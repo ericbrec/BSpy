@@ -1,0 +1,10 @@
+{
+    "terminal.integrated.profiles.windows": {
+        "Windows Powershell": {
+          "source": "PowerShell",
+          "args": ["-ExecutionPolicy", "Bypass"]
+        }
+      },
+      "terminal.integrated.defaultProfile.windows": "Windows Powershell",
+      "cSpell.enabled": true
+}
