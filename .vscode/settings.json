@@ -6,5 +6,8 @@
         }
       },
       "terminal.integrated.defaultProfile.windows": "Windows Powershell",
-      "cSpell.enabled": true
+      "cSpell.words": [
+        "initgl",
+        "pyopengltk"
+      ]
 }
