@@ -8,6 +8,7 @@
       "terminal.integrated.defaultProfile.windows": "Windows Powershell",
       "cSpell.words": [
         "initgl",
+        "NSEW",
         "pyopengltk",
         "yscrollcommand",
         "yview"
