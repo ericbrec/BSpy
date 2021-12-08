@@ -1,20 +1,33 @@
 import numpy as np
+import scipy.interpolate as scispline
 import tkinter as tk
 from OpenGL.GL import *
 from pyopengltk import OpenGLFrame
 
 class Spline:
-    def __init__(self, point):
-        self.point = np.array(point)
+    def __init__(self, order, knots, coefficients):
+        assert len(knots) == order + len(coefficients)
+        self.order = order
+        self.knots = np.array(knots)
+        self.coefficients = np.array(coefficients)
 
     def __str__(self):
-        return "[{0}, {1}]".format(self.point[0], self.point[1])
+        return "[{0}, {1}]".format(self.coefficients[0], self.coefficients[1])
     
     def Draw(self):
         glColor3f(1.0, 0.0, 0.0)
         glBegin(GL_LINE_STRIP)
-        for point in self.point:
+        for point in self.coefficients:
             glVertex2f(point[0], point[1])
+        glEnd()
+
+        tck = (self.knots, self.coefficients.T, self.order-1)
+        glColor3f(0.0, 0.0, 1.0)
+        glBegin(GL_LINE_STRIP)
+        for i in range(100):
+            x = self.knots[self.order-1] + i * (self.knots[-self.order] - self.knots[self.order-1]) / 99.0
+            values = scispline.spalde(x, tck)
+            glVertex2f(values[0][0], values[1][0])
         glEnd()
 
 class SplineOpenGLFrame(OpenGLFrame):
@@ -26,7 +39,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
     def initgl(self):
         glViewport(0, 0, self.width, self.height)
-        glClearColor(0.0, 0.0, 0.0, 0.0)
+        glClearColor(1.0, 1.0, 1.0, 0.0)
 
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
@@ -77,5 +90,5 @@ class PyNubApp(tk.Tk):
 if __name__=='__main__':
     app = PyNubApp()
     for i in range(16):
-        app.AddSpline(Spline([[-1, i/16.0], [0, -i/16.0], [1,0]]))
+        app.AddSpline(Spline(3, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6], [[-1, 0], [-0.5, i/16.0], [0.5, -i/16.0], [1,0]]))
     app.mainloop()

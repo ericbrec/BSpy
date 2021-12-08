@@ -10,6 +10,8 @@
         "initgl",
         "NSEW",
         "pyopengltk",
+        "scipy",
+        "spalde",
         "yscrollcommand",
         "yview"
       ]
