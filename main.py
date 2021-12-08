@@ -21,6 +21,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
     def __init__(self, *args, **kw):
         OpenGLFrame.__init__(self, *args, **kw)
+        self.animate = 0 # Set to number of milliseconds before showing next frame (0 means no animation)
         self.splineDrawList = []
 
     def initgl(self):
