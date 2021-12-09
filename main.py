@@ -40,17 +40,19 @@ class Spline:
                 basis.fill(0.0)
                 basis[self.order-1] = 1.0
                 for degree in range(1, self.order):
+                    b = self.order - degree - 1
                     for n in range(m-degree, m+1):
                         gap0 = self.knots[n+degree] - self.knots[n]
                         val0 = 0.0 if gap0 < 1.0e-8 else (x - self.knots[n]) / gap0
                         gap1 = self.knots[n+degree+1] - self.knots[n+1]
                         val1 = 0.0 if gap1 < 1.0e-8 else (self.knots[n+degree+1] - x) / gap1
-                        b = n + self.order - 1 - m
                         basis[b] = basis[b] * val0 + basis[b+1] * val1
+                        b += 1
                 point.fill(0.0)
+                b = 0
                 for n in range(m+1-self.order, m+1):
-                    b = n + self.order - 1 - m
                     point += basis[b] * self.coefficients[n]
+                    b += 1
                 glVertex2f(point[0], point[1])
         glEnd()
 
