@@ -33,26 +33,37 @@ class Spline:
         glColor3f(0.0, 1.0, 0.0)
         glBegin(GL_LINE_STRIP)
         basis = np.zeros(self.order + 1)
+        dBasis = np.zeros(self.order)
         point = np.zeros(2)
+        derivative = np.zeros(2)
         for m in range(self.order-1, len(self.knots)-self.order):
             for i in range(10):
                 x = self.knots[m] + i * (self.knots[m+1] - self.knots[m]) / 10.0
                 basis.fill(0.0)
+                dBasis.fill(0.0)
                 basis[self.order-1] = 1.0
                 for degree in range(1, self.order):
                     b = self.order - degree - 1
                     for n in range(m-degree, m+1):
                         gap0 = self.knots[n+degree] - self.knots[n]
-                        val0 = 0.0 if gap0 < 1.0e-8 else (x - self.knots[n]) / gap0
                         gap1 = self.knots[n+degree+1] - self.knots[n+1]
+                        val0 = 0.0 if gap0 < 1.0e-8 else (x - self.knots[n]) / gap0
                         val1 = 0.0 if gap1 < 1.0e-8 else (self.knots[n+degree+1] - x) / gap1
+                        if degree == self.order - 1:
+                            d0 = 0.0 if gap0 < 1.0e-8 else degree / gap0
+                            d1 = 0.0 if gap1 < 1.0e-8 else -degree / gap1
+                            dBasis[b] = basis[b] * d0 + basis[b+1] * d1
                         basis[b] = basis[b] * val0 + basis[b+1] * val1
                         b += 1
                 point.fill(0.0)
+                derivative.fill(0.0)
                 b = 0
                 for n in range(m+1-self.order, m+1):
                     point += basis[b] * self.coefficients[n]
+                    derivative += dBasis[b] * self.coefficients[n]
                     b += 1
+                glVertex2f(point[0], point[1])
+                glVertex2f(point[0] - 0.01*derivative[1], point[1] + 0.01*derivative[0])
                 glVertex2f(point[0], point[1])
         glEnd()
 
