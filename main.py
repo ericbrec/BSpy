@@ -13,12 +13,62 @@ class Spline:
 
     def __str__(self):
         return "[{0}, {1}]".format(self.coefficients[0], self.coefficients[1])
+
+    def DrawPoint(self, frame, m, x, deltaX):
+        basis = np.zeros(self.order + 1)
+        dBasis = np.zeros(self.order + 1)
+        d2Basis = np.zeros(self.order + 1)
+        basis[self.order-1] = 1.0
+        for degree in range(1, self.order):
+            b = self.order - degree - 1
+            for n in range(m-degree, m+1):
+                gap0 = self.knots[n+degree] - self.knots[n]
+                gap1 = self.knots[n+degree+1] - self.knots[n+1]
+                val0 = 0.0 if gap0 < 1.0e-8 else (x - self.knots[n]) / gap0
+                val1 = 0.0 if gap1 < 1.0e-8 else (self.knots[n+degree+1] - x) / gap1
+                if degree == self.order - 2:
+                    d0 = 0.0 if gap0 < 1.0e-8 else degree / gap0
+                    d1 = 0.0 if gap1 < 1.0e-8 else -degree / gap1
+                    d2Basis[b] = basis[b] * d0 + basis[b+1] * d1
+                elif degree == self.order - 1:
+                    d0 = 0.0 if gap0 < 1.0e-8 else degree / gap0
+                    d1 = 0.0 if gap1 < 1.0e-8 else -degree / gap1
+                    dBasis[b] = basis[b] * d0 + basis[b+1] * d1
+                    d2Basis[b] = d2Basis[b] * d0 + d2Basis[b+1] * d1
+                basis[b] = basis[b] * val0 + basis[b+1] * val1
+                b += 1
+        
+        point = np.zeros(2)
+        dPoint = np.zeros(2)
+        d2Point = np.zeros(2)
+        b = 0
+        for n in range(m+1-self.order, m+1):
+            point += basis[b] * self.coefficients[n]
+            dPoint += dBasis[b] * self.coefficients[n]
+            d2Point += d2Basis[b] * self.coefficients[n]
+            b += 1
+        
+        glVertex2f(point[0], point[1])
+        glVertex2f(point[0] - 0.01*dPoint[1], point[1] + 0.01*dPoint[0])
+        glVertex2f(point[0], point[1])
+        
+        dPoint[0] *= 0.5 * frame.width
+        dPoint[1] *= 0.5 * frame.height
+        length = np.linalg.norm(dPoint)
+        #deltaX = deltaX if length < 1.0e-8 else 3.0 / length
+
+        d2Point[0] *= 0.5 * frame.width
+        d2Point[1] *= 0.5 * frame.height
+        length = np.linalg.norm(d2Point)
+        deltaX = deltaX if length < 1.0e-8 else 1.0 / np.sqrt(length)
+
+        return deltaX
     
-    def Draw(self):
+    def Draw(self, frame):
         glColor3f(0.0, 0.0, 1.0)
         glBegin(GL_LINE_STRIP)
-        for point in self.coefficients:
-            glVertex2f(point[0], point[1])
+        #for point in self.coefficients:
+        #    glVertex2f(point[0], point[1])
         glEnd()
 
         tck = (self.knots, self.coefficients.T, self.order-1)
@@ -32,39 +82,13 @@ class Spline:
 
         glColor3f(0.0, 1.0, 0.0)
         glBegin(GL_LINE_STRIP)
-        basis = np.zeros(self.order + 1)
-        dBasis = np.zeros(self.order)
-        point = np.zeros(2)
-        derivative = np.zeros(2)
         for m in range(self.order-1, len(self.knots)-self.order):
-            for i in range(10):
-                x = self.knots[m] + i * (self.knots[m+1] - self.knots[m]) / 10.0
-                basis.fill(0.0)
-                dBasis.fill(0.0)
-                basis[self.order-1] = 1.0
-                for degree in range(1, self.order):
-                    b = self.order - degree - 1
-                    for n in range(m-degree, m+1):
-                        gap0 = self.knots[n+degree] - self.knots[n]
-                        gap1 = self.knots[n+degree+1] - self.knots[n+1]
-                        val0 = 0.0 if gap0 < 1.0e-8 else (x - self.knots[n]) / gap0
-                        val1 = 0.0 if gap1 < 1.0e-8 else (self.knots[n+degree+1] - x) / gap1
-                        if degree == self.order - 1:
-                            d0 = 0.0 if gap0 < 1.0e-8 else degree / gap0
-                            d1 = 0.0 if gap1 < 1.0e-8 else -degree / gap1
-                            dBasis[b] = basis[b] * d0 + basis[b+1] * d1
-                        basis[b] = basis[b] * val0 + basis[b+1] * val1
-                        b += 1
-                point.fill(0.0)
-                derivative.fill(0.0)
-                b = 0
-                for n in range(m+1-self.order, m+1):
-                    point += basis[b] * self.coefficients[n]
-                    derivative += dBasis[b] * self.coefficients[n]
-                    b += 1
-                glVertex2f(point[0], point[1])
-                glVertex2f(point[0] - 0.01*derivative[1], point[1] + 0.01*derivative[0])
-                glVertex2f(point[0], point[1])
+            x = self.knots[m]
+            deltaX = 0.5 * (self.knots[m+1] - x)
+            while x < self.knots[m+1]:
+                deltaX = self.DrawPoint(frame, m, x, deltaX)
+                x += deltaX
+        self.DrawPoint(frame, m, self.knots[m+1], deltaX)
         glEnd()
 
 class SplineOpenGLFrame(OpenGLFrame):
@@ -91,7 +115,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         glLoadIdentity()
 
         for spline in self.splineDrawList:
-            spline.Draw()
+            spline.Draw(self)
 
         glFlush()
 
