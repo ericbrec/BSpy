@@ -1,4 +1,5 @@
 import numpy as np
+import quaternion as quat
 import scipy.interpolate as scispline
 import tkinter as tk
 from OpenGL.GL import *
@@ -67,8 +68,8 @@ class Spline:
     def Draw(self, frame):
         glColor3f(0.0, 0.0, 1.0)
         glBegin(GL_LINE_STRIP)
-        #for point in self.coefficients:
-        #    glVertex2f(point[0], point[1])
+        for point in self.coefficients:
+            glVertex2f(point[0], point[1])
         glEnd()
 
         tck = (self.knots, self.coefficients.T, self.order-1)
@@ -85,9 +86,11 @@ class Spline:
         for m in range(self.order-1, len(self.knots)-self.order):
             x = self.knots[m]
             deltaX = 0.5 * (self.knots[m+1] - x)
-            while x < self.knots[m+1]:
+            vertices = 0
+            while x < self.knots[m+1] and vertices < GL_MAX_GEOMETRY_OUTPUT_VERTICES:
                 deltaX = self.DrawPoint(frame, m, x, deltaX)
                 x += deltaX
+                vertices += 1
         self.DrawPoint(frame, m, self.knots[m+1], deltaX)
         glEnd()
 
@@ -97,6 +100,9 @@ class SplineOpenGLFrame(OpenGLFrame):
         OpenGLFrame.__init__(self, *args, **kw)
         self.animate = 0 # Set to number of milliseconds before showing next frame (0 means no animation)
         self.splineDrawList = []
+        self.currentQ = quat.one
+        self.lastQ = quat.one
+        self.origin = None
 
     def initgl(self):
         glViewport(0, 0, self.width, self.height)
@@ -108,16 +114,59 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
+
+        self.bind("<ButtonPress-1>", self.RotateStartHandler)
+        self.bind("<ButtonRelease-1>", self.RotateEndHandler)
+        self.bind("<B1-Motion>", self.RotateDragHandler)
+        
+        print(glGetString(GL_VERSION))
+        print(glGetString(GL_SHADING_LANGUAGE_VERSION))
         
     def redraw(self):
 
         glClear(GL_COLOR_BUFFER_BIT)
         glLoadIdentity()
+        rotation33 = quat.as_rotation_matrix(self.currentQ * self.lastQ)
+        rotation44 = np.identity(4)
+        rotation44[0:3,0:3] = rotation33
+        glMultMatrixf(rotation44)
 
         for spline in self.splineDrawList:
             spline.Draw(self)
 
         glFlush()
+
+    def ProjectToSphere(self, point):
+        length = np.linalg.norm(point)
+        if length <= 0.7071: # 1/sqrt(2)
+            projection = np.array((point[0], point[1], np.sqrt(1.0 - length * length)))
+        else:
+            projection = np.array((point[0], point[1], 0.5 / length))
+            projection = projection / np.linalg.norm(projection)
+        return projection
+
+    def RotateStartHandler(self, event):
+        self.origin = np.array(((2.0 * event.x - self.width)/self.height, (self.height - 2.0 * event.y)/self.height))
+
+    def RotateDragHandler(self, event):
+        if self.origin is not None:
+            point = np.array(((2.0 * event.x - self.width)/self.height, (self.height - 2.0 * event.y)/self.height))
+            a = self.ProjectToSphere(self.origin)
+            b = self.ProjectToSphere(point)
+            dot = np.dot(a, b)
+            halfCosine = np.sqrt(0.5 * (1.0 + dot))
+            halfSine = np.sqrt(0.5 * (1.0 - dot))
+            n = np.cross(a,b)
+            if halfSine > 1.0e-8:
+                n = (halfSine / np.linalg.norm(n)) * n
+            self.currentQ = quat.from_float_array((halfCosine, n[0], n[1], n[2]))
+            self.tkExpose(None)
+
+    def RotateEndHandler(self, event):
+        if self.origin is not None:
+            self.lastQ = self.currentQ * self.lastQ
+            self.currentQ = quat.one
+            self.origin = None
 
 class PyNubApp(tk.Tk):
     def __init__(self, *args, **kw):

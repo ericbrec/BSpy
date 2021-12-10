@@ -8,6 +8,8 @@
       "terminal.integrated.defaultProfile.windows": "Windows Powershell",
       "cSpell.words": [
         "initgl",
+        "Matrixf",
+        "Mult",
         "NSEW",
         "pyopengltk",
         "scipy",
