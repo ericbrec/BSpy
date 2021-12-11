@@ -15,7 +15,7 @@ class Spline:
     def __str__(self):
         return "[{0}, {1}]".format(self.coefficients[0], self.coefficients[1])
 
-    def DrawPoint(self, frame, m, x, deltaX):
+    def DrawPoint(self, frame, drawCoefficients, m, x, deltaX):
         basis = np.zeros(self.order + 1)
         dBasis = np.zeros(self.order + 1)
         d2Basis = np.zeros(self.order + 1)
@@ -39,14 +39,14 @@ class Spline:
                 basis[b] = basis[b] * val0 + basis[b+1] * val1
                 b += 1
         
-        point = np.zeros(2)
-        dPoint = np.zeros(2)
-        d2Point = np.zeros(2)
+        point = np.zeros(4)
+        dPoint = np.zeros(4)
+        d2Point = np.zeros(4)
         b = 0
         for n in range(m+1-self.order, m+1):
-            point += basis[b] * self.coefficients[n]
-            dPoint += dBasis[b] * self.coefficients[n]
-            d2Point += d2Basis[b] * self.coefficients[n]
+            point += basis[b] * drawCoefficients[n]
+            dPoint += dBasis[b] * drawCoefficients[n]
+            d2Point += d2Basis[b] * drawCoefficients[n]
             b += 1
         
         glVertex2f(point[0], point[1])
@@ -65,14 +65,19 @@ class Spline:
 
         return deltaX
     
-    def Draw(self, frame):
+    def Draw(self, frame, transform):
+        drawCoefficients = np.zeros((len(self.coefficients),4))
+        drawCoefficients[:,:self.coefficients.shape[1]] = self.coefficients[:,:]
+        drawCoefficients[:,3] = 1.0
+        drawCoefficients = drawCoefficients @ transform.T
+
         glColor3f(0.0, 0.0, 1.0)
         glBegin(GL_LINE_STRIP)
-        for point in self.coefficients:
+        for point in drawCoefficients:
             glVertex2f(point[0], point[1])
         glEnd()
 
-        tck = (self.knots, self.coefficients.T, self.order-1)
+        tck = (self.knots, drawCoefficients.T, self.order-1)
         glColor3f(1.0, 0.0, 0.0)
         glBegin(GL_LINE_STRIP)
         for i in range(100):
@@ -88,10 +93,10 @@ class Spline:
             deltaX = 0.5 * (self.knots[m+1] - x)
             vertices = 0
             while x < self.knots[m+1] and vertices < GL_MAX_GEOMETRY_OUTPUT_VERTICES:
-                deltaX = self.DrawPoint(frame, m, x, deltaX)
+                deltaX = self.DrawPoint(frame, drawCoefficients, m, x, deltaX)
                 x += deltaX
                 vertices += 1
-        self.DrawPoint(frame, m, self.knots[m+1], deltaX)
+        self.DrawPoint(frame, drawCoefficients, m, self.knots[m+1], deltaX)
         glEnd()
 
 class SplineOpenGLFrame(OpenGLFrame):
@@ -111,6 +116,8 @@ class SplineOpenGLFrame(OpenGLFrame):
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0)
+        self.projection = glGetFloatv(GL_PROJECTION_MATRIX)
+        glLoadIdentity()
 
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
@@ -129,10 +136,10 @@ class SplineOpenGLFrame(OpenGLFrame):
         rotation33 = quat.as_rotation_matrix(self.currentQ * self.lastQ)
         rotation44 = np.identity(4)
         rotation44[0:3,0:3] = rotation33
-        glMultMatrixf(rotation44)
+        transform = self.projection @ rotation44
 
         for spline in self.splineDrawList:
-            spline.Draw(self)
+            spline.Draw(self, transform)
 
         glFlush()
 
