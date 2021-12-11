@@ -53,11 +53,6 @@ class Spline:
         glVertex2f(point[0] - 0.01*dPoint[1], point[1] + 0.01*dPoint[0])
         glVertex2f(point[0], point[1])
         
-        dPoint[0] *= 0.5 * frame.width
-        dPoint[1] *= 0.5 * frame.height
-        length = np.linalg.norm(dPoint)
-        #deltaX = deltaX if length < 1.0e-8 else 3.0 / length
-
         d2Point[0] *= 0.5 * frame.width
         d2Point[1] *= 0.5 * frame.height
         length = np.linalg.norm(d2Point)
@@ -115,10 +110,12 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0)
+        xExtent = self.width / self.height
+        glFrustum(-0.5*xExtent, 0.5*xExtent, -0.5, 0.5, 1.0, 3.0)
+        glTranslate(0.0, 0.0, -2.0)
+        #glOrtho(-xExtent, xExtent, -1.0, 1.0, -1.0, 1.0)
         self.projection = glGetFloatv(GL_PROJECTION_MATRIX)
-        glLoadIdentity()
-
+        
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
@@ -136,7 +133,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         rotation33 = quat.as_rotation_matrix(self.currentQ * self.lastQ)
         rotation44 = np.identity(4)
         rotation44[0:3,0:3] = rotation33
-        transform = self.projection @ rotation44
+        transform = rotation44
 
         for spline in self.splineDrawList:
             spline.Draw(self, transform)

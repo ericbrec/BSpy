@@ -1,11 +1,5 @@
 {
-    "terminal.integrated.profiles.windows": {
-        "Windows Powershell": {
-          "source": "PowerShell",
-          "args": ["-ExecutionPolicy", "Bypass"]
-        }
-      },
-      "terminal.integrated.defaultProfile.windows": "Windows Powershell",
+      "terminal.integrated.defaultProfile.windows": "Windows PowerShell",
       "cSpell.words": [
         "initgl",
         "Matrixf",
