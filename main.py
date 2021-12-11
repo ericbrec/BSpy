@@ -49,17 +49,21 @@ class Spline:
             d2Point += d2Basis[b] * drawCoefficients[n]
             b += 1
         
-        glVertex2f(point[0], point[1])
-        glVertex2f(point[0] - 0.01*dPoint[1], point[1] + 0.01*dPoint[0])
-        glVertex2f(point[0], point[1])
+        glVertex3f(point[0], point[1], point[2])
+        glVertex3f(point[0] - 0.01*dPoint[1], point[1] + 0.01*dPoint[0], point[2])
+        glVertex3f(point[0], point[1], point[2])
         
-        zScale = 1.0 / (screenScale[2] - point[2])
-        zScale2 = zScale * zScale
-        zScale3 = zScale2 * zScale
-        d2Point[0] = screenScale[0] * (d2Point[0] * zScale - 2.0 * dPoint[0] * dPoint[2] * zScale2 + \
-            point[0] * (2.0 * dPoint[2] * dPoint[2] * zScale3 - d2Point[2] * zScale2))
-        d2Point[1] = screenScale[1] * (d2Point[1] * zScale - 2.0 * dPoint[1] * dPoint[2] * zScale2 + \
-            point[1] * (2.0 * dPoint[2] * dPoint[2] * zScale3 - d2Point[2] * zScale2))
+        if screenScale[2] > 1.0:
+            zScale = 1.0 / (screenScale[2] - point[2])
+            zScale2 = zScale * zScale
+            zScale3 = zScale2 * zScale
+            d2Point[0] = screenScale[0] * (d2Point[0] * zScale - 2.0 * dPoint[0] * dPoint[2] * zScale2 + \
+                point[0] * (2.0 * dPoint[2] * dPoint[2] * zScale3 - d2Point[2] * zScale2))
+            d2Point[1] = screenScale[1] * (d2Point[1] * zScale - 2.0 * dPoint[1] * dPoint[2] * zScale2 + \
+                point[1] * (2.0 * dPoint[2] * dPoint[2] * zScale3 - d2Point[2] * zScale2))
+        else:
+            d2Point[0] *= screenScale[0]
+            d2Point[1] *= screenScale[1]
         sqrtLength = (d2Point[0]*d2Point[0] + d2Point[1]*d2Point[1])**0.25
         deltaX = deltaX if sqrtLength < 1.0e-8 else 1.0 / sqrtLength
 
@@ -69,13 +73,13 @@ class Spline:
         drawCoefficients = np.zeros((len(self.coefficients),4))
         drawCoefficients[:,:self.coefficients.shape[1]] = self.coefficients[:,:]
         drawCoefficients[:,3] = 1.0
-        drawCoefficients = drawCoefficients @ transform.T
+        drawCoefficients = drawCoefficients @ transform
         screenScale = np.array((0.5 * frame.height * frame.projection[0,0], 0.5 * frame.height * frame.projection[1,1], frame.projection[3,3]))
 
         glColor3f(0.0, 0.0, 1.0)
         glBegin(GL_LINE_STRIP)
         for point in drawCoefficients:
-            glVertex2f(point[0], point[1])
+            glVertex3f(point[0], point[1], point[2])
         glEnd()
 
         tck = (self.knots, drawCoefficients.T, self.order-1)
@@ -84,7 +88,7 @@ class Spline:
         for i in range(100):
             x = self.knots[self.order-1] + i * (self.knots[-self.order] - self.knots[self.order-1]) / 99.0
             values = scispline.spalde(x, tck)
-            glVertex2f(values[0][0], values[1][0])
+            glVertex3f(values[0][0], values[1][0], values[2][0])
         glEnd()
 
         glColor3f(0.0, 1.0, 0.0)
@@ -138,7 +142,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         glLoadIdentity()
         rotation33 = quat.as_rotation_matrix(self.currentQ * self.lastQ)
         rotation44 = np.identity(4)
-        rotation44[0:3,0:3] = rotation33
+        rotation44[0:3,0:3] = rotation33.T
         transform = rotation44
 
         for spline in self.splineDrawList:
