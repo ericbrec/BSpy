@@ -15,7 +15,7 @@ class Spline:
     def __str__(self):
         return "[{0}, {1}]".format(self.coefficients[0], self.coefficients[1])
 
-    def DrawPoint(self, frame, drawCoefficients, m, x, deltaX):
+    def DrawPoint(self, screenScale, drawCoefficients, m, x, deltaX):
         basis = np.zeros(self.order + 1)
         dBasis = np.zeros(self.order + 1)
         d2Basis = np.zeros(self.order + 1)
@@ -53,10 +53,15 @@ class Spline:
         glVertex2f(point[0] - 0.01*dPoint[1], point[1] + 0.01*dPoint[0])
         glVertex2f(point[0], point[1])
         
-        d2Point[0] *= 0.5 * frame.width
-        d2Point[1] *= 0.5 * frame.height
-        length = np.linalg.norm(d2Point)
-        deltaX = deltaX if length < 1.0e-8 else 1.0 / np.sqrt(length)
+        zScale = 1.0 / (screenScale[2] - point[2])
+        zScale2 = zScale * zScale
+        zScale3 = zScale2 * zScale
+        d2Point[0] = screenScale[0] * (d2Point[0] * zScale - 2.0 * dPoint[0] * dPoint[2] * zScale2 + \
+            point[0] * (2.0 * dPoint[2] * dPoint[2] * zScale3 - d2Point[2] * zScale2))
+        d2Point[1] = screenScale[1] * (d2Point[1] * zScale - 2.0 * dPoint[1] * dPoint[2] * zScale2 + \
+            point[1] * (2.0 * dPoint[2] * dPoint[2] * zScale3 - d2Point[2] * zScale2))
+        sqrtLength = (d2Point[0]*d2Point[0] + d2Point[1]*d2Point[1])**0.25
+        deltaX = deltaX if sqrtLength < 1.0e-8 else 1.0 / sqrtLength
 
         return deltaX
     
@@ -65,6 +70,7 @@ class Spline:
         drawCoefficients[:,:self.coefficients.shape[1]] = self.coefficients[:,:]
         drawCoefficients[:,3] = 1.0
         drawCoefficients = drawCoefficients @ transform.T
+        screenScale = np.array((0.5 * frame.height * frame.projection[0,0], 0.5 * frame.height * frame.projection[1,1], frame.projection[3,3]))
 
         glColor3f(0.0, 0.0, 1.0)
         glBegin(GL_LINE_STRIP)
@@ -88,10 +94,10 @@ class Spline:
             deltaX = 0.5 * (self.knots[m+1] - x)
             vertices = 0
             while x < self.knots[m+1] and vertices < GL_MAX_GEOMETRY_OUTPUT_VERTICES:
-                deltaX = self.DrawPoint(frame, drawCoefficients, m, x, deltaX)
+                deltaX = self.DrawPoint(screenScale, drawCoefficients, m, x, deltaX)
                 x += deltaX
                 vertices += 1
-        self.DrawPoint(frame, drawCoefficients, m, self.knots[m+1], deltaX)
+        self.DrawPoint(screenScale, drawCoefficients, m, self.knots[m+1], deltaX)
         glEnd()
 
 class SplineOpenGLFrame(OpenGLFrame):
