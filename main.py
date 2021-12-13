@@ -109,17 +109,10 @@ class Spline:
         glUniform3f(frame.uSplineColor, 1.0, 0.0, 1.0)
 
         glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
-        glBindTexture(GL_TEXTURE_BUFFER, frame.splineTextureBuffer)
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, frame.splineDataBuffer)
-        glBufferData(GL_TEXTURE_BUFFER, 4 * (2 + 4*len(drawCoefficients)), None, GL_STATIC_READ)
         glBufferSubData(GL_TEXTURE_BUFFER, 0, 4 * 2, np.array((self.order, len(drawCoefficients)), np.float32))
         glBufferSubData(GL_TEXTURE_BUFFER, 4 * 2, 4 * 4*len(drawCoefficients), drawCoefficients)
-        glUniform1i(frame.uSplineData, 0) # 0 is the active texture (default is 0)
 
         glEnableVertexAttribArray(frame.aParameters)
-        glBindBuffer(GL_ARRAY_BUFFER, frame.parameterBuffer)
-        glBufferData(GL_ARRAY_BUFFER, 4 * 4 * 3, np.array([[0,0,0,0], [1,0,0,0], [3,0,0,0]], np.float32), GL_STATIC_DRAW)
-        glVertexAttribPointer(frame.aParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
         glDrawArrays(GL_POINTS, 0, 3)
         glDisableVertexAttribArray(frame.aParameters)
 
@@ -202,15 +195,24 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.fragmentShader = shaders.compileShader(self.fragmentShaderCode, GL_FRAGMENT_SHADER)
             self.program = shaders.compileProgram(self.vertexShader, self.geometryShader, self.fragmentShader)
 
+            self.splineDataBuffer = glGenBuffers(1)
+            self.splineTextureBuffer = glGenTextures(1)
+            glBindBuffer(GL_TEXTURE_BUFFER, self.splineDataBuffer)
+            glBindTexture(GL_TEXTURE_BUFFER, self.splineTextureBuffer)
+            glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, self.splineDataBuffer)
+            glBufferData(GL_TEXTURE_BUFFER, 4 * (2 + 4*100), None, GL_STATIC_READ)
+
             glUseProgram(self.program)
             self.aParameters = glGetAttribLocation(self.program, "aParameters")
+            self.parameterBuffer = glGenBuffers(1)
+            glBindBuffer(GL_ARRAY_BUFFER, self.parameterBuffer)
+            glBufferData(GL_ARRAY_BUFFER, 4 * 4 * 3, np.array([[0,0,0,0], [1,0,0,0], [3,0,0,0]], np.float32), GL_STATIC_DRAW)
+            glVertexAttribPointer(self.aParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
             self.uProjectionMatrix = glGetUniformLocation(self.program, 'uProjectionMatrix')
             self.uScreenScale = glGetUniformLocation(self.program, 'uScreenScale')
             self.uSplineColor = glGetUniformLocation(self.program, 'uSplineColor')
             self.uSplineData = glGetUniformLocation(self.program, 'uSplineData')
-            self.parameterBuffer = glGenBuffers(1)
-            self.splineDataBuffer = glGenBuffers(1)
-            self.splineTextureBuffer = glGenTextures(1)
+            glUniform1i(self.uSplineData, 0) # 0 is the active texture (default is 0)
             glUseProgram(0)
 
             self.initialized = True
