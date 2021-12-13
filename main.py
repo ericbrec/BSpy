@@ -3,22 +3,23 @@ import quaternion as quat
 import scipy.interpolate as scispline
 import tkinter as tk
 from OpenGL.GL import *
+import OpenGL.GL.shaders as shaders
 from pyopengltk import OpenGLFrame
 
 class Spline:
     def __init__(self, order, knots, coefficients):
         assert len(knots) == order + len(coefficients)
         self.order = order
-        self.knots = np.array(knots)
-        self.coefficients = np.array(coefficients)
+        self.knots = np.array(knots, np.float32)
+        self.coefficients = np.array(coefficients, np.float32)
 
     def __str__(self):
         return "[{0}, {1}]".format(self.coefficients[0], self.coefficients[1])
 
     def DrawPoint(self, screenScale, drawCoefficients, m, x, deltaX):
-        basis = np.zeros(self.order + 1)
-        dBasis = np.zeros(self.order + 1)
-        d2Basis = np.zeros(self.order + 1)
+        basis = np.zeros(self.order + 1, np.float32)
+        dBasis = np.zeros(self.order + 1, np.float32)
+        d2Basis = np.zeros(self.order + 1, np.float32)
         basis[self.order-1] = 1.0
         for degree in range(1, self.order):
             b = self.order - degree - 1
@@ -39,9 +40,9 @@ class Spline:
                 basis[b] = basis[b] * val0 + basis[b+1] * val1
                 b += 1
         
-        point = np.zeros(4)
-        dPoint = np.zeros(4)
-        d2Point = np.zeros(4)
+        point = np.zeros(4, np.float32)
+        dPoint = np.zeros(4, np.float32)
+        d2Point = np.zeros(4, np.float32)
         b = 0
         for n in range(m+1-self.order, m+1):
             point += basis[b] * drawCoefficients[n]
@@ -70,11 +71,11 @@ class Spline:
         return deltaX
     
     def Draw(self, frame, transform):
-        drawCoefficients = np.zeros((len(self.coefficients),4))
+        drawCoefficients = np.zeros((len(self.coefficients),4), np.float32)
         drawCoefficients[:,:self.coefficients.shape[1]] = self.coefficients[:,:]
         drawCoefficients[:,3] = 1.0
         drawCoefficients = drawCoefficients @ transform
-        screenScale = np.array((0.5 * frame.height * frame.projection[0,0], 0.5 * frame.height * frame.projection[1,1], frame.projection[3,3]))
+        screenScale = np.array((0.5 * frame.height * frame.projection[0,0], 0.5 * frame.height * frame.projection[1,1], frame.projection[3,3]), np.float32)
 
         glColor3f(0.0, 0.0, 1.0)
         glBegin(GL_LINE_STRIP)
@@ -92,20 +93,77 @@ class Spline:
         glEnd()
 
         glColor3f(0.0, 1.0, 0.0)
-        glBegin(GL_LINE_STRIP)
         for m in range(self.order-1, len(self.knots)-self.order):
             x = self.knots[m]
             deltaX = 0.5 * (self.knots[m+1] - x)
             vertices = 0
-            while x < self.knots[m+1] and vertices < GL_MAX_GEOMETRY_OUTPUT_VERTICES:
+            glBegin(GL_LINE_STRIP)
+            while x < self.knots[m+1] and vertices < GL_MAX_GEOMETRY_OUTPUT_VERTICES - 1:
                 deltaX = self.DrawPoint(screenScale, drawCoefficients, m, x, deltaX)
                 x += deltaX
                 vertices += 1
-        self.DrawPoint(screenScale, drawCoefficients, m, self.knots[m+1], deltaX)
-        glEnd()
+            self.DrawPoint(screenScale, drawCoefficients, m, self.knots[m+1], deltaX)
+            glEnd()
+
+        glUseProgram(frame.program)
+
+        glUniformMatrix4fv(frame.uProjectionMatrix, 1, GL_FALSE, frame.projection)
+        glUniform3fv(frame.uScreenScale, 1, screenScale)
+        glUniform3f(frame.uSplineColor, 1.0, 0.0, 1.0)
+    
+        glEnableVertexAttribArray(frame.aParameters)
+        glBindBuffer(GL_ARRAY_BUFFER, frame.parameterBuffer)
+        glBufferData(GL_ARRAY_BUFFER, 4 * 4 * len(drawCoefficients), drawCoefficients, GL_STATIC_DRAW)
+        glVertexAttribPointer(frame.aParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
+        glDrawArrays(GL_POINTS, 0, len(drawCoefficients))
+        glDisableVertexAttribArray(frame.aParameters)
+
+        glUseProgram(0)
 
 class SplineOpenGLFrame(OpenGLFrame):
 
+    vertexShaderCode = """
+        #version 330 core
+     
+        attribute vec4 aParameters;
+     
+        void main() {
+            gl_Position = aParameters;
+        }
+    """
+    geometryShaderCode = """
+        #version 330 core
+        
+        layout( points ) in;
+        layout( line_strip, max_vertices = 2 ) out;
+
+        uniform mat4 uProjectionMatrix;
+        uniform vec3 uScreenScale;
+        uniform vec3 uSplineColor;
+
+        out vec3 splineColor;
+     
+        void main() {
+            splineColor = uScreenScale;
+            splineColor = uSplineColor;
+            gl_Position = uProjectionMatrix * gl_in[0].gl_Position;
+            EmitVertex();
+            gl_Position.x = gl_Position.x + 0.5;
+            EmitVertex();
+            EndPrimitive();
+        }
+    """
+    fragmentShaderCode = """
+        #version 330 core
+     
+        in vec3 splineColor;
+        out vec3 color;
+     
+        void main() {
+            color = splineColor;
+        }
+    """
+ 
     def __init__(self, *args, **kw):
         OpenGLFrame.__init__(self, *args, **kw)
         self.animate = 0 # Set to number of milliseconds before showing next frame (0 means no animation)
@@ -135,14 +193,27 @@ class SplineOpenGLFrame(OpenGLFrame):
         
         print(glGetString(GL_VERSION))
         print(glGetString(GL_SHADING_LANGUAGE_VERSION))
-        
+
+        self.vertexShader = shaders.compileShader(self.vertexShaderCode, GL_VERTEX_SHADER)
+        self.geometryShader = shaders.compileShader(self.geometryShaderCode, GL_GEOMETRY_SHADER)
+        self.fragmentShader = shaders.compileShader(self.fragmentShaderCode, GL_FRAGMENT_SHADER)
+        self.program = shaders.compileProgram(self.vertexShader, self.geometryShader, self.fragmentShader)
+
+        glUseProgram(self.program)
+        self.aParameters = glGetAttribLocation(self.program, "aParameters")
+        self.uProjectionMatrix = glGetUniformLocation(self.program, 'uProjectionMatrix')
+        self.uScreenScale = glGetUniformLocation(self.program, 'uScreenScale')
+        self.uSplineColor = glGetUniformLocation(self.program, 'uSplineColor')
+        self.parameterBuffer = glGenBuffers(1)
+        glUseProgram(0)
+
     def redraw(self):
 
         glClear(GL_COLOR_BUFFER_BIT)
         glLoadIdentity()
         rotation33 = quat.as_rotation_matrix(self.currentQ * self.lastQ)
-        rotation44 = np.identity(4)
-        rotation44[0:3,0:3] = rotation33.T
+        rotation44 = np.identity(4, np.float32)
+        rotation44[0:3,0:3] = rotation33.T # Transpose to match OpenGL format in numpy
         transform = rotation44
 
         for spline in self.splineDrawList:
@@ -153,18 +224,18 @@ class SplineOpenGLFrame(OpenGLFrame):
     def ProjectToSphere(self, point):
         length = np.linalg.norm(point)
         if length <= 0.7071: # 1/sqrt(2)
-            projection = np.array((point[0], point[1], np.sqrt(1.0 - length * length)))
+            projection = np.array((point[0], point[1], np.sqrt(1.0 - length * length)), np.float32)
         else:
-            projection = np.array((point[0], point[1], 0.5 / length))
+            projection = np.array((point[0], point[1], 0.5 / length), np.float32)
             projection = projection / np.linalg.norm(projection)
         return projection
 
     def RotateStartHandler(self, event):
-        self.origin = np.array(((2.0 * event.x - self.width)/self.height, (self.height - 2.0 * event.y)/self.height))
+        self.origin = np.array(((2.0 * event.x - self.width)/self.height, (self.height - 2.0 * event.y)/self.height), np.float32)
 
     def RotateDragHandler(self, event):
         if self.origin is not None:
-            point = np.array(((2.0 * event.x - self.width)/self.height, (self.height - 2.0 * event.y)/self.height))
+            point = np.array(((2.0 * event.x - self.width)/self.height, (self.height - 2.0 * event.y)/self.height), np.float32)
             a = self.ProjectToSphere(self.origin)
             b = self.ProjectToSphere(point)
             dot = np.dot(a, b)
