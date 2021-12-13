@@ -107,12 +107,20 @@ class Spline:
         glUseProgram(frame.program)
 
         glUniform3f(frame.uSplineColor, 1.0, 0.0, 1.0)
-    
+
+        glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
+        glBindTexture(GL_TEXTURE_BUFFER, frame.splineTextureBuffer)
+        glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, frame.splineDataBuffer)
+        glBufferData(GL_TEXTURE_BUFFER, 4 * (2 + 4*len(drawCoefficients)), None, GL_STATIC_READ)
+        glBufferSubData(GL_TEXTURE_BUFFER, 0, 4 * 2, np.array((self.order, len(drawCoefficients)), np.float32))
+        glBufferSubData(GL_TEXTURE_BUFFER, 4 * 2, 4 * 4*len(drawCoefficients), drawCoefficients)
+        glUniform1i(frame.uSplineData, 0) # 0 is the active texture (default is 0)
+
         glEnableVertexAttribArray(frame.aParameters)
         glBindBuffer(GL_ARRAY_BUFFER, frame.parameterBuffer)
-        glBufferData(GL_ARRAY_BUFFER, 4 * 4 * len(drawCoefficients), drawCoefficients, GL_STATIC_DRAW)
+        glBufferData(GL_ARRAY_BUFFER, 4 * 4 * 3, np.array([[0,0,0,0], [1,0,0,0], [3,0,0,0]], np.float32), GL_STATIC_DRAW)
         glVertexAttribPointer(frame.aParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
-        glDrawArrays(GL_POINTS, 0, len(drawCoefficients))
+        glDrawArrays(GL_POINTS, 0, 3)
         glDisableVertexAttribArray(frame.aParameters)
 
         glUseProgram(0)
@@ -137,13 +145,23 @@ class SplineOpenGLFrame(OpenGLFrame):
         uniform mat4 uProjectionMatrix;
         uniform vec3 uScreenScale;
         uniform vec3 uSplineColor;
+        uniform samplerBuffer uSplineData;
 
         out vec3 splineColor;
      
         void main() {
+            int order;
+            int n;
+            int index;
+            vec4 coefficient;
+
             splineColor = uScreenScale;
             splineColor = uSplineColor;
-            gl_Position = uProjectionMatrix * gl_in[0].gl_Position;
+            order = int(texelFetch(uSplineData, 0));
+            n = int(texelFetch(uSplineData, 1));
+            index = 2 + int(gl_in[0].gl_Position.x) * 4;
+            coefficient = vec4(texelFetch(uSplineData, index).x, texelFetch(uSplineData, index+1).x, texelFetch(uSplineData, index+2).x, texelFetch(uSplineData, index+3).x);
+            gl_Position = uProjectionMatrix * coefficient;
             EmitVertex();
             gl_Position.x = gl_Position.x + 0.5;
             EmitVertex();
@@ -189,7 +207,10 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.uProjectionMatrix = glGetUniformLocation(self.program, 'uProjectionMatrix')
             self.uScreenScale = glGetUniformLocation(self.program, 'uScreenScale')
             self.uSplineColor = glGetUniformLocation(self.program, 'uSplineColor')
+            self.uSplineData = glGetUniformLocation(self.program, 'uSplineData')
             self.parameterBuffer = glGenBuffers(1)
+            self.splineDataBuffer = glGenBuffers(1)
+            self.splineTextureBuffer = glGenTextures(1)
             glUseProgram(0)
 
             self.initialized = True
