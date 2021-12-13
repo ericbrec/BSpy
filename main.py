@@ -75,7 +75,6 @@ class Spline:
         drawCoefficients[:,:self.coefficients.shape[1]] = self.coefficients[:,:]
         drawCoefficients[:,3] = 1.0
         drawCoefficients = drawCoefficients @ transform
-        screenScale = np.array((0.5 * frame.height * frame.projection[0,0], 0.5 * frame.height * frame.projection[1,1], frame.projection[3,3]), np.float32)
 
         glColor3f(0.0, 0.0, 1.0)
         glBegin(GL_LINE_STRIP)
@@ -99,16 +98,14 @@ class Spline:
             vertices = 0
             glBegin(GL_LINE_STRIP)
             while x < self.knots[m+1] and vertices < GL_MAX_GEOMETRY_OUTPUT_VERTICES - 1:
-                deltaX = self.DrawPoint(screenScale, drawCoefficients, m, x, deltaX)
+                deltaX = self.DrawPoint(frame.screenScale, drawCoefficients, m, x, deltaX)
                 x += deltaX
                 vertices += 1
-            self.DrawPoint(screenScale, drawCoefficients, m, self.knots[m+1], deltaX)
+            self.DrawPoint(frame.screenScale, drawCoefficients, m, self.knots[m+1], deltaX)
             glEnd()
 
         glUseProgram(frame.program)
 
-        glUniformMatrix4fv(frame.uProjectionMatrix, 1, GL_FALSE, frame.projection)
-        glUniform3fv(frame.uScreenScale, 1, screenScale)
         glUniform3f(frame.uSplineColor, 1.0, 0.0, 1.0)
     
         glEnableVertexAttribArray(frame.aParameters)
@@ -171,9 +168,32 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.currentQ = quat.one
         self.lastQ = quat.one
         self.origin = None
+        self.initialized = False
 
     def initgl(self):
-        glViewport(0, 0, self.width, self.height)
+        if not self.initialized:
+            self.bind("<ButtonPress-1>", self.RotateStartHandler)
+            self.bind("<ButtonRelease-1>", self.RotateEndHandler)
+            self.bind("<B1-Motion>", self.RotateDragHandler)
+            
+            print(glGetString(GL_VERSION))
+            print(glGetString(GL_SHADING_LANGUAGE_VERSION))
+
+            self.vertexShader = shaders.compileShader(self.vertexShaderCode, GL_VERTEX_SHADER)
+            self.geometryShader = shaders.compileShader(self.geometryShaderCode, GL_GEOMETRY_SHADER)
+            self.fragmentShader = shaders.compileShader(self.fragmentShaderCode, GL_FRAGMENT_SHADER)
+            self.program = shaders.compileProgram(self.vertexShader, self.geometryShader, self.fragmentShader)
+
+            glUseProgram(self.program)
+            self.aParameters = glGetAttribLocation(self.program, "aParameters")
+            self.uProjectionMatrix = glGetUniformLocation(self.program, 'uProjectionMatrix')
+            self.uScreenScale = glGetUniformLocation(self.program, 'uScreenScale')
+            self.uSplineColor = glGetUniformLocation(self.program, 'uSplineColor')
+            self.parameterBuffer = glGenBuffers(1)
+            glUseProgram(0)
+
+            self.initialized = True
+        
         glClearColor(1.0, 1.0, 1.0, 0.0)
 
         glMatrixMode(GL_PROJECTION)
@@ -182,30 +202,16 @@ class SplineOpenGLFrame(OpenGLFrame):
         glFrustum(-0.5*xExtent, 0.5*xExtent, -0.5, 0.5, 1.0, 3.0)
         glTranslate(0.0, 0.0, -2.0)
         #glOrtho(-xExtent, xExtent, -1.0, 1.0, -1.0, 1.0)
+
         self.projection = glGetFloatv(GL_PROJECTION_MATRIX)
-        
+        self.screenScale = np.array((0.5 * self.height * self.projection[0,0], 0.5 * self.height * self.projection[1,1], self.projection[3,3]), np.float32)
+        glUseProgram(self.program)
+        glUniformMatrix4fv(self.uProjectionMatrix, 1, GL_FALSE, self.projection)
+        glUniform3fv(self.uScreenScale, 1, self.screenScale)
+        glUseProgram(0)
+
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
-
-        self.bind("<ButtonPress-1>", self.RotateStartHandler)
-        self.bind("<ButtonRelease-1>", self.RotateEndHandler)
-        self.bind("<B1-Motion>", self.RotateDragHandler)
-        
-        print(glGetString(GL_VERSION))
-        print(glGetString(GL_SHADING_LANGUAGE_VERSION))
-
-        self.vertexShader = shaders.compileShader(self.vertexShaderCode, GL_VERTEX_SHADER)
-        self.geometryShader = shaders.compileShader(self.geometryShaderCode, GL_GEOMETRY_SHADER)
-        self.fragmentShader = shaders.compileShader(self.fragmentShaderCode, GL_FRAGMENT_SHADER)
-        self.program = shaders.compileProgram(self.vertexShader, self.geometryShader, self.fragmentShader)
-
-        glUseProgram(self.program)
-        self.aParameters = glGetAttribLocation(self.program, "aParameters")
-        self.uProjectionMatrix = glGetUniformLocation(self.program, 'uProjectionMatrix')
-        self.uScreenScale = glGetUniformLocation(self.program, 'uScreenScale')
-        self.uSplineColor = glGetUniformLocation(self.program, 'uSplineColor')
-        self.parameterBuffer = glGenBuffers(1)
-        glUseProgram(0)
 
     def redraw(self):
 
