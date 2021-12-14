@@ -113,7 +113,7 @@ class Spline:
         glBufferSubData(GL_TEXTURE_BUFFER, 4 * 2, 4 * 4*len(drawCoefficients), drawCoefficients)
 
         glEnableVertexAttribArray(frame.aParameters)
-        glDrawArrays(GL_POINTS, 0, 3)
+        glDrawArraysInstanced(GL_POINTS, 0, 1, 30)
         glDisableVertexAttribArray(frame.aParameters)
 
         glUseProgram(0)
@@ -124,9 +124,18 @@ class SplineOpenGLFrame(OpenGLFrame):
         #version 330 core
      
         attribute vec4 aParameters;
-     
+
+        uniform samplerBuffer uSplineData;
+
         void main() {
+            int order;
+            int n;
+
+            order = int(texelFetch(uSplineData, 0));
+            n = int(texelFetch(uSplineData, 1));
+
             gl_Position = aParameters;
+            gl_Position.x = gl_Position.x + float(min(gl_InstanceID, n - 1));
         }
     """
     geometryShaderCode = """
@@ -206,7 +215,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.aParameters = glGetAttribLocation(self.program, "aParameters")
             self.parameterBuffer = glGenBuffers(1)
             glBindBuffer(GL_ARRAY_BUFFER, self.parameterBuffer)
-            glBufferData(GL_ARRAY_BUFFER, 4 * 4 * 3, np.array([[0,0,0,0], [1,0,0,0], [3,0,0,0]], np.float32), GL_STATIC_DRAW)
+            glBufferData(GL_ARRAY_BUFFER, 4 * 4, np.array([0,0,0,0], np.float32), GL_STATIC_DRAW)
             glVertexAttribPointer(self.aParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
             self.uProjectionMatrix = glGetUniformLocation(self.program, 'uProjectionMatrix')
             self.uScreenScale = glGetUniformLocation(self.program, 'uScreenScale')
