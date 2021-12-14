@@ -113,7 +113,7 @@ class Spline:
         glBufferSubData(GL_TEXTURE_BUFFER, 4 * 2, 4 * 4*len(drawCoefficients), drawCoefficients)
 
         glEnableVertexAttribArray(frame.aParameters)
-        glDrawArraysInstanced(GL_POINTS, 0, 1, 30)
+        glDrawArraysInstanced(GL_POINTS, 0, 1, len(drawCoefficients))
         glDisableVertexAttribArray(frame.aParameters)
 
         glUseProgram(0)
@@ -127,6 +127,10 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         uniform samplerBuffer uSplineData;
 
+        out KnotIndices {
+            int u;
+        } outData;
+
         void main() {
             int order;
             int n;
@@ -134,8 +138,8 @@ class SplineOpenGLFrame(OpenGLFrame):
             order = int(texelFetch(uSplineData, 0));
             n = int(texelFetch(uSplineData, 1));
 
+            outData.u = min(gl_InstanceID, n - 1);
             gl_Position = aParameters;
-            gl_Position.x = gl_Position.x + float(min(gl_InstanceID, n - 1));
         }
     """
     geometryShaderCode = """
@@ -143,6 +147,10 @@ class SplineOpenGLFrame(OpenGLFrame):
         
         layout( points ) in;
         layout( line_strip, max_vertices = 2 ) out;
+
+        in KnotIndices {
+            int u;
+        } inData[];
 
         uniform mat4 uProjectionMatrix;
         uniform vec3 uScreenScale;
@@ -161,7 +169,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             splineColor = uSplineColor;
             order = int(texelFetch(uSplineData, 0));
             n = int(texelFetch(uSplineData, 1));
-            index = 2 + int(gl_in[0].gl_Position.x) * 4;
+            index = 2 + 4 * inData[0].u;
             coefficient = vec4(texelFetch(uSplineData, index).x, texelFetch(uSplineData, index+1).x, texelFetch(uSplineData, index+2).x, texelFetch(uSplineData, index+3).x);
             gl_Position = uProjectionMatrix * coefficient;
             EmitVertex();
