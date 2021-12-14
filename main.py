@@ -7,6 +7,11 @@ import OpenGL.GL.shaders as shaders
 from pyopengltk import OpenGLFrame
 
 class Spline:
+
+    maxOrder = 9
+    maxCoefficients = 100
+    maxKnots = maxCoefficients + maxOrder
+
     def __init__(self, order, knots, coefficients):
         assert len(knots) == order + len(coefficients)
         self.order = order
@@ -26,15 +31,17 @@ class Spline:
             for n in range(m-degree, m+1):
                 gap0 = self.knots[n+degree] - self.knots[n]
                 gap1 = self.knots[n+degree+1] - self.knots[n+1]
-                val0 = 0.0 if gap0 < 1.0e-8 else (x - self.knots[n]) / gap0
-                val1 = 0.0 if gap1 < 1.0e-8 else (self.knots[n+degree+1] - x) / gap1
+                gap0 = 0.0 if gap0 < 1.0e-8 else 1.0 / gap0
+                gap1 = 0.0 if gap1 < 1.0e-8 else 1.0 / gap1
+                val0 = (x - self.knots[n]) * gap0
+                val1 = (self.knots[n+degree+1] - x) * gap1
                 if degree == self.order - 2:
-                    d0 = 0.0 if gap0 < 1.0e-8 else degree / gap0
-                    d1 = 0.0 if gap1 < 1.0e-8 else -degree / gap1
+                    d0 = degree * gap0
+                    d1 = -degree * gap1
                     d2Basis[b] = basis[b] * d0 + basis[b+1] * d1
                 elif degree == self.order - 1:
-                    d0 = 0.0 if gap0 < 1.0e-8 else degree / gap0
-                    d1 = 0.0 if gap1 < 1.0e-8 else -degree / gap1
+                    d0 = degree * gap0
+                    d1 = -degree * gap1
                     dBasis[b] = basis[b] * d0 + basis[b+1] * d1
                     d2Basis[b] = d2Basis[b] * d0 + d2Basis[b+1] * d1
                 basis[b] = basis[b] * val0 + basis[b+1] * val1
@@ -109,11 +116,18 @@ class Spline:
         glUniform3f(frame.uSplineColor, 1.0, 0.0, 1.0)
 
         glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
-        glBufferSubData(GL_TEXTURE_BUFFER, 0, 4 * 2, np.array((self.order, len(drawCoefficients)), np.float32))
-        glBufferSubData(GL_TEXTURE_BUFFER, 4 * 2, 4 * 4*len(drawCoefficients), drawCoefficients)
+        offset = 0
+        size = 4 * 2
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, np.array((self.order, len(drawCoefficients)), np.float32))
+        offset += size
+        size = 4 * len(self.knots)
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, self.knots)
+        offset += size
+        size = 4 * 4 * len(drawCoefficients)
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
 
         glEnableVertexAttribArray(frame.aParameters)
-        glDrawArraysInstanced(GL_POINTS, 0, 1, len(drawCoefficients))
+        glDrawArraysInstanced(GL_POINTS, 0, 1, len(drawCoefficients) - self.order + 1)
         glDisableVertexAttribArray(frame.aParameters)
 
         glUseProgram(0)
@@ -142,11 +156,17 @@ class SplineOpenGLFrame(OpenGLFrame):
             gl_Position = aParameters;
         }
     """
+    
+
+
+
     geometryShaderCode = """
         #version 330 core
         
         layout( points ) in;
-        layout( line_strip, max_vertices = 2 ) out;
+        layout( line_strip, max_vertices = 128 ) out; // 0.5 * GL_MAX_GEOMETRY_OUTPUT_VERTICES (vertex + color)
+
+        const int header = 2;
 
         in KnotIndices {
             int u;
@@ -158,23 +178,108 @@ class SplineOpenGLFrame(OpenGLFrame):
         uniform samplerBuffer uSplineData;
 
         out vec3 splineColor;
-     
-        void main() {
-            int order;
-            int n;
-            int index;
-            vec4 coefficient;
 
-            splineColor = uScreenScale;
+        void DrawPoint(in int order, in int n, in int m, in float x, inout float deltaX) {
+            float basis[10] = float[10](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+            float dBasis[10] = float[10](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+            float d2Basis[10] = float[10](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+            int b;
+
+            basis[order-1] = 1.0;
+            for (int degree = 1; degree < order; degree++) {
+                b = order - degree - 1;
+                for (int i = m - degree; i < m + 1; i++) {
+                    float gap0 = texelFetch(uSplineData, header + i + degree).x - texelFetch(uSplineData, header + i).x; // knots[i+degree] - knots[i]
+                    float gap1 = texelFetch(uSplineData, header + i + degree + 1).x - texelFetch(uSplineData, header + i + 1).x; // knots[i+degree+1] - knots[i+1]
+                    float val0 = 0.0;
+                    float val1 = 0.0;
+                    float d0 = 0.0;
+                    float d1 = 0.0;
+
+                    gap0 = gap0 < 1.0e-8 ? 0.0 : 1.0 / gap0;
+                    gap1 = gap1 < 1.0e-8 ? 0.0 : 1.0 / gap1;
+                    val0 = (x - texelFetch(uSplineData, header + i).x) * gap0; // (x - knots[i]) * gap0
+                    val1 = (texelFetch(uSplineData, header + i + degree + 1).x - x) * gap1; // (knots[i+degree+1] - x) * gap1
+                    if (degree == order - 2) {
+                        d0 = degree * gap0;
+                        d1 = -degree * gap1;
+                        d2Basis[b] = basis[b] * d0 + basis[b+1] * d1;
+                    }
+                    else if (degree == order - 1) {
+                        d0 = degree * gap0;
+                        d1 = -degree * gap1;
+                        dBasis[b] = basis[b] * d0 + basis[b+1] * d1;
+                        d2Basis[b] = d2Basis[b] * d0 + d2Basis[b+1] * d1;
+                    }
+                    basis[b] = basis[b] * val0 + basis[b+1] * val1;
+                    b++;
+                }
+            }
+            
+            vec4 point = vec4(0.0, 0.0, 0.0, 0.0);
+            vec4 dPoint = vec4(0.0, 0.0, 0.0, 0.0);
+            vec4 d2Point = vec4(0.0, 0.0, 0.0, 0.0);
+            int lastI = header + order + n + 4 * (m + 1);
+            b = 0;
+            for (int i = header + order + n + 4 * (m + 1 - order); i < lastI; i += 4) { // loop from coefficient[m+1-order] to coefficient[m+1]
+                point.x += basis[b] * texelFetch(uSplineData, i).x;
+                point.y += basis[b] * texelFetch(uSplineData, i+1).x;
+                point.z += basis[b] * texelFetch(uSplineData, i+2).x;
+                point.w += basis[b] * texelFetch(uSplineData, i+3).x;
+                dPoint.x += dBasis[b] * texelFetch(uSplineData, i).x;
+                dPoint.y += dBasis[b] * texelFetch(uSplineData, i+1).x;
+                dPoint.z += dBasis[b] * texelFetch(uSplineData, i+2).x;
+                dPoint.w += dBasis[b] * texelFetch(uSplineData, i+3).x;
+                d2Point.x += d2Basis[b] * texelFetch(uSplineData, i).x;
+                d2Point.y += d2Basis[b] * texelFetch(uSplineData, i+1).x;
+                d2Point.z += d2Basis[b] * texelFetch(uSplineData, i+2).x;
+                d2Point.w += d2Basis[b] * texelFetch(uSplineData, i+3).x;
+                b++;
+            }
+
+            gl_Position = uProjectionMatrix * point;
+            EmitVertex();
+            gl_Position = uProjectionMatrix * vec4(point.x - 0.01*dPoint.y, point.y + 0.01*dPoint.x, point.z, point.w);
+            EmitVertex();
+            gl_Position = uProjectionMatrix * point;
+            EmitVertex();
+            
+            float zScale;
+            float zScale2;
+            float zScale3;
+            if (uScreenScale.z > 1.0) {
+                zScale = 1.0 / (uScreenScale.z - point.z);
+                zScale2 = zScale * zScale;
+                zScale3 = zScale2 * zScale;
+                d2Point.x = uScreenScale.x * (d2Point.x * zScale - 2.0 * dPoint.x * dPoint.z * zScale2 +
+                    point.x * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2));
+                d2Point.y = uScreenScale.y * (d2Point.y * zScale - 2.0 * dPoint.y * dPoint.z * zScale2 +
+                    point.y * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2));
+            }
+            else {
+                d2Point.x *= uScreenScale.x;
+                d2Point.y *= uScreenScale.y;
+            }
+            float sqrtLength = pow(d2Point.x*d2Point.x + d2Point.y*d2Point.y, 0.25);
+            deltaX = sqrtLength < 1.0e-8 ? deltaX : 1.0 / sqrtLength;
+        }
+
+        void main() {
+            int order = int(texelFetch(uSplineData, 0).x);
+            int n = int(texelFetch(uSplineData, 1).x);
+            int m = inData[0].u + order - 1;
+            float x = texelFetch(uSplineData, header + m).x; // knots[m]
+            float lastX = texelFetch(uSplineData, header + m + 1).x; // knots[m+1]
+            float deltaX = 0.5 * (lastX - x);
+            int vertices = 0;
+
             splineColor = uSplineColor;
-            order = int(texelFetch(uSplineData, 0));
-            n = int(texelFetch(uSplineData, 1));
-            index = 2 + 4 * inData[0].u;
-            coefficient = vec4(texelFetch(uSplineData, index).x, texelFetch(uSplineData, index+1).x, texelFetch(uSplineData, index+2).x, texelFetch(uSplineData, index+3).x);
-            gl_Position = uProjectionMatrix * coefficient;
-            EmitVertex();
-            gl_Position.x = gl_Position.x + 0.5;
-            EmitVertex();
+            while (x < lastX && vertices < 127) {
+                DrawPoint(order, n, m, x, deltaX);
+                x += deltaX;
+                vertices += 1;
+            }
+            DrawPoint(order, n, m, lastX, deltaX);
             EndPrimitive();
         }
     """
@@ -217,7 +322,8 @@ class SplineOpenGLFrame(OpenGLFrame):
             glBindBuffer(GL_TEXTURE_BUFFER, self.splineDataBuffer)
             glBindTexture(GL_TEXTURE_BUFFER, self.splineTextureBuffer)
             glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, self.splineDataBuffer)
-            glBufferData(GL_TEXTURE_BUFFER, 4 * (2 + 4*100), None, GL_STATIC_READ)
+            maxFloats = 2 + 2 * Spline.maxKnots + 4 * Spline.maxCoefficients * Spline.maxCoefficients
+            glBufferData(GL_TEXTURE_BUFFER, 4 * maxFloats, None, GL_STATIC_READ)
 
             glUseProgram(self.program)
             self.aParameters = glGetAttribLocation(self.program, "aParameters")

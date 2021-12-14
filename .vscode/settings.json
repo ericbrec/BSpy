@@ -1,6 +1,7 @@
 {
       "terminal.integrated.defaultProfile.windows": "Windows PowerShell",
       "cSpell.words": [
+        "bspy",
         "initgl",
         "Matrixf",
         "Mult",
