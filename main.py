@@ -299,10 +299,10 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.currentQ = quat.one
             self.origin = None
 
-class PyNubApp(tk.Tk):
+class bspyApp(tk.Tk):
     def __init__(self, *args, **kw):
         tk.Tk.__init__(self, *args, **kw)
-        self.title('PyNub')
+        self.title('bspy')
 
         self.listBox = tk.Listbox(self, selectmode=tk.MULTIPLE)
         self.listBox.pack(side=tk.LEFT, fill=tk.Y)
@@ -329,7 +329,7 @@ class PyNubApp(tk.Tk):
         self.frame.tkExpose(None)
 
 if __name__=='__main__':
-    app = PyNubApp()
+    app = bspyApp()
     for i in range(16):
         app.AddSpline(Spline(3, [0.2, 0.2, 0.2, 0.3, 0.4, 0.5, 0.6], [[-1, 0], [-0.5, i/16.0], [0.5, -i/16.0], [1,0]]))
     app.mainloop()
