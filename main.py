@@ -338,9 +338,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             glUniform1i(self.uSplineData, 0) # 0 is the active texture (default is 0)
             glUseProgram(0)
 
+            glEnable( GL_DEPTH_TEST )
+            glClearColor(1.0, 1.0, 1.0, 0.0)
             self.initialized = True
-        
-        glClearColor(1.0, 1.0, 1.0, 0.0)
 
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
@@ -361,7 +361,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
     def redraw(self):
 
-        glClear(GL_COLOR_BUFFER_BIT)
+        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT )
         glLoadIdentity()
         rotation33 = quat.as_rotation_matrix(self.currentQ * self.lastQ)
         rotation44 = np.identity(4, np.float32)
