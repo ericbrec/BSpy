@@ -22,25 +22,27 @@ class Spline:
     def __str__(self):
         return "[{0}, {1}]".format(self.coefficients[0], self.coefficients[1])
 
-    def DrawPoint(self, screenScale, drawCoefficients, m, u, deltaU):
-        uBasis = np.zeros(self.order + 1, np.float32)
-        duBasis = np.zeros(self.order + 1, np.float32)
-        du2Basis = np.zeros(self.order + 1, np.float32)
-        uBasis[self.order-1] = 1.0
-        for degree in range(1, self.order):
-            b = self.order - degree - 1
+    def DrawCurvePoint(self, screenScale, drawCoefficients, m, u, deltaU):
+        uOrder = self.order[0]
+        uKnots = self.knots[0]
+        uBasis = np.zeros(uOrder + 1, np.float32)
+        duBasis = np.zeros(uOrder + 1, np.float32)
+        du2Basis = np.zeros(uOrder + 1, np.float32)
+        uBasis[uOrder-1] = 1.0
+        for degree in range(1, uOrder):
+            b = uOrder - degree - 1
             for n in range(m-degree, m+1):
-                gap0 = self.knots[n+degree] - self.knots[n]
-                gap1 = self.knots[n+degree+1] - self.knots[n+1]
+                gap0 = uKnots[n+degree] - uKnots[n]
+                gap1 = uKnots[n+degree+1] - uKnots[n+1]
                 gap0 = 0.0 if gap0 < 1.0e-8 else 1.0 / gap0
                 gap1 = 0.0 if gap1 < 1.0e-8 else 1.0 / gap1
-                val0 = (u - self.knots[n]) * gap0
-                val1 = (self.knots[n+degree+1] - u) * gap1
-                if degree == self.order - 2:
+                val0 = (u - uKnots[n]) * gap0
+                val1 = (uKnots[n+degree+1] - u) * gap1
+                if degree == uOrder - 2:
                     d0 = degree * gap0
                     d1 = -degree * gap1
                     du2Basis[b] = uBasis[b] * d0 + uBasis[b+1] * d1
-                elif degree == self.order - 1:
+                elif degree == uOrder - 1:
                     d0 = degree * gap0
                     d1 = -degree * gap1
                     duBasis[b] = uBasis[b] * d0 + uBasis[b+1] * d1
@@ -52,7 +54,7 @@ class Spline:
         dPoint = np.zeros(4, np.float32)
         d2Point = np.zeros(4, np.float32)
         b = 0
-        for n in range(m+1-self.order, m+1):
+        for n in range(m+1-uOrder, m+1):
             point += uBasis[b] * drawCoefficients[n]
             dPoint += duBasis[b] * drawCoefficients[n]
             d2Point += du2Basis[b] * drawCoefficients[n]
@@ -78,11 +80,9 @@ class Spline:
 
         return deltaU
     
-    def Draw(self, frame, transform):
-        drawCoefficients = np.zeros((len(self.coefficients),4), np.float32)
-        drawCoefficients[:,:self.coefficients.shape[1]] = self.coefficients[:,:]
-        drawCoefficients[:,3] = 1.0
-        drawCoefficients = drawCoefficients @ transform
+    def DrawCurve(self, frame, drawCoefficients):
+        uOrder = self.order[0]
+        uKnots = self.knots[0]
 
         glColor3f(0.0, 0.0, 1.0)
         glBegin(GL_LINE_STRIP)
@@ -90,52 +90,57 @@ class Spline:
             glVertex3f(point[0], point[1], point[2])
         glEnd()
 
-        tck = (self.knots, drawCoefficients.T, self.order-1)
+        tck = (uKnots, drawCoefficients.T, uOrder-1)
         glColor3f(1.0, 0.0, 0.0)
         glBegin(GL_LINE_STRIP)
         for i in range(100):
-            u = self.knots[self.order-1] + i * (self.knots[-self.order] - self.knots[self.order-1]) / 99.0
+            u = uKnots[uOrder-1] + i * (uKnots[-uOrder] - uKnots[uOrder-1]) / 99.0
             values = scispline.spalde(u, tck)
             glVertex3f(values[0][0], values[1][0], values[2][0])
         glEnd()
 
         glColor3f(0.0, 1.0, 0.0)
-        for m in range(self.order-1, len(self.knots)-self.order):
-            u = self.knots[m]
-            deltaU = 0.5 * (self.knots[m+1] - u)
+        for m in range(uOrder-1, len(uKnots)-uOrder):
+            u = uKnots[m]
+            deltaU = 0.5 * (uKnots[m+1] - u)
             vertices = 0
             glBegin(GL_LINE_STRIP)
-            while u < self.knots[m+1] and vertices < GL_MAX_GEOMETRY_OUTPUT_VERTICES - 1:
-                deltaU = self.DrawPoint(frame.screenScale, drawCoefficients, m, u, deltaU)
+            while u < uKnots[m+1] and vertices < GL_MAX_GEOMETRY_OUTPUT_VERTICES - 1:
+                deltaU = self.DrawCurvePoint(frame.screenScale, drawCoefficients, m, u, deltaU)
                 u += deltaU
                 vertices += 1
-            self.DrawPoint(frame.screenScale, drawCoefficients, m, self.knots[m+1], deltaU)
+            self.DrawCurvePoint(frame.screenScale, drawCoefficients, m, uKnots[m+1], deltaU)
             glEnd()
 
-        glUseProgram(frame.program)
+        glUseProgram(frame.curveProgram)
 
-        glUniform3f(frame.uSplineColor, 1.0, 0.0, 1.0)
+        glUniform3f(frame.uCurveSplineColor, 1.0, 0.0, 1.0)
 
         glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
         offset = 0
         size = 4 * 2
-        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, np.array((self.order, len(drawCoefficients)), np.float32))
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, np.array((uOrder, len(drawCoefficients)), np.float32))
         offset += size
-        size = 4 * len(self.knots)
-        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, self.knots)
+        size = 4 * len(uKnots)
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, uKnots)
         offset += size
         size = 4 * 4 * len(drawCoefficients)
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
 
-        glEnableVertexAttribArray(frame.aParameters)
-        glDrawArraysInstanced(GL_POINTS, 0, 1, len(drawCoefficients) - self.order + 1)
-        glDisableVertexAttribArray(frame.aParameters)
+        glEnableVertexAttribArray(frame.aCurveParameters)
+        glDrawArraysInstanced(GL_POINTS, 0, 1, len(drawCoefficients) - uOrder + 1)
+        glDisableVertexAttribArray(frame.aCurveParameters)
 
         glUseProgram(0)
+    
+    def Draw(self, frame, transform):
+        drawCoefficients = self.coefficients @ transform
+        if len(self.order) == 1:
+            self.DrawCurve(frame, drawCoefficients)
 
 class SplineOpenGLFrame(OpenGLFrame):
 
-    vertexShaderCode = """
+    curveVertexShaderCode = """
         #version 330 core
      
         attribute vec4 aParameters;
@@ -158,7 +163,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         }
     """
 
-    geometryShaderCode = """
+    curveGeometryShaderCode = """
         #version 330 core
         
         layout( points ) in;
@@ -310,10 +315,10 @@ class SplineOpenGLFrame(OpenGLFrame):
             print(glGetString(GL_VERSION))
             print(glGetString(GL_SHADING_LANGUAGE_VERSION))
 
-            self.vertexShader = shaders.compileShader(self.vertexShaderCode, GL_VERTEX_SHADER)
-            self.geometryShader = shaders.compileShader(self.geometryShaderCode, GL_GEOMETRY_SHADER)
-            self.fragmentShader = shaders.compileShader(self.fragmentShaderCode, GL_FRAGMENT_SHADER)
-            self.program = shaders.compileProgram(self.vertexShader, self.geometryShader, self.fragmentShader)
+            self.curveProgram = shaders.compileProgram(
+                shaders.compileShader(self.curveVertexShaderCode, GL_VERTEX_SHADER), 
+                shaders.compileShader(self.curveGeometryShaderCode, GL_GEOMETRY_SHADER), 
+                shaders.compileShader(self.fragmentShaderCode, GL_FRAGMENT_SHADER))
 
             self.splineDataBuffer = glGenBuffers(1)
             self.splineTextureBuffer = glGenTextures(1)
@@ -323,17 +328,19 @@ class SplineOpenGLFrame(OpenGLFrame):
             maxFloats = 2 + 2 * Spline.maxKnots + 4 * Spline.maxCoefficients * Spline.maxCoefficients
             glBufferData(GL_TEXTURE_BUFFER, 4 * maxFloats, None, GL_STATIC_READ)
 
-            glUseProgram(self.program)
-            self.aParameters = glGetAttribLocation(self.program, "aParameters")
             self.parameterBuffer = glGenBuffers(1)
             glBindBuffer(GL_ARRAY_BUFFER, self.parameterBuffer)
             glBufferData(GL_ARRAY_BUFFER, 4 * 4, np.array([0,0,0,0], np.float32), GL_STATIC_DRAW)
-            glVertexAttribPointer(self.aParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
-            self.uProjectionMatrix = glGetUniformLocation(self.program, 'uProjectionMatrix')
-            self.uScreenScale = glGetUniformLocation(self.program, 'uScreenScale')
-            self.uSplineColor = glGetUniformLocation(self.program, 'uSplineColor')
-            self.uSplineData = glGetUniformLocation(self.program, 'uSplineData')
-            glUniform1i(self.uSplineData, 0) # 0 is the active texture (default is 0)
+
+            glUseProgram(self.curveProgram)
+            self.aCurveParameters = glGetAttribLocation(self.curveProgram, "aParameters")
+            glBindBuffer(GL_ARRAY_BUFFER, self.parameterBuffer)
+            glVertexAttribPointer(self.aCurveParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
+            self.uCurveProjectionMatrix = glGetUniformLocation(self.curveProgram, 'uProjectionMatrix')
+            self.uCurveScreenScale = glGetUniformLocation(self.curveProgram, 'uScreenScale')
+            self.uCurveSplineColor = glGetUniformLocation(self.curveProgram, 'uSplineColor')
+            self.uCurveSplineData = glGetUniformLocation(self.curveProgram, 'uSplineData')
+            glUniform1i(self.uCurveSplineData, 0) # 0 is the active texture (default is 0)
             glUseProgram(0)
 
             glEnable( GL_DEPTH_TEST )
@@ -349,9 +356,9 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         self.projection = glGetFloatv(GL_PROJECTION_MATRIX)
         self.screenScale = np.array((0.5 * self.height * self.projection[0,0], 0.5 * self.height * self.projection[1,1], self.projection[3,3]), np.float32)
-        glUseProgram(self.program)
-        glUniformMatrix4fv(self.uProjectionMatrix, 1, GL_FALSE, self.projection)
-        glUniform3fv(self.uScreenScale, 1, self.screenScale)
+        glUseProgram(self.curveProgram)
+        glUniformMatrix4fv(self.uCurveProjectionMatrix, 1, GL_FALSE, self.projection)
+        glUniform3fv(self.uCurveScreenScale, 1, self.screenScale)
         glUseProgram(0)
 
         glMatrixMode(GL_MODELVIEW)
@@ -451,10 +458,9 @@ def CreateSplineFromMesh(xRange, yRange, zFunction):
 
 if __name__=='__main__':
     app = bspyApp()
-    spline = CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: np.sin(4*np.sqrt(x*x + y*y)))
-    app.AddSpline(spline)
-    spline = CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: x*x + y*y - 1)
-    app.AddSpline(spline)
-    #for i in range(16):
-        #app.AddSpline(Spline(3, [0.2, 0.2, 0.2, 0.3, 0.4, 0.5, 0.6], [[-1, 0], [-0.5, i/16.0], [0.5, -i/16.0], [1,0]]))
+    app.AddSpline(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: np.sin(4*np.sqrt(x*x + y*y))))
+    app.AddSpline(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: x*x + y*y - 1))
+    app.AddSpline(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: x*x - y*y))
+    for i in range(16):
+        app.AddSpline(Spline((3,), (np.array([0.2, 0.2, 0.2, 0.3, 0.4, 0.5, 0.6], np.float32),), np.array([[-1, 0, 0, 1], [-0.5, i/16.0, 0, 1], [0.5, -i/16.0, 0, 1], [1,0,0,1]], np.float32)))
     app.mainloop()

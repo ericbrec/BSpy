@@ -322,11 +322,13 @@ class SplineOpenGLFrame(OpenGLFrame):
             maxFloats = 2 + 2 * Spline.maxKnots + 4 * Spline.maxCoefficients * Spline.maxCoefficients
             glBufferData(GL_TEXTURE_BUFFER, 4 * maxFloats, None, GL_STATIC_READ)
 
-            glUseProgram(self.program)
-            self.aParameters = glGetAttribLocation(self.program, "aParameters")
             self.parameterBuffer = glGenBuffers(1)
             glBindBuffer(GL_ARRAY_BUFFER, self.parameterBuffer)
             glBufferData(GL_ARRAY_BUFFER, 4 * 4, np.array([0,0,0,0], np.float32), GL_STATIC_DRAW)
+
+            glUseProgram(self.program)
+            self.aParameters = glGetAttribLocation(self.program, "aParameters")
+            glBindBuffer(GL_ARRAY_BUFFER, self.parameterBuffer)
             glVertexAttribPointer(self.aParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
             self.uProjectionMatrix = glGetUniformLocation(self.program, 'uProjectionMatrix')
             self.uScreenScale = glGetUniformLocation(self.program, 'uScreenScale')
