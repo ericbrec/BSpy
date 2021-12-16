@@ -105,16 +105,16 @@ class Spline:
             deltaU = 0.5 * (uKnots[m+1] - u)
             vertices = 0
             glBegin(GL_LINE_STRIP)
-            while u < uKnots[m+1] and vertices < GL_MAX_GEOMETRY_OUTPUT_VERTICES - 1:
+            while u < uKnots[m+1] and vertices < frame.maxVertices - 3:
                 deltaU = self.DrawCurvePoint(frame.screenScale, drawCoefficients, m, u, deltaU)
                 u += deltaU
-                vertices += 1
+                vertices += 3
             self.DrawCurvePoint(frame.screenScale, drawCoefficients, m, uKnots[m+1], deltaU)
             glEnd()
 
         glUseProgram(frame.curveProgram)
 
-        glUniform3f(frame.uCurveSplineColor, 1.0, 0.0, 1.0)
+        glUniform3f(frame.uCurveSplineColor, 0.0, 0.0, 1.0)
 
         glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
         offset = 0
@@ -132,11 +132,92 @@ class Spline:
         glDisableVertexAttribArray(frame.aCurveParameters)
 
         glUseProgram(0)
+
+    def DrawSurfacePoint(self, screenScale, drawCoefficients, m, u, deltaU):
+        uOrder = self.order[0]
+        uKnots = self.knots[0]
+        uBasis = np.zeros(uOrder + 1, np.float32)
+        duBasis = np.zeros(uOrder + 1, np.float32)
+        du2Basis = np.zeros(uOrder + 1, np.float32)
+        uBasis[uOrder-1] = 1.0
+
+        vOrder = self.order[1]
+        vKnots = self.knots[1]
+        vBasis = np.zeros(vOrder + 1, np.float32)
+        dvBasis = np.zeros(vOrder + 1, np.float32)
+        dv2Basis = np.zeros(vOrder + 1, np.float32)
+        vBasis[vOrder-1] = 1.0
+
+        for degree in range(1, uOrder):
+            b = uOrder - degree - 1
+            for n in range(m-degree, m+1):
+                gap0 = uKnots[n+degree] - uKnots[n]
+                gap1 = uKnots[n+degree+1] - uKnots[n+1]
+                gap0 = 0.0 if gap0 < 1.0e-8 else 1.0 / gap0
+                gap1 = 0.0 if gap1 < 1.0e-8 else 1.0 / gap1
+                val0 = (u - uKnots[n]) * gap0
+                val1 = (uKnots[n+degree+1] - u) * gap1
+                if degree == uOrder - 2:
+                    d0 = degree * gap0
+                    d1 = -degree * gap1
+                    du2Basis[b] = uBasis[b] * d0 + uBasis[b+1] * d1
+                elif degree == uOrder - 1:
+                    d0 = degree * gap0
+                    d1 = -degree * gap1
+                    duBasis[b] = uBasis[b] * d0 + uBasis[b+1] * d1
+                    du2Basis[b] = du2Basis[b] * d0 + du2Basis[b+1] * d1
+                uBasis[b] = uBasis[b] * val0 + uBasis[b+1] * val1
+                b += 1
+        
+        point = np.zeros(4, np.float32)
+        dPoint = np.zeros(4, np.float32)
+        d2Point = np.zeros(4, np.float32)
+        b = 0
+        for n in range(m+1-uOrder, m+1):
+            point += uBasis[b] * drawCoefficients[n]
+            dPoint += duBasis[b] * drawCoefficients[n]
+            d2Point += du2Basis[b] * drawCoefficients[n]
+            b += 1
+        
+        glVertex3f(point[0], point[1], point[2])
+        glVertex3f(point[0] - 0.01*dPoint[1], point[1] + 0.01*dPoint[0], point[2])
+        glVertex3f(point[0], point[1], point[2])
+        
+        if screenScale[2] > 1.0:
+            zScale = 1.0 / (screenScale[2] - point[2])
+            zScale2 = zScale * zScale
+            zScale3 = zScale2 * zScale
+            d2Point[0] = screenScale[0] * (d2Point[0] * zScale - 2.0 * dPoint[0] * dPoint[2] * zScale2 + \
+                point[0] * (2.0 * dPoint[2] * dPoint[2] * zScale3 - d2Point[2] * zScale2))
+            d2Point[1] = screenScale[1] * (d2Point[1] * zScale - 2.0 * dPoint[1] * dPoint[2] * zScale2 + \
+                point[1] * (2.0 * dPoint[2] * dPoint[2] * zScale3 - d2Point[2] * zScale2))
+        else:
+            d2Point[0] *= screenScale[0]
+            d2Point[1] *= screenScale[1]
+        sqrtLength = (d2Point[0]*d2Point[0] + d2Point[1]*d2Point[1])**0.25
+        deltaU = deltaU if sqrtLength < 1.0e-8 else 1.0 / sqrtLength
+
+        return deltaU
+    
+    def DrawSurface(self, frame, drawCoefficients):
+        uOrder = self.order[0]
+        uKnots = self.knots[0]
+        vOrder = self.order[1]
+        vKnots = self.knots[1]
+
+        glColor3f(0.0, 0.0, 1.0)
+        for pointList in drawCoefficients:
+            glBegin(GL_LINE_STRIP)
+            for point in pointList:
+                glVertex3f(point[0], point[1], point[2])
+            glEnd()
     
     def Draw(self, frame, transform):
         drawCoefficients = self.coefficients @ transform
         if len(self.order) == 1:
             self.DrawCurve(frame, drawCoefficients)
+        elif len(self.order) == 2:
+            self.DrawSurface(frame, drawCoefficients)
 
 class SplineOpenGLFrame(OpenGLFrame):
 
@@ -165,15 +246,15 @@ class SplineOpenGLFrame(OpenGLFrame):
 
     curveGeometryShaderCode = """
         #version 330 core
-        
+
         layout( points ) in;
-        layout( line_strip, max_vertices = 128 ) out; // 0.5 * GL_MAX_GEOMETRY_OUTPUT_VERTICES (vertex + color)
+        layout( line_strip, max_vertices = {maxVertices} ) out;
 
         const int header = 2;
 
-        in KnotIndices {
+        in KnotIndices {{
             int u;
-        } inData[];
+        }} inData[];
 
         uniform mat4 uProjectionMatrix;
         uniform vec3 uScreenScale;
@@ -182,16 +263,16 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         out vec3 splineColor;
 
-        void DrawPoint(in int order, in int n, in int m, in float u, inout float deltaU) {
+        void DrawPoint(in int order, in int n, in int m, in float u, inout float deltaU) {{
             float uBasis[10] = float[10](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
             float duBasis[10] = float[10](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
             float du2Basis[10] = float[10](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
             int b;
 
             uBasis[order-1] = 1.0;
-            for (int degree = 1; degree < order; degree++) {
+            for (int degree = 1; degree < order; degree++) {{
                 b = order - degree - 1;
-                for (int i = m - degree; i < m + 1; i++) {
+                for (int i = m - degree; i < m + 1; i++) {{
                     float gap0 = texelFetch(uSplineData, header + i + degree).x - texelFetch(uSplineData, header + i).x; // knots[i+degree] - knots[i]
                     float gap1 = texelFetch(uSplineData, header + i + degree + 1).x - texelFetch(uSplineData, header + i + 1).x; // knots[i+degree+1] - knots[i+1]
                     float val0 = 0.0;
@@ -203,28 +284,28 @@ class SplineOpenGLFrame(OpenGLFrame):
                     gap1 = gap1 < 1.0e-8 ? 0.0 : 1.0 / gap1;
                     val0 = (u - texelFetch(uSplineData, header + i).x) * gap0; // (u - knots[i]) * gap0
                     val1 = (texelFetch(uSplineData, header + i + degree + 1).x - u) * gap1; // (knots[i+degree+1] - u) * gap1
-                    if (degree == order - 2) {
+                    if (degree == order - 2) {{
                         d0 = degree * gap0;
                         d1 = -degree * gap1;
                         du2Basis[b] = uBasis[b] * d0 + uBasis[b+1] * d1;
-                    }
-                    else if (degree == order - 1) {
+                    }}
+                    else if (degree == order - 1) {{
                         d0 = degree * gap0;
                         d1 = -degree * gap1;
                         duBasis[b] = uBasis[b] * d0 + uBasis[b+1] * d1;
                         du2Basis[b] = du2Basis[b] * d0 + du2Basis[b+1] * d1;
-                    }
+                    }}
                     uBasis[b] = uBasis[b] * val0 + uBasis[b+1] * val1;
                     b++;
-                }
-            }
+                }}
+            }}
             
             vec4 point = vec4(0.0, 0.0, 0.0, 0.0);
             vec4 dPoint = vec4(0.0, 0.0, 0.0, 0.0);
             vec4 d2Point = vec4(0.0, 0.0, 0.0, 0.0);
             int lastI = header + order + n + 4 * (m + 1);
             b = 0;
-            for (int i = header + order + n + 4 * (m + 1 - order); i < lastI; i += 4) { // loop from coefficient[m+1-order] to coefficient[m+1]
+            for (int i = header + order + n + 4 * (m + 1 - order); i < lastI; i += 4) {{ // loop from coefficient[m+1-order] to coefficient[m+1]
                 point.x += uBasis[b] * texelFetch(uSplineData, i).x;
                 point.y += uBasis[b] * texelFetch(uSplineData, i+1).x;
                 point.z += uBasis[b] * texelFetch(uSplineData, i+2).x;
@@ -238,7 +319,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                 d2Point.z += du2Basis[b] * texelFetch(uSplineData, i+2).x;
                 d2Point.w += du2Basis[b] * texelFetch(uSplineData, i+3).x;
                 b++;
-            }
+            }}
 
             gl_Position = uProjectionMatrix * point;
             EmitVertex();
@@ -250,7 +331,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             float zScale;
             float zScale2;
             float zScale3;
-            if (uScreenScale.z > 1.0) {
+            if (uScreenScale.z > 1.0) {{
                 zScale = 1.0 / (uScreenScale.z - point.z);
                 zScale2 = zScale * zScale;
                 zScale3 = zScale2 * zScale;
@@ -258,16 +339,16 @@ class SplineOpenGLFrame(OpenGLFrame):
                     point.x * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2));
                 d2Point.y = uScreenScale.y * (d2Point.y * zScale - 2.0 * dPoint.y * dPoint.z * zScale2 +
                     point.y * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2));
-            }
-            else {
+            }}
+            else {{
                 d2Point.x *= uScreenScale.x;
                 d2Point.y *= uScreenScale.y;
-            }
+            }}
             float sqrtLength = pow(d2Point.x*d2Point.x + d2Point.y*d2Point.y, 0.25);
             deltaU = sqrtLength < 1.0e-8 ? deltaU : 1.0 / sqrtLength;
-        }
+        }}
 
-        void main() {
+        void main() {{
             int order = int(texelFetch(uSplineData, 0).x);
             int n = int(texelFetch(uSplineData, 1).x);
             int m = inData[0].u + order - 1;
@@ -277,15 +358,16 @@ class SplineOpenGLFrame(OpenGLFrame):
             int vertices = 0;
 
             splineColor = uSplineColor;
-            while (u < lastU && vertices < 127) {
+            while (u < lastU && vertices < {maxVertices} - 3) {{
                 DrawPoint(order, n, m, u, deltaU);
                 u += deltaU;
-                vertices += 1;
-            }
+                vertices += 3;
+            }}
             DrawPoint(order, n, m, lastU, deltaU);
             EndPrimitive();
-        }
+        }}
     """
+
     fragmentShaderCode = """
         #version 330 core
      
@@ -304,17 +386,16 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.currentQ = quat.one
         self.lastQ = quat.one
         self.origin = None
-        self.initialized = False
+        self.bind("<ButtonPress-1>", self.RotateStartHandler)
+        self.bind("<ButtonRelease-1>", self.RotateEndHandler)
+        self.bind("<B1-Motion>", self.RotateDragHandler)
+        self.glInitialized = False
 
     def initgl(self):
-        if not self.initialized:
-            self.bind("<ButtonPress-1>", self.RotateStartHandler)
-            self.bind("<ButtonRelease-1>", self.RotateEndHandler)
-            self.bind("<B1-Motion>", self.RotateDragHandler)
-            
-            print(glGetString(GL_VERSION))
-            print(glGetString(GL_SHADING_LANGUAGE_VERSION))
+        if not self.glInitialized:
+            self.maxVertices = min(256, GL_MAX_GEOMETRY_OUTPUT_VERTICES // 2) # Divide by two because each vertex also includes color
 
+            self.curveGeometryShaderCode = self.curveGeometryShaderCode.format(maxVertices=self.maxVertices)
             self.curveProgram = shaders.compileProgram(
                 shaders.compileShader(self.curveVertexShaderCode, GL_VERTEX_SHADER), 
                 shaders.compileShader(self.curveGeometryShaderCode, GL_GEOMETRY_SHADER), 
@@ -345,7 +426,8 @@ class SplineOpenGLFrame(OpenGLFrame):
 
             glEnable( GL_DEPTH_TEST )
             glClearColor(1.0, 1.0, 1.0, 0.0)
-            self.initialized = True
+
+            self.glInitialized = True
 
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
