@@ -100,7 +100,7 @@ class Spline:
         glColor3f(1.0, 0.0, 0.0)
         glBegin(GL_LINE_STRIP)
         for i in range(100):
-            u = uKnots[uOrder-1] + i * (uKnots[-uOrder] - uKnots[uOrder-1]) / 99.0
+            u = uKnots[uOrder-1] + i * (uKnots[-uOrder] - uKnots[uOrder-1]) / 99.1
             values = scispline.spalde(u, tck)
             glVertex3f(values[0][0], values[1][0], values[2][0])
         glEnd()
@@ -442,7 +442,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             glUniform1i(self.uCurveSplineData, 0) # 0 is the active texture (default is 0)
             glUseProgram(0)
 
-            glEnable( GL_DEPTH_TEST )
+            #glEnable( GL_DEPTH_TEST )
             glClearColor(1.0, 1.0, 1.0, 0.0)
 
             self.glInitialized = True
@@ -450,7 +450,10 @@ class SplineOpenGLFrame(OpenGLFrame):
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         xExtent = self.width / self.height
-        glFrustum(-0.5*xExtent, 0.5*xExtent, -0.5, 0.5, 1.0, 3.0)
+        near = 2.0 - np.sqrt(2)
+        far = 2.0 + 2.0 - near
+        top = near / 2.0 # Choose frustum that displays [-1,1] in y for z = -2.0
+        glFrustum(-top*xExtent, top*xExtent, -top, top, near, far)
         glTranslate(0.0, 0.0, -2.0)
         #glOrtho(-xExtent, xExtent, -1.0, 1.0, -1.0, 1.0)
 
@@ -562,5 +565,5 @@ if __name__=='__main__':
     app.AddSpline(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: x*x + y*y - 1))
     app.AddSpline(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: x*x - y*y))
     for i in range(16):
-        app.AddSpline(Spline((3,), (np.array([0.2, 0.2, 0.2, 0.3, 0.4, 0.5, 0.6], np.float32),), np.array([[-1, 0, 0, 1], [-0.5, i/16.0, 0, 1], [0.5, -i/16.0, 0, 1], [1,0,0,1]], np.float32)))
+        app.AddSpline(Spline((3,), (np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.5, 0.5], np.float32),), np.array([[-1, 0, 0, 1], [-0.5, i/16.0, 0, 1], [0,0,0,1], [0.5, -i/16.0, 0, 1], [1,0,0,1]], np.float32)))
     app.mainloop()
