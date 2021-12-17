@@ -51,21 +51,21 @@ class Spline:
         
         return uBasis, duBasis, du2Basis
     
-    def ComputeDeltaU(self, screenScale, point, duPoint, du2Point, deltaU):
+    def ComputeDelta(self, screenScale, point, dPoint, d2Point, delta):
         if screenScale[2] > 1.0:
             zScale = 1.0 / (screenScale[2] - point[2])
             zScale2 = zScale * zScale
             zScale3 = zScale2 * zScale
-            du2Point[0] = screenScale[0] * (du2Point[0] * zScale - 2.0 * duPoint[0] * duPoint[2] * zScale2 + \
-                point[0] * (2.0 * duPoint[2] * duPoint[2] * zScale3 - du2Point[2] * zScale2))
-            du2Point[1] = screenScale[1] * (du2Point[1] * zScale - 2.0 * duPoint[1] * duPoint[2] * zScale2 + \
-                point[1] * (2.0 * duPoint[2] * duPoint[2] * zScale3 - du2Point[2] * zScale2))
+            d2Point[0] = screenScale[0] * (d2Point[0] * zScale - 2.0 * dPoint[0] * dPoint[2] * zScale2 + \
+                point[0] * (2.0 * dPoint[2] * dPoint[2] * zScale3 - d2Point[2] * zScale2))
+            d2Point[1] = screenScale[1] * (d2Point[1] * zScale - 2.0 * dPoint[1] * dPoint[2] * zScale2 + \
+                point[1] * (2.0 * dPoint[2] * dPoint[2] * zScale3 - d2Point[2] * zScale2))
         else:
-            du2Point[0] *= screenScale[0]
-            du2Point[1] *= screenScale[1]
+            d2Point[0] *= screenScale[0]
+            d2Point[1] *= screenScale[1]
         
-        sqrtLength = (du2Point[0]*du2Point[0] + du2Point[1]*du2Point[1])**0.25
-        return deltaU if sqrtLength < 1.0e-8 else 1.0 / sqrtLength
+        sqrtLength = (d2Point[0]*d2Point[0] + d2Point[1]*d2Point[1])**0.25
+        return delta if sqrtLength < 1.0e-8 else 1.0 / sqrtLength
 
     def DrawCurvePoint(self, screenScale, drawCoefficients, m, u, deltaU):
         uOrder = self.order[0]
@@ -85,7 +85,7 @@ class Spline:
         glVertex3f(point[0] - 0.01*dPoint[1], point[1] + 0.01*dPoint[0], point[2])
         glVertex3f(point[0], point[1], point[2])
         
-        deltaU = self.ComputeDeltaU(screenScale, point, dPoint, d2Point, deltaU)
+        deltaU = self.ComputeDelta(screenScale, point, dPoint, d2Point, deltaU)
 
         return deltaU
     
@@ -148,24 +148,80 @@ class Spline:
         
         glColor3f(1.0, 0.0, 0.0)
         for uM in range(uOrder-1, len(uKnots)-uOrder):
-            u = uKnots[uM]
-            uBasis, duBasis, du2Basis = self.ComputeBasis(0, uM, u)
-
             for vM in range(vOrder-1, len(vKnots)-vOrder):
-                # Calculate deltaU (min value)
-                deltaU = 0.5 * (uKnots[uM+1] - u)
-                for uN in range(uM+1-uOrder, uM+1):
-                    point = np.zeros(4, np.float32)
-                    duPoint = np.zeros(4, np.float32)
-                    du2Point = np.zeros(4, np.float32)
-                    b = 0
+                u = uKnots[uM]
+                uBasis, duBasis, du2Basis = self.ComputeBasis(0, uM, u)
+                vertices = 0
+                glBegin(GL_LINE_STRIP)
+                while u < uKnots[uM+1] and vertices < frame.maxVertices:
+                    # Calculate deltaU (min deltaU value over the comvex hull of v values)
+                    deltaU = 0.5 * (uKnots[uM+1] - uKnots[uM])
                     for vN in range(vM+1-vOrder, vM+1):
-                        point += uBasis[b] * drawCoefficients[uN, vN]
-                        duPoint += duBasis[b] * drawCoefficients[uN, vN]
-                        du2Point += du2Basis[b] * drawCoefficients[uN, vN]
-                        b += 1
-                    newDeltaU = self.ComputeDeltaU(frame.screenScale, point, duPoint, du2Point, deltaU)
-                    deltaU = newDeltaU if newDeltaU < deltaU else deltaU
+                        point = np.zeros(4, np.float32)
+                        duPoint = np.zeros(4, np.float32)
+                        du2Point = np.zeros(4, np.float32)
+                        uB = 0
+                        for uN in range(uM+1-uOrder, uM+1):
+                            point += uBasis[uB] * drawCoefficients[uN, vN]
+                            duPoint += duBasis[uB] * drawCoefficients[uN, vN]
+                            du2Point += du2Basis[uB] * drawCoefficients[uN, vN]
+                            uB += 1
+                        newDeltaU = self.ComputeDelta(frame.screenScale, point, duPoint, du2Point, deltaU)
+                        deltaU = min(newDeltaU, deltaU)
+
+                    u = min(u + deltaU, uKnots[uM+1])
+                    uBasisNext, duBasisNext, du2BasisNext = self.ComputeBasis(0, uM, u)
+    
+                    v = vKnots[vM]
+                    deltaV = 0.5 * (vKnots[vM+1] - v)
+                    while v < vKnots[vM+1] and vertices < frame.maxVertices - 2:
+                    
+                        # TODO: Move this to DrawSurfacePoint()
+                    
+                        vBasis, dvBasis, dv2Basis = self.ComputeBasis(0, vM, v)
+                        point = np.zeros(4, np.float32)
+                        duPoint = np.zeros(4, np.float32)
+                        dvPoint = np.zeros(4, np.float32)
+                        dv2Point = np.zeros(4, np.float32)
+                        vB = 0
+                        for vN in range(vM+1-vOrder, vM+1):
+                            uB = 0
+                            for uN in range(uM+1-uOrder, uM+1):
+                                point += uBasis[uB] * vBasis[vB] * drawCoefficients[uN, vN]
+                                duPoint += duBasis[uB] * vBasis[vB] * drawCoefficients[uN, vN]
+                                dvPoint += uBasis[uB] * dvBasis[vB] * drawCoefficients[uN, vN]
+                                dv2Point += uBasis[uB] * dv2Basis[vB] * drawCoefficients[uN, vN]
+                                uB += 1
+                            vB += 1
+                        deltaV = self.ComputeDelta(frame.screenScale, point, dvPoint, dv2Point, deltaV)
+                        glVertex3f(point[0], point[1], point[2])
+
+                        point = np.zeros(4, np.float32)
+                        duPoint = np.zeros(4, np.float32)
+                        dvPoint = np.zeros(4, np.float32)
+                        dv2Point = np.zeros(4, np.float32)
+                        vB = 0
+                        for vN in range(vM+1-vOrder, vM+1):
+                            uB = 0
+                            for uN in range(uM+1-uOrder, uM+1):
+                                point += uBasisNext[uB] * vBasis[vB] * drawCoefficients[uN, vN]
+                                duPoint += duBasisNext[uB] * vBasis[vB] * drawCoefficients[uN, vN]
+                                dvPoint += uBasisNext[uB] * dvBasis[vB] * drawCoefficients[uN, vN]
+                                dv2Point += uBasisNext[uB] * dv2Basis[vB] * drawCoefficients[uN, vN]
+                                uB += 1
+                            vB += 1
+                        newDeltaV = self.ComputeDelta(frame.screenScale, point, dvPoint, dv2Point, deltaV)
+                        deltaV = min(newDeltaV, deltaV)
+                        glVertex3f(point[0], point[1], point[2])
+
+                        v += deltaV
+                        vertices += 2
+                    
+                    # TODO: DrawSurfacePoint for vKnots[vM+1]
+
+                    uBasis = uBasisNext
+                    duBasis = duBasisNext
+                    du2Basis = du2BasisNext
     
     def Draw(self, frame, transform):
         drawCoefficients = self.coefficients @ transform
