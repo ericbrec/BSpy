@@ -1,6 +1,5 @@
 import numpy as np
 import quaternion as quat
-import scipy.interpolate as scispline
 import tkinter as tk
 from OpenGL.GL import *
 import OpenGL.GL.shaders as shaders
@@ -51,10 +50,26 @@ class Spline:
                 b += 1
         
         return uBasis, duBasis, du2Basis
+    
+    def ComputeDeltaU(self, screenScale, point, duPoint, du2Point, deltaU):
+        if screenScale[2] > 1.0:
+            zScale = 1.0 / (screenScale[2] - point[2])
+            zScale2 = zScale * zScale
+            zScale3 = zScale2 * zScale
+            du2Point[0] = screenScale[0] * (du2Point[0] * zScale - 2.0 * duPoint[0] * duPoint[2] * zScale2 + \
+                point[0] * (2.0 * duPoint[2] * duPoint[2] * zScale3 - du2Point[2] * zScale2))
+            du2Point[1] = screenScale[1] * (du2Point[1] * zScale - 2.0 * duPoint[1] * duPoint[2] * zScale2 + \
+                point[1] * (2.0 * duPoint[2] * duPoint[2] * zScale3 - du2Point[2] * zScale2))
+        else:
+            du2Point[0] *= screenScale[0]
+            du2Point[1] *= screenScale[1]
+        
+        sqrtLength = (du2Point[0]*du2Point[0] + du2Point[1]*du2Point[1])**0.25
+        return deltaU if sqrtLength < 1.0e-8 else 1.0 / sqrtLength
 
     def DrawCurvePoint(self, screenScale, drawCoefficients, m, u, deltaU):
-        uBasis, duBasis, du2Basis = self.ComputeBasis(0, m, u)
         uOrder = self.order[0]
+        uBasis, duBasis, du2Basis = self.ComputeBasis(0, m, u)
 
         point = np.zeros(4, np.float32)
         dPoint = np.zeros(4, np.float32)
@@ -70,19 +85,7 @@ class Spline:
         glVertex3f(point[0] - 0.01*dPoint[1], point[1] + 0.01*dPoint[0], point[2])
         glVertex3f(point[0], point[1], point[2])
         
-        if screenScale[2] > 1.0:
-            zScale = 1.0 / (screenScale[2] - point[2])
-            zScale2 = zScale * zScale
-            zScale3 = zScale2 * zScale
-            d2Point[0] = screenScale[0] * (d2Point[0] * zScale - 2.0 * dPoint[0] * dPoint[2] * zScale2 + \
-                point[0] * (2.0 * dPoint[2] * dPoint[2] * zScale3 - d2Point[2] * zScale2))
-            d2Point[1] = screenScale[1] * (d2Point[1] * zScale - 2.0 * dPoint[1] * dPoint[2] * zScale2 + \
-                point[1] * (2.0 * dPoint[2] * dPoint[2] * zScale3 - d2Point[2] * zScale2))
-        else:
-            d2Point[0] *= screenScale[0]
-            d2Point[1] *= screenScale[1]
-        sqrtLength = (d2Point[0]*d2Point[0] + d2Point[1]*d2Point[1])**0.25
-        deltaU = deltaU if sqrtLength < 1.0e-8 else 1.0 / sqrtLength
+        deltaU = self.ComputeDeltaU(screenScale, point, dPoint, d2Point, deltaU)
 
         return deltaU
     
@@ -90,19 +93,10 @@ class Spline:
         uOrder = self.order[0]
         uKnots = self.knots[0]
 
-        glColor3f(0.0, 0.0, 1.0)
+        glColor3f(1.0, 0.0, 0.0)
         glBegin(GL_LINE_STRIP)
         for point in drawCoefficients:
             glVertex3f(point[0], point[1], point[2])
-        glEnd()
-
-        tck = (uKnots, drawCoefficients.T, uOrder-1)
-        glColor3f(1.0, 0.0, 0.0)
-        glBegin(GL_LINE_STRIP)
-        for i in range(100):
-            u = uKnots[uOrder-1] + i * (uKnots[-uOrder] - uKnots[uOrder-1]) / 99.1
-            values = scispline.spalde(u, tck)
-            glVertex3f(values[0][0], values[1][0], values[2][0])
         glEnd()
 
         glColor3f(0.0, 1.0, 0.0)
@@ -139,72 +133,6 @@ class Spline:
 
         glUseProgram(0)
 
-    def DrawSurfacePoint(self, screenScale, drawCoefficients, m, u, deltaU):
-        uOrder = self.order[0]
-        uKnots = self.knots[0]
-        uBasis = np.zeros(uOrder + 1, np.float32)
-        duBasis = np.zeros(uOrder + 1, np.float32)
-        du2Basis = np.zeros(uOrder + 1, np.float32)
-        uBasis[uOrder-1] = 1.0
-
-        vOrder = self.order[1]
-        vKnots = self.knots[1]
-        vBasis = np.zeros(vOrder + 1, np.float32)
-        dvBasis = np.zeros(vOrder + 1, np.float32)
-        dv2Basis = np.zeros(vOrder + 1, np.float32)
-        vBasis[vOrder-1] = 1.0
-
-        for degree in range(1, uOrder):
-            b = uOrder - degree - 1
-            for n in range(m-degree, m+1):
-                gap0 = uKnots[n+degree] - uKnots[n]
-                gap1 = uKnots[n+degree+1] - uKnots[n+1]
-                gap0 = 0.0 if gap0 < 1.0e-8 else 1.0 / gap0
-                gap1 = 0.0 if gap1 < 1.0e-8 else 1.0 / gap1
-                val0 = (u - uKnots[n]) * gap0
-                val1 = (uKnots[n+degree+1] - u) * gap1
-                if degree == uOrder - 2:
-                    d0 = degree * gap0
-                    d1 = -degree * gap1
-                    du2Basis[b] = uBasis[b] * d0 + uBasis[b+1] * d1
-                elif degree == uOrder - 1:
-                    d0 = degree * gap0
-                    d1 = -degree * gap1
-                    duBasis[b] = uBasis[b] * d0 + uBasis[b+1] * d1
-                    du2Basis[b] = du2Basis[b] * d0 + du2Basis[b+1] * d1
-                uBasis[b] = uBasis[b] * val0 + uBasis[b+1] * val1
-                b += 1
-        
-        point = np.zeros(4, np.float32)
-        dPoint = np.zeros(4, np.float32)
-        d2Point = np.zeros(4, np.float32)
-        b = 0
-        for n in range(m+1-uOrder, m+1):
-            point += uBasis[b] * drawCoefficients[n]
-            dPoint += duBasis[b] * drawCoefficients[n]
-            d2Point += du2Basis[b] * drawCoefficients[n]
-            b += 1
-        
-        glVertex3f(point[0], point[1], point[2])
-        glVertex3f(point[0] - 0.01*dPoint[1], point[1] + 0.01*dPoint[0], point[2])
-        glVertex3f(point[0], point[1], point[2])
-        
-        if screenScale[2] > 1.0:
-            zScale = 1.0 / (screenScale[2] - point[2])
-            zScale2 = zScale * zScale
-            zScale3 = zScale2 * zScale
-            d2Point[0] = screenScale[0] * (d2Point[0] * zScale - 2.0 * dPoint[0] * dPoint[2] * zScale2 + \
-                point[0] * (2.0 * dPoint[2] * dPoint[2] * zScale3 - d2Point[2] * zScale2))
-            d2Point[1] = screenScale[1] * (d2Point[1] * zScale - 2.0 * dPoint[1] * dPoint[2] * zScale2 + \
-                point[1] * (2.0 * dPoint[2] * dPoint[2] * zScale3 - d2Point[2] * zScale2))
-        else:
-            d2Point[0] *= screenScale[0]
-            d2Point[1] *= screenScale[1]
-        sqrtLength = (d2Point[0]*d2Point[0] + d2Point[1]*d2Point[1])**0.25
-        deltaU = deltaU if sqrtLength < 1.0e-8 else 1.0 / sqrtLength
-
-        return deltaU
-    
     def DrawSurface(self, frame, drawCoefficients):
         uOrder = self.order[0]
         uKnots = self.knots[0]
@@ -217,6 +145,39 @@ class Spline:
             for point in pointList:
                 glVertex3f(point[0], point[1], point[2])
             glEnd()
+        
+        glColor3f(1.0, 0.0, 0.0)
+        for uM in range(uOrder-1, len(uKnots)-uOrder):
+            u = uKnots[uM]
+            deltaU = 0.5 * (uKnots[uM+1] - u)
+            uBasis, duBasis, du2Basis = self.ComputeBasis(0, uM, u)
+
+            for vM in range(vOrder-1, len(vKnots)-vOrder):
+                for uN in range(uM+1-uOrder, uM+1):
+                    point = np.zeros(4, np.float32)
+                    duPoint = np.zeros(4, np.float32)
+                    du2Point = np.zeros(4, np.float32)
+                    b = 0
+                    for vN in range(vM+1-vOrder, vM+1):
+                        point += uBasis[b] * drawCoefficients[uN, vN]
+                        duPoint += duBasis[b] * drawCoefficients[uN, vN]
+                        du2Point += du2Basis[b] * drawCoefficients[uN, vN]
+                        b += 1
+                    
+                    newDeltaU = self.ComputeDeltaU(frame.screenScale, point, duPoint, du2Point)
+                    deltaU = newDeltaU if newDeltaU < deltaU else deltaU
+
+        return deltaU
+
+            vertices = 0
+            glBegin(GL_LINE_STRIP)
+            while u < uKnots[uM+1] and vertices < frame.maxVertices - 3:
+                deltaU = self.DrawCurvePoint(frame.screenScale, drawCoefficients, uM, u, deltaU)
+                u += deltaU
+                vertices += 3
+            self.DrawCurvePoint(frame.screenScale, drawCoefficients, uM, uKnots[uM+1], deltaU)
+            glEnd()
+
     
     def Draw(self, frame, transform):
         drawCoefficients = self.coefficients @ transform
