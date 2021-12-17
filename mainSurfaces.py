@@ -149,10 +149,11 @@ class Spline:
         glColor3f(1.0, 0.0, 0.0)
         for uM in range(uOrder-1, len(uKnots)-uOrder):
             u = uKnots[uM]
-            deltaU = 0.5 * (uKnots[uM+1] - u)
             uBasis, duBasis, du2Basis = self.ComputeBasis(0, uM, u)
 
             for vM in range(vOrder-1, len(vKnots)-vOrder):
+                # Calculate deltaU (min value)
+                deltaU = 0.5 * (uKnots[uM+1] - u)
                 for uN in range(uM+1-uOrder, uM+1):
                     point = np.zeros(4, np.float32)
                     duPoint = np.zeros(4, np.float32)
@@ -163,21 +164,8 @@ class Spline:
                         duPoint += duBasis[b] * drawCoefficients[uN, vN]
                         du2Point += du2Basis[b] * drawCoefficients[uN, vN]
                         b += 1
-                    
-                    newDeltaU = self.ComputeDeltaU(frame.screenScale, point, duPoint, du2Point)
+                    newDeltaU = self.ComputeDeltaU(frame.screenScale, point, duPoint, du2Point, deltaU)
                     deltaU = newDeltaU if newDeltaU < deltaU else deltaU
-
-        return deltaU
-
-            vertices = 0
-            glBegin(GL_LINE_STRIP)
-            while u < uKnots[uM+1] and vertices < frame.maxVertices - 3:
-                deltaU = self.DrawCurvePoint(frame.screenScale, drawCoefficients, uM, u, deltaU)
-                u += deltaU
-                vertices += 3
-            self.DrawCurvePoint(frame.screenScale, drawCoefficients, uM, uKnots[uM+1], deltaU)
-            glEnd()
-
     
     def Draw(self, frame, transform):
         drawCoefficients = self.coefficients @ transform
