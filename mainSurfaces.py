@@ -151,9 +151,7 @@ class Spline:
             for vM in range(vOrder-1, len(vKnots)-vOrder):
                 u = uKnots[uM]
                 uBasis, duBasis, du2Basis = self.ComputeBasis(0, uM, u)
-                vertices = 0
-                glBegin(GL_LINE_STRIP)
-                while u < uKnots[uM+1] and vertices < frame.maxVertices:
+                while u < uKnots[uM+1]:
                     # Calculate deltaU (min deltaU value over the comvex hull of v values)
                     deltaU = 0.5 * (uKnots[uM+1] - uKnots[uM])
                     for vN in range(vM+1-vOrder, vM+1):
@@ -174,6 +172,8 @@ class Spline:
     
                     v = vKnots[vM]
                     deltaV = 0.5 * (vKnots[vM+1] - v)
+                    vertices = 0
+                    glBegin(GL_LINE_STRIP)
                     while v < vKnots[vM+1] and vertices < frame.maxVertices - 2:
                     
                         # TODO: Move this to DrawSurfacePoint()
@@ -218,7 +218,7 @@ class Spline:
                         vertices += 2
                     
                     # TODO: DrawSurfacePoint for vKnots[vM+1]
-
+                    glEnd()
                     uBasis = uBasisNext
                     duBasis = duBasisNext
                     du2Basis = du2BasisNext
@@ -234,16 +234,16 @@ class SplineOpenGLFrame(OpenGLFrame):
 
     computeBasisCode = """
         void ComputeBasis(in int offset, in int order, in int n, in int m, in float u, 
-            out float uBasis[10], out float duBasis[10], out float du2Basis[10]) {
-            uBasis = float[10](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-            duBasis = float[10](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-            du2Basis = float[10](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+            out float uBasis[{maxBasis}], out float duBasis[{maxBasis}], out float du2Basis[{maxBasis}]) {{
+            uBasis = float[{maxBasis}](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+            duBasis = float[{maxBasis}](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+            du2Basis = float[{maxBasis}](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 
             int b;
             uBasis[order-1] = 1.0;
-            for (int degree = 1; degree < order; degree++) {
+            for (int degree = 1; degree < order; degree++) {{
                 b = order - degree - 1;
-                for (int i = m - degree; i < m + 1; i++) {
+                for (int i = m - degree; i < m + 1; i++) {{
                     float gap0 = texelFetch(uSplineData, offset + i + degree).x - texelFetch(uSplineData, offset + i).x; // knots[i+degree] - knots[i]
                     float gap1 = texelFetch(uSplineData, offset + i + degree + 1).x - texelFetch(uSplineData, offset + i + 1).x; // knots[i+degree+1] - knots[i+1]
                     float val0 = 0.0;
@@ -255,21 +255,44 @@ class SplineOpenGLFrame(OpenGLFrame):
                     gap1 = gap1 < 1.0e-8 ? 0.0 : 1.0 / gap1;
                     val0 = (u - texelFetch(uSplineData, offset + i).x) * gap0; // (u - knots[i]) * gap0
                     val1 = (texelFetch(uSplineData, offset + i + degree + 1).x - u) * gap1; // (knots[i+degree+1] - u) * gap1
-                    if (degree == order - 2) {
+                    if (degree == order - 2) {{
                         d0 = degree * gap0;
                         d1 = -degree * gap1;
                         du2Basis[b] = uBasis[b] * d0 + uBasis[b+1] * d1;
-                    }
-                    else if (degree == order - 1) {
+                    }}
+                    else if (degree == order - 1) {{
                         d0 = degree * gap0;
                         d1 = -degree * gap1;
                         duBasis[b] = uBasis[b] * d0 + uBasis[b+1] * d1;
                         du2Basis[b] = du2Basis[b] * d0 + du2Basis[b+1] * d1;
-                    }
+                    }}
                     uBasis[b] = uBasis[b] * val0 + uBasis[b+1] * val1;
                     b++;
-                }
+                }}
+            }}
+        }}
+    """
+
+    computeDeltaCode = """
+        void ComputeDelta(in vec4 point, in vec3 dPoint, in vec3 d2Point, inout float delta) {
+            float zScale;
+            float zScale2;
+            float zScale3;
+            if (uScreenScale.z > 1.0) {
+                zScale = 1.0 / (uScreenScale.z - point.z);
+                zScale2 = zScale * zScale;
+                zScale3 = zScale2 * zScale;
+                d2Point.x = uScreenScale.x * (d2Point.x * zScale - 2.0 * dPoint.x * dPoint.z * zScale2 +
+                    point.x * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2));
+                d2Point.y = uScreenScale.y * (d2Point.y * zScale - 2.0 * dPoint.y * dPoint.z * zScale2 +
+                    point.y * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2));
             }
+            else {
+                d2Point.x *= uScreenScale.x;
+                d2Point.y *= uScreenScale.y;
+            }
+            float sqrtLength = pow(d2Point.x*d2Point.x + d2Point.y*d2Point.y, 0.25);
+            delta = sqrtLength < 1.0e-8 ? delta : 1.0 / sqrtLength;
         }
     """
 
@@ -317,10 +340,12 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         {computeBasisCode}
 
+        {computeDeltaCode}
+
         void DrawPoint(in int order, in int n, in int m, in float u, inout float deltaU) {{
-            float uBasis[10];
-            float duBasis[10];
-            float du2Basis[10];
+            float uBasis[{maxBasis}];
+            float duBasis[{maxBasis}];
+            float du2Basis[{maxBasis}];
             int b;
 
             ComputeBasis(header, order, n, m, u, uBasis, duBasis, du2Basis);
@@ -351,24 +376,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             gl_Position = uProjectionMatrix * point;
             EmitVertex();
             
-            float zScale;
-            float zScale2;
-            float zScale3;
-            if (uScreenScale.z > 1.0) {{
-                zScale = 1.0 / (uScreenScale.z - point.z);
-                zScale2 = zScale * zScale;
-                zScale3 = zScale2 * zScale;
-                d2Point.x = uScreenScale.x * (d2Point.x * zScale - 2.0 * dPoint.x * dPoint.z * zScale2 +
-                    point.x * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2));
-                d2Point.y = uScreenScale.y * (d2Point.y * zScale - 2.0 * dPoint.y * dPoint.z * zScale2 +
-                    point.y * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2));
-            }}
-            else {{
-                d2Point.x *= uScreenScale.x;
-                d2Point.y *= uScreenScale.y;
-            }}
-            float sqrtLength = pow(d2Point.x*d2Point.x + d2Point.y*d2Point.y, 0.25);
-            deltaU = sqrtLength < 1.0e-8 ? deltaU : 1.0 / sqrtLength;
+            ComputeDelta(point, dPoint, d2Point, deltaU);
         }}
 
         void main() {{
@@ -418,7 +426,11 @@ class SplineOpenGLFrame(OpenGLFrame):
         if not self.glInitialized:
             self.maxVertices = min(256, GL_MAX_GEOMETRY_OUTPUT_VERTICES // 2) # Divide by two because each vertex also includes color
 
-            self.curveGeometryShaderCode = self.curveGeometryShaderCode.format(maxVertices=self.maxVertices, computeBasisCode=self.computeBasisCode)
+            self.computeBasisCode = self.computeBasisCode.format(maxBasis=Spline.maxOrder+1)
+            self.curveGeometryShaderCode = self.curveGeometryShaderCode.format(maxVertices=self.maxVertices,
+                computeBasisCode=self.computeBasisCode,
+                computeDeltaCode=self.computeDeltaCode,
+                maxBasis=Spline.maxOrder+1)
             self.curveProgram = shaders.compileProgram(
                 shaders.compileShader(self.curveVertexShaderCode, GL_VERTEX_SHADER), 
                 shaders.compileShader(self.curveGeometryShaderCode, GL_GEOMETRY_SHADER), 
