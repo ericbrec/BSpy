@@ -118,7 +118,7 @@ class Spline:
         glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
         offset = 0
         size = 4 * 2
-        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, np.array((uOrder, len(drawCoefficients)), np.float32))
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, np.array((uOrder, drawCoefficients.shape[0]), np.float32))
         offset += size
         size = 4 * len(uKnots)
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, uKnots)
@@ -127,7 +127,7 @@ class Spline:
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
 
         glEnableVertexAttribArray(frame.aCurveParameters)
-        glDrawArraysInstanced(GL_POINTS, 0, 1, len(drawCoefficients) - uOrder + 1)
+        glDrawArraysInstanced(GL_POINTS, 0, 1, drawCoefficients.shape[0] - uOrder + 1)
         glDisableVertexAttribArray(frame.aCurveParameters)
 
         glUseProgram(0)
@@ -191,42 +191,48 @@ class Spline:
             glEnd()
         
         glColor3f(1.0, 0.0, 0.0)
-        for uM in range(uOrder-1, len(uKnots)-uOrder):
-            for vM in range(vOrder-1, len(vKnots)-vOrder):
-                u = uKnots[uM]
-                uBasis, duBasis, du2Basis = self.ComputeBasis(0, uM, u)
-                while u < uKnots[uM+1]:
-                    # Calculate deltaU (min deltaU value over the comvex hull of v values)
-                    deltaU = 0.5 * (uKnots[uM+1] - uKnots[uM])
-                    for vN in range(vM+1-vOrder, vM+1):
-                        point = np.zeros(4, np.float32)
-                        duPoint = np.zeros(4, np.float32)
-                        du2Point = np.zeros(4, np.float32)
-                        uB = 0
-                        for uN in range(uM+1-uOrder, uM+1):
-                            point += uBasis[uB] * drawCoefficients[uN, vN]
-                            duPoint += duBasis[uB] * drawCoefficients[uN, vN]
-                            du2Point += du2Basis[uB] * drawCoefficients[uN, vN]
-                            uB += 1
-                        newDeltaU = self.ComputeDelta(frame.screenScale, point, duPoint, du2Point, deltaU)
-                        deltaU = min(newDeltaU, deltaU)
+        for instance in range((drawCoefficients.shape[0] - uOrder + 1) * (drawCoefficients.shape[1] - vOrder + 1)):
+            uM = uOrder - 1 + instance // (drawCoefficients.shape[1] - vOrder + 1)
+            vM = vOrder - 1 + instance % (drawCoefficients.shape[1] - vOrder + 1)
+            u = uKnots[uM]
+            uBasis, duBasis, du2Basis = self.ComputeBasis(0, uM, u)
+            vertices = 0
+            verticesPerU = 0
+            while u < uKnots[uM+1]:
+                # Calculate deltaU (min deltaU value over the comvex hull of v values)
+                deltaU = 0.5 * (uKnots[uM+1] - uKnots[uM])
+                for vN in range(vM+1-vOrder, vM+1):
+                    point = np.zeros(4, np.float32)
+                    duPoint = np.zeros(4, np.float32)
+                    du2Point = np.zeros(4, np.float32)
+                    uB = 0
+                    for uN in range(uM+1-uOrder, uM+1):
+                        point += uBasis[uB] * drawCoefficients[uN, vN]
+                        duPoint += duBasis[uB] * drawCoefficients[uN, vN]
+                        du2Point += du2Basis[uB] * drawCoefficients[uN, vN]
+                        uB += 1
+                    newDeltaU = self.ComputeDelta(frame.screenScale, point, duPoint, du2Point, deltaU)
+                    deltaU = min(newDeltaU, deltaU)
 
-                    u = min(u + deltaU, uKnots[uM+1])
-                    uBasisNext, duBasisNext, du2BasisNext = self.ComputeBasis(0, uM, u)
-    
-                    v = vKnots[vM]
-                    deltaV = 0.5 * (vKnots[vM+1] - v)
-                    vertices = 0
-                    glBegin(GL_LINE_STRIP)
-                    while v < vKnots[vM+1] and vertices < frame.maxVertices - 2:
-                        deltaV = self.DrawSurfacePoints(frame.screenScale, drawCoefficients, uM, uBasis, duBasis, uBasisNext, duBasisNext, vM, v, deltaV)
-                        v += deltaV
-                        vertices += 2
-                    self.DrawSurfacePoints(frame.screenScale, drawCoefficients, uM, uBasis, duBasis, uBasisNext, duBasisNext, vM, vKnots[vM+1], deltaV)
-                    glEnd()
-                    uBasis = uBasisNext
-                    duBasis = duBasisNext
-                    du2Basis = du2BasisNext
+                verticesPerU = verticesPerU if verticesPerU > 0 else 2 * (int((uKnots[uM+1] - u) / deltaU) + 1)
+                deltaU = deltaU if vertices + verticesPerU < frame.maxVertices else uKnots[uM+1]
+                u = min(u + deltaU, uKnots[uM+1])
+                uBasisNext, duBasisNext, du2BasisNext = self.ComputeBasis(0, uM, u)
+
+                v = vKnots[vM]
+                deltaV = 0.5 * (vKnots[vM+1] - v)
+                verticesPerU = 0
+                glBegin(GL_LINE_STRIP)
+                while v < vKnots[vM+1] and vertices < frame.maxVertices - 2:
+                    deltaV = self.DrawSurfacePoints(frame.screenScale, drawCoefficients, uM, uBasis, duBasis, uBasisNext, duBasisNext, vM, v, deltaV)
+                    v += deltaV
+                    vertices += 2
+                    verticesPerU += 2
+                self.DrawSurfacePoints(frame.screenScale, drawCoefficients, uM, uBasis, duBasis, uBasisNext, duBasisNext, vM, vKnots[vM+1], deltaV)
+                glEnd()
+                uBasis = uBasisNext
+                duBasis = duBasisNext
+                du2Basis = du2BasisNext
     
     def Draw(self, frame, transform):
         drawCoefficients = self.coefficients @ transform
@@ -309,7 +315,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         uniform samplerBuffer uSplineData;
 
         out KnotIndices {
-            int u;
+            int m;
         } outData;
 
         void main() {
@@ -319,7 +325,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             order = int(texelFetch(uSplineData, 0));
             n = int(texelFetch(uSplineData, 1));
 
-            outData.u = min(gl_InstanceID, n - 1);
+            outData.m = min(gl_InstanceID + order - 1, n - 1);
             gl_Position = aParameters;
         }
     """
@@ -333,7 +339,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         const int header = 2;
 
         in KnotIndices {{
-            int u;
+            int m;
         }} inData[];
 
         uniform mat4 uProjectionMatrix;
@@ -387,7 +393,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         void main() {{
             int order = int(texelFetch(uSplineData, 0).x);
             int n = int(texelFetch(uSplineData, 1).x);
-            int m = inData[0].u + order - 1;
+            int m = inData[0].m;
             float u = texelFetch(uSplineData, header + m).x; // knots[m]
             float lastU = texelFetch(uSplineData, header + m + 1).x; // knots[m+1]
             float deltaU = 0.5 * (lastU - u);
@@ -564,19 +570,19 @@ class bspyApp(tk.Tk):
             self.frame.splineDrawList.append(self.splineList[item])
         self.frame.tkExpose(None)
 
-def CreateSplineFromMesh(xRange, yRange, zFunction):
+def CreateSplineFromMesh(xRange, zRange, yFunction):
     order = (3, 3)
-    coefficients = np.zeros((xRange[2], yRange[2], 4), np.float32)
-    knots = (np.zeros(xRange[2] + order[0], np.float32), np.zeros(yRange[2] + order[1], np.float32))
+    coefficients = np.zeros((xRange[2], zRange[2], 4), np.float32)
+    knots = (np.zeros(xRange[2] + order[0], np.float32), np.zeros(zRange[2] + order[1], np.float32))
     knots[0][:xRange[2]] = np.linspace(xRange[0], xRange[1], xRange[2], dtype=np.float32)[:]
     knots[0][xRange[2]:] = xRange[1]
-    knots[1][:yRange[2]] = np.linspace(yRange[0], yRange[1], yRange[2], dtype=np.float32)[:]
-    knots[1][yRange[2]:] = yRange[1]
+    knots[1][:zRange[2]] = np.linspace(zRange[0], zRange[1], zRange[2], dtype=np.float32)[:]
+    knots[1][zRange[2]:] = zRange[1]
     for i in range(xRange[2]):
-        for j in range(yRange[2]):
+        for j in range(zRange[2]):
             coefficients[i, j, 0] = knots[0][i]
-            coefficients[i, j, 1] = knots[1][j]
-            coefficients[i, j, 2] = zFunction(knots[0][i], knots[1][j])
+            coefficients[i, j, 1] = yFunction(knots[0][i], knots[1][j])
+            coefficients[i, j, 2] = knots[1][j]
             coefficients[i, j, 3] = 1.0
     
     return Spline(order, knots, coefficients)
