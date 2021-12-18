@@ -92,13 +92,13 @@ class Spline:
         uOrder = self.order[0]
         uKnots = self.knots[0]
 
-        glColor3f(1.0, 0.0, 0.0)
+        glColor3f(0.0, 0.0, 1.0)
         glBegin(GL_LINE_STRIP)
         for point in drawCoefficients:
             glVertex3f(point[0], point[1], point[2])
         glEnd()
 
-        glColor3f(0.0, 1.0, 0.0)
+        glColor3f(1.0, 0.0, 0.0)
         for m in range(uOrder-1, len(uKnots)-uOrder):
             u = uKnots[m]
             deltaU = 0.5 * (uKnots[m+1] - u)
@@ -113,7 +113,7 @@ class Spline:
 
         glUseProgram(frame.curveProgram)
 
-        glUniform3f(frame.uCurveSplineColor, 0.0, 0.0, 1.0)
+        glUniform3f(frame.uCurveSplineColor, 0.0, 1.0, 0.0)
 
         glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
         offset = 0
@@ -233,7 +233,31 @@ class Spline:
                 uBasis = uBasisNext
                 duBasis = duBasisNext
                 du2Basis = du2BasisNext
-    
+
+        glUseProgram(frame.surfaceProgram)
+
+        glUniform3f(frame.uSurfaceSplineColor, 0.0, 1.0, 0.0)
+
+        glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
+        offset = 0
+        size = 4 * 4
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, np.array((uOrder, vOrder, drawCoefficients.shape[0], drawCoefficients.shape[1]), np.float32))
+        offset += size
+        size = 4 * len(uKnots)
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, uKnots)
+        offset += size
+        size = 4 * len(vKnots)
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, vKnots)
+        offset += size
+        size = 4 * 4 * drawCoefficients.shape[0] * drawCoefficients.shape[1]
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
+
+        glEnableVertexAttribArray(frame.aSurfaceParameters)
+        glDrawArraysInstanced(GL_POINTS, 0, 1, (drawCoefficients.shape[0] - uOrder + 1) * (drawCoefficients.shape[1] - vOrder + 1))
+        glDisableVertexAttribArray(frame.aSurfaceParameters)
+
+        glUseProgram(0)
+
     def Draw(self, frame, transform):
         drawCoefficients = self.coefficients @ transform
         if len(self.order) == 1:
@@ -424,8 +448,8 @@ class SplineOpenGLFrame(OpenGLFrame):
             int vN = int(texelFetch(uSplineData, 3).x);
             int stride = vN - vOrder + 1;
 
-            outData.uM = min(floor(gl_InstanceID / stride) + uOrder - 1, uN - 1);
-            outData.uM = min(mod(gl_InstanceID, stride) + vOrder - 1, vN - 1);
+            outData.uM = min(int(gl_InstanceID / stride) + uOrder - 1, uN - 1);
+            outData.vM = min(int(mod(gl_InstanceID, stride)) + vOrder - 1, vN - 1);
             gl_Position = aParameters;
         }
     """
@@ -534,7 +558,6 @@ class SplineOpenGLFrame(OpenGLFrame):
             int vOrder = int(texelFetch(uSplineData, 1).x);
             int uN = int(texelFetch(uSplineData, 2).x);
             int vN = int(texelFetch(uSplineData, 3).x);
-            int stride = vN - vOrder + 1;
             int uM = inData[0].uM;
             int vM = inData[0].vM;
             float firstU = texelFetch(uSplineData, header + uM).x; // uKnots[uM]
@@ -570,8 +593,8 @@ class SplineOpenGLFrame(OpenGLFrame):
                         i += vN * 4;
                     }}
                     float newDeltaU = deltaU;
-                    ComputeDelta(point, dvPoint, dv2Point, newDeltaU);
-                    deltaV = min(newDeltaU, deltaU);
+                    ComputeDelta(point, duPoint, du2Point, newDeltaU);
+                    deltaU = min(newDeltaU, deltaU);
                     j += 4;
                 }}
 
@@ -633,6 +656,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.maxVertices = min(256, GL_MAX_GEOMETRY_OUTPUT_VERTICES // 2) # Divide by two because each vertex also includes color
 
             self.computeBasisCode = self.computeBasisCode.format(maxBasis=Spline.maxOrder+1)
+
             self.curveGeometryShaderCode = self.curveGeometryShaderCode.format(maxVertices=self.maxVertices,
                 computeBasisCode=self.computeBasisCode,
                 computeDeltaCode=self.computeDeltaCode,
@@ -641,13 +665,22 @@ class SplineOpenGLFrame(OpenGLFrame):
                 shaders.compileShader(self.curveVertexShaderCode, GL_VERTEX_SHADER), 
                 shaders.compileShader(self.curveGeometryShaderCode, GL_GEOMETRY_SHADER), 
                 shaders.compileShader(self.fragmentShaderCode, GL_FRAGMENT_SHADER))
+            
+            self.surfaceGeometryShaderCode = self.surfaceGeometryShaderCode.format(maxVertices=self.maxVertices,
+                computeBasisCode=self.computeBasisCode,
+                computeDeltaCode=self.computeDeltaCode,
+                maxBasis=Spline.maxOrder+1)
+            self.surfaceProgram = shaders.compileProgram(
+                shaders.compileShader(self.surfaceVertexShaderCode, GL_VERTEX_SHADER), 
+                shaders.compileShader(self.surfaceGeometryShaderCode, GL_GEOMETRY_SHADER), 
+                shaders.compileShader(self.fragmentShaderCode, GL_FRAGMENT_SHADER))
 
             self.splineDataBuffer = glGenBuffers(1)
             self.splineTextureBuffer = glGenTextures(1)
             glBindBuffer(GL_TEXTURE_BUFFER, self.splineDataBuffer)
             glBindTexture(GL_TEXTURE_BUFFER, self.splineTextureBuffer)
             glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, self.splineDataBuffer)
-            maxFloats = 2 + 2 * Spline.maxKnots + 4 * Spline.maxCoefficients * Spline.maxCoefficients
+            maxFloats = 4 + 2 * Spline.maxKnots + 4 * Spline.maxCoefficients * Spline.maxCoefficients
             glBufferData(GL_TEXTURE_BUFFER, 4 * maxFloats, None, GL_STATIC_READ)
 
             self.parameterBuffer = glGenBuffers(1)
@@ -663,6 +696,17 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.uCurveSplineColor = glGetUniformLocation(self.curveProgram, 'uSplineColor')
             self.uCurveSplineData = glGetUniformLocation(self.curveProgram, 'uSplineData')
             glUniform1i(self.uCurveSplineData, 0) # 0 is the active texture (default is 0)
+
+            glUseProgram(self.surfaceProgram)
+            self.aSurfaceParameters = glGetAttribLocation(self.surfaceProgram, "aParameters")
+            glBindBuffer(GL_ARRAY_BUFFER, self.parameterBuffer)
+            glVertexAttribPointer(self.aSurfaceParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
+            self.uSurfaceProjectionMatrix = glGetUniformLocation(self.surfaceProgram, 'uProjectionMatrix')
+            self.uSurfaceScreenScale = glGetUniformLocation(self.surfaceProgram, 'uScreenScale')
+            self.uSurfaceSplineColor = glGetUniformLocation(self.surfaceProgram, 'uSplineColor')
+            self.uSurfaceSplineData = glGetUniformLocation(self.surfaceProgram, 'uSplineData')
+            glUniform1i(self.uSurfaceSplineData, 0) # 0 is the active texture (default is 0)
+
             glUseProgram(0)
 
             #glEnable( GL_DEPTH_TEST )
@@ -685,6 +729,9 @@ class SplineOpenGLFrame(OpenGLFrame):
         glUseProgram(self.curveProgram)
         glUniformMatrix4fv(self.uCurveProjectionMatrix, 1, GL_FALSE, self.projection)
         glUniform3fv(self.uCurveScreenScale, 1, self.screenScale)
+        glUseProgram(self.surfaceProgram)
+        glUniformMatrix4fv(self.uSurfaceProjectionMatrix, 1, GL_FALSE, self.projection)
+        glUniform3fv(self.uSurfaceScreenScale, 1, self.screenScale)
         glUseProgram(0)
 
         glMatrixMode(GL_MODELVIEW)
