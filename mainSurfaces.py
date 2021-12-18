@@ -192,7 +192,7 @@ class Spline:
             glEnd()
         
         glColor3f(1.0, 0.0, 0.0)
-        for instance in range((drawCoefficients.shape[0] - uOrder + 1) * (drawCoefficients.shape[1] - vOrder + 1)):
+        for instance in range(0): #(drawCoefficients.shape[0] - uOrder + 1) * (drawCoefficients.shape[1] - vOrder + 1)):
             uM = uOrder - 1 + instance // (drawCoefficients.shape[1] - vOrder + 1)
             vM = vOrder - 1 + instance % (drawCoefficients.shape[1] - vOrder + 1)
             u = uKnots[uM]
@@ -464,7 +464,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         #version 330 core
 
         layout( points ) in;
-        layout( line_strip, max_vertices = {maxVertices} ) out;
+        layout( triangle_strip, max_vertices = {maxVertices} ) out;
 
         const int header = 4;
 
@@ -476,6 +476,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         uniform mat4 uProjectionMatrix;
         uniform vec3 uScreenScale;
         uniform vec3 uSplineColor;
+        uniform vec3 uLightDirection;
         uniform samplerBuffer uSplineData;
 
         out vec3 splineColor;
@@ -520,6 +521,9 @@ class SplineOpenGLFrame(OpenGLFrame):
                 j += 4;
             }}
 
+            vec3 normal = normalize(cross(duPoint, dvPoint));
+            float intensity = dot(normal, uLightDirection);
+            splineColor = (0.3 + 0.7 * abs(intensity)) * uSplineColor;
             gl_Position = uProjectionMatrix * point;
             EmitVertex();
             
@@ -551,6 +555,9 @@ class SplineOpenGLFrame(OpenGLFrame):
                 j += 4;
             }}
 
+            normal = normalize(cross(duPoint, dvPoint));
+            intensity = dot(normal, uLightDirection);
+            splineColor = (0.3 + 0.7 * abs(intensity)) * uSplineColor;
             gl_Position = uProjectionMatrix * point;
             EmitVertex();
             
@@ -575,6 +582,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             float duBasis[{maxBasis}];
             float du2Basis[{maxBasis}];
 
+            splineColor = uSplineColor;
             ComputeBasis(header, uOrder, uN, uM, u, uBasis, duBasis, du2Basis);
             while (u < lastU) {{
                 // Calculate deltaU (min deltaU value over the comvex hull of v values)
@@ -614,7 +622,6 @@ class SplineOpenGLFrame(OpenGLFrame):
                 float du2BasisNext[{maxBasis}];
                 ComputeBasis(header, uOrder, uN, uM, u, uBasisNext, duBasisNext, du2BasisNext);
 
-                splineColor = uSplineColor;
                 float v = texelFetch(uSplineData, header + uOrder + uN + vM).x; // vKnots[vM]
                 float lastV = texelFetch(uSplineData, header + uOrder + uN + vM + 1).x; // vKnots[vM+1]
                 float deltaV = 0.5 * (lastV - v);
@@ -715,12 +722,16 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.uSurfaceProjectionMatrix = glGetUniformLocation(self.surfaceProgram, 'uProjectionMatrix')
             self.uSurfaceScreenScale = glGetUniformLocation(self.surfaceProgram, 'uScreenScale')
             self.uSurfaceSplineColor = glGetUniformLocation(self.surfaceProgram, 'uSplineColor')
+            self.uSurfaceLightDirection = glGetUniformLocation(self.surfaceProgram, 'uLightDirection')
+            self.lightDirection = np.array((0.6, 0.3, 1), np.float32)
+            self.lightDirection = self.lightDirection / np.linalg.norm(self.lightDirection)
+            glUniform3fv(self.uSurfaceLightDirection, 1, self.lightDirection)
             self.uSurfaceSplineData = glGetUniformLocation(self.surfaceProgram, 'uSplineData')
             glUniform1i(self.uSurfaceSplineData, 0) # 0 is the active texture (default is 0)
 
             glUseProgram(0)
 
-            #glEnable( GL_DEPTH_TEST )
+            glEnable( GL_DEPTH_TEST )
             glClearColor(1.0, 1.0, 1.0, 0.0)
 
             self.glInitialized = True
@@ -728,11 +739,13 @@ class SplineOpenGLFrame(OpenGLFrame):
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         xExtent = self.width / self.height
-        near = 2.0 - np.sqrt(2)
-        far = 2.0 + 2.0 - near
-        top = near / 2.0 # Choose frustum that displays [-1,1] in y for z = -2.0
+        clipDistance = np.sqrt(3.0)
+        zDropoff = 3.0
+        near = zDropoff - clipDistance
+        far = zDropoff + clipDistance
+        top = clipDistance * near / zDropoff # Choose frustum that displays [-clipDistance,clipDistance] in y for z = -zDropoff
         glFrustum(-top*xExtent, top*xExtent, -top, top, near, far)
-        glTranslate(0.0, 0.0, -2.0)
+        glTranslate(0.0, 0.0, -zDropoff)
         #glOrtho(-xExtent, xExtent, -1.0, 1.0, -1.0, 1.0)
 
         self.projection = glGetFloatv(GL_PROJECTION_MATRIX)
