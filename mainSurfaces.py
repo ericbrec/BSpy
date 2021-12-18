@@ -319,11 +319,8 @@ class SplineOpenGLFrame(OpenGLFrame):
         } outData;
 
         void main() {
-            int order;
-            int n;
-
-            order = int(texelFetch(uSplineData, 0));
-            n = int(texelFetch(uSplineData, 1));
+            int order = int(texelFetch(uSplineData, 0).x);
+            int n = int(texelFetch(uSplineData, 1).x);
 
             outData.m = min(gl_InstanceID + order - 1, n - 1);
             gl_Position = aParameters;
@@ -357,16 +354,14 @@ class SplineOpenGLFrame(OpenGLFrame):
             float uBasis[{maxBasis}];
             float duBasis[{maxBasis}];
             float du2Basis[{maxBasis}];
-            int b;
 
             ComputeBasis(header, order, n, m, u, uBasis, duBasis, du2Basis);
             
             vec4 point = vec4(0.0, 0.0, 0.0, 0.0);
             vec3 dPoint = vec3(0.0, 0.0, 0.0);
             vec3 d2Point = vec3(0.0, 0.0, 0.0);
-            int lastI = header + order + n + 4 * (m + 1);
-            b = 0;
-            for (int i = header + order + n + 4 * (m + 1 - order); i < lastI; i += 4) {{ // loop from coefficient[m+1-order] to coefficient[m+1]
+            int i = header + order + n + 4 * (m + 1 - order);
+            for (int b = 0; b < order; b++) {{ // loop from coefficient[m+1-order] to coefficient[m+1]
                 point.x += uBasis[b] * texelFetch(uSplineData, i).x;
                 point.y += uBasis[b] * texelFetch(uSplineData, i+1).x;
                 point.z += uBasis[b] * texelFetch(uSplineData, i+2).x;
@@ -377,7 +372,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                 d2Point.x += du2Basis[b] * texelFetch(uSplineData, i).x;
                 d2Point.y += du2Basis[b] * texelFetch(uSplineData, i+1).x;
                 d2Point.z += du2Basis[b] * texelFetch(uSplineData, i+2).x;
-                b++;
+                i += 4;
             }}
 
             gl_Position = uProjectionMatrix * point;
@@ -388,6 +383,150 @@ class SplineOpenGLFrame(OpenGLFrame):
             EmitVertex();
             
             ComputeDelta(point, dPoint, d2Point, deltaU);
+        }}
+
+        void main() {{
+            int order = int(texelFetch(uSplineData, 0).x);
+            int n = int(texelFetch(uSplineData, 1).x);
+            int m = inData[0].m;
+            float u = texelFetch(uSplineData, header + m).x; // knots[m]
+            float lastU = texelFetch(uSplineData, header + m + 1).x; // knots[m+1]
+            float deltaU = 0.5 * (lastU - u);
+            int vertices = 0;
+
+            splineColor = uSplineColor;
+            while (u < lastU && vertices < {maxVertices} - 3) {{
+                DrawCurvePoints(order, n, m, u, deltaU);
+                u += deltaU;
+                vertices += 3;
+            }}
+            DrawCurvePoints(order, n, m, lastU, deltaU);
+            EndPrimitive();
+        }}
+    """
+
+    surfaceVertexShaderCode = """
+        #version 330 core
+     
+        attribute vec4 aParameters;
+
+        uniform samplerBuffer uSplineData;
+
+        out KnotIndices {
+            int uM;
+            int vM;
+        } outData;
+
+        void main() {
+            int uOrder = int(texelFetch(uSplineData, 0).x);
+            int vOrder = int(texelFetch(uSplineData, 1).x);
+            int uN = int(texelFetch(uSplineData, 2).x);
+            int vN = int(texelFetch(uSplineData, 3).x);
+            int stride = vN - vOrder + 1;
+
+            outData.uM = min(floor(gl_InstanceID / stride) + uOrder - 1, uN - 1);
+            outData.uM = min(mod(gl_InstanceID, stride) + vOrder - 1, vN - 1);
+            gl_Position = aParameters;
+        }
+    """
+
+    surfaceGeometryShaderCode = """
+        #version 330 core
+
+        layout( points ) in;
+        layout( line_strip, max_vertices = {maxVertices} ) out;
+
+        const int header = 4;
+
+        in KnotIndices {{
+            int uM;
+            int vM;
+        }} inData[];
+
+        uniform mat4 uProjectionMatrix;
+        uniform vec3 uScreenScale;
+        uniform vec3 uSplineColor;
+        uniform samplerBuffer uSplineData;
+
+        out vec3 splineColor;
+
+        {computeBasisCode}
+
+        {computeDeltaCode}
+
+        void DrawSurfaceCurvePoints(in int uOrder, in int uN, in int uM,
+            in float uBasis[{maxBasis}], in float duBasis[{maxBasis}],
+            in float uBasisNext[{maxBasis}], in float duBasisNext[{maxBasis}],
+            in int vOrder, in int vN, in int vM, in float v, inout float deltaV) {{
+            float vBasis[{maxBasis}];
+            float dvBasis[{maxBasis}];
+            float dv2Basis[{maxBasis}];
+
+            ComputeBasis(header + uOrder + uN, vOrder, vN, vM, v, vBasis, dvBasis, dv2Basis);
+            
+            vec4 point = vec4(0.0, 0.0, 0.0, 0.0);
+            vec3 duPoint = vec3(0.0, 0.0, 0.0);
+            vec3 dvPoint = vec3(0.0, 0.0, 0.0);
+            vec3 dv2Point = vec3(0.0, 0.0, 0.0);
+            int j = header + uOrder + uN + vOrder + vN + (vM + 1 - vOrder) * 4;
+            for (int vB = 0; vB < vOrder; vB++) {{ // loop from coefficient[m+1-order] to coefficient[m+1]
+                int i = j + (uM + 1 - uOrder ) * vN * 4;
+                for (int uB = 0; uB < uOrder; uB++) {{ // loop from coefficient[m+1-order] to coefficient[m+1]
+                    point.x += uBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i).x;
+                    point.y += uBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i+1).x;
+                    point.z += uBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i+2).x;
+                    point.w += uBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i+3).x;
+                    duPoint.x += duBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i).x;
+                    duPoint.y += duBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i+1).x;
+                    duPoint.z += duBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i+2).x;
+                    dvPoint.x += uBasis[uB] * dvBasis[vB] * texelFetch(uSplineData, i).x;
+                    dvPoint.y += uBasis[uB] * dvBasis[vB] * texelFetch(uSplineData, i+1).x;
+                    dvPoint.z += uBasis[uB] * dvBasis[vB] * texelFetch(uSplineData, i+2).x;
+                    dv2Point.x += uBasis[uB] * dv2Basis[vB] * texelFetch(uSplineData, i).x;
+                    dv2Point.y += uBasis[uB] * dv2Basis[vB] * texelFetch(uSplineData, i+1).x;
+                    dv2Point.z += uBasis[uB] * dv2Basis[vB] * texelFetch(uSplineData, i+2).x;
+                    i += vN * 4;
+                }}
+                j += 4;
+            }}
+
+            gl_Position = uProjectionMatrix * point;
+            EmitVertex();
+            
+            ComputeDelta(point, dvPoint, dv2Point, deltaV);
+            
+            point = vec4(0.0, 0.0, 0.0, 0.0);
+            duPoint = vec3(0.0, 0.0, 0.0);
+            dvPoint = vec3(0.0, 0.0, 0.0);
+            dv2Point = vec3(0.0, 0.0, 0.0);
+            j = header + uOrder + uN + vOrder + vN + (vM + 1 - vOrder) * 4;
+            for (int vB = 0; vB < vOrder; vB++) {{ // loop from coefficient[m+1-order] to coefficient[m+1]
+                int i = j + (uM + 1 - uOrder ) * vN * 4;
+                for (int uB = 0; uB < uOrder; uB++) {{ // loop from coefficient[m+1-order] to coefficient[m+1]
+                    point.x += uBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i).x;
+                    point.y += uBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i+1).x;
+                    point.z += uBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i+2).x;
+                    point.w += uBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i+3).x;
+                    duPoint.x += duBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i).x;
+                    duPoint.y += duBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i+1).x;
+                    duPoint.z += duBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i+2).x;
+                    dvPoint.x += uBasisNext[uB] * dvBasis[vB] * texelFetch(uSplineData, i).x;
+                    dvPoint.y += uBasisNext[uB] * dvBasis[vB] * texelFetch(uSplineData, i+1).x;
+                    dvPoint.z += uBasisNext[uB] * dvBasis[vB] * texelFetch(uSplineData, i+2).x;
+                    dv2Point.x += uBasisNext[uB] * dv2Basis[vB] * texelFetch(uSplineData, i).x;
+                    dv2Point.y += uBasisNext[uB] * dv2Basis[vB] * texelFetch(uSplineData, i+1).x;
+                    dv2Point.z += uBasisNext[uB] * dv2Basis[vB] * texelFetch(uSplineData, i+2).x;
+                    i += vN * 4;
+                }}
+                j += 4;
+            }}
+
+            gl_Position = uProjectionMatrix * point;
+            EmitVertex();
+            
+            float newDeltaV = deltaV;
+            ComputeDelta(point, dvPoint, dv2Point, newDeltaV);
+            deltaV = min(newDeltaV, deltaV)
         }}
 
         void main() {{
