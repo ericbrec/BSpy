@@ -104,11 +104,12 @@ class Spline:
             deltaU = 0.5 * (uKnots[m+1] - u)
             vertices = 0
             glBegin(GL_LINE_STRIP)
-            while u < uKnots[m+1] and vertices < frame.maxVertices - 3:
+            while u < uKnots[m+1] and vertices <= frame.maxVertices - 6: # Save room for the vertices at u and lastU
                 deltaU = self.DrawCurvePoints(frame.screenScale, drawCoefficients, m, u, deltaU)
                 u += deltaU
                 vertices += 3
             self.DrawCurvePoints(frame.screenScale, drawCoefficients, m, uKnots[m+1], deltaU)
+            vertices += 3
             glEnd()
 
         glUseProgram(frame.curveProgram)
@@ -214,8 +215,8 @@ class Spline:
                     newDeltaU = self.ComputeDelta(frame.screenScale, point, duPoint, du2Point, deltaU)
                     deltaU = min(newDeltaU, deltaU)
 
-                verticesPerU = verticesPerU if verticesPerU > 0 else 2 * (int((uKnots[uM+1] - u) / deltaU) + 1)
-                deltaU = deltaU if vertices + verticesPerU < frame.maxVertices else uKnots[uM+1]
+                verticesPerU = verticesPerU if verticesPerU > 0 else 2 * int((uKnots[uM+1] - u) / deltaU)
+                deltaU = deltaU if vertices + verticesPerU + 8 <= frame.maxVertices else 2.0 * (uKnots[uM+1] - u) # Leave at least 8 vertices for a near empty last row
                 u = min(u + deltaU, uKnots[uM+1])
                 uBasisNext, duBasisNext, du2BasisNext = self.ComputeBasis(0, uM, u)
 
@@ -223,12 +224,14 @@ class Spline:
                 deltaV = 0.5 * (vKnots[vM+1] - v)
                 verticesPerU = 0
                 glBegin(GL_LINE_STRIP)
-                while v < vKnots[vM+1] and vertices < frame.maxVertices - 2:
+                while v < vKnots[vM+1] and vertices <= frame.maxVertices - 4: # Save room for the vertices at v and lastV
                     deltaV = self.DrawSurfacePoints(frame.screenScale, drawCoefficients, uM, uBasis, duBasis, uBasisNext, duBasisNext, vM, v, deltaV)
                     v += deltaV
                     vertices += 2
                     verticesPerU += 2
                 self.DrawSurfacePoints(frame.screenScale, drawCoefficients, uM, uBasis, duBasis, uBasisNext, duBasisNext, vM, vKnots[vM+1], deltaV)
+                vertices += 2
+                verticesPerU += 2
                 glEnd()
                 uBasis = uBasisNext
                 duBasis = duBasisNext
@@ -419,12 +422,13 @@ class SplineOpenGLFrame(OpenGLFrame):
             int vertices = 0;
 
             splineColor = uSplineColor;
-            while (u < lastU && vertices < {maxVertices} - 3) {{
+            while (u < lastU && vertices <= {maxVertices} - 6) {{ // Save room for the vertices at u and lastU
                 DrawCurvePoints(order, n, m, u, deltaU);
                 u += deltaU;
                 vertices += 3;
             }}
             DrawCurvePoints(order, n, m, lastU, deltaU);
+            vertices += 3;
             EndPrimitive();
         }}
     """
@@ -598,8 +602,8 @@ class SplineOpenGLFrame(OpenGLFrame):
                     j += 4;
                 }}
 
-                verticesPerU = verticesPerU > 0 ? verticesPerU : 2 * (int((lastU - u) / deltaU) + 1);
-                deltaU = vertices + verticesPerU < {maxVertices} ? deltaU : lastU;
+                verticesPerU = verticesPerU > 0 ? verticesPerU : 2 * int((lastU - u) / deltaU);
+                deltaU = vertices + verticesPerU + 8 <= {maxVertices} ? deltaU : 2.0 * (lastU - u); // Leave at least 8 vertices for a near empty last row
                 u = min(u + deltaU, lastU);
                 float uBasisNext[{maxBasis}];
                 float duBasisNext[{maxBasis}];
@@ -611,7 +615,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                 float lastV = texelFetch(uSplineData, header + uOrder + uN + vM + 1).x; // vKnots[vM+1]
                 float deltaV = 0.5 * (lastV - v);
                 verticesPerU = 0;
-                while (v < lastV && vertices < {maxVertices} - 2) {{
+                while (v < lastV && vertices <= {maxVertices} - 4) {{ // Save room for the vertices at v and lastV
                     DrawSurfacePoints(uOrder, uN, uM, uBasis, duBasis, uBasisNext, duBasisNext,
                         vOrder, vN, vM, v, deltaV);
                     v += deltaV;
@@ -620,6 +624,8 @@ class SplineOpenGLFrame(OpenGLFrame):
                 }}
                 DrawSurfacePoints(uOrder, uN, uM, uBasis, duBasis, uBasisNext, duBasisNext,
                     vOrder, vN, vM, lastV, deltaV);
+                vertices += 2;
+                verticesPerU += 2;
                 EndPrimitive();
                 uBasis = uBasisNext;
                 duBasis = duBasisNext;
@@ -646,6 +652,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.currentQ = quat.one
         self.lastQ = quat.one
         self.origin = None
+        self.bind("<ButtonPress-3>", self.Home)
         self.bind("<ButtonPress-1>", self.RotateStartHandler)
         self.bind("<ButtonRelease-1>", self.RotateEndHandler)
         self.bind("<B1-Motion>", self.RotateDragHandler)
@@ -750,6 +757,11 @@ class SplineOpenGLFrame(OpenGLFrame):
             spline.Draw(self, transform)
 
         glFlush()
+
+    def Home(self, event):
+        self.lastQ = quat.one
+        self.currentQ = quat.one
+        self.tkExpose(None)
 
     def ProjectToSphere(self, point):
         length = np.linalg.norm(point)
