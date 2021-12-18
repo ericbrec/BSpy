@@ -454,7 +454,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         {computeDeltaCode}
 
-        void DrawSurfaceCurvePoints(in int uOrder, in int uN, in int uM,
+        void DrawSurfacePoints(in int uOrder, in int uN, in int uM,
             in float uBasis[{maxBasis}], in float duBasis[{maxBasis}],
             in float uBasisNext[{maxBasis}], in float duBasisNext[{maxBasis}],
             in int vOrder, in int vN, in int vM, in float v, inout float deltaV) {{
@@ -469,9 +469,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             vec3 dvPoint = vec3(0.0, 0.0, 0.0);
             vec3 dv2Point = vec3(0.0, 0.0, 0.0);
             int j = header + uOrder + uN + vOrder + vN + (vM + 1 - vOrder) * 4;
-            for (int vB = 0; vB < vOrder; vB++) {{ // loop from coefficient[m+1-order] to coefficient[m+1]
-                int i = j + (uM + 1 - uOrder ) * vN * 4;
-                for (int uB = 0; uB < uOrder; uB++) {{ // loop from coefficient[m+1-order] to coefficient[m+1]
+            for (int vB = 0; vB < vOrder; vB++) {{
+                int i = j + (uM + 1 - uOrder) * vN * 4;
+                for (int uB = 0; uB < uOrder; uB++) {{
                     point.x += uBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i).x;
                     point.y += uBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i+1).x;
                     point.z += uBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i+2).x;
@@ -500,9 +500,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             dvPoint = vec3(0.0, 0.0, 0.0);
             dv2Point = vec3(0.0, 0.0, 0.0);
             j = header + uOrder + uN + vOrder + vN + (vM + 1 - vOrder) * 4;
-            for (int vB = 0; vB < vOrder; vB++) {{ // loop from coefficient[m+1-order] to coefficient[m+1]
-                int i = j + (uM + 1 - uOrder ) * vN * 4;
-                for (int uB = 0; uB < uOrder; uB++) {{ // loop from coefficient[m+1-order] to coefficient[m+1]
+            for (int vB = 0; vB < vOrder; vB++) {{
+                int i = j + (uM + 1 - uOrder) * vN * 4;
+                for (int uB = 0; uB < uOrder; uB++) {{
                     point.x += uBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i).x;
                     point.y += uBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i+1).x;
                     point.z += uBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i+2).x;
@@ -526,26 +526,82 @@ class SplineOpenGLFrame(OpenGLFrame):
             
             float newDeltaV = deltaV;
             ComputeDelta(point, dvPoint, dv2Point, newDeltaV);
-            deltaV = min(newDeltaV, deltaV)
+            deltaV = min(newDeltaV, deltaV);
         }}
 
         void main() {{
-            int order = int(texelFetch(uSplineData, 0).x);
-            int n = int(texelFetch(uSplineData, 1).x);
-            int m = inData[0].m;
-            float u = texelFetch(uSplineData, header + m).x; // knots[m]
-            float lastU = texelFetch(uSplineData, header + m + 1).x; // knots[m+1]
-            float deltaU = 0.5 * (lastU - u);
+            int uOrder = int(texelFetch(uSplineData, 0).x);
+            int vOrder = int(texelFetch(uSplineData, 1).x);
+            int uN = int(texelFetch(uSplineData, 2).x);
+            int vN = int(texelFetch(uSplineData, 3).x);
+            int stride = vN - vOrder + 1;
+            int uM = inData[0].uM;
+            int vM = inData[0].vM;
+            float firstU = texelFetch(uSplineData, header + uM).x; // uKnots[uM]
+            float lastU = texelFetch(uSplineData, header + uM + 1).x; // uKnots[uM+1]
+            float u = firstU;
             int vertices = 0;
+            int verticesPerU = 0;
+            float uBasis[{maxBasis}];
+            float duBasis[{maxBasis}];
+            float du2Basis[{maxBasis}];
 
-            splineColor = uSplineColor;
-            while (u < lastU && vertices < {maxVertices} - 3) {{
-                DrawCurvePoints(order, n, m, u, deltaU);
-                u += deltaU;
-                vertices += 3;
+            ComputeBasis(header, uOrder, uN, uM, u, uBasis, duBasis, du2Basis);
+            while (u < lastU) {{
+                // Calculate deltaU (min deltaU value over the comvex hull of v values)
+                float deltaU = 0.5 * (lastU - firstU);
+                int j = header + uOrder + uN + vOrder + vN + (vM + 1 - vOrder) * 4;
+                for (int vB = 0; vB < vOrder; vB++) {{
+                    vec4 point = vec4(0.0, 0.0, 0.0, 0.0);
+                    vec3 duPoint = vec3(0.0, 0.0, 0.0);
+                    vec3 du2Point = vec3(0.0, 0.0, 0.0);
+                    int i = j + (uM + 1 - uOrder) * vN * 4;
+                    for (int uB = 0; uB < uOrder; uB++) {{
+                        point.x += uBasis[uB] * texelFetch(uSplineData, i).x;
+                        point.y += uBasis[uB] * texelFetch(uSplineData, i+1).x;
+                        point.z += uBasis[uB] * texelFetch(uSplineData, i+2).x;
+                        point.w += uBasis[uB] * texelFetch(uSplineData, i+3).x;
+                        duPoint.x += duBasis[uB] * texelFetch(uSplineData, i).x;
+                        duPoint.y += duBasis[uB] * texelFetch(uSplineData, i+1).x;
+                        duPoint.z += duBasis[uB] * texelFetch(uSplineData, i+2).x;
+                        du2Point.x += du2Basis[uB] * texelFetch(uSplineData, i).x;
+                        du2Point.y += du2Basis[uB] * texelFetch(uSplineData, i+1).x;
+                        du2Point.z += du2Basis[uB] * texelFetch(uSplineData, i+2).x;
+                        i += vN * 4;
+                    }}
+                    float newDeltaU = deltaU;
+                    ComputeDelta(point, dvPoint, dv2Point, newDeltaU);
+                    deltaV = min(newDeltaU, deltaU);
+                    j += 4;
+                }}
+
+                verticesPerU = verticesPerU > 0 ? verticesPerU : 2 * (int((lastU - u) / deltaU) + 1);
+                deltaU = vertices + verticesPerU < {maxVertices} ? deltaU : lastU;
+                u = min(u + deltaU, lastU);
+                float uBasisNext[{maxBasis}];
+                float duBasisNext[{maxBasis}];
+                float du2BasisNext[{maxBasis}];
+                ComputeBasis(header, uOrder, uN, uM, u, uBasisNext, duBasisNext, du2BasisNext);
+
+                splineColor = uSplineColor;
+                float v = texelFetch(uSplineData, header + uOrder + uN + vM).x; // vKnots[vM]
+                float lastV = texelFetch(uSplineData, header + uOrder + uN + vM + 1).x; // vKnots[vM+1]
+                float deltaV = 0.5 * (lastV - v);
+                verticesPerU = 0;
+                while (v < lastV && vertices < {maxVertices} - 2) {{
+                    DrawSurfacePoints(uOrder, uN, uM, uBasis, duBasis, uBasisNext, duBasisNext,
+                        vOrder, vN, vM, v, deltaV);
+                    v += deltaV;
+                    vertices += 2;
+                    verticesPerU += 2;
+                }}
+                DrawSurfacePoints(uOrder, uN, uM, uBasis, duBasis, uBasisNext, duBasisNext,
+                    vOrder, vN, vM, lastV, deltaV);
+                EndPrimitive();
+                uBasis = uBasisNext;
+                duBasis = duBasisNext;
+                du2Basis = du2BasisNext;
             }}
-            DrawCurvePoints(order, n, m, lastU, deltaU);
-            EndPrimitive();
         }}
     """
 
