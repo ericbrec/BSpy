@@ -67,7 +67,7 @@ class Spline:
         sqrtLength = (d2Point[0]*d2Point[0] + d2Point[1]*d2Point[1])**0.25
         return delta if sqrtLength < 1.0e-8 else 1.0 / sqrtLength
 
-    def DrawCurvePoint(self, screenScale, drawCoefficients, m, u, deltaU):
+    def DrawCurvePoints(self, screenScale, drawCoefficients, m, u, deltaU):
         uOrder = self.order[0]
         uBasis, duBasis, du2Basis = self.ComputeBasis(0, m, u)
 
@@ -105,10 +105,10 @@ class Spline:
             vertices = 0
             glBegin(GL_LINE_STRIP)
             while u < uKnots[m+1] and vertices < frame.maxVertices - 3:
-                deltaU = self.DrawCurvePoint(frame.screenScale, drawCoefficients, m, u, deltaU)
+                deltaU = self.DrawCurvePoints(frame.screenScale, drawCoefficients, m, u, deltaU)
                 u += deltaU
                 vertices += 3
-            self.DrawCurvePoint(frame.screenScale, drawCoefficients, m, uKnots[m+1], deltaU)
+            self.DrawCurvePoints(frame.screenScale, drawCoefficients, m, uKnots[m+1], deltaU)
             glEnd()
 
         glUseProgram(frame.curveProgram)
@@ -353,7 +353,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         {computeDeltaCode}
 
-        void DrawPoint(in int order, in int n, in int m, in float u, inout float deltaU) {{
+        void DrawCurvePoints(in int order, in int n, in int m, in float u, inout float deltaU) {{
             float uBasis[{maxBasis}];
             float duBasis[{maxBasis}];
             float du2Basis[{maxBasis}];
@@ -401,11 +401,11 @@ class SplineOpenGLFrame(OpenGLFrame):
 
             splineColor = uSplineColor;
             while (u < lastU && vertices < {maxVertices} - 3) {{
-                DrawPoint(order, n, m, u, deltaU);
+                DrawCurvePoints(order, n, m, u, deltaU);
                 u += deltaU;
                 vertices += 3;
             }}
-            DrawPoint(order, n, m, lastU, deltaU);
+            DrawCurvePoints(order, n, m, lastU, deltaU);
             EndPrimitive();
         }}
     """
