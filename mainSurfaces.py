@@ -215,8 +215,10 @@ class Spline:
                     newDeltaU = self.ComputeDelta(frame.screenScale, point, duPoint, du2Point, deltaU)
                     deltaU = min(newDeltaU, deltaU)
 
+                # If there's less than 8 vertices for the last row, force this to be the last row.
                 verticesPerU = verticesPerU if verticesPerU > 0 else 2 * int((uKnots[uM+1] - u) / deltaU)
-                deltaU = deltaU if vertices + verticesPerU + 8 <= frame.maxVertices else 2.0 * (uKnots[uM+1] - u) # Leave at least 8 vertices for a near empty last row
+                deltaU = deltaU if vertices + verticesPerU + 8 <= frame.maxVertices else 2.0 * (uKnots[uM+1] - u)
+
                 u = min(u + deltaU, uKnots[uM+1])
                 uBasisNext, duBasisNext, du2BasisNext = self.ComputeBasis(0, uM, u)
 
@@ -602,8 +604,10 @@ class SplineOpenGLFrame(OpenGLFrame):
                     j += 4;
                 }}
 
+                // If there's less than 8 vertices for the last row, force this to be the last row.
                 verticesPerU = verticesPerU > 0 ? verticesPerU : 2 * int((lastU - u) / deltaU);
-                deltaU = vertices + verticesPerU + 8 <= {maxVertices} ? deltaU : 2.0 * (lastU - u); // Leave at least 8 vertices for a near empty last row
+                deltaU = vertices + verticesPerU + 8 <= {maxVertices} ? deltaU : 2.0 * (lastU - u);
+
                 u = min(u + deltaU, lastU);
                 float uBasisNext[{maxBasis}];
                 float duBasisNext[{maxBasis}];
