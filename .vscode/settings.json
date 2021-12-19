@@ -4,6 +4,7 @@
         "bspy",
         "dtype",
         "initgl",
+        "Integerv",
         "Matrixf",
         "Mult",
         "NSEW",

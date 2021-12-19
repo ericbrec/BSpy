@@ -688,12 +688,12 @@ class SplineOpenGLFrame(OpenGLFrame):
 
     def initgl(self):
         if not self.glInitialized:
-            systemMaxVertices = GL_MAX_GEOMETRY_OUTPUT_VERTICES // 2 # Divide by two because each vertex also includes color
-            self.maxVertices = min(256, systemMaxVertices)
+            self.maxVertices = glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_VERTICES)
             print("GL_VERSION: ", glGetString(GL_VERSION))
             print("GL_SHADING_LANGUAGE_VERSION: ", glGetString(GL_SHADING_LANGUAGE_VERSION))
-            print("GL_MAX_GEOMETRY_OUTPUT_VERTICES: ", int(GL_MAX_GEOMETRY_OUTPUT_VERTICES))
-            print("GL_MAX_GEOMETRY_OUTPUT_COMPONENTS: ", int(GL_MAX_GEOMETRY_OUTPUT_COMPONENTS))
+            print("GL_MAX_GEOMETRY_OUTPUT_VERTICES: ", glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_VERTICES))
+            print("GL_MAX_GEOMETRY_OUTPUT_COMPONENTS: ", glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_COMPONENTS))
+            print("GL_MAX_TESS_GEN_LEVEL: ", glGetIntegerv(GL_MAX_TESS_GEN_LEVEL))
 
             try:
                 self.computeBasisCode = self.computeBasisCode.format(maxBasis=Spline.maxOrder+1)
