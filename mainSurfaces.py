@@ -99,7 +99,7 @@ class Spline:
         glEnd()
 
         glColor3f(1.0, 0.0, 0.0)
-        for m in range(uOrder-1, len(uKnots)-uOrder):
+        for m in range(0): #uOrder-1, len(uKnots)-uOrder):
             u = uKnots[m]
             deltaU = 0.5 * (uKnots[m+1] - u)
             vertices = 0
@@ -673,25 +673,35 @@ class SplineOpenGLFrame(OpenGLFrame):
         if not self.glInitialized:
             self.maxVertices = min(256, GL_MAX_GEOMETRY_OUTPUT_VERTICES // 2) # Divide by two because each vertex also includes color
 
-            self.computeBasisCode = self.computeBasisCode.format(maxBasis=Spline.maxOrder+1)
+            try:
+                self.computeBasisCode = self.computeBasisCode.format(maxBasis=Spline.maxOrder+1)
 
-            self.curveGeometryShaderCode = self.curveGeometryShaderCode.format(maxVertices=self.maxVertices,
-                computeBasisCode=self.computeBasisCode,
-                computeDeltaCode=self.computeDeltaCode,
-                maxBasis=Spline.maxOrder+1)
-            self.curveProgram = shaders.compileProgram(
-                shaders.compileShader(self.curveVertexShaderCode, GL_VERTEX_SHADER), 
-                shaders.compileShader(self.curveGeometryShaderCode, GL_GEOMETRY_SHADER), 
-                shaders.compileShader(self.fragmentShaderCode, GL_FRAGMENT_SHADER))
-            
-            self.surfaceGeometryShaderCode = self.surfaceGeometryShaderCode.format(maxVertices=self.maxVertices,
-                computeBasisCode=self.computeBasisCode,
-                computeDeltaCode=self.computeDeltaCode,
-                maxBasis=Spline.maxOrder+1)
-            self.surfaceProgram = shaders.compileProgram(
-                shaders.compileShader(self.surfaceVertexShaderCode, GL_VERTEX_SHADER), 
-                shaders.compileShader(self.surfaceGeometryShaderCode, GL_GEOMETRY_SHADER), 
-                shaders.compileShader(self.fragmentShaderCode, GL_FRAGMENT_SHADER))
+                self.curveGeometryShaderCode = self.curveGeometryShaderCode.format(maxVertices=self.maxVertices,
+                    computeBasisCode=self.computeBasisCode,
+                    computeDeltaCode=self.computeDeltaCode,
+                    maxBasis=Spline.maxOrder+1)
+                self.curveProgram = shaders.compileProgram(
+                    shaders.compileShader(self.curveVertexShaderCode, GL_VERTEX_SHADER), 
+                    shaders.compileShader(self.curveGeometryShaderCode, GL_GEOMETRY_SHADER), 
+                    shaders.compileShader(self.fragmentShaderCode, GL_FRAGMENT_SHADER))
+                
+                self.surfaceGeometryShaderCode = self.surfaceGeometryShaderCode.format(maxVertices=self.maxVertices,
+                    computeBasisCode=self.computeBasisCode,
+                    computeDeltaCode=self.computeDeltaCode,
+                    maxBasis=Spline.maxOrder+1)
+                self.surfaceProgram = shaders.compileProgram(
+                    shaders.compileShader(self.surfaceVertexShaderCode, GL_VERTEX_SHADER), 
+                    shaders.compileShader(self.surfaceGeometryShaderCode, GL_GEOMETRY_SHADER), 
+                    shaders.compileShader(self.fragmentShaderCode, GL_FRAGMENT_SHADER))
+            except shaders.ShaderCompilationError as exception:
+                error = exception.args[0]
+                lineNumber = error.split(":")[3]
+                source = exception.args[1][0]
+                badLine = source.split(b"\n")[int(lineNumber)-1]
+                shaderType = exception.args[2]
+                print(shaderType, error)
+                print(badLine)
+                quit()
 
             self.splineDataBuffer = glGenBuffers(1)
             self.splineTextureBuffer = glGenTextures(1)
