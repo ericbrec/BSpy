@@ -275,64 +275,81 @@ class SplineOpenGLFrame(OpenGLFrame):
     computeBasisCode = """
         void ComputeBasis(in int offset, in int order, in int n, in int m, in float u, 
             out float uBasis[{maxBasis}], out float duBasis[{maxBasis}], out float du2Basis[{maxBasis}]) {{
+            int degree = 1;
+
             uBasis = float[{maxBasis}](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
             duBasis = float[{maxBasis}](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
             du2Basis = float[{maxBasis}](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-
-            int b;
             uBasis[order-1] = 1.0;
-            for (int degree = 1; degree < order; degree++) {{
-                b = order - degree - 1;
+
+            while (degree < order - 2) {{
+                int b = order - degree - 1;
                 for (int i = m - degree; i < m + 1; i++) {{
                     float gap0 = texelFetch(uSplineData, offset + i + degree).x - texelFetch(uSplineData, offset + i).x; // knots[i+degree] - knots[i]
                     float gap1 = texelFetch(uSplineData, offset + i + degree + 1).x - texelFetch(uSplineData, offset + i + 1).x; // knots[i+degree+1] - knots[i+1]
-                    float val0 = 0.0;
-                    float val1 = 0.0;
-                    float d0 = 0.0;
-                    float d1 = 0.0;
-
                     gap0 = gap0 < 1.0e-8 ? 0.0 : 1.0 / gap0;
                     gap1 = gap1 < 1.0e-8 ? 0.0 : 1.0 / gap1;
-                    val0 = (u - texelFetch(uSplineData, offset + i).x) * gap0; // (u - knots[i]) * gap0
-                    val1 = (texelFetch(uSplineData, offset + i + degree + 1).x - u) * gap1; // (knots[i+degree+1] - u) * gap1
-                    if (degree == order - 2) {{
-                        d0 = degree * gap0;
-                        d1 = -degree * gap1;
-                        du2Basis[b] = uBasis[b] * d0 + uBasis[b+1] * d1;
-                    }}
-                    else if (degree == order - 1) {{
-                        d0 = degree * gap0;
-                        d1 = -degree * gap1;
-                        duBasis[b] = uBasis[b] * d0 + uBasis[b+1] * d1;
-                        du2Basis[b] = du2Basis[b] * d0 + du2Basis[b+1] * d1;
-                    }}
+
+                    float val0 = (u - texelFetch(uSplineData, offset + i).x) * gap0; // (u - knots[i]) * gap0;
+                    float val1 = (texelFetch(uSplineData, offset + i + degree + 1).x - u) * gap1; // (knots[i+degree+1] - u) * gap1;
                     uBasis[b] = uBasis[b] * val0 + uBasis[b+1] * val1;
                     b++;
                 }}
+                degree++;
+            }}
+            while (degree < order - 1) {{
+                int b = order - degree - 1;
+                for (int i = m - degree; i < m + 1; i++) {{
+                    float gap0 = texelFetch(uSplineData, offset + i + degree).x - texelFetch(uSplineData, offset + i).x; // knots[i+degree] - knots[i]
+                    float gap1 = texelFetch(uSplineData, offset + i + degree + 1).x - texelFetch(uSplineData, offset + i + 1).x; // knots[i+degree+1] - knots[i+1]
+                    gap0 = gap0 < 1.0e-8 ? 0.0 : 1.0 / gap0;
+                    gap1 = gap1 < 1.0e-8 ? 0.0 : 1.0 / gap1;
+
+                    float d0 = degree * gap0;
+                    float d1 = -degree * gap1;
+                    du2Basis[b] = uBasis[b] * d0 + uBasis[b+1] * d1;
+                    float val0 = (u - texelFetch(uSplineData, offset + i).x) * gap0; // (u - knots[i]) * gap0;
+                    float val1 = (texelFetch(uSplineData, offset + i + degree + 1).x - u) * gap1; // (knots[i+degree+1] - u) * gap1;
+                    uBasis[b] = uBasis[b] * val0 + uBasis[b+1] * val1;
+                    b++;
+                }}
+                degree++;
+            }}
+            while (degree < order) {{
+                int b = order - degree - 1;
+                for (int i = m - degree; i < m + 1; i++) {{
+                    float gap0 = texelFetch(uSplineData, offset + i + degree).x - texelFetch(uSplineData, offset + i).x; // knots[i+degree] - knots[i]
+                    float gap1 = texelFetch(uSplineData, offset + i + degree + 1).x - texelFetch(uSplineData, offset + i + 1).x; // knots[i+degree+1] - knots[i+1]
+                    gap0 = gap0 < 1.0e-8 ? 0.0 : 1.0 / gap0;
+                    gap1 = gap1 < 1.0e-8 ? 0.0 : 1.0 / gap1;
+
+                    float d0 = degree * gap0;
+                    float d1 = -degree * gap1;
+                    duBasis[b] = uBasis[b] * d0 + uBasis[b+1] * d1;
+                    du2Basis[b] = du2Basis[b] * d0 + du2Basis[b+1] * d1;
+                    float val0 = (u - texelFetch(uSplineData, offset + i).x) * gap0; // (u - knots[i]) * gap0;
+                    float val1 = (texelFetch(uSplineData, offset + i + degree + 1).x - u) * gap1; // (knots[i+degree+1] - u) * gap1;
+                    uBasis[b] = uBasis[b] * val0 + uBasis[b+1] * val1;
+                    b++;
+                }}
+                degree++;
             }}
         }}
     """
 
     computeDeltaCode = """
         void ComputeDelta(in vec4 point, in vec3 dPoint, in vec3 d2Point, inout float delta) {
-            float zScale;
-            float zScale2;
-            float zScale3;
-            if (uScreenScale.z > 1.0) {
-                zScale = 1.0 / (uScreenScale.z - point.z);
-                zScale2 = zScale * zScale;
-                zScale3 = zScale2 * zScale;
-                d2Point.x = uScreenScale.x * (d2Point.x * zScale - 2.0 * dPoint.x * dPoint.z * zScale2 +
-                    point.x * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2));
-                d2Point.y = uScreenScale.y * (d2Point.y * zScale - 2.0 * dPoint.y * dPoint.z * zScale2 +
-                    point.y * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2));
-            }
-            else {
-                d2Point.x *= uScreenScale.x;
-                d2Point.y *= uScreenScale.y;
-            }
-            float sqrtLength = pow(d2Point.x*d2Point.x + d2Point.y*d2Point.y, 0.25);
-            delta = sqrtLength < 1.0e-8 ? delta : 1.0 / sqrtLength;
+            float zScale = 1.0 / (uScreenScale.z - point.z);
+            float zScale2 = zScale * zScale;
+            float zScale3 = zScale2 * zScale;
+            vec2 projection = uScreenScale.z > 1.0 ? 
+                vec2(uScreenScale.x * (d2Point.x * zScale - 2.0 * dPoint.x * dPoint.z * zScale2 +
+                    point.x * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2)),
+                    uScreenScale.y * (d2Point.y * zScale - 2.0 * dPoint.y * dPoint.z * zScale2 +
+                    point.y * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2)))
+                : vec2(uScreenScale.x * d2Point.x, uScreenScale.y * d2Point.y);
+            float projectionLength = length(projection);
+            delta = projectionLength < 1.0e-8 ? delta : 1.0 / sqrt(projectionLength);
         }
     """
 
