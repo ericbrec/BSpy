@@ -584,7 +584,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
             splineColor = uSplineColor;
             ComputeBasis(header, uOrder, uN, uM, u, uBasis, duBasis, du2Basis);
-            while (u < lastU) {{
+            while (u < lastU && vertices < {maxVertices}) {{
                 // Calculate deltaU (min deltaU value over the comvex hull of v values)
                 float deltaU = 0.5 * (lastU - firstU);
                 int j = header + uOrder + uN + vOrder + vN + (vM + 1 - vOrder) * 4;
@@ -614,7 +614,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
                 // If there's less than 8 vertices for the last row, force this to be the last row.
                 verticesPerU = verticesPerU > 0 ? verticesPerU : 2 * int((lastU - u) / deltaU);
-                deltaU = vertices + verticesPerU + 8 <= {maxVertices} ? deltaU : 2.0 * (lastU - u);
+                //deltaU = vertices + verticesPerU + 8 <= {maxVertices} ? deltaU : 2.0 * (lastU - u);
 
                 u = min(u + deltaU, lastU);
                 float uBasisNext[{maxBasis}];
@@ -629,12 +629,12 @@ class SplineOpenGLFrame(OpenGLFrame):
                 while (v < lastV && vertices <= {maxVertices} - 4) {{ // Save room for the vertices at v and lastV
                     DrawSurfacePoints(uOrder, uN, uM, uBasis, duBasis, uBasisNext, duBasisNext,
                         vOrder, vN, vM, v, deltaV);
-                    v += deltaV;
+                    v = min(v + deltaV, lastV);
                     vertices += 2;
                     verticesPerU += 2;
                 }}
                 DrawSurfacePoints(uOrder, uN, uM, uBasis, duBasis, uBasisNext, duBasisNext,
-                    vOrder, vN, vM, lastV, deltaV);
+                    vOrder, vN, vM, v, deltaV); //lastV, deltaV);
                 vertices += 2;
                 verticesPerU += 2;
                 EndPrimitive();
