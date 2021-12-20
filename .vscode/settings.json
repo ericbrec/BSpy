@@ -1,6 +1,8 @@
 {
       "terminal.integrated.defaultProfile.windows": "Windows PowerShell",
       "cSpell.words": [
+        "Brechner",
+        "bspline",
         "bspy",
         "dtype",
         "initgl",
@@ -8,6 +10,8 @@
         "Matrixf",
         "Mult",
         "NSEW",
+        "opengl",
+        "pyopengl",
         "pyopengltk",
         "scipy",
         "spalde",
