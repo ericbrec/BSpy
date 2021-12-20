@@ -1,6 +1,3 @@
-import sys
-sys.path.append('''C:/Users/ericb/Repos/bspy/''')
-
 import numpy as np
 from bspy.spline import Spline
 from bspy.bspyApp import bspyApp
