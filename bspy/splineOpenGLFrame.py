@@ -4,7 +4,7 @@ import tkinter as tk
 from OpenGL.GL import *
 import OpenGL.GL.shaders as shaders
 from pyopengltk import OpenGLFrame
-from bspline import Spline
+from bspy.spline import Spline
 
 class SplineOpenGLFrame(OpenGLFrame):
 

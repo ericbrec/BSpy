@@ -1,9 +1,9 @@
 import sys
-sys.path.append('''"C:/Users/ericb/Repos/bspy/''')
+sys.path.append('''C:/Users/ericb/Repos/bspy/''')
 
 import numpy as np
-from bspline import Spline
-from bspyApp import bspyApp
+from bspy.spline import Spline
+from bspy.bspyApp import bspyApp
 
 def CreateSplineFromMesh(xRange, zRange, yFunction):
     order = (3, 3)

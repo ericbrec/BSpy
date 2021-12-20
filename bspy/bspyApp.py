@@ -1,5 +1,5 @@
 import tkinter as tk
-from splineOpenGLFrame import SplineOpenGLFrame
+from bspy.splineOpenGLFrame import SplineOpenGLFrame
 
 class bspyApp(tk.Tk):
     def __init__(self, *args, **kw):
@@ -19,3 +19,13 @@ class bspyApp(tk.Tk):
         self.frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=tk.YES)
 
         self.splineList = []
+
+    def AddSpline(self, spline):
+        self.splineList.append(spline)
+        self.listBox.insert(tk.END, spline)
+
+    def ListChanged(self, event):
+        self.frame.splineDrawList = []
+        for item in self.listBox.curselection():
+            self.frame.splineDrawList.append(self.splineList[item])
+        self.frame.tkExpose(None)
