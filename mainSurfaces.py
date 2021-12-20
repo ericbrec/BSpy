@@ -692,7 +692,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             print("GL_VERSION: ", glGetString(GL_VERSION))
             print("GL_SHADING_LANGUAGE_VERSION: ", glGetString(GL_SHADING_LANGUAGE_VERSION))
             print("GL_MAX_GEOMETRY_OUTPUT_VERTICES: ", glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_VERTICES))
-            print("GL_MAX_GEOMETRY_OUTPUT_COMPONENTS: ", glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_COMPONENTS))
+            print("GL_MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS: ", glGetIntegerv(GL_MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS))
             print("GL_MAX_TESS_GEN_LEVEL: ", glGetIntegerv(GL_MAX_TESS_GEN_LEVEL))
 
             try:
