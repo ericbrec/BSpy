@@ -92,21 +92,72 @@ class SplineOpenGLFrame(OpenGLFrame):
     curveVertexShaderCode = """
         #version 330 core
      
+        const int header = 2;
+
         attribute vec4 aParameters;
 
         uniform samplerBuffer uSplineData;
 
-        out KnotIndices {
-            int m;
+        out GeometryInfo {
+            int uOrder;
+            int uN;
+            int uM;
+            float firstU;
+            float lastU;
         } outData;
 
         void main() {
-            int order = int(texelFetch(uSplineData, 0).x);
-            int n = int(texelFetch(uSplineData, 1).x);
-
-            outData.m = min(gl_InstanceID + order - 1, n - 1);
+            outData.uOrder = int(texelFetch(uSplineData, 0).x);
+            outData.uN = int(texelFetch(uSplineData, 1).x);
+            outData.uM = min(gl_InstanceID + outData.uOrder - 1, outData.uN - 1);
+            outData.firstU = texelFetch(uSplineData, header + outData.uM).x; // knots[uM]
+            outData.lastU = texelFetch(uSplineData, header + outData.uM + 1).x; // knots[uM+1]
             gl_Position = aParameters;
         }
+    """
+
+    curveTCShaderCode = """
+        #version 410 core
+
+        layout (vertices = 1) out;
+
+        const int header = 2;
+
+        in GeometryInfo {{
+            int uOrder;
+            int uN;
+            int uM;
+            float firstU;
+            float lastU;
+        }} inData[];
+
+        uniform mat4 uProjectionMatrix;
+        uniform vec3 uScreenScale;
+        uniform samplerBuffer uSplineData;
+
+        struct PatchData {{
+            int uM;
+            float firstU;
+            float lastU;
+            float deltaU;
+        }}
+        patch out PatchData patchData;
+
+        void main() {{
+            gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
+
+            // Set the control points of the output patch
+            for (int i = 0 ; i < 3 ; i++) {
+                oPatch.Normal[i] = Normal_CS_in[i];
+                oPatch.TexCoord[i] = TexCoord_CS_in[i];
+            }
+
+            // Calculate the tessellation levels
+            gl_TessLevelOuter[0] = gTessellationLevel;
+            gl_TessLevelOuter[1] = gTessellationLevel;
+            gl_TessLevelOuter[2] = gTessellationLevel;
+            gl_TessLevelInner[0] = gTessellationLevel;
+        }}
     """
 
     curveGeometryShaderCode = """
@@ -117,8 +168,12 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         const int header = 2;
 
-        in KnotIndices {{
-            int m;
+        in GeometryInfo {{
+            int uOrder;
+            int uN;
+            int uM;
+            float firstU;
+            float lastU;
         }} inData[];
 
         uniform mat4 uProjectionMatrix;
@@ -168,11 +223,11 @@ class SplineOpenGLFrame(OpenGLFrame):
         }}
 
         void main() {{
-            int order = int(texelFetch(uSplineData, 0).x);
-            int n = int(texelFetch(uSplineData, 1).x);
-            int m = inData[0].m;
-            float u = texelFetch(uSplineData, header + m).x; // knots[m]
-            float lastU = texelFetch(uSplineData, header + m + 1).x; // knots[m+1]
+            int order = inData[0].uOrder;
+            int n = inData[0].uN;
+            int m = inData[0].uM;
+            float u = inData[0].firstU;
+            float lastU = inData[0].lastU;
             float deltaU = 0.5 * (lastU - u);
             int vertices = 0;
 
@@ -190,27 +245,88 @@ class SplineOpenGLFrame(OpenGLFrame):
 
     surfaceVertexShaderCode = """
         #version 330 core
+
+        const int header = 4;
      
         attribute vec4 aParameters;
 
         uniform samplerBuffer uSplineData;
 
-        out KnotIndices {
+        out GeometryInfo {
+            int uOrder;
+            int vOrder;
+            int uN;
+            int vN;
             int uM;
             int vM;
+            float firstU;
+            float firstV;
+            float lastU;
+            float lastV;
         } outData;
 
         void main() {
-            int uOrder = int(texelFetch(uSplineData, 0).x);
-            int vOrder = int(texelFetch(uSplineData, 1).x);
-            int uN = int(texelFetch(uSplineData, 2).x);
-            int vN = int(texelFetch(uSplineData, 3).x);
-            int stride = vN - vOrder + 1;
+            outData.uOrder = int(texelFetch(uSplineData, 0).x);
+            outData.vOrder = int(texelFetch(uSplineData, 1).x);
+            outData.uN = int(texelFetch(uSplineData, 2).x);
+            outData.vN = int(texelFetch(uSplineData, 3).x);
+            int stride = outData.vN - outData.vOrder + 1;
 
-            outData.uM = min(int(gl_InstanceID / stride) + uOrder - 1, uN - 1);
-            outData.vM = min(int(mod(gl_InstanceID, stride)) + vOrder - 1, vN - 1);
+            outData.uM = min(int(gl_InstanceID / stride) + outData.uOrder - 1, outData.uN - 1);
+            outData.vM = min(int(mod(gl_InstanceID, stride)) + outData.vOrder - 1, outData.vN - 1);
+            outData.firstU = texelFetch(uSplineData, header + outData.uM).x; // uKnots[uM]
+            outData.firstV = texelFetch(uSplineData, header + outData.uOrder + outData.uN + outData.vM).x; // vKnots[vM]
+            outData.lastU = texelFetch(uSplineData, header + outData.uM + 1).x; // uKnots[uM+1]
+            outData.lastV = texelFetch(uSplineData, header + outData.uOrder + outData.uN + outData.vM + 1).x; // vKnots[vM+1]
             gl_Position = aParameters;
         }
+    """
+
+    surfaceTCShaderCode = """
+        #version 410 core
+
+        layout (vertices = 1) out;
+
+        const int header = 4;
+
+        in GeometryInfo {{
+            int uOrder;
+            int vOrder;
+            int uN;
+            int vN;
+            int uM;
+            int vM;
+            float firstU;
+            float firstV;
+            float lastU;
+            float lastV;
+        }} inData[];
+
+        uniform mat4 uProjectionMatrix;
+        uniform vec3 uScreenScale;
+        uniform samplerBuffer uSplineData;
+
+        struct PatchData {{
+            int uM;
+            int vM;
+        }}
+        out patch PatchData patchData;
+
+        void main() {{
+            gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
+
+            // Set the control points of the output patch
+            for (int i = 0 ; i < 3 ; i++) {
+                oPatch.Normal[i] = Normal_CS_in[i];
+                oPatch.TexCoord[i] = TexCoord_CS_in[i];
+            }
+
+            // Calculate the tessellation levels
+            gl_TessLevelOuter[0] = gTessellationLevel;
+            gl_TessLevelOuter[1] = gTessellationLevel;
+            gl_TessLevelOuter[2] = gTessellationLevel;
+            gl_TessLevelInner[0] = gTessellationLevel;
+        }}
     """
 
     surfaceGeometryShaderCode = """
@@ -221,9 +337,17 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         const int header = 4;
 
-        in KnotIndices {{
+        in GeometryInfo {{
+            int uOrder;
+            int vOrder;
+            int uN;
+            int vN;
             int uM;
             int vM;
+            float firstU;
+            float firstV;
+            float lastU;
+            float lastV;
         }} inData[];
 
         uniform mat4 uProjectionMatrix;
@@ -320,14 +444,14 @@ class SplineOpenGLFrame(OpenGLFrame):
         }}
 
         void main() {{
-            int uOrder = int(texelFetch(uSplineData, 0).x);
-            int vOrder = int(texelFetch(uSplineData, 1).x);
-            int uN = int(texelFetch(uSplineData, 2).x);
-            int vN = int(texelFetch(uSplineData, 3).x);
+            int uOrder = inData[0].uOrder;
+            int vOrder = inData[0].vOrder;
+            int uN = inData[0].uN;
+            int vN = inData[0].vN;
             int uM = inData[0].uM;
             int vM = inData[0].vM;
-            float firstU = texelFetch(uSplineData, header + uM).x; // uKnots[uM]
-            float lastU = texelFetch(uSplineData, header + uM + 1).x; // uKnots[uM+1]
+            float firstU = inData[0].firstU;
+            float lastU = inData[0].lastU;
             float u = firstU;
             int vertices = 0;
             int verticesPerU = 0;
@@ -375,8 +499,8 @@ class SplineOpenGLFrame(OpenGLFrame):
                 float du2BasisNext[{maxBasis}];
                 ComputeBasis(header, uOrder, uN, uM, u, uBasisNext, duBasisNext, du2BasisNext);
 
-                float v = texelFetch(uSplineData, header + uOrder + uN + vM).x; // vKnots[vM]
-                float lastV = texelFetch(uSplineData, header + uOrder + uN + vM + 1).x; // vKnots[vM+1]
+                float v = inData[0].firstV;
+                float lastV = inData[0].lastV;
                 float deltaV = 0.5 * (lastV - v);
                 verticesPerU = 0;
                 while (v < lastV && vertices <= {maxVertices} - 4) {{ // Save room for the vertices at v and lastV
