@@ -156,11 +156,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         void main()
         {{
-            outData.uOrder = inData[gl_InvocationID].uOrder;
-            outData.uN = inData[gl_InvocationID].uN;
-            outData.uM = inData[gl_InvocationID].uM;
-            outData.firstU = inData[gl_InvocationID].firstU;
-            outData.lastU = inData[gl_InvocationID].lastU;
+            outData = inData[gl_InvocationID];
             gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 
             // Find bounding box for coefficients in projected screen space pixels.
@@ -182,7 +178,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             // Calculate the tessellation levels based on one vertex per pixel, so each sample can handle at most "maxVertices" pixels.
             // The number of samples ranges from 1 to gl_MaxTessGenLevel.
             vec2 size = maxProjected - minProjected;
-            float samples = min(max(ceil(max(size.x, size.y) / {maxVertices}.0), 1.0), gl_MaxTessGenLevel);
+            float samples = min(ceil(max(size.x, size.y) / {maxVertices}.0), gl_MaxTessGenLevel);
             gl_TessLevelOuter[0] = 1.0;
             gl_TessLevelOuter[1] = samples;
         }}
@@ -219,7 +215,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             outData.uN = inData.uN;
             outData.uM = inData.uM;
             // gl_TessCoord.x is in [0.0, 1.0], so outData.firstU is in [inData.firstU, inData.lastU].
-            outData.firstU = inData.firstU + (inData.lastU - inData.firstU) * gl_TessCoord.x;
+            outData.firstU = inData.firstU +  gl_TessCoord.x * (inData.lastU - inData.firstU);
             // Ensure outData.lastU is in [inData.firstU, inData.lastU].
             outData.lastU = min(inData.lastU, outData.firstU + (inData.lastU - inData.firstU) / gl_TessLevelOuter[1]);
         }
@@ -379,33 +375,112 @@ class SplineOpenGLFrame(OpenGLFrame):
             float lastV;
         }} inData[];
 
-        uniform mat4 uProjectionMatrix;
         uniform vec3 uScreenScale;
         uniform samplerBuffer uSplineData;
 
-        patch out PatchData
+        patch out SplineInfo
         {{
+            int uOrder;
+            int vOrder;
+            int uN;
+            int vN;
             int uM;
             int vM;
-        }} patchData;
+            float firstU;
+            float firstV;
+            float lastU;
+            float lastV;
+        }} outData;
 
         void main()
         {{
+            outData = inData[gl_InvocationID];
             gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 
-            // Set the control points of the output patch
-            for (int i = 0 ; i < 3 ; i++)
+            // Find bounding box for coefficients in projected screen space pixels.
+            vec2 minProjected = uScreenScale.xy;
+            vec2 maxProjected = -uScreenScale.xy;
+            int j = header + outData.uOrder + outData.uN + outData.vOrder + outData.vN + (outData.vM + 1 - outData.vOrder) * 4;
+            for (int vB = 0; vB < outData.vOrder; vB++)
             {{
-                oPatch.Normal[i] = Normal_CS_in[i];
-                oPatch.TexCoord[i] = TexCoord_CS_in[i];
+                int i = j + (outData.uM + 1 - outData.uOrder) * outData.vN * 4;
+                for (int uB = 0; uB < outData.uOrder; uB++)
+                {{
+                    float zScale = uScreenScale.z > 1.0 ? 1.0 / (uScreenScale.z - texelFetch(uSplineData, i+2).x) : 1.0;
+                    vec2 projection = vec2(uScreenScale.x * texelFetch(uSplineData, i).x * zScale,
+                        uScreenScale.y * texelFetch(uSplineData, i+1).x * zScale);
+                    minProjected = min(minProjected, projection);
+                    maxProjected = max(maxProjected, projection);
+                    i += outData.vN * 4;
+                }}
+                j += 4;
             }}
+            minProjected = max(minProjected, -uScreenScale.xy);
+            maxProjected = min(maxProjected, uScreenScale.xy);
 
-            // Calculate the tessellation levels
-            gl_TessLevelOuter[0] = gTessellationLevel;
-            gl_TessLevelOuter[1] = gTessellationLevel;
-            gl_TessLevelOuter[2] = gTessellationLevel;
-            gl_TessLevelInner[0] = gTessellationLevel;
+            // Calculate the tessellation levels based on one vertex per pixel, so each sample can handle at most "maxVertices" pixels.
+            // The number of samples ranges from 1 to gl_MaxTessGenLevel.
+            vec2 size = maxProjected - minProjected;
+            float samples = min(ceil(max(size.x, size.y) / {maxVertices}.0), gl_MaxTessGenLevel);
+            gl_TessLevelOuter[0] = samples;
+            gl_TessLevelOuter[1] = 2.0;
         }}
+    """
+
+    surfaceTEShaderCode = """
+        #version 410 core
+
+        layout (isolines, point_mode) in;
+
+        const int header = 2;
+
+        patch in SplineInfo
+        {
+            int uOrder;
+            int vOrder;
+            int uN;
+            int vN;
+            int uM;
+            int vM;
+            float firstU;
+            float firstV;
+            float lastU;
+            float lastV;
+        } inData;
+
+        out SplineInfo
+        {
+            int uOrder;
+            int vOrder;
+            int uN;
+            int vN;
+            int uM;
+            int vM;
+            float firstU;
+            float firstV;
+            float lastU;
+            float lastV;
+        } outData;
+
+        void main()
+        {
+            outData.uOrder = inData.uOrder;
+            outData.vOrder = inData.vOrder;
+            outData.uN = inData.uN;
+            outData.vN = inData.vN;
+            outData.uM = inData.uM;
+            outData.vM = inData.vM;
+
+            // gl_TessCoord.x is in [0.0, 1.0]
+            outData.firstU = inData.firstU + gl_TessCoord.x * (inData.lastU - inData.firstU);
+            // Ensure outData.lastU is in [inData.firstU, inData.lastU].
+            outData.lastU = min(inData.lastU, outData.firstU + (inData.lastU - inData.firstU) / gl_TessLevelOuter[1]);
+
+            // gl_TessCoord.y is in [0.0, gl_TessLevelOuter[0] - 1.0]
+            outData.firstV = inData.firstV +  gl_TessCoord.y * (inData.lastV - inData.firstV) / gl_TessLevelOuter[0];
+            // Ensure outData.lastV is in [inData.firstV, inData.lastV].
+            outData.lastV = min(inData.lastV, outData.firstV + (inData.lastV - inData.firstV) / gl_TessLevelOuter[0]);
+        }
     """
 
     surfaceGeometryShaderCode = """
@@ -665,12 +740,15 @@ class SplineOpenGLFrame(OpenGLFrame):
                     shaders.compileShader(self.curveGeometryShaderCode, GL_GEOMETRY_SHADER), 
                     shaders.compileShader(self.fragmentShaderCode, GL_FRAGMENT_SHADER))
                 
+                self.surfaceTCShaderCode = self.surfaceTCShaderCode.format(maxVertices=self.maxVertices)
                 self.surfaceGeometryShaderCode = self.surfaceGeometryShaderCode.format(maxVertices=self.maxVertices,
                     computeBasisCode=self.computeBasisCode,
                     computeDeltaCode=self.computeDeltaCode,
                     maxBasis=Spline.maxOrder+1)
                 self.surfaceProgram = shaders.compileProgram(
                     shaders.compileShader(self.surfaceVertexShaderCode, GL_VERTEX_SHADER), 
+                    shaders.compileShader(self.surfaceTCShaderCode, GL_TESS_CONTROL_SHADER), 
+                    shaders.compileShader(self.surfaceTEShaderCode, GL_TESS_EVALUATION_SHADER), 
                     shaders.compileShader(self.surfaceGeometryShaderCode, GL_GEOMETRY_SHADER), 
                     shaders.compileShader(self.fragmentShaderCode, GL_FRAGMENT_SHADER))
             except shaders.ShaderCompilationError as exception:
@@ -721,7 +799,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
             glUseProgram(0)
 
-            #glEnable( GL_DEPTH_TEST )
+            glEnable( GL_DEPTH_TEST )
             #glClearColor(1.0, 1.0, 1.0, 0.0)
             glClearColor(0.0, 0.0, 0.0, 0.0)
 
