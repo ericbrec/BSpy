@@ -142,7 +142,6 @@ class SplineOpenGLFrame(OpenGLFrame):
             float lastU;
         }} inData[];
 
-        uniform mat4 uProjectionMatrix;
         uniform vec3 uScreenScale;
         uniform samplerBuffer uSplineData;
 
@@ -157,19 +156,37 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         void main()
         {{
-            outData.uOrder = inData[0].uOrder;
-            outData.uN = inData[0].uN;
-            outData.uM = inData[0].uM;
-            outData.firstU = inData[0].firstU;
-            outData.lastU = inData[0].lastU;
-
+            outData.uOrder = inData[gl_InvocationID].uOrder;
+            outData.uN = inData[gl_InvocationID].uN;
+            outData.uM = inData[gl_InvocationID].uM;
+            outData.firstU = inData[gl_InvocationID].firstU;
+            outData.lastU = inData[gl_InvocationID].lastU;
             gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 
-            // Calculate the tessellation levels
-            gl_TessLevelOuter[0] = 5.0;
-            gl_TessLevelOuter[1] = 3.0;
+            // Find bounding box for coefficients in projected screen space pixels.
+            vec2 minProjected = uScreenScale.xy;
+            vec2 maxProjected = -uScreenScale.xy;
+            int i = header + outData.uOrder + outData.uN + (outData.uM + 1 - outData.uOrder) * 4;
+            for (int uB = 0; uB < outData.uOrder; uB++)
+            {{
+                float zScale = uScreenScale.z > 1.0 ? 1.0 / (uScreenScale.z - texelFetch(uSplineData, i+2).x) : 1.0;
+                vec2 projection = vec2(uScreenScale.x * texelFetch(uSplineData, i).x * zScale,
+                    uScreenScale.y * texelFetch(uSplineData, i+1).x * zScale);
+                minProjected = min(minProjected, projection);
+                maxProjected = max(maxProjected, projection);
+                i += 4;
+            }}
+            minProjected = max(minProjected, -uScreenScale.xy);
+            maxProjected = min(maxProjected, uScreenScale.xy);
+
+            // Calculate the tessellation levels based on one vertex per pixel, so each sample can handle at most "maxVertices" pixels.
+            // The number of samples ranges from 1 to gl_MaxTessGenLevel.
+            vec2 size = maxProjected - minProjected;
+            float samples = min(max(ceil(max(size.x, size.y) / {maxVertices}.0), 1.0), gl_MaxTessGenLevel);
+            gl_TessLevelOuter[0] = 1.0;
+            gl_TessLevelOuter[1] = samples;
         }}
-    """.format()
+    """
 
     curveTEShaderCode = """
         #version 410 core
@@ -282,6 +299,10 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         void main()
         {{
+            if (inData[0].firstU >= inData[0].lastU)
+            {{
+                return;
+            }}
             int order = inData[0].uOrder;
             int n = inData[0].uN;
             int m = inData[0].uM;
@@ -516,6 +537,10 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         void main()
         {{
+            if (inData[0].firstU >= inData[0].lastU || inData[0].firstV >= inData[0].lastV)
+            {{
+                return;
+            }}
             int uOrder = inData[0].uOrder;
             int vOrder = inData[0].vOrder;
             int uN = inData[0].uN;
@@ -635,6 +660,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             try:
                 self.computeBasisCode = self.computeBasisCode.format(maxBasis=Spline.maxOrder+1)
 
+                self.curveTCShaderCode = self.curveTCShaderCode.format(maxVertices=self.maxVertices)
                 self.curveGeometryShaderCode = self.curveGeometryShaderCode.format(maxVertices=self.maxVertices,
                     computeBasisCode=self.computeBasisCode,
                     computeDeltaCode=self.computeDeltaCode,

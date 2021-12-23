@@ -28,14 +28,6 @@ class Spline:
             glVertex3f(point[0], point[1], point[2])
         glEnd()
 
-        glColor3f(1.0, 0.0, 0.0)
-        glBegin(GL_LINE_STRIP)
-        glVertex3f(-0.01, -0.01, 0.0)
-        glVertex3f(-0.01, 0.01 + 5.0/6.0, 0.0)
-        glVertex3f(1.01, 0.01 + 5.0/6.0, 0.0)
-        glVertex3f(1.01, -0.01, 0.0)
-        glEnd()
-
         glUseProgram(frame.curveProgram)
         glUniform3f(frame.uCurveSplineColor, 0.0, 1.0, 0.0)
         glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
