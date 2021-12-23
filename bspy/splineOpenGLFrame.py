@@ -90,7 +90,7 @@ class SplineOpenGLFrame(OpenGLFrame):
     """
 
     curveVertexShaderCode = """
-        #version 330 core
+        #version 410 core
      
         const int header = 2;
 
@@ -98,7 +98,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         uniform samplerBuffer uSplineData;
 
-        out GeometryInfo {
+        out SplineInfo  {
             int uOrder;
             int uN;
             int uM;
@@ -123,7 +123,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         const int header = 2;
 
-        in GeometryInfo {{
+        in SplineInfo {{
             int uOrder;
             int uN;
             int uM;
@@ -135,40 +135,79 @@ class SplineOpenGLFrame(OpenGLFrame):
         uniform vec3 uScreenScale;
         uniform samplerBuffer uSplineData;
 
-        struct PatchData {{
+        patch out SplineInfo {{
+            int uOrder;
+            int uN;
             int uM;
             float firstU;
             float lastU;
-            float deltaU;
-        }}
-        patch out PatchData patchData;
+        }} outData;
 
         void main() {{
+            outData.uOrder = inData[0].uOrder;
+            outData.uN = inData[0].uN;
+            outData.uM = inData[0].uM;
+            outData.firstU = inData[0].firstU;
+            outData.lastU = inData[0].lastU;
+
             gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 
-            // Set the control points of the output patch
-            for (int i = 0 ; i < 3 ; i++) {
-                oPatch.Normal[i] = Normal_CS_in[i];
-                oPatch.TexCoord[i] = TexCoord_CS_in[i];
-            }
-
             // Calculate the tessellation levels
-            gl_TessLevelOuter[0] = gTessellationLevel;
-            gl_TessLevelOuter[1] = gTessellationLevel;
-            gl_TessLevelOuter[2] = gTessellationLevel;
-            gl_TessLevelInner[0] = gTessellationLevel;
+            gl_TessLevelOuter[0] = 5.0;
+            gl_TessLevelOuter[1] = 3.0;
         }}
-    """
+    """.format()
+
+    curveTEShaderCode = """
+        #version 410 core
+
+        layout (isolines, point_mode) in;
+
+        const int header = 2;
+
+        patch in SplineInfo {{
+            int uOrder;
+            int uN;
+            int uM;
+            float firstU;
+            float lastU;
+        }} inData;
+
+        uniform mat4 uProjectionMatrix;
+        uniform vec3 uScreenScale;
+        uniform vec3 uSplineColor;
+        uniform samplerBuffer uSplineData;
+
+        out SplineInfo {{
+            int uOrder;
+            int uN;
+            int uM;
+            float firstU;
+            float lastU;
+        }} outData;
+        out vec3 splineColor;
+
+        void main() {{
+            outData.uOrder = inData.uOrder;
+            outData.uN = inData.uN;
+            outData.uM = inData.uM;
+            outData.firstU = inData.firstU;
+            outData.lastU = inData.lastU;
+
+            splineColor = uSplineColor;
+            gl_Position = uProjectionMatrix * vec4(gl_TessCoord.x, gl_TessCoord.y, 0.0, 1.0);
+        }}
+    """.format()
 
     curveGeometryShaderCode = """
-        #version 330 core
+        #version 410 core
 
         layout( points ) in;
         layout( line_strip, max_vertices = {maxVertices} ) out;
 
         const int header = 2;
 
-        in GeometryInfo {{
+        in SplineInfo {{
             int uOrder;
             int uN;
             int uM;
@@ -244,7 +283,7 @@ class SplineOpenGLFrame(OpenGLFrame):
     """
 
     surfaceVertexShaderCode = """
-        #version 330 core
+        #version 410 core
 
         const int header = 4;
      
@@ -252,7 +291,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         uniform samplerBuffer uSplineData;
 
-        out GeometryInfo {
+        out SplineInfo {
             int uOrder;
             int vOrder;
             int uN;
@@ -289,7 +328,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         const int header = 4;
 
-        in GeometryInfo {{
+        in SplineInfo {{
             int uOrder;
             int vOrder;
             int uN;
@@ -306,11 +345,10 @@ class SplineOpenGLFrame(OpenGLFrame):
         uniform vec3 uScreenScale;
         uniform samplerBuffer uSplineData;
 
-        struct PatchData {{
+        patch out PatchData {{
             int uM;
             int vM;
-        }}
-        out patch PatchData patchData;
+        }} patchData;
 
         void main() {{
             gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
@@ -330,14 +368,14 @@ class SplineOpenGLFrame(OpenGLFrame):
     """
 
     surfaceGeometryShaderCode = """
-        #version 330 core
+        #version 410 core
 
         layout( points ) in;
         layout( triangle_strip, max_vertices = {maxVertices} ) out;
 
         const int header = 4;
 
-        in GeometryInfo {{
+        in SplineInfo {{
             int uOrder;
             int vOrder;
             int uN;
@@ -523,7 +561,7 @@ class SplineOpenGLFrame(OpenGLFrame):
     """
 
     fragmentShaderCode = """
-        #version 330 core
+        #version 410 core
      
         in vec3 splineColor;
         out vec3 color;
@@ -549,11 +587,11 @@ class SplineOpenGLFrame(OpenGLFrame):
     def initgl(self):
         if not self.glInitialized:
             self.maxVertices = glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_VERTICES)
-            print("GL_VERSION: ", glGetString(GL_VERSION))
-            print("GL_SHADING_LANGUAGE_VERSION: ", glGetString(GL_SHADING_LANGUAGE_VERSION))
-            print("GL_MAX_GEOMETRY_OUTPUT_VERTICES: ", glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_VERTICES))
-            print("GL_MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS: ", glGetIntegerv(GL_MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS))
-            print("GL_MAX_TESS_GEN_LEVEL: ", glGetIntegerv(GL_MAX_TESS_GEN_LEVEL))
+            #print("GL_VERSION: ", glGetString(GL_VERSION))
+            #print("GL_SHADING_LANGUAGE_VERSION: ", glGetString(GL_SHADING_LANGUAGE_VERSION))
+            #print("GL_MAX_GEOMETRY_OUTPUT_VERTICES: ", glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_VERTICES))
+            #print("GL_MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS: ", glGetIntegerv(GL_MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS))
+            #print("GL_MAX_TESS_GEN_LEVEL: ", glGetIntegerv(GL_MAX_TESS_GEN_LEVEL))
 
             try:
                 self.computeBasisCode = self.computeBasisCode.format(maxBasis=Spline.maxOrder+1)
@@ -564,7 +602,9 @@ class SplineOpenGLFrame(OpenGLFrame):
                     maxBasis=Spline.maxOrder+1)
                 self.curveProgram = shaders.compileProgram(
                     shaders.compileShader(self.curveVertexShaderCode, GL_VERTEX_SHADER), 
-                    shaders.compileShader(self.curveGeometryShaderCode, GL_GEOMETRY_SHADER), 
+                    shaders.compileShader(self.curveTCShaderCode, GL_TESS_CONTROL_SHADER), 
+                    shaders.compileShader(self.curveTEShaderCode, GL_TESS_EVALUATION_SHADER), 
+                    #shaders.compileShader(self.curveGeometryShaderCode, GL_GEOMETRY_SHADER), 
                     shaders.compileShader(self.fragmentShaderCode, GL_FRAGMENT_SHADER))
                 
                 self.surfaceGeometryShaderCode = self.surfaceGeometryShaderCode.format(maxVertices=self.maxVertices,
@@ -623,8 +663,9 @@ class SplineOpenGLFrame(OpenGLFrame):
 
             glUseProgram(0)
 
-            glEnable( GL_DEPTH_TEST )
-            glClearColor(1.0, 1.0, 1.0, 0.0)
+            #glEnable( GL_DEPTH_TEST )
+            #glClearColor(1.0, 1.0, 1.0, 0.0)
+            glClearColor(0.0, 0.0, 0.0, 0.0)
 
             self.glInitialized = True
 

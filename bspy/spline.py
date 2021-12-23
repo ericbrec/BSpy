@@ -28,6 +28,14 @@ class Spline:
             glVertex3f(point[0], point[1], point[2])
         glEnd()
 
+        glColor3f(1.0, 0.0, 0.0)
+        glBegin(GL_LINE_STRIP)
+        glVertex3f(-0.01, -0.01, 0.0)
+        glVertex3f(-0.01, 0.01 + 5.0/6.0, 0.0)
+        glVertex3f(1.01, 0.01 + 5.0/6.0, 0.0)
+        glVertex3f(1.01, -0.01, 0.0)
+        glEnd()
+
         glUseProgram(frame.curveProgram)
         glUniform3f(frame.uCurveSplineColor, 0.0, 1.0, 0.0)
         glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
@@ -41,7 +49,9 @@ class Spline:
         size = 4 * 4 * len(drawCoefficients)
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
         glEnableVertexAttribArray(frame.aCurveParameters)
-        glDrawArraysInstanced(GL_POINTS, 0, 1, drawCoefficients.shape[0] - self.order[0] + 1)
+        #glDrawArraysInstanced(GL_POINTS, 0, 1, drawCoefficients.shape[0] - self.order[0] + 1)
+        glPatchParameteri(GL_PATCH_VERTICES, 1)
+        glDrawArraysInstanced(GL_PATCHES, 0, 1, 1)
         glDisableVertexAttribArray(frame.aCurveParameters)
         glUseProgram(0)
 
