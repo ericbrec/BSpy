@@ -43,7 +43,7 @@ class Spline:
         glEnableVertexAttribArray(frame.aCurveParameters)
         #glDrawArraysInstanced(GL_POINTS, 0, 1, drawCoefficients.shape[0] - self.order[0] + 1)
         glPatchParameteri(GL_PATCH_VERTICES, 1)
-        glDrawArraysInstanced(GL_PATCHES, 0, 1, 1)
+        glDrawArraysInstanced(GL_PATCHES, 0, 1, drawCoefficients.shape[0] - self.order[0] + 1)
         glDisableVertexAttribArray(frame.aCurveParameters)
         glUseProgram(0)
 

@@ -196,41 +196,34 @@ class SplineOpenGLFrame(OpenGLFrame):
         const int header = 2;
 
         patch in SplineInfo
-        {{
+        {
             int uOrder;
             int uN;
             int uM;
             float firstU;
             float lastU;
-        }} inData;
-
-        uniform mat4 uProjectionMatrix;
-        uniform vec3 uScreenScale;
-        uniform vec3 uSplineColor;
-        uniform samplerBuffer uSplineData;
+        } inData;
 
         out SplineInfo
-        {{
+        {
             int uOrder;
             int uN;
             int uM;
             float firstU;
             float lastU;
-        }} outData;
-        out vec3 splineColor;
+        } outData;
 
         void main()
-        {{
+        {
             outData.uOrder = inData.uOrder;
             outData.uN = inData.uN;
             outData.uM = inData.uM;
-            outData.firstU = inData.firstU;
-            outData.lastU = inData.lastU;
-
-            splineColor = uSplineColor;
-            gl_Position = uProjectionMatrix * vec4(gl_TessCoord.x, gl_TessCoord.y, 0.0, 1.0);
-        }}
-    """.format()
+            // gl_TessCoord.x is in [0.0, 1.0], so outData.firstU is in [inData.firstU, inData.lastU].
+            outData.firstU = inData.firstU + (inData.lastU - inData.firstU) * gl_TessCoord.x;
+            // Ensure outData.lastU is in [inData.firstU, inData.lastU].
+            outData.lastU = min(inData.lastU, outData.firstU + (inData.lastU - inData.firstU) / gl_TessLevelOuter[1]);
+        }
+    """
 
     curveGeometryShaderCode = """
         #version 410 core
@@ -669,7 +662,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                     shaders.compileShader(self.curveVertexShaderCode, GL_VERTEX_SHADER), 
                     shaders.compileShader(self.curveTCShaderCode, GL_TESS_CONTROL_SHADER), 
                     shaders.compileShader(self.curveTEShaderCode, GL_TESS_EVALUATION_SHADER), 
-                    #shaders.compileShader(self.curveGeometryShaderCode, GL_GEOMETRY_SHADER), 
+                    shaders.compileShader(self.curveGeometryShaderCode, GL_GEOMETRY_SHADER), 
                     shaders.compileShader(self.fragmentShaderCode, GL_FRAGMENT_SHADER))
                 
                 self.surfaceGeometryShaderCode = self.surfaceGeometryShaderCode.format(maxVertices=self.maxVertices,
