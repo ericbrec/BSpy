@@ -214,10 +214,11 @@ class SplineOpenGLFrame(OpenGLFrame):
             outData.uOrder = inData.uOrder;
             outData.uN = inData.uN;
             outData.uM = inData.uM;
-            // gl_TessCoord.x is in [0.0, 1.0], so outData.firstU is in [inData.firstU, inData.lastU].
-            outData.firstU = inData.firstU +  gl_TessCoord.x * (inData.lastU - inData.firstU);
+            // gl_TessCoord.x is in [0.0, 1.0]
+            float deltaU = inData.lastU - inData.firstU;
+            outData.firstU = inData.firstU + gl_TessCoord.x * deltaU;
             // Ensure outData.lastU is in [inData.firstU, inData.lastU].
-            outData.lastU = min(inData.lastU, outData.firstU + (inData.lastU - inData.firstU) / gl_TessLevelOuter[1]);
+            outData.lastU = min(inData.lastU, outData.firstU + deltaU  / gl_TessLevelOuter[1]);
         }
     """
 
@@ -421,9 +422,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             // Calculate the tessellation levels based on one vertex per pixel, so each sample can handle at most "maxVertices" pixels.
             // The number of samples ranges from 1 to gl_MaxTessGenLevel.
             vec2 size = maxProjected - minProjected;
-            float samples = min(ceil(max(size.x, size.y) / {maxVertices}.0), gl_MaxTessGenLevel);
+            float samples = min(ceil(0.5 + max(size.x, size.y) / {maxVertices}.0), gl_MaxTessGenLevel);
             gl_TessLevelOuter[0] = samples;
-            gl_TessLevelOuter[1] = 2.0;
+            gl_TessLevelOuter[1] = samples;
         }}
     """
 
@@ -472,14 +473,16 @@ class SplineOpenGLFrame(OpenGLFrame):
             outData.vM = inData.vM;
 
             // gl_TessCoord.x is in [0.0, 1.0]
-            outData.firstU = inData.firstU + gl_TessCoord.x * (inData.lastU - inData.firstU);
+            float deltaU = inData.lastU - inData.firstU;
+            outData.firstU = inData.firstU + gl_TessCoord.x * deltaU;
             // Ensure outData.lastU is in [inData.firstU, inData.lastU].
-            outData.lastU = min(inData.lastU, outData.firstU + (inData.lastU - inData.firstU) / gl_TessLevelOuter[1]);
+            outData.lastU = min(inData.lastU, outData.firstU + deltaU / gl_TessLevelOuter[1]);
 
-            // gl_TessCoord.y is in [0.0, gl_TessLevelOuter[0] - 1.0]
-            outData.firstV = inData.firstV +  gl_TessCoord.y * (inData.lastV - inData.firstV) / gl_TessLevelOuter[0];
+            // gl_TessCoord.y is in [0.0, 1.0)
+            float deltaV = inData.lastV - inData.firstV;
+            outData.firstV = inData.firstV +  gl_TessCoord.y * deltaV;
             // Ensure outData.lastV is in [inData.firstV, inData.lastV].
-            outData.lastV = min(inData.lastV, outData.firstV + (inData.lastV - inData.firstV) / gl_TessLevelOuter[0]);
+            outData.lastV = min(inData.lastV, outData.firstV + deltaV / gl_TessLevelOuter[0]);
         }
     """
 

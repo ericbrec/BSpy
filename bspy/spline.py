@@ -41,7 +41,6 @@ class Spline:
         size = 4 * 4 * len(drawCoefficients)
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
         glEnableVertexAttribArray(frame.aCurveParameters)
-        #glDrawArraysInstanced(GL_POINTS, 0, 1, drawCoefficients.shape[0] - self.order[0] + 1)
         glPatchParameteri(GL_PATCH_VERTICES, 1)
         glDrawArraysInstanced(GL_PATCHES, 0, 1, drawCoefficients.shape[0] - self.order[0] + 1)
         glDisableVertexAttribArray(frame.aCurveParameters)
@@ -71,10 +70,8 @@ class Spline:
         size = 4 * 4 * drawCoefficients.shape[0] * drawCoefficients.shape[1]
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
         glEnableVertexAttribArray(frame.aSurfaceParameters)
-        #glDrawArraysInstanced(GL_POINTS, 0, 1, (drawCoefficients.shape[0] - self.order[0] + 1) * (drawCoefficients.shape[1] - self.order[1] + 1))
         glPatchParameteri(GL_PATCH_VERTICES, 1)
-        #glDrawArraysInstanced(GL_PATCHES, 0, 1, (drawCoefficients.shape[0] - self.order[0] + 1) * (drawCoefficients.shape[1] - self.order[1] + 1))
-        glDrawArraysInstanced(GL_PATCHES, 0, 1, 1)
+        glDrawArraysInstanced(GL_PATCHES, 0, 1, (drawCoefficients.shape[0] - self.order[0] + 1) * (drawCoefficients.shape[1] - self.order[1] + 1))
         glDisableVertexAttribArray(frame.aSurfaceParameters)
         glUseProgram(0)
 
