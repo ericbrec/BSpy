@@ -52,20 +52,41 @@ class Spline:
         return uBasis, duBasis, du2Basis
     
     def ComputeDelta(self, screenScale, point, dPoint, d2Point, delta):
+        d2Screen = np.empty(2, np.float32)
         if screenScale[2] > 1.0:
             zScale = 1.0 / (screenScale[2] - point[2])
             zScale2 = zScale * zScale
             zScale3 = zScale2 * zScale
-            d2Point[0] = screenScale[0] * (d2Point[0] * zScale - 2.0 * dPoint[0] * dPoint[2] * zScale2 + \
+            d2Screen[0] = screenScale[0] * (d2Point[0] * zScale - 2.0 * dPoint[0] * dPoint[2] * zScale2 + \
                 point[0] * (2.0 * dPoint[2] * dPoint[2] * zScale3 - d2Point[2] * zScale2))
-            d2Point[1] = screenScale[1] * (d2Point[1] * zScale - 2.0 * dPoint[1] * dPoint[2] * zScale2 + \
+            d2Screen[1] = screenScale[1] * (d2Point[1] * zScale - 2.0 * dPoint[1] * dPoint[2] * zScale2 + \
                 point[1] * (2.0 * dPoint[2] * dPoint[2] * zScale3 - d2Point[2] * zScale2))
         else:
-            d2Point[0] *= screenScale[0]
-            d2Point[1] *= screenScale[1]
+            d2Screen[0] = screenScale[0] * d2Point[0]
+            d2Screen[1] = screenScale[1] * d2Point[1]
         
-        sqrtLength = (d2Point[0]*d2Point[0] + d2Point[1]*d2Point[1])**0.25
+        sqrtLength = (d2Screen[0]*d2Screen[0] + d2Screen[1]*d2Screen[1])**0.25
         return delta if sqrtLength < 1.0e-8 else 1.0 / sqrtLength
+
+    def ComputeCurveDelta(self, screenScale, drawCoefficients, uM):
+        uOrder = self.order[0]
+        uKnots = self.knots[0]
+        deltaU = uKnots[uM+1] - uKnots[uM]
+        for uN in range(uM+1-uOrder, uM-1):
+            gap = uKnots[uN+uOrder] - uKnots[uN+1]
+            gap = 0.0 if gap < 1.0e-8 else 1.0 / gap
+            dPoint0 = (uOrder - 1) * (drawCoefficients[uN+1] - drawCoefficients[uN]) * gap
+            gap = uKnots[uN+1+uOrder] - uKnots[uN+2]
+            gap = 0.0 if gap < 1.0e-8 else 1.0 / gap
+            dPoint1 = (uOrder - 1) * (drawCoefficients[uN+2] - drawCoefficients[uN+1]) * gap
+            gap = uKnots[uN+uOrder] - uKnots[uN+2]
+            gap = 0.0 if gap < 1.0e-8 else 1.0 / gap
+            d2Point = (uOrder - 2) * (dPoint1 - dPoint0) * gap
+            deltaU = min(deltaU, self.ComputeDelta(screenScale, drawCoefficients[uN], dPoint0, d2Point, deltaU))
+            deltaU = min(deltaU, self.ComputeDelta(screenScale, drawCoefficients[uN+1], dPoint0, d2Point, deltaU))
+            deltaU = min(deltaU, self.ComputeDelta(screenScale, drawCoefficients[uN+1], dPoint1, d2Point, deltaU))
+            deltaU = min(deltaU, self.ComputeDelta(screenScale, drawCoefficients[uN+2], dPoint1, d2Point, deltaU))
+        return deltaU
 
     def DrawCurvePoints(self, screenScale, drawCoefficients, m, u, deltaU):
         uOrder = self.order[0]
@@ -99,18 +120,24 @@ class Spline:
         glEnd()
 
         glColor3f(1.0, 0.0, 0.0)
-        for m in range(0): #uOrder-1, len(uKnots)-uOrder):
+        for m in range(uOrder-1, len(uKnots)-uOrder):
+            minDeltaU = self.ComputeCurveDelta(frame.screenScale, drawCoefficients, m)
+            minDeltaDeltaU = 1000.0
+            maxDeltaDeltaU = 0.0
             u = uKnots[m]
             deltaU = 0.5 * (uKnots[m+1] - u)
             vertices = 0
             glBegin(GL_LINE_STRIP)
             while u < uKnots[m+1] and vertices <= frame.maxVertices - 6: # Save room for the vertices at u and lastU
                 deltaU = self.DrawCurvePoints(frame.screenScale, drawCoefficients, m, u, deltaU)
+                minDeltaDeltaU = min(minDeltaDeltaU, deltaU - minDeltaU)
+                maxDeltaDeltaU = max(maxDeltaDeltaU, deltaU - minDeltaU)
                 u += deltaU
                 vertices += 3
             self.DrawCurvePoints(frame.screenScale, drawCoefficients, m, uKnots[m+1], deltaU)
             vertices += 3
             glEnd()
+            print(minDeltaDeltaU, maxDeltaDeltaU)
 
         glUseProgram(frame.curveProgram)
 
@@ -132,7 +159,49 @@ class Spline:
         glDisableVertexAttribArray(frame.aCurveParameters)
 
         glUseProgram(0)
-    
+
+    def ComputeSurfaceDeltas(self, screenScale, drawCoefficients, uM, vM):
+        uOrder = self.order[0]
+        uKnots = self.knots[0]
+        vOrder = self.order[1]
+        vKnots = self.knots[1]
+
+        deltaU = uKnots[uM+1] - uKnots[uM]
+        for vN in range(vM+1-vOrder, vM+1):
+            for uN in range(uM+1-uOrder, uM-1):
+                gap = uKnots[uN+uOrder] - uKnots[uN+1]
+                gap = 0.0 if gap < 1.0e-8 else 1.0 / gap
+                dPoint0 = (uOrder - 1) * (drawCoefficients[uN+1, vN] - drawCoefficients[uN, vN]) * gap
+                gap = uKnots[uN+1+uOrder] - uKnots[uN+2]
+                gap = 0.0 if gap < 1.0e-8 else 1.0 / gap
+                dPoint1 = (uOrder - 1) * (drawCoefficients[uN+2, vN] - drawCoefficients[uN+1, vN]) * gap
+                gap = uKnots[uN+uOrder] - uKnots[uN+2]
+                gap = 0.0 if gap < 1.0e-8 else 1.0 / gap
+                d2Point = (uOrder - 2) * (dPoint1 - dPoint0) * gap
+                deltaU = min(deltaU, self.ComputeDelta(screenScale, drawCoefficients[uN, vN], dPoint0, d2Point, deltaU))
+                deltaU = min(deltaU, self.ComputeDelta(screenScale, drawCoefficients[uN+1, vN], dPoint0, d2Point, deltaU))
+                deltaU = min(deltaU, self.ComputeDelta(screenScale, drawCoefficients[uN+1, vN], dPoint1, d2Point, deltaU))
+                deltaU = min(deltaU, self.ComputeDelta(screenScale, drawCoefficients[uN+2, vN], dPoint1, d2Point, deltaU))
+
+        deltaV = vKnots[vM+1] - vKnots[vM]
+        for uN in range(uM+1-uOrder, uM+1):
+            for vN in range(vM+1-vOrder, vM-1):
+                gap = vKnots[vN+vOrder] - vKnots[vN+1]
+                gap = 0.0 if gap < 1.0e-8 else 1.0 / gap
+                dPoint0 = (vOrder - 1) * (drawCoefficients[uN, vN+1] - drawCoefficients[uN, vN]) * gap
+                gap = vKnots[vN+1+vOrder] - vKnots[vN+2]
+                gap = 0.0 if gap < 1.0e-8 else 1.0 / gap
+                dPoint1 = (vOrder - 1) * (drawCoefficients[uN, vN+2] - drawCoefficients[uN, vN+1]) * gap
+                gap = vKnots[vN+vOrder] - vKnots[vN+2]
+                gap = 0.0 if gap < 1.0e-8 else 1.0 / gap
+                d2Point = (vOrder - 2) * (dPoint1 - dPoint0) * gap
+                deltaV = min(deltaV, self.ComputeDelta(screenScale, drawCoefficients[uN, vN], dPoint0, d2Point, deltaV))
+                deltaV = min(deltaV, self.ComputeDelta(screenScale, drawCoefficients[uN, vN+1], dPoint0, d2Point, deltaV))
+                deltaV = min(deltaV, self.ComputeDelta(screenScale, drawCoefficients[uN, vN+1], dPoint1, d2Point, deltaV))
+                deltaV = min(deltaV, self.ComputeDelta(screenScale, drawCoefficients[uN, vN+2], dPoint1, d2Point, deltaV))
+
+        return deltaU, deltaV
+
     def DrawSurfacePoints(self, screenScale, drawCoefficients, uM, uBasis, duBasis, uBasisNext, duBasisNext, vM, v, deltaV):
         uOrder = self.order[0]
         vOrder = self.order[1]
@@ -192,9 +261,14 @@ class Spline:
             glEnd()
         
         glColor3f(1.0, 0.0, 0.0)
-        for instance in range(0): #(drawCoefficients.shape[0] - uOrder + 1) * (drawCoefficients.shape[1] - vOrder + 1)):
+        for instance in range((drawCoefficients.shape[0] - uOrder + 1) * (drawCoefficients.shape[1] - vOrder + 1)):
             uM = uOrder - 1 + instance // (drawCoefficients.shape[1] - vOrder + 1)
             vM = vOrder - 1 + instance % (drawCoefficients.shape[1] - vOrder + 1)
+            minDeltaU, minDeltaV = self.ComputeSurfaceDeltas(frame.screenScale, drawCoefficients, uM, vM)
+            minDeltaDeltaU = 1000.0
+            minDeltaDeltaV = 1000.0
+            maxDeltaDeltaU = 0.0
+            maxDeltaDeltaV = 0.0
             u = uKnots[uM]
             uBasis, duBasis, du2Basis = self.ComputeBasis(0, uM, u)
             vertices = 0
@@ -217,7 +291,9 @@ class Spline:
 
                 # If there's less than 8 vertices for the last row, force this to be the last row.
                 verticesPerU = verticesPerU if verticesPerU > 0 else 2 * int((uKnots[uM+1] - u) / deltaU)
-                deltaU = deltaU if vertices + verticesPerU + 8 <= frame.maxVertices else 2.0 * (uKnots[uM+1] - u)
+                #deltaU = deltaU if vertices + verticesPerU + 8 <= frame.maxVertices else 2.0 * (uKnots[uM+1] - u)
+                minDeltaDeltaU = min(minDeltaDeltaU, deltaU - minDeltaU)
+                maxDeltaDeltaU = max(maxDeltaDeltaU, deltaU - minDeltaU)
 
                 u = min(u + deltaU, uKnots[uM+1])
                 uBasisNext, duBasisNext, du2BasisNext = self.ComputeBasis(0, uM, u)
@@ -228,6 +304,8 @@ class Spline:
                 glBegin(GL_LINE_STRIP)
                 while v < vKnots[vM+1] and vertices <= frame.maxVertices - 4: # Save room for the vertices at v and lastV
                     deltaV = self.DrawSurfacePoints(frame.screenScale, drawCoefficients, uM, uBasis, duBasis, uBasisNext, duBasisNext, vM, v, deltaV)
+                    minDeltaDeltaV = min(minDeltaDeltaV, deltaV - minDeltaV)
+                    maxDeltaDeltaV = max(maxDeltaDeltaV, deltaV - minDeltaV)
                     v += deltaV
                     vertices += 2
                     verticesPerU += 2
@@ -238,6 +316,7 @@ class Spline:
                 uBasis = uBasisNext
                 duBasis = duBasisNext
                 du2Basis = du2BasisNext
+            print(minDeltaDeltaU, minDeltaDeltaV, maxDeltaDeltaU, maxDeltaDeltaV)
 
         glUseProgram(frame.surfaceProgram)
 
@@ -258,7 +337,7 @@ class Spline:
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
 
         glEnableVertexAttribArray(frame.aSurfaceParameters)
-        glDrawArraysInstanced(GL_POINTS, 0, 1, (drawCoefficients.shape[0] - uOrder + 1) * (drawCoefficients.shape[1] - vOrder + 1))
+        #glDrawArraysInstanced(GL_POINTS, 0, 1, (drawCoefficients.shape[0] - uOrder + 1) * (drawCoefficients.shape[1] - vOrder + 1))
         glDisableVertexAttribArray(frame.aSurfaceParameters)
 
         glUseProgram(0)
