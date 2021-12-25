@@ -642,7 +642,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         #version 410 core
 
         layout( points ) in;
-        layout( triangle_strip, max_vertices = {maxVertices} ) out;
+        layout( line_strip, max_vertices = {maxVertices} ) out;
 
         const int header = 4;
 
@@ -672,10 +672,12 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         {computeDeltaCode}
 
+        {computeSurfaceDeltasCode}
+
         void DrawSurfacePoints(in int uOrder, in int uN, in int uM,
             in float uBasis[{maxBasis}], in float duBasis[{maxBasis}],
             in float uBasisNext[{maxBasis}], in float duBasisNext[{maxBasis}],
-            in int vOrder, in int vN, in int vM, in float v, inout float deltaV)
+            in int vOrder, in int vN, in int vM, in float v)
         {{
             float vBasis[{maxBasis}];
             float dvBasis[{maxBasis}];
@@ -686,7 +688,6 @@ class SplineOpenGLFrame(OpenGLFrame):
             vec4 point = vec4(0.0, 0.0, 0.0, 0.0);
             vec3 duPoint = vec3(0.0, 0.0, 0.0);
             vec3 dvPoint = vec3(0.0, 0.0, 0.0);
-            vec3 dv2Point = vec3(0.0, 0.0, 0.0);
             int j = header + uOrder + uN + vOrder + vN + (vM + 1 - vOrder) * 4;
             for (int vB = 0; vB < vOrder; vB++)
             {{
@@ -703,9 +704,6 @@ class SplineOpenGLFrame(OpenGLFrame):
                     dvPoint.x += uBasis[uB] * dvBasis[vB] * texelFetch(uSplineData, i).x;
                     dvPoint.y += uBasis[uB] * dvBasis[vB] * texelFetch(uSplineData, i+1).x;
                     dvPoint.z += uBasis[uB] * dvBasis[vB] * texelFetch(uSplineData, i+2).x;
-                    dv2Point.x += uBasis[uB] * dv2Basis[vB] * texelFetch(uSplineData, i).x;
-                    dv2Point.y += uBasis[uB] * dv2Basis[vB] * texelFetch(uSplineData, i+1).x;
-                    dv2Point.z += uBasis[uB] * dv2Basis[vB] * texelFetch(uSplineData, i+2).x;
                     i += vN * 4;
                 }}
                 j += 4;
@@ -717,12 +715,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             gl_Position = uProjectionMatrix * point;
             EmitVertex();
             
-            ComputeDelta(point, dvPoint, dv2Point, deltaV);
-            
             point = vec4(0.0, 0.0, 0.0, 0.0);
             duPoint = vec3(0.0, 0.0, 0.0);
             dvPoint = vec3(0.0, 0.0, 0.0);
-            dv2Point = vec3(0.0, 0.0, 0.0);
             j = header + uOrder + uN + vOrder + vN + (vM + 1 - vOrder) * 4;
             for (int vB = 0; vB < vOrder; vB++)
             {{
@@ -739,9 +734,6 @@ class SplineOpenGLFrame(OpenGLFrame):
                     dvPoint.x += uBasisNext[uB] * dvBasis[vB] * texelFetch(uSplineData, i).x;
                     dvPoint.y += uBasisNext[uB] * dvBasis[vB] * texelFetch(uSplineData, i+1).x;
                     dvPoint.z += uBasisNext[uB] * dvBasis[vB] * texelFetch(uSplineData, i+2).x;
-                    dv2Point.x += uBasisNext[uB] * dv2Basis[vB] * texelFetch(uSplineData, i).x;
-                    dv2Point.y += uBasisNext[uB] * dv2Basis[vB] * texelFetch(uSplineData, i+1).x;
-                    dv2Point.z += uBasisNext[uB] * dv2Basis[vB] * texelFetch(uSplineData, i+2).x;
                     i += vN * 4;
                 }}
                 j += 4;
@@ -752,8 +744,6 @@ class SplineOpenGLFrame(OpenGLFrame):
             splineColor = (0.3 + 0.7 * abs(intensity)) * uSplineColor;
             gl_Position = uProjectionMatrix * point;
             EmitVertex();
-            
-            ComputeDelta(point, dvPoint, dv2Point, deltaV);
         }}
 
         void main()
@@ -772,46 +762,18 @@ class SplineOpenGLFrame(OpenGLFrame):
             float lastU = inData[0].lastU;
             float u = firstU;
             int vertices = 0;
-            int verticesPerU = 0;
             float uBasis[{maxBasis}];
             float duBasis[{maxBasis}];
             float du2Basis[{maxBasis}];
+            float deltaU;
+            float deltaV;
 
+            ComputeSurfaceDeltas(uOrder, uN, uM, vOrder, vN, vM, deltaU, deltaV);
             splineColor = uSplineColor;
+            
             ComputeBasis(header, uOrder, uN, uM, u, uBasis, duBasis, du2Basis);
             while (u < lastU && vertices < {maxVertices})
             {{
-                // Calculate deltaU (min deltaU value over the comvex hull of v values)
-                float deltaU = 0.5 * (lastU - firstU);
-                int j = header + uOrder + uN + vOrder + vN + (vM + 1 - vOrder) * 4;
-                for (int vB = 0; vB < vOrder; vB++)
-                {{
-                    vec4 point = vec4(0.0, 0.0, 0.0, 0.0);
-                    vec3 duPoint = vec3(0.0, 0.0, 0.0);
-                    vec3 du2Point = vec3(0.0, 0.0, 0.0);
-                    int i = j + (uM + 1 - uOrder) * vN * 4;
-                    for (int uB = 0; uB < uOrder; uB++)
-                    {{
-                        point.x += uBasis[uB] * texelFetch(uSplineData, i).x;
-                        point.y += uBasis[uB] * texelFetch(uSplineData, i+1).x;
-                        point.z += uBasis[uB] * texelFetch(uSplineData, i+2).x;
-                        point.w += uBasis[uB] * texelFetch(uSplineData, i+3).x;
-                        duPoint.x += duBasis[uB] * texelFetch(uSplineData, i).x;
-                        duPoint.y += duBasis[uB] * texelFetch(uSplineData, i+1).x;
-                        duPoint.z += duBasis[uB] * texelFetch(uSplineData, i+2).x;
-                        du2Point.x += du2Basis[uB] * texelFetch(uSplineData, i).x;
-                        du2Point.y += du2Basis[uB] * texelFetch(uSplineData, i+1).x;
-                        du2Point.z += du2Basis[uB] * texelFetch(uSplineData, i+2).x;
-                        i += vN * 4;
-                    }}
-                    ComputeDelta(point, duPoint, du2Point, deltaU);
-                    j += 4;
-                }}
-
-                // If there's less than 8 vertices for the last row, force this to be the last row.
-                verticesPerU = verticesPerU > 0 ? verticesPerU : 2 * int((lastU - u) / deltaU);
-                //deltaU = vertices + verticesPerU + 8 <= {maxVertices} ? deltaU : 2.0 * (lastU - u);
-
                 u = min(u + deltaU, lastU);
                 float uBasisNext[{maxBasis}];
                 float duBasisNext[{maxBasis}];
@@ -820,21 +782,16 @@ class SplineOpenGLFrame(OpenGLFrame):
 
                 float v = inData[0].firstV;
                 float lastV = inData[0].lastV;
-                verticesPerU = 0;
                 while (v < lastV && vertices <= {maxVertices} - 4) // Save room for the vertices at v and lastV
                 {{
-                    float deltaV = lastV - v;
                     DrawSurfacePoints(uOrder, uN, uM, uBasis, duBasis, uBasisNext, duBasisNext,
-                        vOrder, vN, vM, v, deltaV);
+                        vOrder, vN, vM, v);
                     v = min(v + deltaV, lastV);
                     vertices += 2;
-                    verticesPerU += 2;
                 }}
-                float deltaV = lastV - v;
                 DrawSurfacePoints(uOrder, uN, uM, uBasis, duBasis, uBasisNext, duBasisNext,
-                    vOrder, vN, vM, v, deltaV); //lastV, deltaV);
+                    vOrder, vN, vM, v);
                 vertices += 2;
-                verticesPerU += 2;
                 EndPrimitive();
                 uBasis = uBasisNext;
                 duBasis = duBasisNext;
@@ -897,6 +854,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                 self.surfaceGeometryShaderCode = self.surfaceGeometryShaderCode.format(maxVertices=self.maxVertices,
                     computeBasisCode=self.computeBasisCode,
                     computeDeltaCode=self.computeDeltaCode,
+                    computeSurfaceDeltasCode=self.computeSurfaceDeltasCode,
                     maxBasis=Spline.maxOrder+1)
                 self.surfaceProgram = shaders.compileProgram(
                     shaders.compileShader(self.surfaceVertexShaderCode, GL_VERTEX_SHADER), 
