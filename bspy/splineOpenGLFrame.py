@@ -93,7 +93,59 @@ class SplineOpenGLFrame(OpenGLFrame):
                     point.y * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2)))
                 : vec2(uScreenScale.x * d2Point.x, uScreenScale.y * d2Point.y);
             float projectionLength = length(projection);
-            delta = projectionLength < 1.0e-8 ? delta : 1.0 / sqrt(projectionLength);
+            float newDelta = projectionLength < 1.0e-8 ? delta : 1.0 / sqrt(projectionLength);
+            delta = min(newDelta, delta);
+        }
+    """
+
+    computeCurveDeltaCode = """
+        void ComputeCurveDelta(in int uOrder, in int uN, in int uM, out float deltaU)
+        {
+            float uInterval = texelFetch(uSplineData, header + uM+1).x - texelFetch(uSplineData, header + uM).x; // uKnots[uM+1] - uKnots[uM]
+            int i = uM+1-uOrder;
+            int coefficientOffset = header + uOrder + uN + 4 * i;
+            vec4 coefficient0 = vec4(
+                texelFetch(uSplineData, coefficientOffset+0).x, 
+                texelFetch(uSplineData, coefficientOffset+1).x,
+                texelFetch(uSplineData, coefficientOffset+2).x,
+                texelFetch(uSplineData, coefficientOffset+3).x);
+            coefficientOffset += 4;
+            vec4 coefficient1 = vec4(
+                texelFetch(uSplineData, coefficientOffset+0).x, 
+                texelFetch(uSplineData, coefficientOffset+1).x,
+                texelFetch(uSplineData, coefficientOffset+2).x,
+                texelFetch(uSplineData, coefficientOffset+3).x);
+            float gap = texelFetch(uSplineData, header + i+uOrder).x - texelFetch(uSplineData, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]
+            gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+            vec3 dPoint0 = (uOrder - 1) * gap * (coefficient1.xyz - coefficient0.xyz);
+
+            deltaU = max(uInterval, 1.0e-8);
+            while (i < uM-1)
+            {
+                coefficientOffset += 4;
+                vec4 coefficient2 = vec4(
+                    texelFetch(uSplineData, coefficientOffset+0).x, 
+                    texelFetch(uSplineData, coefficientOffset+1).x,
+                    texelFetch(uSplineData, coefficientOffset+2).x,
+                    texelFetch(uSplineData, coefficientOffset+3).x);
+                gap = texelFetch(uSplineData, header + i+1+uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]
+                gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                vec3 dPoint1 = (uOrder - 1) * gap * (coefficient2.xyz - coefficient1.xyz);
+                gap = texelFetch(uSplineData, header + i+uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+uOrder] - uKnots[i+2]
+                gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                vec3 d2Point = (uOrder - 2) * gap * (dPoint1 - dPoint0);
+
+                ComputeDelta(coefficient0, dPoint0, d2Point, deltaU);
+                ComputeDelta(coefficient1, dPoint0, d2Point, deltaU);
+                ComputeDelta(coefficient1, dPoint1, d2Point, deltaU);
+                ComputeDelta(coefficient2, dPoint1, d2Point, deltaU);
+
+                coefficient0 = coefficient1;
+                coefficient1 = coefficient2;
+                dPoint0 = dPoint1;
+                i++;
+            }
+            // samples = ceil(uInterval / deltaU);
         }
     """
 
@@ -250,7 +302,9 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         {computeDeltaCode}
 
-        void DrawCurvePoints(in int order, in int n, in int m, in float u, inout float deltaU)
+        {computeCurveDeltaCode}
+
+        void DrawCurvePoints(in int order, in int n, in int m, in float u)
         {{
             float uBasis[{maxBasis}];
             float duBasis[{maxBasis}];
@@ -260,7 +314,6 @@ class SplineOpenGLFrame(OpenGLFrame):
             
             vec4 point = vec4(0.0, 0.0, 0.0, 0.0);
             vec3 dPoint = vec3(0.0, 0.0, 0.0);
-            vec3 d2Point = vec3(0.0, 0.0, 0.0);
             int i = header + order + n + 4 * (m + 1 - order);
             for (int b = 0; b < order; b++) // loop from coefficient[m+1-order] to coefficient[m+1]
             {{
@@ -271,9 +324,6 @@ class SplineOpenGLFrame(OpenGLFrame):
                 dPoint.x += duBasis[b] * texelFetch(uSplineData, i).x;
                 dPoint.y += duBasis[b] * texelFetch(uSplineData, i+1).x;
                 dPoint.z += duBasis[b] * texelFetch(uSplineData, i+2).x;
-                d2Point.x += du2Basis[b] * texelFetch(uSplineData, i).x;
-                d2Point.y += du2Basis[b] * texelFetch(uSplineData, i+1).x;
-                d2Point.z += du2Basis[b] * texelFetch(uSplineData, i+2).x;
                 i += 4;
             }}
 
@@ -283,8 +333,6 @@ class SplineOpenGLFrame(OpenGLFrame):
             EmitVertex();
             gl_Position = uProjectionMatrix * point;
             EmitVertex();
-            
-            ComputeDelta(point, dPoint, d2Point, deltaU);
         }}
 
         void main()
@@ -298,17 +346,18 @@ class SplineOpenGLFrame(OpenGLFrame):
             int m = inData[0].uM;
             float u = inData[0].firstU;
             float lastU = inData[0].lastU;
-            float deltaU = 0.5 * (lastU - u);
+            float deltaU;
             int vertices = 0;
 
+            ComputeCurveDelta(order, n, m, deltaU);
             splineColor = uSplineColor;
             while (u < lastU && vertices <= {maxVertices} - 6) // Save room for the vertices at u and lastU
             {{
-                DrawCurvePoints(order, n, m, u, deltaU);
+                DrawCurvePoints(order, n, m, u);
                 u += deltaU;
                 vertices += 3;
             }}
-            DrawCurvePoints(order, n, m, lastU, deltaU);
+            DrawCurvePoints(order, n, m, lastU);
             vertices += 3;
             EndPrimitive();
         }}
@@ -601,9 +650,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             gl_Position = uProjectionMatrix * point;
             EmitVertex();
             
-            float newDeltaV = deltaV;
-            ComputeDelta(point, dvPoint, dv2Point, newDeltaV);
-            deltaV = min(newDeltaV, deltaV);
+            ComputeDelta(point, dvPoint, dv2Point, deltaV);
         }}
 
         void main()
@@ -654,9 +701,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                         du2Point.z += du2Basis[uB] * texelFetch(uSplineData, i+2).x;
                         i += vN * 4;
                     }}
-                    float newDeltaU = deltaU;
-                    ComputeDelta(point, duPoint, du2Point, newDeltaU);
-                    deltaU = min(newDeltaU, deltaU);
+                    ComputeDelta(point, duPoint, du2Point, deltaU);
                     j += 4;
                 }}
 
@@ -672,16 +717,17 @@ class SplineOpenGLFrame(OpenGLFrame):
 
                 float v = inData[0].firstV;
                 float lastV = inData[0].lastV;
-                float deltaV = 0.5 * (lastV - v);
                 verticesPerU = 0;
                 while (v < lastV && vertices <= {maxVertices} - 4) // Save room for the vertices at v and lastV
                 {{
+                    float deltaV = lastV - v;
                     DrawSurfacePoints(uOrder, uN, uM, uBasis, duBasis, uBasisNext, duBasisNext,
                         vOrder, vN, vM, v, deltaV);
                     v = min(v + deltaV, lastV);
                     vertices += 2;
                     verticesPerU += 2;
                 }}
+                float deltaV = lastV - v;
                 DrawSurfacePoints(uOrder, uN, uM, uBasis, duBasis, uBasisNext, duBasisNext,
                     vOrder, vN, vM, v, deltaV); //lastV, deltaV);
                 vertices += 2;
@@ -735,6 +781,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                 self.curveGeometryShaderCode = self.curveGeometryShaderCode.format(maxVertices=self.maxVertices,
                     computeBasisCode=self.computeBasisCode,
                     computeDeltaCode=self.computeDeltaCode,
+                    computeCurveDeltaCode=self.computeCurveDeltaCode,
                     maxBasis=Spline.maxOrder+1)
                 self.curveProgram = shaders.compileProgram(
                     shaders.compileShader(self.curveVertexShaderCode, GL_VERTEX_SHADER), 
