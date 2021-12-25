@@ -102,6 +102,8 @@ class SplineOpenGLFrame(OpenGLFrame):
         void ComputeCurveDelta(in int uOrder, in int uN, in int uM, out float deltaU)
         {
             float uInterval = texelFetch(uSplineData, header + uM+1).x - texelFetch(uSplineData, header + uM).x; // uKnots[uM+1] - uKnots[uM]
+
+            deltaU = max(uInterval, 1.0e-8);
             int i = uM+1-uOrder;
             int coefficientOffset = header + uOrder + uN + 4 * i;
             vec4 coefficient0 = vec4(
@@ -118,8 +120,6 @@ class SplineOpenGLFrame(OpenGLFrame):
             float gap = texelFetch(uSplineData, header + i+uOrder).x - texelFetch(uSplineData, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]
             gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
             vec3 dPoint0 = (uOrder - 1) * gap * (coefficient1.xyz - coefficient0.xyz);
-
-            deltaU = max(uInterval, 1.0e-8);
             while (i < uM-1)
             {
                 coefficientOffset += 4;
@@ -145,7 +145,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                 dPoint0 = dPoint1;
                 i++;
             }
-            // samples = ceil(uInterval / deltaU);
+            // uSamples = ceil(uInterval / deltaU);
         }
     """
 
@@ -361,6 +361,109 @@ class SplineOpenGLFrame(OpenGLFrame):
             vertices += 3;
             EndPrimitive();
         }}
+    """
+
+    computeSurfaceDeltasCode = """
+        void ComputeSurfaceDeltas(in int uOrder, in int uN, in int uM,
+            in int vOrder, in int vN, in int vM, out float deltaU, out float deltaV)
+        {
+            float uInterval = texelFetch(uSplineData, header + uM+1).x - texelFetch(uSplineData, header + uM).x; // uKnots[uM+1] - uKnots[uM]
+            float vInterval = texelFetch(uSplineData, header + uOrder+uN + vM+1).x - texelFetch(uSplineData, header + uOrder+uN + vM).x; // vKnots[vM+1] - vKnots[vM]
+
+            deltaU = max(uInterval, 1.0e-8);
+            for (int j = vM+1-vOrder; j < vM+1; j++)
+            {
+                int i = uM+1-uOrder;
+                int coefficientOffset = header + uOrder+uN + 4*vN*i + 4*j;
+                vec4 coefficient0 = vec4(
+                    texelFetch(uSplineData, coefficientOffset+0).x, 
+                    texelFetch(uSplineData, coefficientOffset+1).x,
+                    texelFetch(uSplineData, coefficientOffset+2).x,
+                    texelFetch(uSplineData, coefficientOffset+3).x);
+                coefficientOffset += 4*vN;
+                vec4 coefficient1 = vec4(
+                    texelFetch(uSplineData, coefficientOffset+0).x, 
+                    texelFetch(uSplineData, coefficientOffset+1).x,
+                    texelFetch(uSplineData, coefficientOffset+2).x,
+                    texelFetch(uSplineData, coefficientOffset+3).x);
+                float gap = texelFetch(uSplineData, header + i+uOrder).x - texelFetch(uSplineData, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]
+                gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                vec3 dPoint0 = (uOrder - 1) * gap * (coefficient1.xyz - coefficient0.xyz);
+                while (i < uM-1)
+                {
+                    coefficientOffset += 4*vN;
+                    vec4 coefficient2 = vec4(
+                        texelFetch(uSplineData, coefficientOffset+0).x, 
+                        texelFetch(uSplineData, coefficientOffset+1).x,
+                        texelFetch(uSplineData, coefficientOffset+2).x,
+                        texelFetch(uSplineData, coefficientOffset+3).x);
+                    gap = texelFetch(uSplineData, header + i+1+uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]
+                    gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                    vec3 dPoint1 = (uOrder - 1) * gap * (coefficient2.xyz - coefficient1.xyz);
+                    gap = texelFetch(uSplineData, header + i+uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+uOrder] - uKnots[i+2]
+                    gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                    vec3 d2Point = (uOrder - 2) * gap * (dPoint1 - dPoint0);
+
+                    ComputeDelta(coefficient0, dPoint0, d2Point, deltaU);
+                    ComputeDelta(coefficient1, dPoint0, d2Point, deltaU);
+                    ComputeDelta(coefficient1, dPoint1, d2Point, deltaU);
+                    ComputeDelta(coefficient2, dPoint1, d2Point, deltaU);
+
+                    coefficient0 = coefficient1;
+                    coefficient1 = coefficient2;
+                    dPoint0 = dPoint1;
+                    i++;
+                }
+            }
+
+            deltaV = max(vInterval, 1.0e-8);
+            for (int i = uM+1-uOrder; i < uM+1; i++)
+            {
+                int j = vM+1-vOrder;
+                int coefficientOffset = header + uOrder+uN + 4*vN*i + 4*j;
+                vec4 coefficient0 = vec4(
+                    texelFetch(uSplineData, coefficientOffset+0).x, 
+                    texelFetch(uSplineData, coefficientOffset+1).x,
+                    texelFetch(uSplineData, coefficientOffset+2).x,
+                    texelFetch(uSplineData, coefficientOffset+3).x);
+                coefficientOffset += 4;
+                vec4 coefficient1 = vec4(
+                    texelFetch(uSplineData, coefficientOffset+0).x, 
+                    texelFetch(uSplineData, coefficientOffset+1).x,
+                    texelFetch(uSplineData, coefficientOffset+2).x,
+                    texelFetch(uSplineData, coefficientOffset+3).x);
+                float gap = texelFetch(uSplineData, header + uOrder+uN + j+vOrder).x - texelFetch(uSplineData, header + uOrder+uN + j+1).x; // vKnots[j+vOrder] - vKnots[j+1]
+                gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                vec3 dPoint0 = (vOrder - 1) * gap * (coefficient1.xyz - coefficient0.xyz);
+                while (j < vM-1)
+                {
+                    coefficientOffset += 4;
+                    vec4 coefficient2 = vec4(
+                        texelFetch(uSplineData, coefficientOffset+0).x, 
+                        texelFetch(uSplineData, coefficientOffset+1).x,
+                        texelFetch(uSplineData, coefficientOffset+2).x,
+                        texelFetch(uSplineData, coefficientOffset+3).x);
+                    gap = texelFetch(uSplineData, header + uOrder+uN + j+1+vOrder).x - texelFetch(uSplineData, header + uOrder+uN + j+2).x; // vKnots[j+1+vOrder] - vKnots[j+2]
+                    gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                    vec3 dPoint1 = (vOrder - 1) * gap * (coefficient2.xyz - coefficient1.xyz);
+                    gap = texelFetch(uSplineData, header + uOrder+uN + j+vOrder).x - texelFetch(uSplineData, header + uOrder+uN + j+2).x; // vKnots[j+vOrder] - vKnots[j+2]
+                    gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                    vec3 d2Point = (vOrder - 2) * gap * (dPoint1 - dPoint0);
+
+                    ComputeDelta(coefficient0, dPoint0, d2Point, deltaV);
+                    ComputeDelta(coefficient1, dPoint0, d2Point, deltaV);
+                    ComputeDelta(coefficient1, dPoint1, d2Point, deltaV);
+                    ComputeDelta(coefficient2, dPoint1, d2Point, deltaV);
+
+                    coefficient0 = coefficient1;
+                    coefficient1 = coefficient2;
+                    dPoint0 = dPoint1;
+                    j++;
+                }
+            }
+            // uSamples = ceil(uInterval / deltaU);
+            // vSamples = ceil(vInterval / deltaV);
+        }
     """
 
     surfaceVertexShaderCode = """
