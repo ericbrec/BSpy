@@ -438,13 +438,17 @@ class SplineOpenGLFrame(OpenGLFrame):
             ComputeSurfaceSamples(uSamples, vSamples);
             gl_TessLevelOuter[0] = vSamples;
             gl_TessLevelOuter[1] = uSamples;
+            gl_TessLevelOuter[2] = vSamples;
+            gl_TessLevelOuter[3] = uSamples;
+            gl_TessLevelInner[0] = uSamples;
+            gl_TessLevelInner[1] = vSamples;
         }}
     """
 
     surfaceTEShaderCode = """
         #version 410 core
 
-        layout (isolines, point_mode) in;
+        layout (quads) in;
 
         const int header = 4;
 
