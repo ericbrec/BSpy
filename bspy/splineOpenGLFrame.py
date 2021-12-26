@@ -535,19 +535,37 @@ class SplineOpenGLFrame(OpenGLFrame):
     def __init__(self, *args, **kw):
         OpenGLFrame.__init__(self, *args, **kw)
         self.animate = 0 # Set to number of milliseconds before showing next frame (0 means no animation)
+
         self.splineDrawList = []
+        
         self.currentQ = quat.one
         self.lastQ = quat.one
         self.origin = None
+
         self.bind("<ButtonPress-3>", self.Home)
         self.bind("<ButtonPress-1>", self.RotateStartHandler)
         self.bind("<ButtonRelease-1>", self.RotateEndHandler)
         self.bind("<B1-Motion>", self.RotateDragHandler)
+        self.bind("<Unmap>", self.Unmap)
+
+        self.computeBasisCode = self.computeBasisCode.format(maxBasis=Spline.maxOrder+1)
+        self.curveTCShaderCode = self.curveTCShaderCode.format(
+            computeDeltaCode=self.computeDeltaCode,
+            computeCurveSamplesCode=self.computeCurveSamplesCode)
+        self.curveTEShaderCode = self.curveTEShaderCode.format(
+            computeBasisCode=self.computeBasisCode,
+            maxBasis=Spline.maxOrder+1)
+        self.surfaceTCShaderCode = self.surfaceTCShaderCode.format(
+            computeDeltaCode=self.computeDeltaCode,
+            computeSurfaceSamplesCode=self.computeSurfaceSamplesCode)
+        self.surfaceTEShaderCode = self.surfaceTEShaderCode.format(
+            computeBasisCode=self.computeBasisCode,
+            maxBasis=Spline.maxOrder+1)
+
         self.glInitialized = False
 
     def initgl(self):
         if not self.glInitialized:
-            self.maxVertices = glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_VERTICES)
             #print("GL_VERSION: ", glGetString(GL_VERSION))
             #print("GL_SHADING_LANGUAGE_VERSION: ", glGetString(GL_SHADING_LANGUAGE_VERSION))
             #print("GL_MAX_GEOMETRY_OUTPUT_VERTICES: ", glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_VERTICES))
@@ -555,26 +573,11 @@ class SplineOpenGLFrame(OpenGLFrame):
             #print("GL_MAX_TESS_GEN_LEVEL: ", glGetIntegerv(GL_MAX_TESS_GEN_LEVEL))
 
             try:
-                self.computeBasisCode = self.computeBasisCode.format(maxBasis=Spline.maxOrder+1)
-
-                self.curveTCShaderCode = self.curveTCShaderCode.format(
-                    computeDeltaCode=self.computeDeltaCode,
-                    computeCurveSamplesCode=self.computeCurveSamplesCode)
-                self.curveTEShaderCode = self.curveTEShaderCode.format(
-                    computeBasisCode=self.computeBasisCode,
-                    maxBasis=Spline.maxOrder+1)
                 self.curveProgram = shaders.compileProgram(
                     shaders.compileShader(self.curveVertexShaderCode, GL_VERTEX_SHADER), 
                     shaders.compileShader(self.curveTCShaderCode, GL_TESS_CONTROL_SHADER), 
                     shaders.compileShader(self.curveTEShaderCode, GL_TESS_EVALUATION_SHADER), 
                     shaders.compileShader(self.fragmentShaderCode, GL_FRAGMENT_SHADER))
-                
-                self.surfaceTCShaderCode = self.surfaceTCShaderCode.format(
-                    computeDeltaCode=self.computeDeltaCode,
-                    computeSurfaceSamplesCode=self.computeSurfaceSamplesCode)
-                self.surfaceTEShaderCode = self.surfaceTEShaderCode.format(
-                    computeBasisCode=self.computeBasisCode,
-                    maxBasis=Spline.maxOrder+1)
                 self.surfaceProgram = shaders.compileProgram(
                     shaders.compileShader(self.surfaceVertexShaderCode, GL_VERTEX_SHADER), 
                     shaders.compileShader(self.surfaceTCShaderCode, GL_TESS_CONTROL_SHADER), 
@@ -672,6 +675,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             spline.Draw(self, transform)
 
         glFlush()
+
+    def Unmap(self, event):
+        self.glInitialized = False
 
     def Home(self, event):
         self.lastQ = quat.one
