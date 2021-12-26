@@ -10,32 +10,14 @@ class SplineOpenGLFrame(OpenGLFrame):
 
     computeBasisCode = """
         void ComputeBasis(in int offset, in int order, in int n, in int m, in float u, 
-            out float uBasis[{maxBasis}], out float duBasis[{maxBasis}], out float du2Basis[{maxBasis}])
+            out float uBasis[{maxBasis}], out float duBasis[{maxBasis}])
         {{
             int degree = 1;
 
             uBasis = float[{maxBasis}](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
             duBasis = float[{maxBasis}](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-            du2Basis = float[{maxBasis}](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
             uBasis[order-1] = 1.0;
 
-            while (degree < order - 2)
-            {{
-                int b = order - degree - 1;
-                for (int i = m - degree; i < m + 1; i++)
-                {{
-                    float gap0 = texelFetch(uSplineData, offset + i + degree).x - texelFetch(uSplineData, offset + i).x; // knots[i+degree] - knots[i]
-                    float gap1 = texelFetch(uSplineData, offset + i + degree + 1).x - texelFetch(uSplineData, offset + i + 1).x; // knots[i+degree+1] - knots[i+1]
-                    gap0 = gap0 < 1.0e-8 ? 0.0 : 1.0 / gap0;
-                    gap1 = gap1 < 1.0e-8 ? 0.0 : 1.0 / gap1;
-
-                    float val0 = (u - texelFetch(uSplineData, offset + i).x) * gap0; // (u - knots[i]) * gap0;
-                    float val1 = (texelFetch(uSplineData, offset + i + degree + 1).x - u) * gap1; // (knots[i+degree+1] - u) * gap1;
-                    uBasis[b] = uBasis[b] * val0 + uBasis[b+1] * val1;
-                    b++;
-                }}
-                degree++;
-            }}
             while (degree < order - 1)
             {{
                 int b = order - degree - 1;
@@ -46,9 +28,6 @@ class SplineOpenGLFrame(OpenGLFrame):
                     gap0 = gap0 < 1.0e-8 ? 0.0 : 1.0 / gap0;
                     gap1 = gap1 < 1.0e-8 ? 0.0 : 1.0 / gap1;
 
-                    float d0 = degree * gap0;
-                    float d1 = -degree * gap1;
-                    du2Basis[b] = uBasis[b] * d0 + uBasis[b+1] * d1;
                     float val0 = (u - texelFetch(uSplineData, offset + i).x) * gap0; // (u - knots[i]) * gap0;
                     float val1 = (texelFetch(uSplineData, offset + i + degree + 1).x - u) * gap1; // (knots[i+degree+1] - u) * gap1;
                     uBasis[b] = uBasis[b] * val0 + uBasis[b+1] * val1;
@@ -69,7 +48,6 @@ class SplineOpenGLFrame(OpenGLFrame):
                     float d0 = degree * gap0;
                     float d1 = -degree * gap1;
                     duBasis[b] = uBasis[b] * d0 + uBasis[b+1] * d1;
-                    du2Basis[b] = du2Basis[b] * d0 + du2Basis[b+1] * d1;
                     float val0 = (u - texelFetch(uSplineData, offset + i).x) * gap0; // (u - knots[i]) * gap0;
                     float val1 = (texelFetch(uSplineData, offset + i + degree + 1).x - u) * gap1; // (knots[i+degree+1] - u) * gap1;
                     uBasis[b] = uBasis[b] * val0 + uBasis[b+1] * val1;
@@ -98,57 +76,6 @@ class SplineOpenGLFrame(OpenGLFrame):
         }
     """
 
-    computeCurveDeltaCode = """
-        void ComputeCurveDelta(in int uOrder, in int uN, in int uM, out float deltaU)
-        {
-            float uInterval = texelFetch(uSplineData, header + uM+1).x - texelFetch(uSplineData, header + uM).x; // uKnots[uM+1] - uKnots[uM]
-
-            deltaU = max(uInterval, 1.0e-8);
-            int i = uM+1-uOrder;
-            int coefficientOffset = header + uOrder + uN + 4 * i;
-            vec4 coefficient0 = vec4(
-                texelFetch(uSplineData, coefficientOffset+0).x, 
-                texelFetch(uSplineData, coefficientOffset+1).x,
-                texelFetch(uSplineData, coefficientOffset+2).x,
-                texelFetch(uSplineData, coefficientOffset+3).x);
-            coefficientOffset += 4;
-            vec4 coefficient1 = vec4(
-                texelFetch(uSplineData, coefficientOffset+0).x, 
-                texelFetch(uSplineData, coefficientOffset+1).x,
-                texelFetch(uSplineData, coefficientOffset+2).x,
-                texelFetch(uSplineData, coefficientOffset+3).x);
-            float gap = texelFetch(uSplineData, header + i+uOrder).x - texelFetch(uSplineData, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]
-            gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
-            vec3 dPoint0 = (uOrder - 1) * gap * (coefficient1.xyz - coefficient0.xyz);
-            while (i < uM-1)
-            {
-                coefficientOffset += 4;
-                vec4 coefficient2 = vec4(
-                    texelFetch(uSplineData, coefficientOffset+0).x, 
-                    texelFetch(uSplineData, coefficientOffset+1).x,
-                    texelFetch(uSplineData, coefficientOffset+2).x,
-                    texelFetch(uSplineData, coefficientOffset+3).x);
-                gap = texelFetch(uSplineData, header + i+1+uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]
-                gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
-                vec3 dPoint1 = (uOrder - 1) * gap * (coefficient2.xyz - coefficient1.xyz);
-                gap = texelFetch(uSplineData, header + i+uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+uOrder] - uKnots[i+2]
-                gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
-                vec3 d2Point = (uOrder - 2) * gap * (dPoint1 - dPoint0);
-
-                ComputeDelta(coefficient0, dPoint0, d2Point, deltaU);
-                ComputeDelta(coefficient1, dPoint0, d2Point, deltaU);
-                ComputeDelta(coefficient1, dPoint1, d2Point, deltaU);
-                ComputeDelta(coefficient2, dPoint1, d2Point, deltaU);
-
-                coefficient0 = coefficient1;
-                coefficient1 = coefficient2;
-                dPoint0 = dPoint1;
-                i++;
-            }
-            // uSamples = ceil(uInterval / deltaU);
-        }
-    """
-
     curveVertexShaderCode = """
         #version 410 core
      
@@ -165,6 +92,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             int uM;
             float firstU;
             float lastU;
+            float deltaU;
         } outData;
 
         void main()
@@ -174,7 +102,60 @@ class SplineOpenGLFrame(OpenGLFrame):
             outData.uM = min(gl_InstanceID + outData.uOrder - 1, outData.uN - 1);
             outData.firstU = texelFetch(uSplineData, header + outData.uM).x; // knots[uM]
             outData.lastU = texelFetch(uSplineData, header + outData.uM + 1).x; // knots[uM+1]
+            outData.deltaU = outData.lastU - outData.firstU;
             gl_Position = aParameters;
+        }
+    """
+
+    computeCurveSamplesCode = """
+        void ComputeCurveSamples(out float uSamples)
+        {
+            float uInterval = outData.deltaU; // uKnots[uM+1] - uKnots[uM]
+
+            outData.deltaU = max(uInterval, 1.0e-8);
+            int i = outData.uM+1-outData.uOrder;
+            int coefficientOffset = header + outData.uOrder + outData.uN + 4 * i;
+            vec4 coefficient0 = vec4(
+                texelFetch(uSplineData, coefficientOffset+0).x, 
+                texelFetch(uSplineData, coefficientOffset+1).x,
+                texelFetch(uSplineData, coefficientOffset+2).x,
+                texelFetch(uSplineData, coefficientOffset+3).x);
+            coefficientOffset += 4;
+            vec4 coefficient1 = vec4(
+                texelFetch(uSplineData, coefficientOffset+0).x, 
+                texelFetch(uSplineData, coefficientOffset+1).x,
+                texelFetch(uSplineData, coefficientOffset+2).x,
+                texelFetch(uSplineData, coefficientOffset+3).x);
+            float gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]
+            gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+            vec3 dPoint0 = (outData.uOrder - 1) * gap * (coefficient1.xyz - coefficient0.xyz);
+            while (i < outData.uM-1)
+            {
+                coefficientOffset += 4;
+                vec4 coefficient2 = vec4(
+                    texelFetch(uSplineData, coefficientOffset+0).x, 
+                    texelFetch(uSplineData, coefficientOffset+1).x,
+                    texelFetch(uSplineData, coefficientOffset+2).x,
+                    texelFetch(uSplineData, coefficientOffset+3).x);
+                gap = texelFetch(uSplineData, header + i+1+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]
+                gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                vec3 dPoint1 = (outData.uOrder - 1) * gap * (coefficient2.xyz - coefficient1.xyz);
+                gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+uOrder] - uKnots[i+2]
+                gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                vec3 d2Point = (outData.uOrder - 2) * gap * (dPoint1 - dPoint0);
+
+                ComputeDelta(coefficient0, dPoint0, d2Point, outData.deltaU);
+                ComputeDelta(coefficient1, dPoint0, d2Point, outData.deltaU);
+                ComputeDelta(coefficient1, dPoint1, d2Point, outData.deltaU);
+                ComputeDelta(coefficient2, dPoint1, d2Point, outData.deltaU);
+
+                coefficient0 = coefficient1;
+                coefficient1 = coefficient2;
+                dPoint0 = dPoint1;
+                i++;
+            }
+            uSamples = ceil(uInterval / outData.deltaU);
+            outData.deltaU = uInterval / uSamples;
         }
     """
 
@@ -192,6 +173,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             int uM;
             float firstU;
             float lastU;
+            float deltaU;
         }} inData[];
 
         uniform vec3 uScreenScale;
@@ -204,35 +186,24 @@ class SplineOpenGLFrame(OpenGLFrame):
             int uM;
             float firstU;
             float lastU;
+            float deltaU;
         }} outData;
+
+        {computeDeltaCode}
+
+        {computeCurveSamplesCode}
 
         void main()
         {{
             outData = inData[gl_InvocationID];
             gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 
-            // Find bounding box for coefficients in projected screen space pixels.
-            vec2 minProjected = uScreenScale.xy;
-            vec2 maxProjected = -uScreenScale.xy;
-            int i = header + outData.uOrder + outData.uN + (outData.uM + 1 - outData.uOrder) * 4;
-            for (int uB = 0; uB < outData.uOrder; uB++)
-            {{
-                float zScale = uScreenScale.z > 1.0 ? 1.0 / (uScreenScale.z - texelFetch(uSplineData, i+2).x) : 1.0;
-                vec2 projection = vec2(uScreenScale.x * texelFetch(uSplineData, i).x * zScale,
-                    uScreenScale.y * texelFetch(uSplineData, i+1).x * zScale);
-                minProjected = min(minProjected, projection);
-                maxProjected = max(maxProjected, projection);
-                i += 4;
-            }}
-            minProjected = max(minProjected, -uScreenScale.xy);
-            maxProjected = min(maxProjected, uScreenScale.xy);
+            float uSamples = 0.0;
+            ComputeCurveSamples(uSamples); // uses outData and changes outData.deltaU
 
-            // Calculate the tessellation levels based on one vertex per pixel, so each sample can handle at most "maxVertices" pixels.
-            // The number of samples ranges from 1 to gl_MaxTessGenLevel.
-            vec2 size = maxProjected - minProjected;
-            float samples = min(ceil(max(size.x, size.y) / {maxVertices}.0), gl_MaxTessGenLevel);
+            uSamples = min(uSamples, gl_MaxTessGenLevel);
             gl_TessLevelOuter[0] = 1.0;
-            gl_TessLevelOuter[1] = samples;
+            gl_TessLevelOuter[1] = uSamples;
         }}
     """
 
@@ -250,6 +221,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             int uM;
             float firstU;
             float lastU;
+            float deltaU;
         } inData;
 
         out SplineInfo
@@ -259,6 +231,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             int uM;
             float firstU;
             float lastU;
+            float deltaU;
         } outData;
 
         void main()
@@ -267,10 +240,11 @@ class SplineOpenGLFrame(OpenGLFrame):
             outData.uN = inData.uN;
             outData.uM = inData.uM;
             // gl_TessCoord.x is in [0.0, 1.0]
-            float deltaU = inData.lastU - inData.firstU;
-            outData.firstU = inData.firstU + gl_TessCoord.x * deltaU;
+            float uInterval = inData.lastU - inData.firstU;
+            outData.deltaU = uInterval  / gl_TessLevelOuter[1];
+            outData.firstU = inData.firstU + gl_TessCoord.x * uInterval;
             // Ensure outData.lastU is in [inData.firstU, inData.lastU].
-            outData.lastU = min(inData.lastU, outData.firstU + deltaU  / gl_TessLevelOuter[1]);
+            outData.lastU = min(inData.lastU, outData.firstU + outData.deltaU);
         }
     """
 
@@ -289,6 +263,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             int uM;
             float firstU;
             float lastU;
+            float deltaU;
         }} inData[];
 
         uniform mat4 uProjectionMatrix;
@@ -300,17 +275,12 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         {computeBasisCode}
 
-        {computeDeltaCode}
-
-        {computeCurveDeltaCode}
-
         void DrawCurvePoints(in int order, in int n, in int m, in float u)
         {{
             float uBasis[{maxBasis}];
             float duBasis[{maxBasis}];
-            float du2Basis[{maxBasis}];
 
-            ComputeBasis(header, order, n, m, u, uBasis, duBasis, du2Basis);
+            ComputeBasis(header, order, n, m, u, uBasis, duBasis);
             
             vec4 point = vec4(0.0, 0.0, 0.0, 0.0);
             vec3 dPoint = vec3(0.0, 0.0, 0.0);
@@ -346,10 +316,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             int m = inData[0].uM;
             float u = inData[0].firstU;
             float lastU = inData[0].lastU;
-            float deltaU;
+            float deltaU = inData[0].deltaU;
             int vertices = 0;
 
-            ComputeCurveDelta(order, n, m, deltaU);
             splineColor = uSplineColor;
             while (u < lastU && vertices <= {maxVertices} - 6) // Save room for the vertices at u and lastU
             {{
@@ -361,6 +330,51 @@ class SplineOpenGLFrame(OpenGLFrame):
             vertices += 3;
             EndPrimitive();
         }}
+    """
+
+    surfaceVertexShaderCode = """
+        #version 410 core
+
+        const int header = 4;
+     
+        attribute vec4 aParameters;
+
+        uniform samplerBuffer uSplineData;
+
+        out SplineInfo
+        {
+            int uOrder;
+            int vOrder;
+            int uN;
+            int vN;
+            int uM;
+            int vM;
+            float firstU;
+            float firstV;
+            float lastU;
+            float lastV;
+            float deltaU;
+            float deltaV;
+        } outData;
+
+        void main()
+        {
+            outData.uOrder = int(texelFetch(uSplineData, 0).x);
+            outData.vOrder = int(texelFetch(uSplineData, 1).x);
+            outData.uN = int(texelFetch(uSplineData, 2).x);
+            outData.vN = int(texelFetch(uSplineData, 3).x);
+            int stride = outData.vN - outData.vOrder + 1;
+
+            outData.uM = min(int(gl_InstanceID / stride) + outData.uOrder - 1, outData.uN - 1);
+            outData.vM = min(int(mod(gl_InstanceID, stride)) + outData.vOrder - 1, outData.vN - 1);
+            outData.firstU = texelFetch(uSplineData, header + outData.uM).x; // uKnots[uM]
+            outData.firstV = texelFetch(uSplineData, header + outData.uOrder + outData.uN + outData.vM).x; // vKnots[vM]
+            outData.lastU = texelFetch(uSplineData, header + outData.uM + 1).x; // uKnots[uM+1]
+            outData.lastV = texelFetch(uSplineData, header + outData.uOrder + outData.uN + outData.vM + 1).x; // vKnots[vM+1]
+            outData.deltaU = outData.lastU - outData.firstU;
+            outData.deltaV = outData.lastV - outData.firstV;
+            gl_Position = aParameters;
+        }
     """
 
     computeSurfaceDeltasCode = """
@@ -466,47 +480,6 @@ class SplineOpenGLFrame(OpenGLFrame):
         }
     """
 
-    surfaceVertexShaderCode = """
-        #version 410 core
-
-        const int header = 4;
-     
-        attribute vec4 aParameters;
-
-        uniform samplerBuffer uSplineData;
-
-        out SplineInfo
-        {
-            int uOrder;
-            int vOrder;
-            int uN;
-            int vN;
-            int uM;
-            int vM;
-            float firstU;
-            float firstV;
-            float lastU;
-            float lastV;
-        } outData;
-
-        void main()
-        {
-            outData.uOrder = int(texelFetch(uSplineData, 0).x);
-            outData.vOrder = int(texelFetch(uSplineData, 1).x);
-            outData.uN = int(texelFetch(uSplineData, 2).x);
-            outData.vN = int(texelFetch(uSplineData, 3).x);
-            int stride = outData.vN - outData.vOrder + 1;
-
-            outData.uM = min(int(gl_InstanceID / stride) + outData.uOrder - 1, outData.uN - 1);
-            outData.vM = min(int(mod(gl_InstanceID, stride)) + outData.vOrder - 1, outData.vN - 1);
-            outData.firstU = texelFetch(uSplineData, header + outData.uM).x; // uKnots[uM]
-            outData.firstV = texelFetch(uSplineData, header + outData.uOrder + outData.uN + outData.vM).x; // vKnots[vM]
-            outData.lastU = texelFetch(uSplineData, header + outData.uM + 1).x; // uKnots[uM+1]
-            outData.lastV = texelFetch(uSplineData, header + outData.uOrder + outData.uN + outData.vM + 1).x; // vKnots[vM+1]
-            gl_Position = aParameters;
-        }
-    """
-
     surfaceTCShaderCode = """
         #version 410 core
 
@@ -526,6 +499,8 @@ class SplineOpenGLFrame(OpenGLFrame):
             float firstV;
             float lastU;
             float lastV;
+            float deltaU;
+            float deltaV;
         }} inData[];
 
         uniform vec3 uScreenScale;
@@ -543,6 +518,8 @@ class SplineOpenGLFrame(OpenGLFrame):
             float firstV;
             float lastU;
             float lastV;
+            float deltaU;
+            float deltaV;
         }} outData;
 
         void main()
@@ -599,6 +576,8 @@ class SplineOpenGLFrame(OpenGLFrame):
             float firstV;
             float lastU;
             float lastV;
+            float deltaU;
+            float deltaV;
         } inData;
 
         out SplineInfo
@@ -613,6 +592,8 @@ class SplineOpenGLFrame(OpenGLFrame):
             float firstV;
             float lastU;
             float lastV;
+            float deltaU;
+            float deltaV;
         } outData;
 
         void main()
@@ -658,6 +639,8 @@ class SplineOpenGLFrame(OpenGLFrame):
             float firstV;
             float lastU;
             float lastV;
+            float deltaU;
+            float deltaV;
         }} inData[];
 
         uniform mat4 uProjectionMatrix;
@@ -681,9 +664,8 @@ class SplineOpenGLFrame(OpenGLFrame):
         {{
             float vBasis[{maxBasis}];
             float dvBasis[{maxBasis}];
-            float dv2Basis[{maxBasis}];
 
-            ComputeBasis(header + uOrder + uN, vOrder, vN, vM, v, vBasis, dvBasis, dv2Basis);
+            ComputeBasis(header + uOrder + uN, vOrder, vN, vM, v, vBasis, dvBasis);
             
             vec4 point = vec4(0.0, 0.0, 0.0, 0.0);
             vec3 duPoint = vec3(0.0, 0.0, 0.0);
@@ -764,21 +746,19 @@ class SplineOpenGLFrame(OpenGLFrame):
             int vertices = 0;
             float uBasis[{maxBasis}];
             float duBasis[{maxBasis}];
-            float du2Basis[{maxBasis}];
             float deltaU;
             float deltaV;
 
             ComputeSurfaceDeltas(uOrder, uN, uM, vOrder, vN, vM, deltaU, deltaV);
             splineColor = uSplineColor;
             
-            ComputeBasis(header, uOrder, uN, uM, u, uBasis, duBasis, du2Basis);
+            ComputeBasis(header, uOrder, uN, uM, u, uBasis, duBasis);
             while (u < lastU && vertices < {maxVertices})
             {{
                 u = min(u + deltaU, lastU);
                 float uBasisNext[{maxBasis}];
                 float duBasisNext[{maxBasis}];
-                float du2BasisNext[{maxBasis}];
-                ComputeBasis(header, uOrder, uN, uM, u, uBasisNext, duBasisNext, du2BasisNext);
+                ComputeBasis(header, uOrder, uN, uM, u, uBasisNext, duBasisNext);
 
                 float v = inData[0].firstV;
                 float lastV = inData[0].lastV;
@@ -795,7 +775,6 @@ class SplineOpenGLFrame(OpenGLFrame):
                 EndPrimitive();
                 uBasis = uBasisNext;
                 duBasis = duBasisNext;
-                du2Basis = du2BasisNext;
             }}
         }}
     """
@@ -837,11 +816,11 @@ class SplineOpenGLFrame(OpenGLFrame):
             try:
                 self.computeBasisCode = self.computeBasisCode.format(maxBasis=Spline.maxOrder+1)
 
-                self.curveTCShaderCode = self.curveTCShaderCode.format(maxVertices=self.maxVertices)
+                self.curveTCShaderCode = self.curveTCShaderCode.format(maxVertices=self.maxVertices,
+                    computeDeltaCode=self.computeDeltaCode,
+                    computeCurveSamplesCode=self.computeCurveSamplesCode)
                 self.curveGeometryShaderCode = self.curveGeometryShaderCode.format(maxVertices=self.maxVertices,
                     computeBasisCode=self.computeBasisCode,
-                    computeDeltaCode=self.computeDeltaCode,
-                    computeCurveDeltaCode=self.computeCurveDeltaCode,
                     maxBasis=Spline.maxOrder+1)
                 self.curveProgram = shaders.compileProgram(
                     shaders.compileShader(self.curveVertexShaderCode, GL_VERTEX_SHADER), 
