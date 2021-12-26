@@ -688,25 +688,25 @@ class SplineOpenGLFrame(OpenGLFrame):
             vec4 point = vec4(0.0, 0.0, 0.0, 0.0);
             vec3 duPoint = vec3(0.0, 0.0, 0.0);
             vec3 dvPoint = vec3(0.0, 0.0, 0.0);
-            int j = header + uOrder + uN + vOrder + vN + (vM + 1 - vOrder) * 4;
-            for (int vB = 0; vB < vOrder; vB++)
+            int i = header + uOrder + uN + vOrder + vN + (uM + 1 - uOrder) * vN * 4;
+            for (int uB = 0; uB < uOrder; uB++)
             {{
-                int i = j + (uM + 1 - uOrder) * vN * 4;
-                for (int uB = 0; uB < uOrder; uB++)
+                int j = i + (vM + 1 - vOrder) * 4;
+                for (int vB = 0; vB < vOrder; vB++)
                 {{
-                    point.x += uBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i).x;
-                    point.y += uBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i+1).x;
-                    point.z += uBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i+2).x;
-                    point.w += uBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i+3).x;
-                    duPoint.x += duBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i).x;
-                    duPoint.y += duBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i+1).x;
-                    duPoint.z += duBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i+2).x;
-                    dvPoint.x += uBasis[uB] * dvBasis[vB] * texelFetch(uSplineData, i).x;
-                    dvPoint.y += uBasis[uB] * dvBasis[vB] * texelFetch(uSplineData, i+1).x;
-                    dvPoint.z += uBasis[uB] * dvBasis[vB] * texelFetch(uSplineData, i+2).x;
-                    i += vN * 4;
+                    point.x += uBasis[uB] * vBasis[vB] * texelFetch(uSplineData, j).x;
+                    point.y += uBasis[uB] * vBasis[vB] * texelFetch(uSplineData, j+1).x;
+                    point.z += uBasis[uB] * vBasis[vB] * texelFetch(uSplineData, j+2).x;
+                    point.w += uBasis[uB] * vBasis[vB] * texelFetch(uSplineData, j+3).x;
+                    duPoint.x += duBasis[uB] * vBasis[vB] * texelFetch(uSplineData, j).x;
+                    duPoint.y += duBasis[uB] * vBasis[vB] * texelFetch(uSplineData, j+1).x;
+                    duPoint.z += duBasis[uB] * vBasis[vB] * texelFetch(uSplineData, j+2).x;
+                    dvPoint.x += uBasis[uB] * dvBasis[vB] * texelFetch(uSplineData, j).x;
+                    dvPoint.y += uBasis[uB] * dvBasis[vB] * texelFetch(uSplineData, j+1).x;
+                    dvPoint.z += uBasis[uB] * dvBasis[vB] * texelFetch(uSplineData, j+2).x;
+                    j += 4;
                 }}
-                j += 4;
+                i += vN * 4;
             }}
 
             vec3 normal = normalize(cross(duPoint, dvPoint));
@@ -718,25 +718,25 @@ class SplineOpenGLFrame(OpenGLFrame):
             point = vec4(0.0, 0.0, 0.0, 0.0);
             duPoint = vec3(0.0, 0.0, 0.0);
             dvPoint = vec3(0.0, 0.0, 0.0);
-            j = header + uOrder + uN + vOrder + vN + (vM + 1 - vOrder) * 4;
-            for (int vB = 0; vB < vOrder; vB++)
+            i = header + uOrder + uN + vOrder + vN + (uM + 1 - uOrder) * vN * 4;
+            for (int uB = 0; uB < uOrder; uB++)
             {{
-                int i = j + (uM + 1 - uOrder) * vN * 4;
-                for (int uB = 0; uB < uOrder; uB++)
+                int j = i + (vM + 1 - vOrder) * 4;
+                for (int vB = 0; vB < vOrder; vB++)
                 {{
-                    point.x += uBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i).x;
-                    point.y += uBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i+1).x;
-                    point.z += uBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i+2).x;
-                    point.w += uBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i+3).x;
-                    duPoint.x += duBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i).x;
-                    duPoint.y += duBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i+1).x;
-                    duPoint.z += duBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i+2).x;
-                    dvPoint.x += uBasisNext[uB] * dvBasis[vB] * texelFetch(uSplineData, i).x;
-                    dvPoint.y += uBasisNext[uB] * dvBasis[vB] * texelFetch(uSplineData, i+1).x;
-                    dvPoint.z += uBasisNext[uB] * dvBasis[vB] * texelFetch(uSplineData, i+2).x;
-                    i += vN * 4;
+                    point.x += uBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, j).x;
+                    point.y += uBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, j+1).x;
+                    point.z += uBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, j+2).x;
+                    point.w += uBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, j+3).x;
+                    duPoint.x += duBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, j).x;
+                    duPoint.y += duBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, j+1).x;
+                    duPoint.z += duBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, j+2).x;
+                    dvPoint.x += uBasisNext[uB] * dvBasis[vB] * texelFetch(uSplineData, j).x;
+                    dvPoint.y += uBasisNext[uB] * dvBasis[vB] * texelFetch(uSplineData, j+1).x;
+                    dvPoint.z += uBasisNext[uB] * dvBasis[vB] * texelFetch(uSplineData, j+2).x;
+                    j += 4;
                 }}
-                j += 4;
+                i += vN * 4;
             }}
 
             normal = normalize(cross(duPoint, dvPoint));
