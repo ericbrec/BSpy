@@ -374,7 +374,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             for (int j = vM+1-vOrder; j < vM+1; j++)
             {
                 int i = uM+1-uOrder;
-                int coefficientOffset = header + uOrder+uN + 4*vN*i + 4*j;
+                int coefficientOffset = header + uOrder+uN + vOrder+vN + 4*vN*i + 4*j;
                 vec4 coefficient0 = vec4(
                     texelFetch(uSplineData, coefficientOffset+0).x, 
                     texelFetch(uSplineData, coefficientOffset+1).x,
@@ -420,7 +420,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             for (int i = uM+1-uOrder; i < uM+1; i++)
             {
                 int j = vM+1-vOrder;
-                int coefficientOffset = header + uOrder+uN + 4*vN*i + 4*j;
+                int coefficientOffset = header + uOrder+uN + vOrder+vN + 4*vN*i + 4*j;
                 vec4 coefficient0 = vec4(
                     texelFetch(uSplineData, coefficientOffset+0).x, 
                     texelFetch(uSplineData, coefficientOffset+1).x,
@@ -642,7 +642,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         #version 410 core
 
         layout( points ) in;
-        layout( line_strip, max_vertices = {maxVertices} ) out;
+        layout( triangle_strip, max_vertices = {maxVertices} ) out;
 
         const int header = 4;
 
