@@ -217,10 +217,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         }} inData;
 
         uniform mat4 uProjectionMatrix;
-        uniform vec3 uSplineColor;
         uniform samplerBuffer uSplineData;
-
-        out vec3 splineColor;
 
         {computeBasisCode}
 
@@ -243,11 +240,22 @@ class SplineOpenGLFrame(OpenGLFrame):
                 i += 4;
             }}
 
-            splineColor = uSplineColor;
             gl_Position = uProjectionMatrix * point;
         }}
     """
 
+    curveFragmentShaderCode = """
+        #version 410 core
+     
+        uniform vec3 uSplineColor;
+
+        out vec3 color;
+     
+        void main()
+        {
+            color = uSplineColor;
+        }
+    """
     surfaceVertexShaderCode = """
         #version 410 core
 
@@ -513,11 +521,10 @@ class SplineOpenGLFrame(OpenGLFrame):
         }} inData;
 
         uniform mat4 uProjectionMatrix;
-        uniform vec3 uSplineColor;
-        uniform vec3 uLightDirection;
         uniform samplerBuffer uSplineData;
 
-        out vec3 splineColor;
+        out vec4 worldPosition;
+        out vec3 normal;
 
         {computeBasisCode}
 
@@ -559,22 +566,27 @@ class SplineOpenGLFrame(OpenGLFrame):
                 i += inData.vN * 4;
             }}
 
-            vec3 normal = normalize(cross(duPoint, dvPoint));
-            float intensity = dot(normal, uLightDirection);
-            splineColor = (0.3 + 0.7 * abs(intensity)) * uSplineColor;
+            worldPosition = point;
+            normal = normalize(cross(duPoint, dvPoint));
             gl_Position = uProjectionMatrix * point;
         }}
     """
 
-    fragmentShaderCode = """
+    surfaceFragmentShaderCode = """
         #version 410 core
      
-        in vec3 splineColor;
+        in vec4 worldPosition;
+        in vec3 normal;
+
+        uniform vec3 uSplineColor;
+        uniform vec3 uLightDirection;
+
         out vec3 color;
      
         void main()
         {
-            color = splineColor;
+            float intensity = dot(normal, uLightDirection);
+            color = (0.3 + 0.7 * abs(intensity)) * uSplineColor;
         }
     """
  
@@ -624,12 +636,12 @@ class SplineOpenGLFrame(OpenGLFrame):
                     shaders.compileShader(self.curveVertexShaderCode, GL_VERTEX_SHADER), 
                     shaders.compileShader(self.curveTCShaderCode, GL_TESS_CONTROL_SHADER), 
                     shaders.compileShader(self.curveTEShaderCode, GL_TESS_EVALUATION_SHADER), 
-                    shaders.compileShader(self.fragmentShaderCode, GL_FRAGMENT_SHADER))
+                    shaders.compileShader(self.curveFragmentShaderCode, GL_FRAGMENT_SHADER))
                 self.surfaceProgram = shaders.compileProgram(
                     shaders.compileShader(self.surfaceVertexShaderCode, GL_VERTEX_SHADER), 
                     shaders.compileShader(self.surfaceTCShaderCode, GL_TESS_CONTROL_SHADER), 
                     shaders.compileShader(self.surfaceTEShaderCode, GL_TESS_EVALUATION_SHADER), 
-                    shaders.compileShader(self.fragmentShaderCode, GL_FRAGMENT_SHADER))
+                    shaders.compileShader(self.surfaceFragmentShaderCode, GL_FRAGMENT_SHADER))
             except shaders.ShaderCompilationError as exception:
                 error = exception.args[0]
                 lineNumber = error.split(":")[3]
