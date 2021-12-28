@@ -35,7 +35,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                 }}
                 degree++;
             }}
-            while (degree < order)
+            if (degree < order)
             {{
                 int b = order - degree - 1;
                 for (int i = m - degree; i < m + 1; i++)
@@ -53,7 +53,6 @@ class SplineOpenGLFrame(OpenGLFrame):
                     uBasis[b] = uBasis[b] * val0 + uBasis[b+1] * val1;
                     b++;
                 }}
-                degree++;
             }}
         }}
     """
