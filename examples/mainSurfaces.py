@@ -170,8 +170,10 @@ class Spline:
         vInterval = vKnots[vM+1] - vKnots[vM]
 
         deltaU = max(uInterval, 1.0e-8)
+        deltaULeft = np.full(uOrder, deltaU, np.float32)
+        deltaURight = np.full(uOrder, deltaU, np.float32)
         for vN in range(vM+1-vOrder, vM+1):
-            for uN in range(uM+1-uOrder, uM-1):
+            for uN in range(max(uM-uOrder, 0), min(uM, drawCoefficients.shape[0]-2)):
                 gap = uKnots[uN+uOrder] - uKnots[uN+1]
                 gap = 0.0 if gap < 1.0e-8 else 1.0 / gap
                 dPoint0 = (uOrder - 1) * (drawCoefficients[uN+1, vN] - drawCoefficients[uN, vN]) * gap
@@ -181,10 +183,16 @@ class Spline:
                 gap = uKnots[uN+uOrder] - uKnots[uN+2]
                 gap = 0.0 if gap < 1.0e-8 else 1.0 / gap
                 d2Point = (uOrder - 2) * (dPoint1 - dPoint0) * gap
-                deltaU = min(deltaU, self.ComputeDelta(screenScale, drawCoefficients[uN, vN], dPoint0, d2Point, deltaU))
-                deltaU = min(deltaU, self.ComputeDelta(screenScale, drawCoefficients[uN+1, vN], dPoint0, d2Point, deltaU))
-                deltaU = min(deltaU, self.ComputeDelta(screenScale, drawCoefficients[uN+1, vN], dPoint1, d2Point, deltaU))
-                deltaU = min(deltaU, self.ComputeDelta(screenScale, drawCoefficients[uN+2, vN], dPoint1, d2Point, deltaU))
+                k = uN - uM + uOrder
+                deltaULeft[k] = min(deltaULeft[k], self.ComputeDelta(screenScale, drawCoefficients[uN, vN], dPoint0, d2Point, deltaULeft[k]))
+                deltaULeft[k] = min(deltaULeft[k], self.ComputeDelta(screenScale, drawCoefficients[uN+1, vN], dPoint0, d2Point, deltaULeft[k]))
+                deltaURight[k] = min(deltaURight[k], self.ComputeDelta(screenScale, drawCoefficients[uN+1, vN], dPoint1, d2Point, deltaURight[k]))
+                deltaURight[k] = min(deltaURight[k], self.ComputeDelta(screenScale, drawCoefficients[uN+2, vN], dPoint1, d2Point, deltaURight[k]))
+        for uN in range(1, uOrder-1):
+            deltaU = min(deltaU, deltaULeft[k], deltaURight[k])
+        deltaUm = min(deltaURight[0], deltaULeft[1])
+        deltaUm1 = min(deltaURight[uOrder-2], deltaULeft[uOrder-1])
+        print(uM, vM, deltaUm, deltaUm1, deltaU)
 
         deltaV = max(vInterval, 1.0e-8)
         for uN in range(uM+1-uOrder, uM+1):
