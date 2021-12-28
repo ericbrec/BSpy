@@ -194,10 +194,12 @@ class Spline:
                 deltaULeft[k] = min(deltaULeft[k], self.ComputeDelta(screenScale, drawCoefficients[uN+1, vN], dPoint0, d2Point, deltaULeft[k]))
                 deltaURight[k] = min(deltaURight[k], self.ComputeDelta(screenScale, drawCoefficients[uN+1, vN], dPoint1, d2Point, deltaURight[k]))
                 deltaURight[k] = min(deltaURight[k], self.ComputeDelta(screenScale, drawCoefficients[uN+2, vN], dPoint1, d2Point, deltaURight[k]))
+        deltaUm = deltaU
+        deltaUm1 = deltaU
         for k in range(1, uOrder-1):
-            deltaUm = min(deltaURight[k-1], deltaULeft[k])
+            deltaUm = min(deltaUm, deltaURight[k-1], deltaULeft[k])
             deltaU = min(deltaU, deltaULeft[k], deltaURight[k])
-            deltaUm1 = min(deltaURight[k], deltaULeft[k+1])
+            deltaUm1 = min(deltaUm1, deltaURight[k], deltaULeft[k+1])
 
         deltaV = max(vInterval, 1.0e-8)
         for uN in range(uM+1-uOrder, uM+1):
