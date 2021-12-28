@@ -14,8 +14,11 @@ class SplineOpenGLFrame(OpenGLFrame):
         {{
             int degree = 1;
 
-            uBasis = float[{maxBasis}](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-            duBasis = float[{maxBasis}](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+            for (int i = 0; i < {maxBasis}; i++)
+            {{
+                uBasis[i] = 0.0;
+                duBasis[i] = 0.0;
+            }}
             uBasis[order-1] = 1.0;
 
             while (degree < order - 1)
