@@ -570,6 +570,7 @@ class FunOpenGLFrame(OpenGLFrame):
             }}
 
             worldPosition = point;
+            worldPosition.z -= uProjectionMatrix[3][3];
             normal = normalize(cross(duPoint, dvPoint));
             float uFirst = texelFetch(uSplineData, header + inData.uOrder - 1).x; // uKnots[uOrder-1]
             float uSpan = texelFetch(uSplineData, header + inData.uN - 1).x - uFirst; // uKnots[uN-1] - uKnots[uOrder-1]
@@ -598,7 +599,10 @@ class FunOpenGLFrame(OpenGLFrame):
         void main()
         {
             float intensity = dot(normal, uLightDirection);
-            color = (0.3 + 0.7 * abs(intensity)) * texture(uTextureMap, textureCoordinate).rgb;
+            vec3 reflection = normalize(reflect(worldPosition.xyz, normal));
+        	vec2 tex = vec2(0.5 * (1.0 - atan(reflection.x, reflection.z) / 3.1416), 0.5 * (1.0 - reflection.y));
+            color = (0.3 + 0.7 * abs(intensity)) * texture(uTextureMap, tex).rgb;
+            //color = (0.3 + 0.7 * abs(intensity)) * texture(uTextureMap, textureCoordinate).rgb;
         }
     """
  
@@ -671,14 +675,15 @@ class FunOpenGLFrame(OpenGLFrame):
             maxFloats = 4 + 2 * Spline.maxKnots + 4 * Spline.maxCoefficients * Spline.maxCoefficients
             glBufferData(GL_TEXTURE_BUFFER, 4 * maxFloats, None, GL_STATIC_READ)
 
-            img = Image.open("C:/Users/ericb/OneDrive/Pictures/Backgrounds/2020 Cannon Beach.jpg")
+            #img = Image.open("C:/Users/ericb/OneDrive/Pictures/Backgrounds/2020 Cannon Beach.jpg")
+            img = Image.open("C:/Users/ericb/OneDrive/Pictures/Backgrounds/Tom Sailing.jpg")
             img_data = np.array((img.getdata()), np.int8)
             self.textureBuffer = glGenTextures(1)
             glActiveTexture(GL_TEXTURE1)
             glBindTexture(GL_TEXTURE_2D, self.textureBuffer)
             glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
-            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
-            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER)
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER)
             glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
             glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, img.size[0], img.size[1], 0, GL_RGB, GL_UNSIGNED_BYTE, img_data)            
