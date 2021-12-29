@@ -522,6 +522,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         }} inData;
 
         uniform mat4 uProjectionMatrix;
+        uniform vec3 uScreenScale;
         uniform samplerBuffer uSplineData;
 
         out vec4 worldPosition;
@@ -568,7 +569,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             }}
 
             worldPosition = point;
-            worldPosition.z -= uProjectionMatrix[3][3];
+            worldPosition.z -= uScreenScale.z > 1.0 ? uScreenScale.z : 0.0;
             normal = normalize(cross(duPoint, dvPoint));
             gl_Position = uProjectionMatrix * point;
         }}

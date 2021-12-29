@@ -523,6 +523,7 @@ class FunOpenGLFrame(OpenGLFrame):
         }} inData;
 
         uniform mat4 uProjectionMatrix;
+        uniform vec3 uScreenScale;
         uniform samplerBuffer uSplineData;
 
         out vec4 worldPosition;
@@ -570,7 +571,7 @@ class FunOpenGLFrame(OpenGLFrame):
             }}
 
             worldPosition = point;
-            worldPosition.z -= uProjectionMatrix[3][3];
+            worldPosition.z -= uScreenScale.z > 1.0 ? uScreenScale.z : 0.0;
             normal = normalize(cross(duPoint, dvPoint));
             float uFirst = texelFetch(uSplineData, header + inData.uOrder - 1).x; // uKnots[uOrder-1]
             float uSpan = texelFetch(uSplineData, header + inData.uN - 1).x - uFirst; // uKnots[uN-1] - uKnots[uOrder-1]
