@@ -256,6 +256,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             color = uSplineColor;
         }
     """
+
     surfaceVertexShaderCode = """
         #version 410 core
 
@@ -567,6 +568,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             }}
 
             worldPosition = point;
+            worldPosition.z -= uProjectionMatrix[3][3];
             normal = normalize(cross(duPoint, dvPoint));
             gl_Position = uProjectionMatrix * point;
         }}
@@ -670,7 +672,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.uCurveScreenScale = glGetUniformLocation(self.curveProgram, 'uScreenScale')
             self.uCurveSplineColor = glGetUniformLocation(self.curveProgram, 'uSplineColor')
             self.uCurveSplineData = glGetUniformLocation(self.curveProgram, 'uSplineData')
-            glUniform1i(self.uCurveSplineData, 0) # 0 is the active texture (default is 0)
+            glUniform1i(self.uCurveSplineData, 0) # GL_TEXTURE0 is the spline buffer texture
 
             glUseProgram(self.surfaceProgram)
             self.aSurfaceParameters = glGetAttribLocation(self.surfaceProgram, "aParameters")
@@ -684,7 +686,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.lightDirection = self.lightDirection / np.linalg.norm(self.lightDirection)
             glUniform3fv(self.uSurfaceLightDirection, 1, self.lightDirection)
             self.uSurfaceSplineData = glGetUniformLocation(self.surfaceProgram, 'uSplineData')
-            glUniform1i(self.uSurfaceSplineData, 0) # 0 is the active texture (default is 0)
+            glUniform1i(self.uSurfaceSplineData, 0) # GL_TEXTURE0 is the spline buffer texture
 
             glUseProgram(0)
 

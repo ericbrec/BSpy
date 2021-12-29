@@ -701,7 +701,7 @@ class FunOpenGLFrame(OpenGLFrame):
             self.uCurveScreenScale = glGetUniformLocation(self.curveProgram, 'uScreenScale')
             self.uCurveSplineColor = glGetUniformLocation(self.curveProgram, 'uSplineColor')
             self.uCurveSplineData = glGetUniformLocation(self.curveProgram, 'uSplineData')
-            glUniform1i(self.uCurveSplineData, 0) # GL_TEXTURE0 is spline buffer texture
+            glUniform1i(self.uCurveSplineData, 0) # GL_TEXTURE0 is the spline buffer texture
 
             glUseProgram(self.surfaceProgram)
             self.aSurfaceParameters = glGetAttribLocation(self.surfaceProgram, "aParameters")
