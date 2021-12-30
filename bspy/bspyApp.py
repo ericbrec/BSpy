@@ -28,22 +28,8 @@ class bspyApp(tk.Tk):
         self.frame = SplineOpenGLFrame(self, width=500, height=500)
         self.frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=tk.YES)
 
-        # Adjustment dialog
-        self.adjust = tk.Toplevel(self)
-        self.adjust.withdraw()
-        self.adjust.title("Adjust spline")
-
-        tk.Checkbutton(self.adjust, text="Points", anchor=tk.W).pack(side=tk.TOP, fill=tk.X)
-        tk.Checkbutton(self.adjust, text="Lines", anchor=tk.W).pack(side=tk.TOP, fill=tk.X)
-        tk.Checkbutton(self.adjust, text="Shaded", anchor=tk.W).pack(side=tk.TOP, fill=tk.X)
-        tk.Checkbutton(self.adjust, text="Symbol", anchor=tk.W).pack(side=tk.TOP, fill=tk.X)
-        tk.Checkbutton(self.adjust, text="Boundary", anchor=tk.W).pack(side=tk.TOP, fill=tk.X)
-        tk.Checkbutton(self.adjust, text="Isoparms", anchor=tk.W).pack(side=tk.TOP, fill=tk.X)
-        tk.Checkbutton(self.adjust, text="Label", anchor=tk.W).pack(side=tk.TOP, fill=tk.X)
-        tk.Button(self.adjust, text='Color', command=self.ColorChange).pack(side=tk.TOP, fill=tk.X)
-        tk.Button(self.adjust, text='Done', command=self.adjust.withdraw).pack(side=tk.TOP, fill=tk.X)
-
         self.splineList = []
+        self.adjust = None
 
     def AddSpline(self, spline):
         self.splineList.append(spline)
@@ -56,7 +42,34 @@ class bspyApp(tk.Tk):
         self.frame.tkExpose(None)
 
     def Adjust(self):
-        self.adjust.deiconify()
+        if self.adjust is None:
+            self.adjust = tk.Toplevel()
+            self.adjust.title("Adjust")
+
+            checkButtons = tk.LabelFrame(self.adjust, text="Style")
+            checkButtons.pack(side=tk.LEFT, fill=tk.BOTH, expand=tk.YES)
+            tk.Checkbutton(checkButtons, text="Points", anchor=tk.W).pack(side=tk.TOP, fill=tk.X)
+            tk.Checkbutton(checkButtons, text="Lines", anchor=tk.W).pack(side=tk.TOP, fill=tk.X)
+            tk.Checkbutton(checkButtons, text="Shaded", anchor=tk.W).pack(side=tk.TOP, fill=tk.X)
+            tk.Checkbutton(checkButtons, text="Symbol", anchor=tk.W).pack(side=tk.TOP, fill=tk.X)
+            tk.Checkbutton(checkButtons, text="Boundary", anchor=tk.W).pack(side=tk.TOP, fill=tk.X)
+            tk.Checkbutton(checkButtons, text="Isoparms", anchor=tk.W).pack(side=tk.TOP, fill=tk.X)
+            tk.Checkbutton(checkButtons, text="Label", anchor=tk.W).pack(side=tk.TOP, fill=tk.X)
+
+            buttons = tk.LabelFrame(self.adjust, text="Color")
+            buttons.pack(side=tk.LEFT, fill=tk.BOTH, expand=tk.YES)
+            tk.Button(buttons, text='Fill color', command=self.ColorChange).pack(side=tk.TOP, fill=tk.X)
+            tk.Button(buttons, text='Line color', command=self.ColorChange).pack(side=tk.TOP, fill=tk.X)
+            tk.Button(buttons, text='Dismiss', command=self.adjust.withdraw).pack(side=tk.TOP, fill=tk.X)
+
+            self.adjust.minsize(205, self.adjust.winfo_height())
+            self.adjust.bind('<Destroy>', self.AdjustDestroy)
+
+        else:
+            self.adjust.deiconify()
+
+    def AdjustDestroy(self, event):
+        self.adjust = None
 
     def ColorChange(self):
         if len(self.listBox.curselection()) > 0:
