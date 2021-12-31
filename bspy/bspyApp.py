@@ -5,12 +5,12 @@ from bspy.splineOpenGLFrame import SplineOpenGLFrame
 from bspy.spline import Spline
 
 class BitCheckbutton(tk.Checkbutton):
-    def __init__(self, parent, bitNumber, **kw):
-        self.bitNumber = bitNumber
+    def __init__(self, parent, bitMask, **kw):
+        self.bitMask = bitMask
         self.variable = kw.get("variable")
         self.command = kw.get("command")
         self.var = tk.IntVar()
-        self.var.set(1 if self.variable.get() & (1 << self.bitNumber) else 0)
+        self.var.set(1 if self.variable.get() & self.bitMask else 0)
         kw["variable"] = self.var
         kw["onvalue"] = 1
         kw["offvalue"] = 0
@@ -19,13 +19,13 @@ class BitCheckbutton(tk.Checkbutton):
     
     def Command(self):
         if self.var.get() == 1:
-            self.variable.set(self.variable.get() | (1 << self.bitNumber))
+            self.variable.set(self.variable.get() | self.bitMask)
         else:
-            self.variable.set(self.variable.get() & ~(1 << self.bitNumber))
+            self.variable.set(self.variable.get() & ~self.bitMask)
         self.command(self.variable.get())
 
     def Update(self):
-        self.var.set(1 if self.variable.get() & (1 << self.bitNumber) else 0)
+        self.var.set(1 if self.variable.get() & self.bitMask else 0)
 
 class bspyApp(tk.Tk):
     def __init__(self, *args, **kw):

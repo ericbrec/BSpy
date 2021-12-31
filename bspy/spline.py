@@ -7,13 +7,13 @@ class Spline:
     maxCoefficients = 100
     maxKnots = maxCoefficients + maxOrder
 
-    POINTS = 0
-    LINES = 1
-    SHADED = 2
-    SYMBOL = 3
-    BOUNDARY = 4
-    ISOPARMS = 5
-    LABEL = 6
+    POINTS = (1 << 0)
+    LINES = (1 << 1)
+    SHADED = (1 << 2)
+    SYMBOL = (1 << 3)
+    BOUNDARY = (1 << 4)
+    ISOPARMS = (1 << 5)
+    LABEL = (1 << 6)
 
     def __init__(self, order, knots, coefficients):
         for i in range(len(order)):
@@ -27,13 +27,13 @@ class Spline:
         self.coefficients = coefficients
         self.fillColor = np.array((0.0, 1.0, 0.0, 1.0), np.float32)
         self.lineColor = np.array((1.0, 1.0, 1.0, 1.0), np.float32)
-        self.options = (1 << self.SHADED)
+        self.options = self.SHADED
 
     def __str__(self):
         return "[{0}, {1}]".format(self.coefficients[0], self.coefficients[1])
     
     def DrawCurve(self, frame, drawCoefficients):
-        if self.options & (1 << self.LINES):
+        if self.options & self.LINES:
             glColor3f(0.0, 0.0, 1.0)
             glBegin(GL_LINE_STRIP)
             for point in drawCoefficients:
@@ -59,7 +59,7 @@ class Spline:
         glUseProgram(0)
 
     def DrawSurface(self, frame, drawCoefficients):
-        if self.options & (1 << self.LINES):
+        if self.options & self.LINES:
             glColor3f(0.0, 0.0, 1.0)
             for pointList in drawCoefficients:
                 glBegin(GL_LINE_STRIP)
