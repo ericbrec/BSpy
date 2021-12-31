@@ -7,6 +7,15 @@ class Spline:
     maxCoefficients = 100
     maxKnots = maxCoefficients + maxOrder
 
+    POINTS = 0
+    LINES = 1
+    SHADED = 2
+    SYMBOL = 3
+    BOUNDARY = 4
+    ISOPARMS = 5
+    CONTOUR = 6
+    LABEL = 7
+
     def __init__(self, order, knots, coefficients):
         for i in range(len(order)):
             assert len(knots[i]) == order[i] + coefficients.shape[i]
@@ -19,6 +28,7 @@ class Spline:
         self.coefficients = coefficients
         self.fillColor = np.array((0.0, 1.0, 0.0), np.float32)
         self.lineColor = np.array((1.0, 1.0, 1.0), np.float32)
+        self.options = (1 << self.LINES) | (1 << self.SHADED) | (1 << self.ISOPARMS)
 
     def __str__(self):
         return "[{0}, {1}]".format(self.coefficients[0], self.coefficients[1])
