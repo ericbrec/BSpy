@@ -93,7 +93,6 @@ class bspyApp(tk.Tk):
             BitCheckbutton(self.checkButtons, Spline.SYMBOL, text="Symbol", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
             BitCheckbutton(self.checkButtons, Spline.BOUNDARY, text="Boundary", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
             BitCheckbutton(self.checkButtons, Spline.ISOPARMS, text="Isoparms", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
-            BitCheckbutton(self.checkButtons, Spline.CONTOUR, text="Contour", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
             BitCheckbutton(self.checkButtons, Spline.LABEL, text="Label", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
 
             buttons = tk.LabelFrame(self.adjust, text="Color")

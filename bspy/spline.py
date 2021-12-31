@@ -13,8 +13,7 @@ class Spline:
     SYMBOL = 3
     BOUNDARY = 4
     ISOPARMS = 5
-    CONTOUR = 6
-    LABEL = 7
+    LABEL = 6
 
     def __init__(self, order, knots, coefficients):
         for i in range(len(order)):
@@ -34,11 +33,12 @@ class Spline:
         return "[{0}, {1}]".format(self.coefficients[0], self.coefficients[1])
     
     def DrawCurve(self, frame, drawCoefficients):
-        glColor3f(0.0, 0.0, 1.0)
-        glBegin(GL_LINE_STRIP)
-        for point in drawCoefficients:
-            glVertex3f(point[0], point[1], point[2])
-        glEnd()
+        if self.options & (1 << self.LINES):
+            glColor3f(0.0, 0.0, 1.0)
+            glBegin(GL_LINE_STRIP)
+            for point in drawCoefficients:
+                glVertex3f(point[0], point[1], point[2])
+            glEnd()
 
         glUseProgram(frame.curveProgram)
         glUniform3fv(frame.uCurveLineColor, 1, self.lineColor)
@@ -59,16 +59,18 @@ class Spline:
         glUseProgram(0)
 
     def DrawSurface(self, frame, drawCoefficients):
-        glColor3f(0.0, 0.0, 1.0)
-        for pointList in drawCoefficients:
-            glBegin(GL_LINE_STRIP)
-            for point in pointList:
-                glVertex3f(point[0], point[1], point[2])
-            glEnd()
+        if self.options & (1 << self.LINES):
+            glColor3f(0.0, 0.0, 1.0)
+            for pointList in drawCoefficients:
+                glBegin(GL_LINE_STRIP)
+                for point in pointList:
+                    glVertex3f(point[0], point[1], point[2])
+                glEnd()
 
         glUseProgram(frame.surfaceProgram)
         glUniform3fv(frame.uSurfaceFillColor, 1, self.fillColor)
         glUniform3fv(frame.uSurfaceLineColor, 1, self.lineColor)
+        glUniform1i(frame.uSurfaceOptions, self.options)
         glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
         offset = 0
         size = 4 * 4

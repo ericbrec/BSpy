@@ -578,9 +578,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             gl_Position = uProjectionMatrix * point;
 
             float velocity = length(vec2(uScreenScale.x * duPoint.x, uScreenScale.y * duPoint.y));
-            pixelSize.x = velocity > 1.0e-8 ? -worldPosition.z / velocity : inData.uInterval;
+            pixelSize.x = velocity > 1.0e-8 ? -worldPosition.z / velocity : 0.1 * inData.uInterval;
             velocity = length(vec2(uScreenScale.x * dvPoint.x, uScreenScale.y * dvPoint.y));
-            pixelSize.y = velocity > 1.0e-8 ? -worldPosition.z / velocity : inData.vInterval;
+            pixelSize.y = velocity > 1.0e-8 ? -worldPosition.z / velocity : 0.1 * inData.vInterval;
         }}
     """
 
@@ -605,17 +605,18 @@ class SplineOpenGLFrame(OpenGLFrame):
         uniform vec3 uFillColor;
         uniform vec3 uLineColor;
         uniform vec3 uLightDirection;
+        uniform int uOptions;
 
         out vec3 color;
      
         void main()
         {
-            color = uFillColor;/*
-            color = abs(parameters.x - inData.u) < pixelSize.x || abs(parameters.x - inData.u - inData.uInterval) < pixelSize.x ? uLineColor : color;
-            color = abs(parameters.y - inData.v) < pixelSize.y || abs(parameters.y - inData.v - inData.vInterval) < pixelSize.y ? uLineColor : color;
-            color = abs(parameters.x - inData.uFirst) < 3.0 * pixelSize.x || abs(parameters.x - inData.uFirst - inData.uSpan) < 2.0 * pixelSize.x ? uLineColor : color;
-            color = abs(parameters.y - inData.vFirst) < 3.0 * pixelSize.y || abs(parameters.y - inData.vFirst - inData.vSpan) < 2.0 * pixelSize.y ? uLineColor : color;
-            */color = (0.3 + 0.7 * abs(dot(normal, uLightDirection))) * color;
+            color = uFillColor;
+            color = (uOptions & (1 << 4)) > 0 && (abs(parameters.x - inData.uFirst) < 3.0 * pixelSize.x || abs(parameters.x - inData.uFirst - inData.uSpan) < 2.0 * pixelSize.x) ? uLineColor : color;
+            color = (uOptions & (1 << 4)) > 0 && (abs(parameters.y - inData.vFirst) < 3.0 * pixelSize.y || abs(parameters.y - inData.vFirst - inData.vSpan) < 2.0 * pixelSize.y) ? uLineColor : color;
+            color = (uOptions & (1 << 5)) > 0 && (abs(parameters.x - inData.u) < pixelSize.x || abs(parameters.x - inData.u - inData.uInterval) < pixelSize.x) ? uLineColor : color;
+            color = (uOptions & (1 << 5)) > 0 && (abs(parameters.y - inData.v) < pixelSize.y || abs(parameters.y - inData.v - inData.vInterval) < pixelSize.y) ? uLineColor : color;
+            color = (0.3 + 0.7 * abs(dot(normal, uLightDirection))) * color;
         }
     """
  
@@ -713,6 +714,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.lightDirection = np.array((0.6, 0.3, 1), np.float32)
             self.lightDirection = self.lightDirection / np.linalg.norm(self.lightDirection)
             glUniform3fv(self.uSurfaceLightDirection, 1, self.lightDirection)
+            self.uSurfaceOptions = glGetUniformLocation(self.surfaceProgram, 'uOptions')
             self.uSurfaceSplineData = glGetUniformLocation(self.surfaceProgram, 'uSplineData')
             glUniform1i(self.uSurfaceSplineData, 0) # GL_TEXTURE0 is the spline buffer texture
 
