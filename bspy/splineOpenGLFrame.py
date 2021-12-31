@@ -611,12 +611,14 @@ class SplineOpenGLFrame(OpenGLFrame):
      
         void main()
         {
-            color = uFillColor;
+            color = (uOptions & (1 << 2)) > 0 ? uFillColor : vec4(0.0, 0.0, 0.0, 0.0);
             color = (uOptions & (1 << 4)) > 0 && (abs(parameters.x - inData.uFirst) < 3.0 * pixelSize.x || abs(parameters.x - inData.uFirst - inData.uSpan) < 2.0 * pixelSize.x) ? uLineColor : color;
             color = (uOptions & (1 << 4)) > 0 && (abs(parameters.y - inData.vFirst) < 3.0 * pixelSize.y || abs(parameters.y - inData.vFirst - inData.vSpan) < 2.0 * pixelSize.y) ? uLineColor : color;
             color = (uOptions & (1 << 5)) > 0 && (abs(parameters.x - inData.u) < pixelSize.x || abs(parameters.x - inData.u - inData.uInterval) < pixelSize.x) ? uLineColor : color;
             color = (uOptions & (1 << 5)) > 0 && (abs(parameters.y - inData.v) < pixelSize.y || abs(parameters.y - inData.v - inData.vInterval) < pixelSize.y) ? uLineColor : color;
-            color = (0.3 + 0.7 * abs(dot(normal, uLightDirection))) * color;
+            color.rgb = (0.3 + 0.7 * abs(dot(normal, uLightDirection))) * color.rgb;
+            if (color.a == 0.0)
+                discard;
         }
     """
  
@@ -721,8 +723,8 @@ class SplineOpenGLFrame(OpenGLFrame):
             glUseProgram(0)
 
             glEnable( GL_DEPTH_TEST )
-            #glClearColor(1.0, 1.0, 1.0, 0.0)
-            glClearColor(0.0, 0.0, 0.0, 0.0)
+            #glClearColor(1.0, 1.0, 1.0, 1.0)
+            glClearColor(0.0, 0.0, 0.0, 1.0)
 
             self.glInitialized = True
 
