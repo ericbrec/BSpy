@@ -247,9 +247,9 @@ class SplineOpenGLFrame(OpenGLFrame):
     curveFragmentShaderCode = """
         #version 410 core
      
-        uniform vec3 uLineColor;
+        uniform vec4 uLineColor;
 
-        out vec3 color;
+        out vec4 color;
      
         void main()
         {
@@ -602,12 +602,12 @@ class SplineOpenGLFrame(OpenGLFrame):
         in vec2 parameters;
         in vec2 pixelSize;
 
-        uniform vec3 uFillColor;
-        uniform vec3 uLineColor;
+        uniform vec4 uFillColor;
+        uniform vec4 uLineColor;
         uniform vec3 uLightDirection;
         uniform int uOptions;
 
-        out vec3 color;
+        out vec4 color;
      
         void main()
         {

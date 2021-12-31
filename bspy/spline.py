@@ -25,8 +25,8 @@ class Spline:
         self.order = order
         self.knots = knots
         self.coefficients = coefficients
-        self.fillColor = np.array((0.0, 1.0, 0.0), np.float32)
-        self.lineColor = np.array((1.0, 1.0, 1.0), np.float32)
+        self.fillColor = np.array((0.0, 1.0, 0.0, 1.0), np.float32)
+        self.lineColor = np.array((1.0, 1.0, 1.0, 1.0), np.float32)
         self.options = (1 << self.SHADED)
 
     def __str__(self):
@@ -41,7 +41,7 @@ class Spline:
             glEnd()
 
         glUseProgram(frame.curveProgram)
-        glUniform3fv(frame.uCurveLineColor, 1, self.lineColor)
+        glUniform4fv(frame.uCurveLineColor, 1, self.lineColor)
         glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
         offset = 0
         size = 4 * 2
@@ -68,8 +68,8 @@ class Spline:
                 glEnd()
 
         glUseProgram(frame.surfaceProgram)
-        glUniform3fv(frame.uSurfaceFillColor, 1, self.fillColor)
-        glUniform3fv(frame.uSurfaceLineColor, 1, self.lineColor)
+        glUniform4fv(frame.uSurfaceFillColor, 1, self.fillColor)
+        glUniform4fv(frame.uSurfaceLineColor, 1, self.lineColor)
         glUniform1i(frame.uSurfaceOptions, self.options)
         glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
         offset = 0
