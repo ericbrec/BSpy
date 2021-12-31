@@ -27,7 +27,7 @@ class Spline:
         self.coefficients = coefficients
         self.fillColor = np.array((0.0, 1.0, 0.0, 1.0), np.float32)
         self.lineColor = np.array((1.0, 1.0, 1.0, 1.0), np.float32)
-        self.options = self.SHADED
+        self.options = self.SHADED | self.BOUNDARY
 
     def __str__(self):
         return "[{0}, {1}]".format(self.coefficients[0], self.coefficients[1])
