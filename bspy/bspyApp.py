@@ -78,6 +78,7 @@ class bspyApp(tk.Tk):
         if self.adjust is None:
             self.adjust = tk.Toplevel()
             self.adjust.title("Adjust")
+            self.adjust.bind('<Destroy>', self.AdjustDestroy)
 
             self.checkButtons = tk.LabelFrame(self.adjust, text="Style")
             self.checkButtons.pack(side=tk.LEFT, fill=tk.BOTH, expand=tk.YES)
@@ -101,11 +102,15 @@ class bspyApp(tk.Tk):
             tk.Button(buttons, text='Line color', command=self.LineColorChange).pack(side=tk.TOP, fill=tk.X)
             tk.Button(buttons, text='Dismiss', command=self.adjust.withdraw).pack(side=tk.TOP, fill=tk.X)
 
-            self.adjust.minsize(205, self.adjust.winfo_height())
-            self.adjust.bind('<Destroy>', self.AdjustDestroy)
-
+            self.adjust.update()
+            self.adjust.resizable(False, False)
         else:
             self.adjust.deiconify()
+
+        if self.winfo_x() + self.winfo_width() + 205 <= self.winfo_screenwidth():
+            self.adjust.geometry("{width}x{height}+{x}+{y}".format(width=205, height=self.adjust.winfo_height(), x=self.winfo_x() + self.winfo_width(), y=self.winfo_y()))
+        else:
+            self.adjust.geometry("{width}x{height}+{x}+{y}".format(width=205, height=self.adjust.winfo_height(), x=self.winfo_screenwidth() - 205, y=self.winfo_y()))
 
     def AdjustDestroy(self, event):
         self.adjust = None
