@@ -248,13 +248,13 @@ class FunOpenGLFrame(OpenGLFrame):
     curveFragmentShaderCode = """
         #version 410 core
      
-        uniform vec3 uSplineColor;
+        uniform vec3 uLineColor;
 
         out vec3 color;
      
         void main()
         {
-            color = uSplineColor;
+            color = uLineColor;
         }
     """
 
@@ -269,16 +269,13 @@ class FunOpenGLFrame(OpenGLFrame):
 
         out SplineInfo
         {
-            int uOrder;
-            int vOrder;
-            int uN;
-            int vN;
-            int uM;
-            int vM;
-            float u;
-            float v;
-            float uInterval;
-            float vInterval;
+            int uOrder, vOrder;
+            int uN, vN;
+            int uM, vM;
+            float uFirst, vFirst;
+            float uSpan, vSpan;
+            float u, v;
+            float uInterval, vInterval;
         } outData;
 
         void main()
@@ -291,6 +288,10 @@ class FunOpenGLFrame(OpenGLFrame):
 
             outData.uM = min(int(gl_InstanceID / stride) + outData.uOrder - 1, outData.uN - 1);
             outData.vM = min(int(mod(gl_InstanceID, stride)) + outData.vOrder - 1, outData.vN - 1);
+            outData.uFirst = texelFetch(uSplineData, header + outData.uOrder - 1).x; // uKnots[uOrder-1]
+            outData.vFirst = texelFetch(uSplineData, header + outData.uOrder + outData.uN + outData.vOrder - 1).x; // vKnots[vOrder-1]
+            outData.uSpan = texelFetch(uSplineData, header + outData.uN - 1).x - outData.uFirst; // uKnots[uN-1] - uKnots[uOrder-1]
+            outData.vSpan = texelFetch(uSplineData, header + outData.uOrder + outData.uN + outData.vN - 1).x - outData.vFirst; // vKnots[vN-1] - vKnots[vOrder-1]
             outData.u = texelFetch(uSplineData, header + outData.uM).x; // uKnots[uM]
             outData.v = texelFetch(uSplineData, header + outData.uOrder + outData.uN + outData.vM).x; // vKnots[vM]
             outData.uInterval = texelFetch(uSplineData, header + outData.uM + 1).x - outData.u; // uKnots[uM+1] - uKnots[uM]
@@ -451,16 +452,13 @@ class FunOpenGLFrame(OpenGLFrame):
 
         in SplineInfo
         {{
-            int uOrder;
-            int vOrder;
-            int uN;
-            int vN;
-            int uM;
-            int vM;
-            float u;
-            float v;
-            float uInterval;
-            float vInterval;
+            int uOrder, vOrder;
+            int uN, vN;
+            int uM, vM;
+            float uFirst, vFirst;
+            float uSpan, vSpan;
+            float u, v;
+            float uInterval, vInterval;
         }} inData[];
 
         uniform vec3 uScreenScale;
@@ -468,16 +466,13 @@ class FunOpenGLFrame(OpenGLFrame):
 
         patch out SplineInfo
         {{
-            int uOrder;
-            int vOrder;
-            int uN;
-            int vN;
-            int uM;
-            int vM;
-            float u;
-            float v;
-            float uInterval;
-            float vInterval;
+            int uOrder, vOrder;
+            int uN, vN;
+            int uM, vM;
+            float uFirst, vFirst;
+            float uSpan, vSpan;
+            float u, v;
+            float uInterval, vInterval;
         }} outData;
 
         {computeDeltaCode}
@@ -510,25 +505,33 @@ class FunOpenGLFrame(OpenGLFrame):
 
         patch in SplineInfo
         {{
-            int uOrder;
-            int vOrder;
-            int uN;
-            int vN;
-            int uM;
-            int vM;
-            float u;
-            float v;
-            float uInterval;
-            float vInterval;
+            int uOrder, vOrder;
+            int uN, vN;
+            int uM, vM;
+            float uFirst, vFirst;
+            float uSpan, vSpan;
+            float u, v;
+            float uInterval, vInterval;
         }} inData;
 
         uniform mat4 uProjectionMatrix;
         uniform vec3 uScreenScale;
         uniform samplerBuffer uSplineData;
 
+        flat out SplineInfo
+        {{
+            int uOrder, vOrder;
+            int uN, vN;
+            int uM, vM;
+            float uFirst, vFirst;
+            float uSpan, vSpan;
+            float u, v;
+            float uInterval, vInterval;
+        }} outData;
         out vec4 worldPosition;
         out vec3 normal;
-        out vec2 textureCoordinate;
+        out vec2 parameters;
+        out vec2 pixelSize;
 
         {computeBasisCode}
 
@@ -536,15 +539,13 @@ class FunOpenGLFrame(OpenGLFrame):
         {{
             float uBasis[{maxBasis}];
             float duBasis[{maxBasis}];
-            ComputeBasis(header, inData.uOrder, inData.uN, inData.uM,
-                inData.u + gl_TessCoord.x * inData.uInterval, 
-                uBasis, duBasis);
+            parameters.x = inData.u + gl_TessCoord.x * inData.uInterval;
+            ComputeBasis(header, inData.uOrder, inData.uN, inData.uM, parameters.x, uBasis, duBasis);
 
             float vBasis[{maxBasis}];
             float dvBasis[{maxBasis}];
-            ComputeBasis(header + inData.uOrder+inData.uN, inData.vOrder, inData.vN, inData.vM,
-                inData.v + gl_TessCoord.y * inData.vInterval, 
-                vBasis, dvBasis);
+            parameters.y = inData.v + gl_TessCoord.y * inData.vInterval;
+            ComputeBasis(header + inData.uOrder+inData.uN, inData.vOrder, inData.vN, inData.vM, parameters.y, vBasis, dvBasis);
             
             vec4 point = vec4(0.0, 0.0, 0.0, 0.0);
             vec3 duPoint = vec3(0.0, 0.0, 0.0);
@@ -570,28 +571,40 @@ class FunOpenGLFrame(OpenGLFrame):
                 i += inData.vN * 4;
             }}
 
+            outData = inData;
+
             worldPosition = point;
             worldPosition.z -= uScreenScale.z > 1.0 ? uScreenScale.z : 0.0;
             normal = normalize(cross(duPoint, dvPoint));
-            float uFirst = texelFetch(uSplineData, header + inData.uOrder - 1).x; // uKnots[uOrder-1]
-            float uSpan = texelFetch(uSplineData, header + inData.uN - 1).x - uFirst; // uKnots[uN-1] - uKnots[uOrder-1]
-            float vFirst = texelFetch(uSplineData, header + inData.uOrder + inData.uN + inData.vOrder - 1).x; // vKnots[vOrder-1]
-            float vSpan = texelFetch(uSplineData, header + inData.uOrder + inData.uN + inData.vN - 1).x - vFirst; // vKnots[vN-1] - vKnots[vOrder-1]
-            textureCoordinate = vec2(
-                (inData.u + gl_TessCoord.x * inData.uInterval - uFirst) / uSpan,
-                (inData.v + gl_TessCoord.y * inData.vInterval - vFirst) / vSpan);
             gl_Position = uProjectionMatrix * point;
+
+            float velocity = length(vec2(uScreenScale.x * duPoint.x, uScreenScale.y * duPoint.y));
+            pixelSize.x = velocity > 1.0e-8 ? -worldPosition.z / velocity : inData.uInterval;
+            velocity = length(vec2(uScreenScale.x * dvPoint.x, uScreenScale.y * dvPoint.y));
+            pixelSize.y = velocity > 1.0e-8 ? -worldPosition.z / velocity : inData.vInterval;
         }}
     """
 
     surfaceFragmentShaderCode = """
         #version 410 core
      
+        flat in SplineInfo
+        {
+            int uOrder, vOrder;
+            int uN, vN;
+            int uM, vM;
+            float uFirst, vFirst;
+            float uSpan, vSpan;
+            float u, v;
+            float uInterval, vInterval;
+        } inData;
         in vec4 worldPosition;
         in vec3 normal;
-        in vec2 textureCoordinate;
+        in vec2 parameters;
+        in vec2 pixelSize;
 
-        uniform vec3 uSplineColor;
+        uniform vec3 uFillColor;
+        uniform vec3 uLineColor;
         uniform vec3 uLightDirection;
         uniform sampler2D uTextureMap;
 
@@ -603,7 +616,16 @@ class FunOpenGLFrame(OpenGLFrame):
             vec3 reflection = normalize(reflect(worldPosition.xyz, normal));
         	vec2 tex = vec2(0.5 * (1.0 - atan(reflection.x, reflection.z) / 3.1416), 0.5 * (1.0 - reflection.y));
             color = (0.3 + 0.7 * abs(intensity)) * texture(uTextureMap, tex).rgb;
-            //color = (0.3 + 0.7 * abs(intensity)) * texture(uTextureMap, textureCoordinate).rgb;
+
+        	tex = vec2((parameters.x - inData.uFirst) / inData.uSpan, (parameters.y - inData.vFirst) / inData.vSpan);
+            color = (0.3 + 0.7 * abs(intensity)) * texture(uTextureMap, tex).rgb;
+
+            /*
+            color = abs(parameters.x - inData.u) < pixelSize.x || abs(parameters.x - inData.u - inData.uInterval) < pixelSize.x ? uLineColor : color;
+            color = abs(parameters.y - inData.v) < pixelSize.y || abs(parameters.y - inData.v - inData.vInterval) < pixelSize.y ? uLineColor : color;
+            color = abs(parameters.x - inData.uFirst) < 3.0 * pixelSize.x || abs(parameters.x - inData.uFirst - inData.uSpan) < 2.0 * pixelSize.x ? uLineColor : color;
+            color = abs(parameters.y - inData.vFirst) < 3.0 * pixelSize.y || abs(parameters.y - inData.vFirst - inData.vSpan) < 2.0 * pixelSize.y ? uLineColor : color;
+            */
         }
     """
  
@@ -700,7 +722,7 @@ class FunOpenGLFrame(OpenGLFrame):
             glVertexAttribPointer(self.aCurveParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
             self.uCurveProjectionMatrix = glGetUniformLocation(self.curveProgram, 'uProjectionMatrix')
             self.uCurveScreenScale = glGetUniformLocation(self.curveProgram, 'uScreenScale')
-            self.uCurveSplineColor = glGetUniformLocation(self.curveProgram, 'uSplineColor')
+            self.uCurveLineColor = glGetUniformLocation(self.curveProgram, 'uLineColor')
             self.uCurveSplineData = glGetUniformLocation(self.curveProgram, 'uSplineData')
             glUniform1i(self.uCurveSplineData, 0) # GL_TEXTURE0 is the spline buffer texture
 
@@ -710,7 +732,8 @@ class FunOpenGLFrame(OpenGLFrame):
             glVertexAttribPointer(self.aSurfaceParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
             self.uSurfaceProjectionMatrix = glGetUniformLocation(self.surfaceProgram, 'uProjectionMatrix')
             self.uSurfaceScreenScale = glGetUniformLocation(self.surfaceProgram, 'uScreenScale')
-            self.uSurfaceSplineColor = glGetUniformLocation(self.surfaceProgram, 'uSplineColor')
+            self.uSurfaceFillColor = glGetUniformLocation(self.surfaceProgram, 'uFillColor')
+            self.uSurfaceLineColor = glGetUniformLocation(self.surfaceProgram, 'uLineColor')
             self.uSurfaceLightDirection = glGetUniformLocation(self.surfaceProgram, 'uLightDirection')
             self.lightDirection = np.array((0.6, 0.3, 1), np.float32)
             self.lightDirection = self.lightDirection / np.linalg.norm(self.lightDirection)

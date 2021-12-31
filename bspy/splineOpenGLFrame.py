@@ -610,10 +610,12 @@ class SplineOpenGLFrame(OpenGLFrame):
      
         void main()
         {
-            float intensity = dot(normal, uLightDirection);
-            color = abs(parameters.x - inData.u) < pixelSize.x ? uLineColor : uFillColor;
-            color = abs(parameters.y - inData.v) < pixelSize.y ? uLineColor : color;
-            color = (0.3 + 0.7 * abs(intensity)) * color;
+            color = uFillColor;/*
+            color = abs(parameters.x - inData.u) < pixelSize.x || abs(parameters.x - inData.u - inData.uInterval) < pixelSize.x ? uLineColor : color;
+            color = abs(parameters.y - inData.v) < pixelSize.y || abs(parameters.y - inData.v - inData.vInterval) < pixelSize.y ? uLineColor : color;
+            color = abs(parameters.x - inData.uFirst) < 3.0 * pixelSize.x || abs(parameters.x - inData.uFirst - inData.uSpan) < 2.0 * pixelSize.x ? uLineColor : color;
+            color = abs(parameters.y - inData.vFirst) < 3.0 * pixelSize.y || abs(parameters.y - inData.vFirst - inData.vSpan) < 2.0 * pixelSize.y ? uLineColor : color;
+            */color = (0.3 + 0.7 * abs(dot(normal, uLightDirection))) * color;
         }
     """
  
