@@ -58,8 +58,8 @@ class bspyApp(tk.Tk):
 
             buttons = tk.LabelFrame(self.adjust, text="Color")
             buttons.pack(side=tk.LEFT, fill=tk.BOTH, expand=tk.YES)
-            tk.Button(buttons, text='Fill color', command=self.ColorChange).pack(side=tk.TOP, fill=tk.X)
-            tk.Button(buttons, text='Line color', command=self.ColorChange).pack(side=tk.TOP, fill=tk.X)
+            tk.Button(buttons, text='Fill color', command=self.FillColorChange).pack(side=tk.TOP, fill=tk.X)
+            tk.Button(buttons, text='Line color', command=self.LineColorChange).pack(side=tk.TOP, fill=tk.X)
             tk.Button(buttons, text='Dismiss', command=self.adjust.withdraw).pack(side=tk.TOP, fill=tk.X)
 
             self.adjust.minsize(205, self.adjust.winfo_height())
@@ -71,11 +71,19 @@ class bspyApp(tk.Tk):
     def AdjustDestroy(self, event):
         self.adjust = None
 
-    def ColorChange(self):
+    def FillColorChange(self):
         if len(self.listBox.curselection()) > 0:
-            oldColor = 255.0 * self.splineList[self.listBox.curselection()[0]].color
+            oldColor = 255.0 * self.splineList[self.listBox.curselection()[0]].fillColor
             newColor = askcolor(title="Set spline color", color="#%02x%02x%02x" % (int(oldColor[0]), int(oldColor[1]), int(oldColor[2])))
             if newColor[0] is not None:
                 for item in self.listBox.curselection():
-                    self.splineList[item].color = np.array(newColor[0], np.float32) / 255.0
+                    self.splineList[item].fillColor = np.array(newColor[0], np.float32) / 255.0
+                self.frame.tkExpose(None)
+    def LineColorChange(self):
+        if len(self.listBox.curselection()) > 0:
+            oldColor = 255.0 * self.splineList[self.listBox.curselection()[0]].lineColor
+            newColor = askcolor(title="Set spline color", color="#%02x%02x%02x" % (int(oldColor[0]), int(oldColor[1]), int(oldColor[2])))
+            if newColor[0] is not None:
+                for item in self.listBox.curselection():
+                    self.splineList[item].lineColor = np.array(newColor[0], np.float32) / 255.0
                 self.frame.tkExpose(None)
