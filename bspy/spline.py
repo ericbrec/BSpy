@@ -4,7 +4,7 @@ from OpenGL.GL import *
 class Spline:
 
     maxOrder = 9
-    maxCoefficients = 100
+    maxCoefficients = 120
     maxKnots = maxCoefficients + maxOrder
     maxFloats = 4 + 2 * maxKnots + 4 * maxCoefficients * maxCoefficients
 
