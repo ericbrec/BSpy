@@ -152,7 +152,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                 dPoint0 = dPoint1;
                 i++;
             }
-            uSamples = min(ceil(outData.uInterval / delta), gl_MaxTessGenLevel);
+            uSamples = min(floor(0.5 + outData.uInterval / delta), gl_MaxTessGenLevel);
         }
     """
 
@@ -436,9 +436,9 @@ class SplineOpenGLFrame(OpenGLFrame):
                 deltaMin[2] = min(deltaMin[2], deltaRight[k]);
                 deltaMin[2] = min(deltaMin[2], deltaLeft[k+1]);
             }}
-            vSamples[0] = min(ceil(outData.vInterval / deltaMin[0]), gl_MaxTessGenLevel);
-            vSamples[1] = min(ceil(outData.vInterval / deltaMin[1]), gl_MaxTessGenLevel);
-            vSamples[2] = min(ceil(outData.vInterval / deltaMin[2]), gl_MaxTessGenLevel);
+            vSamples[0] = min(floor(0.5 + outData.vInterval / deltaMin[0]), gl_MaxTessGenLevel);
+            vSamples[1] = min(floor(0.5 + outData.vInterval / deltaMin[1]), gl_MaxTessGenLevel);
+            vSamples[2] = min(floor(0.5 + outData.vInterval / deltaMin[2]), gl_MaxTessGenLevel);
         }}
     """
 
@@ -530,7 +530,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         out vec4 worldPosition;
         out vec3 normal;
         out vec2 parameters;
-        out vec2 pixelSize;
+        out vec2 pixelPer;
 
         {computeBasisCode}
 
@@ -575,12 +575,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             worldPosition = point;
             worldPosition.z -= uScreenScale.z > 1.0 ? uScreenScale.z : 0.0;
             normal = normalize(cross(duPoint, dvPoint));
+            pixelPer.x = length(vec2(uScreenScale.x * duPoint.x, uScreenScale.y * duPoint.y)) / -worldPosition.z;
+            pixelPer.y = length(vec2(uScreenScale.x * dvPoint.x, uScreenScale.y * dvPoint.y)) / -worldPosition.z;
             gl_Position = uProjectionMatrix * point;
-
-            float velocity = length(vec2(uScreenScale.x * duPoint.x, uScreenScale.y * duPoint.y));
-            pixelSize.x = velocity > 1.0e-8 ? -worldPosition.z / velocity : 0.1 * inData.uInterval;
-            velocity = length(vec2(uScreenScale.x * dvPoint.x, uScreenScale.y * dvPoint.y));
-            pixelSize.y = velocity > 1.0e-8 ? -worldPosition.z / velocity : 0.1 * inData.vInterval;
         }}
     """
 
@@ -600,7 +597,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         in vec4 worldPosition;
         in vec3 normal;
         in vec2 parameters;
-        in vec2 pixelSize;
+        in vec2 pixelPer;
 
         uniform vec4 uFillColor;
         uniform vec4 uLineColor;
@@ -612,10 +609,10 @@ class SplineOpenGLFrame(OpenGLFrame):
         void main()
         {
             color = (uOptions & (1 << 2)) > 0 ? uFillColor : vec4(0.0, 0.0, 0.0, 0.0);
-            color = (uOptions & (1 << 4)) > 0 && (abs(parameters.x - inData.uFirst) < 3.0 * pixelSize.x || abs(parameters.x - inData.uFirst - inData.uSpan) < 2.0 * pixelSize.x) ? uLineColor : color;
-            color = (uOptions & (1 << 4)) > 0 && (abs(parameters.y - inData.vFirst) < 3.0 * pixelSize.y || abs(parameters.y - inData.vFirst - inData.vSpan) < 2.0 * pixelSize.y) ? uLineColor : color;
-            color = (uOptions & (1 << 5)) > 0 && (abs(parameters.x - inData.u) < pixelSize.x || abs(parameters.x - inData.u - inData.uInterval) < pixelSize.x) ? uLineColor : color;
-            color = (uOptions & (1 << 5)) > 0 && (abs(parameters.y - inData.v) < pixelSize.y || abs(parameters.y - inData.v - inData.vInterval) < pixelSize.y) ? uLineColor : color;
+            color = (uOptions & (1 << 4)) > 0 && (pixelPer.x * abs(parameters.x - inData.uFirst) < 2.0 || pixelPer.x * abs(parameters.x - inData.uFirst - inData.uSpan) < 2.0) ? uLineColor : color;
+            color = (uOptions & (1 << 4)) > 0 && (pixelPer.y * abs(parameters.y - inData.vFirst) < 2.0 || pixelPer.y * abs(parameters.y - inData.vFirst - inData.vSpan) < 2.0) ? uLineColor : color;
+            color = (uOptions & (1 << 5)) > 0 && (pixelPer.x * abs(parameters.x - inData.u) < 1.0 || pixelPer.x * abs(parameters.x - inData.u - inData.uInterval) < 1.0) ? uLineColor : color;
+            color = (uOptions & (1 << 5)) > 0 && (pixelPer.y * abs(parameters.y - inData.v) < 1.0 || pixelPer.y * abs(parameters.y - inData.v - inData.vInterval) < 1.0) ? uLineColor : color;
             color.rgb = (0.3 + 0.7 * abs(dot(normal, uLightDirection))) * color.rgb;
             if (color.a == 0.0)
                 discard;
@@ -687,8 +684,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             glBindBuffer(GL_TEXTURE_BUFFER, self.splineDataBuffer)
             glBindTexture(GL_TEXTURE_BUFFER, self.splineTextureBuffer)
             glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, self.splineDataBuffer)
-            maxFloats = 4 + 2 * Spline.maxKnots + 4 * Spline.maxCoefficients * Spline.maxCoefficients
-            glBufferData(GL_TEXTURE_BUFFER, 4 * maxFloats, None, GL_STATIC_READ)
+            glBufferData(GL_TEXTURE_BUFFER, 4 * Spline.maxFloats, None, GL_STATIC_READ)
 
             self.parameterBuffer = glGenBuffers(1)
             glBindBuffer(GL_ARRAY_BUFFER, self.parameterBuffer)

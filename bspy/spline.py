@@ -6,6 +6,7 @@ class Spline:
     maxOrder = 9
     maxCoefficients = 100
     maxKnots = maxCoefficients + maxOrder
+    maxFloats = 4 + 2 * maxKnots + 4 * maxCoefficients * maxCoefficients
 
     POINTS = (1 << 0)
     LINES = (1 << 1)
@@ -16,9 +17,15 @@ class Spline:
     LABEL = (1 << 6)
 
     def __init__(self, order, knots, coefficients):
+        floatCount = 0
+        coefficientCount = 1
         for i in range(len(order)):
+            assert order[i] <= self.maxOrder
             assert len(knots[i]) == order[i] + coefficients.shape[i]
+            floatCount += 2 + order[i] + coefficients.shape[i]
+            coefficientCount *= coefficients.shape[i]
         assert coefficients.shape[len(order)] == 4 # Coefficients are all 4-vectors (homogeneous coordinates)
+        assert floatCount + 4 * coefficientCount <= self.maxFloats
         for knotArray in knots:
             assert knotArray.dtype == np.float32
         assert coefficients.dtype == np.float32
