@@ -96,3 +96,21 @@ class Spline:
             self.DrawCurve(frame, drawCoefficients)
         elif len(self.order) == 2:
             self.DrawSurface(frame, drawCoefficients)
+
+    def Save(self, fileName):
+        kw = {}
+        kw["order"] = order=np.array(self.order, np.int32)
+        for i in range(len(self.knots)):
+            kw["knots{count}".format(count=i)] = self.knots[i]
+        kw["coefficients"] = self.coefficients
+        np.savez(fileName, **kw )
+    
+    @staticmethod
+    def Load(fileName):
+        kw = np.load(fileName)
+        order = kw["order"]
+        knots = []
+        for i in range(len(order)):
+            knots.append(kw["knots{count}".format(count=i)])
+        coefficients = kw["coefficients"]
+        return Spline(order, knots, coefficients)
