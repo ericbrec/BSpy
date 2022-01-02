@@ -60,8 +60,8 @@ class SplineOpenGLFrame(OpenGLFrame):
         }}
     """
 
-    computeDeltaCode = """
-        void ComputeDelta(in vec4 point, in vec3 dPoint, in vec3 d2Point, inout float delta)
+    computeSampleRateCode = """
+        float ComputeSampleRate(in vec4 point, in vec3 dPoint, in vec3 d2Point)
         {
             float zScale = 1.0 / (uScreenScale.z - point.z);
             float zScale2 = zScale * zScale;
@@ -72,9 +72,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                     uScreenScale.y * (d2Point.y * zScale - 2.0 * dPoint.y * dPoint.z * zScale2 +
                     point.y * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2)))
                 : vec2(uScreenScale.x * d2Point.x, uScreenScale.y * d2Point.y);
-            float projectionLength = length(projection);
-            float newDelta = projectionLength < 1.0e-8 ? delta : 1.0 / sqrt(projectionLength);
-            delta = min(newDelta, delta);
+            return sqrt(length(projection));
         }
     """
 
@@ -110,7 +108,7 @@ class SplineOpenGLFrame(OpenGLFrame):
     computeCurveSamplesCode = """
         void ComputeCurveSamples(out float uSamples)
         {
-            float delta = max(outData.uInterval, 1.0e-8);
+            float sampleRate = 1.0 / max(outData.uInterval, 1.0e-8);
             int i = outData.uM+1-outData.uOrder;
             int coefficientOffset = header + outData.uOrder + outData.uN + 4 * i;
             vec4 coefficient0 = vec4(
@@ -142,17 +140,17 @@ class SplineOpenGLFrame(OpenGLFrame):
                 gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
                 vec3 d2Point = (outData.uOrder - 2) * gap * (dPoint1 - dPoint0);
 
-                ComputeDelta(coefficient0, dPoint0, d2Point, delta);
-                ComputeDelta(coefficient1, dPoint0, d2Point, delta);
-                ComputeDelta(coefficient1, dPoint1, d2Point, delta);
-                ComputeDelta(coefficient2, dPoint1, d2Point, delta);
+                sampleRate = max(sampleRate, ComputeSampleRate(coefficient0, dPoint0, d2Point));
+                sampleRate = max(sampleRate, ComputeSampleRate(coefficient1, dPoint0, d2Point));
+                sampleRate = max(sampleRate, ComputeSampleRate(coefficient1, dPoint1, d2Point));
+                sampleRate = max(sampleRate, ComputeSampleRate(coefficient2, dPoint1, d2Point));
 
                 coefficient0 = coefficient1;
                 coefficient1 = coefficient2;
                 dPoint0 = dPoint1;
                 i++;
             }
-            uSamples = min(floor(0.5 + outData.uInterval / delta), gl_MaxTessGenLevel);
+            uSamples = min(floor(0.5 + outData.uInterval * sampleRate), gl_MaxTessGenLevel);
         }
     """
 
@@ -184,7 +182,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             float uInterval;
         }} outData;
 
-        {computeDeltaCode}
+        {computeSampleRateCode}
 
         {computeCurveSamplesCode}
 
@@ -305,14 +303,14 @@ class SplineOpenGLFrame(OpenGLFrame):
             // Computes sample counts for u and v for the left side ([0]), middle ([1]), and right side ([2]).
             // The left side sample count matches the right side sample count for the previous knot.
             // The middle sample count is the number of samples between knots (same as ComputeCurveSamples).
-            float deltaLeft[{maxOrder}];
-            float deltaRight[{maxOrder}];
+            float sampleRateLeft[{maxOrder}];
+            float sampleRateRight[{maxOrder}];
 
-            float delta = max(outData.uInterval, 1.0e-8);
+            float sampleRateMin = 1.0 / max(outData.uInterval, 1.0e-8);
             for (int k = 0; k < outData.uOrder; k++)
             {{
-                deltaLeft[k] = delta;
-                deltaRight[k] = delta;
+                sampleRateLeft[k] = sampleRateMin;
+                sampleRateRight[k] = sampleRateMin;
             }}
             for (int j = outData.vM+1-outData.vOrder; j < outData.vM+1; j++)
             {{
@@ -349,10 +347,10 @@ class SplineOpenGLFrame(OpenGLFrame):
                     vec3 d2Point = (outData.uOrder - 2) * gap * (dPoint1 - dPoint0);
 
                     int k = i - outData.uM + outData.uOrder;
-                    ComputeDelta(coefficient0, dPoint0, d2Point, deltaLeft[k]);
-                    ComputeDelta(coefficient1, dPoint0, d2Point, deltaLeft[k]);
-                    ComputeDelta(coefficient1, dPoint1, d2Point, deltaRight[k]);
-                    ComputeDelta(coefficient2, dPoint1, d2Point, deltaRight[k]);
+                    sampleRateLeft[k] = max(sampleRateLeft[k], ComputeSampleRate(coefficient0, dPoint0, d2Point));
+                    sampleRateLeft[k] = max(sampleRateLeft[k], ComputeSampleRate(coefficient1, dPoint0, d2Point));
+                    sampleRateRight[k] = max(sampleRateRight[k], ComputeSampleRate(coefficient1, dPoint1, d2Point));
+                    sampleRateRight[k] = max(sampleRateRight[k], ComputeSampleRate(coefficient2, dPoint1, d2Point));
 
                     coefficient0 = coefficient1;
                     coefficient1 = coefficient2;
@@ -360,25 +358,25 @@ class SplineOpenGLFrame(OpenGLFrame):
                     i++;
                 }}
             }}
-            float deltaMin[3] = float[3](delta, delta, delta);
+            float sampleRateMax[3] = float[3](sampleRateMin, sampleRateMin, sampleRateMin);
             for (int k = 1; k < outData.uOrder - 1; k++)
             {{
-                deltaMin[0] = min(deltaMin[0], deltaRight[k-1]);
-                deltaMin[0] = min(deltaMin[0], deltaLeft[k]);
-                deltaMin[1] = min(deltaMin[1], deltaLeft[k]);
-                deltaMin[1] = min(deltaMin[1], deltaRight[k]);
-                deltaMin[2] = min(deltaMin[2], deltaRight[k]);
-                deltaMin[2] = min(deltaMin[2], deltaLeft[k+1]);
+                sampleRateMax[0] = max(sampleRateMax[0], sampleRateRight[k-1]);
+                sampleRateMax[0] = max(sampleRateMax[0], sampleRateLeft[k]);
+                sampleRateMax[1] = max(sampleRateMax[1], sampleRateLeft[k]);
+                sampleRateMax[1] = max(sampleRateMax[1], sampleRateRight[k]);
+                sampleRateMax[2] = max(sampleRateMax[2], sampleRateRight[k]);
+                sampleRateMax[2] = max(sampleRateMax[2], sampleRateLeft[k+1]);
             }}
-            uSamples[0] = min(ceil(outData.uInterval / deltaMin[0]), gl_MaxTessGenLevel);
-            uSamples[1] = min(ceil(outData.uInterval / deltaMin[1]), gl_MaxTessGenLevel);
-            uSamples[2] = min(ceil(outData.uInterval / deltaMin[2]), gl_MaxTessGenLevel);
+            uSamples[0] = min(floor(0.5 + outData.uInterval * sampleRateMax[0]), gl_MaxTessGenLevel);
+            uSamples[1] = min(floor(0.5 + outData.uInterval * sampleRateMax[1]), gl_MaxTessGenLevel);
+            uSamples[2] = min(floor(0.5 + outData.uInterval * sampleRateMax[2]), gl_MaxTessGenLevel);
 
-            delta = max(outData.vInterval, 1.0e-8);
+            sampleRateMin = 1.0 / max(outData.vInterval, 1.0e-8);
             for (int k = 0; k < outData.vOrder; k++)
             {{
-                deltaLeft[k] = delta;
-                deltaRight[k] = delta;
+                sampleRateLeft[k] = sampleRateMin;
+                sampleRateRight[k] = sampleRateMin;
             }}
             for (int i = outData.uM+1-outData.uOrder; i < outData.uM+1; i++)
             {{
@@ -415,10 +413,10 @@ class SplineOpenGLFrame(OpenGLFrame):
                     vec3 d2Point = (outData.vOrder - 2) * gap * (dPoint1 - dPoint0);
 
                     int k = j - outData.vM + outData.vOrder;
-                    ComputeDelta(coefficient0, dPoint0, d2Point, deltaLeft[k]);
-                    ComputeDelta(coefficient1, dPoint0, d2Point, deltaLeft[k]);
-                    ComputeDelta(coefficient1, dPoint1, d2Point, deltaRight[k]);
-                    ComputeDelta(coefficient2, dPoint1, d2Point, deltaRight[k]);
+                    sampleRateLeft[k] = max(sampleRateLeft[k], ComputeSampleRate(coefficient0, dPoint0, d2Point));
+                    sampleRateLeft[k] = max(sampleRateLeft[k], ComputeSampleRate(coefficient1, dPoint0, d2Point));
+                    sampleRateRight[k] = max(sampleRateRight[k], ComputeSampleRate(coefficient1, dPoint1, d2Point));
+                    sampleRateRight[k] = max(sampleRateRight[k], ComputeSampleRate(coefficient2, dPoint1, d2Point));
 
                     coefficient0 = coefficient1;
                     coefficient1 = coefficient2;
@@ -426,19 +424,19 @@ class SplineOpenGLFrame(OpenGLFrame):
                     j++;
                 }}
             }}
-            deltaMin = float[3](delta, delta, delta);
+            sampleRateMax = float[3](sampleRateMin, sampleRateMin, sampleRateMin);
             for (int k = 1; k < outData.vOrder - 1; k++)
             {{
-                deltaMin[0] = min(deltaMin[0], deltaRight[k-1]);
-                deltaMin[0] = min(deltaMin[0], deltaLeft[k]);
-                deltaMin[1] = min(deltaMin[1], deltaLeft[k]);
-                deltaMin[1] = min(deltaMin[1], deltaRight[k]);
-                deltaMin[2] = min(deltaMin[2], deltaRight[k]);
-                deltaMin[2] = min(deltaMin[2], deltaLeft[k+1]);
+                sampleRateMax[0] = max(sampleRateMax[0], sampleRateRight[k-1]);
+                sampleRateMax[0] = max(sampleRateMax[0], sampleRateLeft[k]);
+                sampleRateMax[1] = max(sampleRateMax[1], sampleRateLeft[k]);
+                sampleRateMax[1] = max(sampleRateMax[1], sampleRateRight[k]);
+                sampleRateMax[2] = max(sampleRateMax[2], sampleRateRight[k]);
+                sampleRateMax[2] = max(sampleRateMax[2], sampleRateLeft[k+1]);
             }}
-            vSamples[0] = min(floor(0.5 + outData.vInterval / deltaMin[0]), gl_MaxTessGenLevel);
-            vSamples[1] = min(floor(0.5 + outData.vInterval / deltaMin[1]), gl_MaxTessGenLevel);
-            vSamples[2] = min(floor(0.5 + outData.vInterval / deltaMin[2]), gl_MaxTessGenLevel);
+            vSamples[0] = min(floor(0.5 + outData.vInterval * sampleRateMax[0]), gl_MaxTessGenLevel);
+            vSamples[1] = min(floor(0.5 + outData.vInterval * sampleRateMax[1]), gl_MaxTessGenLevel);
+            vSamples[2] = min(floor(0.5 + outData.vInterval * sampleRateMax[2]), gl_MaxTessGenLevel);
         }}
     """
 
@@ -474,7 +472,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             float uInterval, vInterval;
         }} outData;
 
-        {computeDeltaCode}
+        {computeSampleRateCode}
 
         {computeSurfaceSamplesCode}
 
@@ -639,13 +637,13 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.computeBasisCode = self.computeBasisCode.format(maxBasis=Spline.maxOrder+1)
         self.computeSurfaceSamplesCode = self.computeSurfaceSamplesCode.format(maxOrder=Spline.maxOrder)
         self.curveTCShaderCode = self.curveTCShaderCode.format(
-            computeDeltaCode=self.computeDeltaCode,
+            computeSampleRateCode=self.computeSampleRateCode,
             computeCurveSamplesCode=self.computeCurveSamplesCode)
         self.curveTEShaderCode = self.curveTEShaderCode.format(
             computeBasisCode=self.computeBasisCode,
             maxBasis=Spline.maxOrder+1)
         self.surfaceTCShaderCode = self.surfaceTCShaderCode.format(
-            computeDeltaCode=self.computeDeltaCode,
+            computeSampleRateCode=self.computeSampleRateCode,
             computeSurfaceSamplesCode=self.computeSurfaceSamplesCode)
         self.surfaceTEShaderCode = self.surfaceTEShaderCode.format(
             computeBasisCode=self.computeBasisCode,
