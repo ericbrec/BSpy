@@ -61,18 +61,27 @@ class SplineOpenGLFrame(OpenGLFrame):
     """
 
     computeSampleRateCode = """
-        float ComputeSampleRate(in vec4 point, in vec3 dPoint, in vec3 d2Point)
+        float ComputeSampleRate(in vec4 point, in vec3 dPoint, in vec3 d2Point, in float minRate)
         {
-            float zScale = -1.0 / point.z;
-            float zScale2 = zScale * zScale;
-            float zScale3 = zScale2 * zScale;
-            vec2 projection = uScreenScale.z > 0.0 ? 
-                vec2(uScreenScale.x * (d2Point.x * zScale - 2.0 * dPoint.x * dPoint.z * zScale2 +
-                    point.x * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2)),
-                    uScreenScale.y * (d2Point.y * zScale - 2.0 * dPoint.y * dPoint.z * zScale2 +
-                    point.y * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2)))
-                : vec2(uScreenScale.x * d2Point.x, uScreenScale.y * d2Point.y);
-            return sqrt(length(projection));
+            float rate = 0.0;
+            float scale = uScreenScale.z > 0.0 ? -point.z : 1.0;
+
+            if (point.z < uClipBounds[3] && point.z > uClipBounds[2] && 
+                point.y < scale * uClipBounds[1] && point.y > -scale * uClipBounds[1] &&
+                point.x < scale * uClipBounds[0] && point.x > -scale * uClipBounds[0])
+            {
+                float zScale = -1.0 / point.z;
+                float zScale2 = zScale * zScale;
+                float zScale3 = zScale2 * zScale;
+                vec2 projection = uScreenScale.z > 0.0 ? 
+                    vec2(uScreenScale.x * (d2Point.x * zScale - 2.0 * dPoint.x * dPoint.z * zScale2 +
+                        point.x * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2)),
+                        uScreenScale.y * (d2Point.y * zScale - 2.0 * dPoint.y * dPoint.z * zScale2 +
+                        point.y * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2)))
+                    : vec2(uScreenScale.x * d2Point.x, uScreenScale.y * d2Point.y);
+                rate = max(sqrt(length(projection)), minRate);
+            }
+            return rate;
         }
     """
 
@@ -108,47 +117,51 @@ class SplineOpenGLFrame(OpenGLFrame):
     computeCurveSamplesCode = """
         void ComputeCurveSamples(out float uSamples)
         {
-            float sampleRate = 1.0 / max(outData.uInterval, 1.0e-8);
-            int i = outData.uM+1-outData.uOrder;
-            int coefficientOffset = header + outData.uOrder + outData.uN + 4 * i;
-            vec4 coefficient0 = vec4(
-                texelFetch(uSplineData, coefficientOffset+0).x, 
-                texelFetch(uSplineData, coefficientOffset+1).x,
-                texelFetch(uSplineData, coefficientOffset+2).x,
-                texelFetch(uSplineData, coefficientOffset+3).x);
-            coefficientOffset += 4;
-            vec4 coefficient1 = vec4(
-                texelFetch(uSplineData, coefficientOffset+0).x, 
-                texelFetch(uSplineData, coefficientOffset+1).x,
-                texelFetch(uSplineData, coefficientOffset+2).x,
-                texelFetch(uSplineData, coefficientOffset+3).x);
-            float gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]
-            gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
-            vec3 dPoint0 = (outData.uOrder - 1) * gap * (coefficient1.xyz - coefficient0.xyz);
-            while (i < outData.uM-1)
+            float sampleRate = 0.0;
+            if (outData.uInterval > 0.0)
             {
-                coefficientOffset += 4;
-                vec4 coefficient2 = vec4(
+                float minRate = 1.0 / outData.uInterval;
+                int i = outData.uM+1-outData.uOrder;
+                int coefficientOffset = header + outData.uOrder + outData.uN + 4 * i;
+                vec4 coefficient0 = vec4(
                     texelFetch(uSplineData, coefficientOffset+0).x, 
                     texelFetch(uSplineData, coefficientOffset+1).x,
                     texelFetch(uSplineData, coefficientOffset+2).x,
                     texelFetch(uSplineData, coefficientOffset+3).x);
-                gap = texelFetch(uSplineData, header + i+1+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]
+                coefficientOffset += 4;
+                vec4 coefficient1 = vec4(
+                    texelFetch(uSplineData, coefficientOffset+0).x, 
+                    texelFetch(uSplineData, coefficientOffset+1).x,
+                    texelFetch(uSplineData, coefficientOffset+2).x,
+                    texelFetch(uSplineData, coefficientOffset+3).x);
+                float gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]
                 gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
-                vec3 dPoint1 = (outData.uOrder - 1) * gap * (coefficient2.xyz - coefficient1.xyz);
-                gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+uOrder] - uKnots[i+2]
-                gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
-                vec3 d2Point = (outData.uOrder - 2) * gap * (dPoint1 - dPoint0);
+                vec3 dPoint0 = (outData.uOrder - 1) * gap * (coefficient1.xyz - coefficient0.xyz);
+                while (i < outData.uM-1)
+                {
+                    coefficientOffset += 4;
+                    vec4 coefficient2 = vec4(
+                        texelFetch(uSplineData, coefficientOffset+0).x, 
+                        texelFetch(uSplineData, coefficientOffset+1).x,
+                        texelFetch(uSplineData, coefficientOffset+2).x,
+                        texelFetch(uSplineData, coefficientOffset+3).x);
+                    gap = texelFetch(uSplineData, header + i+1+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]
+                    gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                    vec3 dPoint1 = (outData.uOrder - 1) * gap * (coefficient2.xyz - coefficient1.xyz);
+                    gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+uOrder] - uKnots[i+2]
+                    gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                    vec3 d2Point = (outData.uOrder - 2) * gap * (dPoint1 - dPoint0);
 
-                sampleRate = max(sampleRate, ComputeSampleRate(coefficient0, dPoint0, d2Point));
-                sampleRate = max(sampleRate, ComputeSampleRate(coefficient1, dPoint0, d2Point));
-                sampleRate = max(sampleRate, ComputeSampleRate(coefficient1, dPoint1, d2Point));
-                sampleRate = max(sampleRate, ComputeSampleRate(coefficient2, dPoint1, d2Point));
+                    sampleRate = max(sampleRate, ComputeSampleRate(coefficient0, dPoint0, d2Point, minRate));
+                    sampleRate = max(sampleRate, ComputeSampleRate(coefficient1, dPoint0, d2Point, minRate));
+                    sampleRate = max(sampleRate, ComputeSampleRate(coefficient1, dPoint1, d2Point, minRate));
+                    sampleRate = max(sampleRate, ComputeSampleRate(coefficient2, dPoint1, d2Point, minRate));
 
-                coefficient0 = coefficient1;
-                coefficient1 = coefficient2;
-                dPoint0 = dPoint1;
-                i++;
+                    coefficient0 = coefficient1;
+                    coefficient1 = coefficient2;
+                    dPoint0 = dPoint1;
+                    i++;
+                }
             }
             uSamples = min(floor(0.5 + outData.uInterval * sampleRate), gl_MaxTessGenLevel);
         }
@@ -171,6 +184,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         }} inData[];
 
         uniform vec3 uScreenScale;
+        uniform vec4 uClipBounds;
         uniform samplerBuffer uSplineData;
 
         patch out SplineInfo
@@ -303,140 +317,149 @@ class SplineOpenGLFrame(OpenGLFrame):
             // Computes sample counts for u and v for the left side ([0]), middle ([1]), and right side ([2]).
             // The left side sample count matches the right side sample count for the previous knot.
             // The middle sample count is the number of samples between knots (same as ComputeCurveSamples).
-            float sampleRateLeft[{maxOrder}];
-            float sampleRateRight[{maxOrder}];
+            float sampleRate[3] = float[3](0.0, 0.0, 0.0);
+            if (outData.uInterval > 0.0)
+            {{
+                float sampleRateLeft[{maxOrder}];
+                float sampleRateRight[{maxOrder}];
+                float minRate = 1.0 / outData.uInterval;
 
-            float sampleRateMin = 1.0 / max(outData.uInterval, 1.0e-8);
-            for (int k = 0; k < outData.uOrder; k++)
-            {{
-                sampleRateLeft[k] = sampleRateMin;
-                sampleRateRight[k] = sampleRateMin;
-            }}
-            for (int j = outData.vM+1-outData.vOrder; j < outData.vM+1; j++)
-            {{
-                int i = max(outData.uM - outData.uOrder, 0);
-                int iLimit = min(outData.uM, outData.uN - 2);
-                int coefficientOffset = header + outData.uOrder+outData.uN + outData.vOrder+outData.vN + 4*outData.vN*i + 4*j;
-                vec4 coefficient0 = vec4(
-                    texelFetch(uSplineData, coefficientOffset+0).x, 
-                    texelFetch(uSplineData, coefficientOffset+1).x,
-                    texelFetch(uSplineData, coefficientOffset+2).x,
-                    texelFetch(uSplineData, coefficientOffset+3).x);
-                coefficientOffset += 4*outData.vN;
-                vec4 coefficient1 = vec4(
-                    texelFetch(uSplineData, coefficientOffset+0).x, 
-                    texelFetch(uSplineData, coefficientOffset+1).x,
-                    texelFetch(uSplineData, coefficientOffset+2).x,
-                    texelFetch(uSplineData, coefficientOffset+3).x);
-                float gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]
-                gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
-                vec3 dPoint0 = (outData.uOrder - 1) * gap * (coefficient1.xyz - coefficient0.xyz);
-                while (i < iLimit)
+                for (int k = 0; k < outData.uOrder; k++)
                 {{
+                    sampleRateLeft[k] = 0.0;
+                    sampleRateRight[k] = 0.0;
+                }}
+                for (int j = outData.vM+1-outData.vOrder; j < outData.vM+1; j++)
+                {{
+                    int i = max(outData.uM - outData.uOrder, 0);
+                    int iLimit = min(outData.uM, outData.uN - 2);
+                    int coefficientOffset = header + outData.uOrder+outData.uN + outData.vOrder+outData.vN + 4*outData.vN*i + 4*j;
+                    vec4 coefficient0 = vec4(
+                        texelFetch(uSplineData, coefficientOffset+0).x, 
+                        texelFetch(uSplineData, coefficientOffset+1).x,
+                        texelFetch(uSplineData, coefficientOffset+2).x,
+                        texelFetch(uSplineData, coefficientOffset+3).x);
                     coefficientOffset += 4*outData.vN;
-                    vec4 coefficient2 = vec4(
+                    vec4 coefficient1 = vec4(
                         texelFetch(uSplineData, coefficientOffset+0).x, 
                         texelFetch(uSplineData, coefficientOffset+1).x,
                         texelFetch(uSplineData, coefficientOffset+2).x,
                         texelFetch(uSplineData, coefficientOffset+3).x);
-                    gap = texelFetch(uSplineData, header + i+1+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]
+                    float gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]
                     gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
-                    vec3 dPoint1 = (outData.uOrder - 1) * gap * (coefficient2.xyz - coefficient1.xyz);
-                    gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+uOrder] - uKnots[i+2]
-                    gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
-                    vec3 d2Point = (outData.uOrder - 2) * gap * (dPoint1 - dPoint0);
+                    vec3 dPoint0 = (outData.uOrder - 1) * gap * (coefficient1.xyz - coefficient0.xyz);
+                    while (i < iLimit)
+                    {{
+                        coefficientOffset += 4*outData.vN;
+                        vec4 coefficient2 = vec4(
+                            texelFetch(uSplineData, coefficientOffset+0).x, 
+                            texelFetch(uSplineData, coefficientOffset+1).x,
+                            texelFetch(uSplineData, coefficientOffset+2).x,
+                            texelFetch(uSplineData, coefficientOffset+3).x);
+                        gap = texelFetch(uSplineData, header + i+1+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]
+                        gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                        vec3 dPoint1 = (outData.uOrder - 1) * gap * (coefficient2.xyz - coefficient1.xyz);
+                        gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+uOrder] - uKnots[i+2]
+                        gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                        vec3 d2Point = (outData.uOrder - 2) * gap * (dPoint1 - dPoint0);
 
-                    int k = i - outData.uM + outData.uOrder;
-                    sampleRateLeft[k] = max(sampleRateLeft[k], ComputeSampleRate(coefficient0, dPoint0, d2Point));
-                    sampleRateLeft[k] = max(sampleRateLeft[k], ComputeSampleRate(coefficient1, dPoint0, d2Point));
-                    sampleRateRight[k] = max(sampleRateRight[k], ComputeSampleRate(coefficient1, dPoint1, d2Point));
-                    sampleRateRight[k] = max(sampleRateRight[k], ComputeSampleRate(coefficient2, dPoint1, d2Point));
+                        int k = i - outData.uM + outData.uOrder;
+                        sampleRateLeft[k] = max(sampleRateLeft[k], ComputeSampleRate(coefficient0, dPoint0, d2Point, minRate));
+                        sampleRateLeft[k] = max(sampleRateLeft[k], ComputeSampleRate(coefficient1, dPoint0, d2Point, minRate));
+                        sampleRateRight[k] = max(sampleRateRight[k], ComputeSampleRate(coefficient1, dPoint1, d2Point, minRate));
+                        sampleRateRight[k] = max(sampleRateRight[k], ComputeSampleRate(coefficient2, dPoint1, d2Point, minRate));
 
-                    coefficient0 = coefficient1;
-                    coefficient1 = coefficient2;
-                    dPoint0 = dPoint1;
-                    i++;
+                        coefficient0 = coefficient1;
+                        coefficient1 = coefficient2;
+                        dPoint0 = dPoint1;
+                        i++;
+                    }}
                 }}
-            }}
-            float sampleRateMax[3] = float[3](sampleRateMin, sampleRateMin, sampleRateMin);
-            for (int k = 1; k < outData.uOrder - 1; k++)
-            {{
-                sampleRateMax[0] = max(sampleRateMax[0], sampleRateRight[k-1]);
-                sampleRateMax[0] = max(sampleRateMax[0], sampleRateLeft[k]);
-                sampleRateMax[1] = max(sampleRateMax[1], sampleRateLeft[k]);
-                sampleRateMax[1] = max(sampleRateMax[1], sampleRateRight[k]);
-                sampleRateMax[2] = max(sampleRateMax[2], sampleRateRight[k]);
-                sampleRateMax[2] = max(sampleRateMax[2], sampleRateLeft[k+1]);
-            }}
-            uSamples[0] = min(floor(0.5 + outData.uInterval * sampleRateMax[0]), gl_MaxTessGenLevel);
-            uSamples[1] = min(floor(0.5 + outData.uInterval * sampleRateMax[1]), gl_MaxTessGenLevel);
-            uSamples[2] = min(floor(0.5 + outData.uInterval * sampleRateMax[2]), gl_MaxTessGenLevel);
-
-            sampleRateMin = 1.0 / max(outData.vInterval, 1.0e-8);
-            for (int k = 0; k < outData.vOrder; k++)
-            {{
-                sampleRateLeft[k] = sampleRateMin;
-                sampleRateRight[k] = sampleRateMin;
-            }}
-            for (int i = outData.uM+1-outData.uOrder; i < outData.uM+1; i++)
-            {{
-                int j = max(outData.vM - outData.vOrder, 0);
-                int jLimit = min(outData.vM, outData.vN - 2);
-                int coefficientOffset = header + outData.uOrder+outData.uN + outData.vOrder+outData.vN + 4*outData.vN*i + 4*j;
-                vec4 coefficient0 = vec4(
-                    texelFetch(uSplineData, coefficientOffset+0).x, 
-                    texelFetch(uSplineData, coefficientOffset+1).x,
-                    texelFetch(uSplineData, coefficientOffset+2).x,
-                    texelFetch(uSplineData, coefficientOffset+3).x);
-                coefficientOffset += 4;
-                vec4 coefficient1 = vec4(
-                    texelFetch(uSplineData, coefficientOffset+0).x, 
-                    texelFetch(uSplineData, coefficientOffset+1).x,
-                    texelFetch(uSplineData, coefficientOffset+2).x,
-                    texelFetch(uSplineData, coefficientOffset+3).x);
-                float gap = texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+outData.vOrder).x - texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+1).x; // vKnots[j+vOrder] - vKnots[j+1]
-                gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
-                vec3 dPoint0 = (outData.vOrder - 1) * gap * (coefficient1.xyz - coefficient0.xyz);
-                while (j < jLimit)
+                for (int k = 1; k < outData.uOrder - 1; k++)
                 {{
-                    coefficientOffset += 4;
-                    vec4 coefficient2 = vec4(
+                    sampleRate[0] = max(sampleRate[0], sampleRateRight[k-1]);
+                    sampleRate[0] = max(sampleRate[0], sampleRateLeft[k]);
+                    sampleRate[1] = max(sampleRate[1], sampleRateLeft[k]);
+                    sampleRate[1] = max(sampleRate[1], sampleRateRight[k]);
+                    sampleRate[2] = max(sampleRate[2], sampleRateRight[k]);
+                    sampleRate[2] = max(sampleRate[2], sampleRateLeft[k+1]);
+                }}
+            }}
+            uSamples[0] = min(floor(0.5 + outData.uInterval * sampleRate[0]), gl_MaxTessGenLevel);
+            uSamples[1] = min(floor(0.5 + outData.uInterval * sampleRate[1]), gl_MaxTessGenLevel);
+            uSamples[2] = min(floor(0.5 + outData.uInterval * sampleRate[2]), gl_MaxTessGenLevel);
+
+            sampleRate = float[3](0.0, 0.0, 0.0);
+            if (outData.vInterval > 0.0)
+            {{
+                float sampleRateLeft[{maxOrder}];
+                float sampleRateRight[{maxOrder}];
+                float minRate = 1.0 / outData.vInterval;
+
+                for (int k = 0; k < outData.vOrder; k++)
+                {{
+                    sampleRateLeft[k] = 0.0;
+                    sampleRateRight[k] = 0.0;
+                }}
+                for (int i = outData.uM+1-outData.uOrder; i < outData.uM+1; i++)
+                {{
+                    int j = max(outData.vM - outData.vOrder, 0);
+                    int jLimit = min(outData.vM, outData.vN - 2);
+                    int coefficientOffset = header + outData.uOrder+outData.uN + outData.vOrder+outData.vN + 4*outData.vN*i + 4*j;
+                    vec4 coefficient0 = vec4(
                         texelFetch(uSplineData, coefficientOffset+0).x, 
                         texelFetch(uSplineData, coefficientOffset+1).x,
                         texelFetch(uSplineData, coefficientOffset+2).x,
                         texelFetch(uSplineData, coefficientOffset+3).x);
-                    gap = texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+1+outData.vOrder).x - texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+2).x; // vKnots[j+1+vOrder] - vKnots[j+2]
+                    coefficientOffset += 4;
+                    vec4 coefficient1 = vec4(
+                        texelFetch(uSplineData, coefficientOffset+0).x, 
+                        texelFetch(uSplineData, coefficientOffset+1).x,
+                        texelFetch(uSplineData, coefficientOffset+2).x,
+                        texelFetch(uSplineData, coefficientOffset+3).x);
+                    float gap = texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+outData.vOrder).x - texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+1).x; // vKnots[j+vOrder] - vKnots[j+1]
                     gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
-                    vec3 dPoint1 = (outData.vOrder - 1) * gap * (coefficient2.xyz - coefficient1.xyz);
-                    gap = texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+outData.vOrder).x - texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+2).x; // vKnots[j+vOrder] - vKnots[j+2]
-                    gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
-                    vec3 d2Point = (outData.vOrder - 2) * gap * (dPoint1 - dPoint0);
+                    vec3 dPoint0 = (outData.vOrder - 1) * gap * (coefficient1.xyz - coefficient0.xyz);
+                    while (j < jLimit)
+                    {{
+                        coefficientOffset += 4;
+                        vec4 coefficient2 = vec4(
+                            texelFetch(uSplineData, coefficientOffset+0).x, 
+                            texelFetch(uSplineData, coefficientOffset+1).x,
+                            texelFetch(uSplineData, coefficientOffset+2).x,
+                            texelFetch(uSplineData, coefficientOffset+3).x);
+                        gap = texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+1+outData.vOrder).x - texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+2).x; // vKnots[j+1+vOrder] - vKnots[j+2]
+                        gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                        vec3 dPoint1 = (outData.vOrder - 1) * gap * (coefficient2.xyz - coefficient1.xyz);
+                        gap = texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+outData.vOrder).x - texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+2).x; // vKnots[j+vOrder] - vKnots[j+2]
+                        gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                        vec3 d2Point = (outData.vOrder - 2) * gap * (dPoint1 - dPoint0);
 
-                    int k = j - outData.vM + outData.vOrder;
-                    sampleRateLeft[k] = max(sampleRateLeft[k], ComputeSampleRate(coefficient0, dPoint0, d2Point));
-                    sampleRateLeft[k] = max(sampleRateLeft[k], ComputeSampleRate(coefficient1, dPoint0, d2Point));
-                    sampleRateRight[k] = max(sampleRateRight[k], ComputeSampleRate(coefficient1, dPoint1, d2Point));
-                    sampleRateRight[k] = max(sampleRateRight[k], ComputeSampleRate(coefficient2, dPoint1, d2Point));
+                        int k = j - outData.vM + outData.vOrder;
+                        sampleRateLeft[k] = max(sampleRateLeft[k], ComputeSampleRate(coefficient0, dPoint0, d2Point, minRate));
+                        sampleRateLeft[k] = max(sampleRateLeft[k], ComputeSampleRate(coefficient1, dPoint0, d2Point, minRate));
+                        sampleRateRight[k] = max(sampleRateRight[k], ComputeSampleRate(coefficient1, dPoint1, d2Point, minRate));
+                        sampleRateRight[k] = max(sampleRateRight[k], ComputeSampleRate(coefficient2, dPoint1, d2Point, minRate));
 
-                    coefficient0 = coefficient1;
-                    coefficient1 = coefficient2;
-                    dPoint0 = dPoint1;
-                    j++;
+                        coefficient0 = coefficient1;
+                        coefficient1 = coefficient2;
+                        dPoint0 = dPoint1;
+                        j++;
+                    }}
+                }}
+                for (int k = 1; k < outData.vOrder - 1; k++)
+                {{
+                    sampleRate[0] = max(sampleRate[0], sampleRateRight[k-1]);
+                    sampleRate[0] = max(sampleRate[0], sampleRateLeft[k]);
+                    sampleRate[1] = max(sampleRate[1], sampleRateLeft[k]);
+                    sampleRate[1] = max(sampleRate[1], sampleRateRight[k]);
+                    sampleRate[2] = max(sampleRate[2], sampleRateRight[k]);
+                    sampleRate[2] = max(sampleRate[2], sampleRateLeft[k+1]);
                 }}
             }}
-            sampleRateMax = float[3](sampleRateMin, sampleRateMin, sampleRateMin);
-            for (int k = 1; k < outData.vOrder - 1; k++)
-            {{
-                sampleRateMax[0] = max(sampleRateMax[0], sampleRateRight[k-1]);
-                sampleRateMax[0] = max(sampleRateMax[0], sampleRateLeft[k]);
-                sampleRateMax[1] = max(sampleRateMax[1], sampleRateLeft[k]);
-                sampleRateMax[1] = max(sampleRateMax[1], sampleRateRight[k]);
-                sampleRateMax[2] = max(sampleRateMax[2], sampleRateRight[k]);
-                sampleRateMax[2] = max(sampleRateMax[2], sampleRateLeft[k+1]);
-            }}
-            vSamples[0] = min(floor(0.5 + outData.vInterval * sampleRateMax[0]), gl_MaxTessGenLevel);
-            vSamples[1] = min(floor(0.5 + outData.vInterval * sampleRateMax[1]), gl_MaxTessGenLevel);
-            vSamples[2] = min(floor(0.5 + outData.vInterval * sampleRateMax[2]), gl_MaxTessGenLevel);
+            vSamples[0] = min(floor(0.5 + outData.vInterval * sampleRate[0]), gl_MaxTessGenLevel);
+            vSamples[1] = min(floor(0.5 + outData.vInterval * sampleRate[1]), gl_MaxTessGenLevel);
+            vSamples[2] = min(floor(0.5 + outData.vInterval * sampleRate[2]), gl_MaxTessGenLevel);
         }}
     """
 
@@ -459,6 +482,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         }} inData[];
 
         uniform vec3 uScreenScale;
+        uniform vec4 uClipBounds;
         uniform samplerBuffer uSplineData;
 
         patch out SplineInfo
@@ -694,6 +718,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             glVertexAttribPointer(self.aCurveParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
             self.uCurveProjectionMatrix = glGetUniformLocation(self.curveProgram, 'uProjectionMatrix')
             self.uCurveScreenScale = glGetUniformLocation(self.curveProgram, 'uScreenScale')
+            self.uCurveClipBounds = glGetUniformLocation(self.curveProgram, 'uClipBounds')
             self.uCurveLineColor = glGetUniformLocation(self.curveProgram, 'uLineColor')
             self.uCurveSplineData = glGetUniformLocation(self.curveProgram, 'uSplineData')
             glUniform1i(self.uCurveSplineData, 0) # GL_TEXTURE0 is the spline buffer texture
@@ -704,6 +729,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             glVertexAttribPointer(self.aSurfaceParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
             self.uSurfaceProjectionMatrix = glGetUniformLocation(self.surfaceProgram, 'uProjectionMatrix')
             self.uSurfaceScreenScale = glGetUniformLocation(self.surfaceProgram, 'uScreenScale')
+            self.uSurfaceClipBounds = glGetUniformLocation(self.curveProgram, 'uClipBounds')
             self.uSurfaceFillColor = glGetUniformLocation(self.surfaceProgram, 'uFillColor')
             self.uSurfaceLineColor = glGetUniformLocation(self.surfaceProgram, 'uLineColor')
             self.uSurfaceLightDirection = glGetUniformLocation(self.surfaceProgram, 'uLightDirection')
@@ -742,9 +768,11 @@ class SplineOpenGLFrame(OpenGLFrame):
         glUseProgram(self.curveProgram)
         glUniformMatrix4fv(self.uCurveProjectionMatrix, 1, GL_FALSE, self.projection)
         glUniform3fv(self.uCurveScreenScale, 1, self.screenScale)
+        glUniform4fv(self.uCurveClipBounds, 1, self.clipBounds)
         glUseProgram(self.surfaceProgram)
         glUniformMatrix4fv(self.uSurfaceProjectionMatrix, 1, GL_FALSE, self.projection)
         glUniform3fv(self.uSurfaceScreenScale, 1, self.screenScale)
+        glUniform4fv(self.uSurfaceClipBounds, 1, self.clipBounds)
         glUseProgram(0)
 
         glMatrixMode(GL_MODELVIEW)
