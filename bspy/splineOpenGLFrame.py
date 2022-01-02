@@ -791,7 +791,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             halfCosine = np.sqrt(0.5 * (1.0 + dot))
             halfSine = np.sqrt(0.5 * (1.0 - dot))
             n = np.cross(a,b)
-            if halfSine > 1.0e-8:
+            if 1.0e-8 < halfSine < 1.0:
                 n = (halfSine / np.linalg.norm(n)) * n
             self.currentQ = quat.from_float_array((halfCosine, n[0], n[1], n[2]))
             self.tkExpose(None)
