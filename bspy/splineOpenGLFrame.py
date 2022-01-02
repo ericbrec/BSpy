@@ -63,10 +63,10 @@ class SplineOpenGLFrame(OpenGLFrame):
     computeSampleRateCode = """
         float ComputeSampleRate(in vec4 point, in vec3 dPoint, in vec3 d2Point)
         {
-            float zScale = 1.0 / (uScreenScale.z - point.z);
+            float zScale = -1.0 / point.z;
             float zScale2 = zScale * zScale;
             float zScale3 = zScale2 * zScale;
-            vec2 projection = uScreenScale.z > 1.0 ? 
+            vec2 projection = uScreenScale.z > 0.0 ? 
                 vec2(uScreenScale.x * (d2Point.x * zScale - 2.0 * dPoint.x * dPoint.z * zScale2 +
                     point.x * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2)),
                     uScreenScale.y * (d2Point.y * zScale - 2.0 * dPoint.y * dPoint.z * zScale2 +
@@ -571,11 +571,10 @@ class SplineOpenGLFrame(OpenGLFrame):
             outData = inData;
 
             worldPosition = point;
-            worldPosition.z -= uScreenScale.z > 1.0 ? uScreenScale.z : 0.0;
             normal = normalize(cross(duPoint, dvPoint));
-            float zScale = 1.0 / worldPosition.z * worldPosition.z;
-            pixelPer.x = zScale * max(uScreenScale.x * abs(worldPosition.x * duPoint.z - duPoint.x * worldPosition.z), uScreenScale.y * abs(worldPosition.y * duPoint.z - duPoint.y * worldPosition.z));
-            pixelPer.y = zScale * max(uScreenScale.x * abs(worldPosition.x * dvPoint.z - dvPoint.x * worldPosition.z), uScreenScale.y * abs(worldPosition.y * dvPoint.z - dvPoint.y * worldPosition.z));
+            float zScale = 1.0 / point.z * point.z;
+            pixelPer.x = zScale * max(uScreenScale.x * abs(point.x * duPoint.z - duPoint.x * point.z), uScreenScale.y * abs(point.y * duPoint.z - duPoint.y * point.z));
+            pixelPer.y = zScale * max(uScreenScale.x * abs(point.x * dvPoint.z - dvPoint.x * point.z), uScreenScale.y * abs(point.y * dvPoint.z - dvPoint.y * point.z));
             gl_Position = uProjectionMatrix * point;
         }}
     """
@@ -725,6 +724,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
+        self.translation = np.identity(4, np.float32)
         xExtent = self.width / self.height
         clipDistance = np.sqrt(3.0)
         zDropoff = 3.0
@@ -732,11 +732,13 @@ class SplineOpenGLFrame(OpenGLFrame):
         far = zDropoff + clipDistance
         top = clipDistance * near / zDropoff # Choose frustum that displays [-clipDistance,clipDistance] in y for z = -zDropoff
         glFrustum(-top*xExtent, top*xExtent, -top, top, near, far)
-        glTranslate(0.0, 0.0, -zDropoff)
+        self.translation[3][2] = -zDropoff
         #glOrtho(-xExtent, xExtent, -1.0, 1.0, -1.0, 1.0)
 
         self.projection = glGetFloatv(GL_PROJECTION_MATRIX)
-        self.screenScale = np.array((0.5 * self.height * self.projection[0,0], 0.5 * self.height * self.projection[1,1], self.projection[3,3]), np.float32)
+        self.screenScale = np.array((0.5 * self.height * self.projection[0,0], 0.5 * self.height * self.projection[1,1], 1.0), np.float32)
+        self.clipBounds = np.array((1.0 / self.projection[0,0], 1.0 / self.projection[1,1], -far, -near), np.float32)
+
         glUseProgram(self.curveProgram)
         glUniformMatrix4fv(self.uCurveProjectionMatrix, 1, GL_FALSE, self.projection)
         glUniform3fv(self.uCurveScreenScale, 1, self.screenScale)
@@ -755,7 +757,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         rotation33 = quat.as_rotation_matrix(self.currentQ * self.lastQ)
         rotation44 = np.identity(4, np.float32)
         rotation44[0:3,0:3] = rotation33.T # Transpose to match OpenGL format in numpy
-        transform = rotation44
+        transform = rotation44 @ self.translation
 
         for spline in self.splineDrawList:
             spline.Draw(self, transform)
