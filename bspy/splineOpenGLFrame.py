@@ -575,7 +575,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             worldPosition = point;
             worldPosition.z -= uScreenScale.z > 1.0 ? uScreenScale.z : 0.0;
             normal = normalize(cross(duPoint, dvPoint));
-            float zScale = 0.15 / worldPosition.z * worldPosition.z;
+            float zScale = 1.0 / worldPosition.z * worldPosition.z;
             pixelPer.x = zScale * max(uScreenScale.x * abs(worldPosition.x * duPoint.z - duPoint.x * worldPosition.z), uScreenScale.y * abs(worldPosition.y * duPoint.z - duPoint.y * worldPosition.z));
             pixelPer.y = zScale * max(uScreenScale.x * abs(worldPosition.x * dvPoint.z - dvPoint.x * worldPosition.z), uScreenScale.y * abs(worldPosition.y * dvPoint.z - dvPoint.y * worldPosition.z));
             gl_Position = uProjectionMatrix * point;
@@ -610,10 +610,10 @@ class SplineOpenGLFrame(OpenGLFrame):
         void main()
         {
             color = (uOptions & (1 << 2)) > 0 ? uFillColor : vec4(0.0, 0.0, 0.0, 0.0);
-            color = (uOptions & (1 << 4)) > 0 && (pixelPer.x * (parameters.x - inData.uFirst) < 2.0 || pixelPer.x * (inData.uFirst + inData.uSpan - parameters.x) < 2.0) ? uLineColor : color;
-            color = (uOptions & (1 << 4)) > 0 && (pixelPer.y * (parameters.y - inData.vFirst) < 2.0 || pixelPer.y * (inData.vFirst + inData.vSpan - parameters.y) < 2.0) ? uLineColor : color;
-            color = (uOptions & (1 << 5)) > 0 && (pixelPer.x * (parameters.x - inData.u) < 1.0 || pixelPer.x * (inData.u + inData.uInterval - parameters.x) < 1.0) ? uLineColor : color;
-            color = (uOptions & (1 << 5)) > 0 && (pixelPer.y * (parameters.y - inData.v) < 1.0 || pixelPer.y * (inData.v + inData.vInterval - parameters.y) < 1.0) ? uLineColor : color;
+            color = (uOptions & (1 << 4)) > 0 && (pixelPer.x * (parameters.x - inData.uFirst) < 12.0 || pixelPer.x * (inData.uFirst + inData.uSpan - parameters.x) < 12.0) ? uLineColor : color;
+            color = (uOptions & (1 << 4)) > 0 && (pixelPer.y * (parameters.y - inData.vFirst) < 12.0 || pixelPer.y * (inData.vFirst + inData.vSpan - parameters.y) < 12.0) ? uLineColor : color;
+            color = (uOptions & (1 << 5)) > 0 && pixelPer.x * (parameters.x - inData.u) < 12.0 ? uLineColor : color;
+            color = (uOptions & (1 << 5)) > 0 && pixelPer.y * (parameters.y - inData.v) < 12.0 ? uLineColor : color;
             color.rgb = (0.3 + 0.7 * abs(dot(normal, uLightDirection))) * color.rgb;
             if (color.a == 0.0)
                 discard;
