@@ -630,12 +630,13 @@ class SplineOpenGLFrame(OpenGLFrame):
      
         void main()
         {
-            color = (uOptions & (1 << 2)) > 0 ? uFillColor : vec4(0.0, 0.0, 0.0, 0.0);
-            color = (uOptions & (1 << 4)) > 0 && (pixelPer.x * (parameters.x - inData.uFirst) < 12.0 || pixelPer.x * (inData.uFirst + inData.uSpan - parameters.x) < 12.0) ? uLineColor : color;
-            color = (uOptions & (1 << 4)) > 0 && (pixelPer.y * (parameters.y - inData.vFirst) < 12.0 || pixelPer.y * (inData.vFirst + inData.vSpan - parameters.y) < 12.0) ? uLineColor : color;
-            color = (uOptions & (1 << 5)) > 0 && pixelPer.x * (parameters.x - inData.u) < 12.0 ? uLineColor : color;
-            color = (uOptions & (1 << 5)) > 0 && pixelPer.y * (parameters.y - inData.v) < 12.0 ? uLineColor : color;
-            color.rgb = (0.3 + 0.7 * abs(dot(normal, uLightDirection))) * color.rgb;
+            float specular = pow(abs(dot(normal, normalize(uLightDirection + worldPosition.xyz / length(worldPosition)))), 10.0);
+            bool line = (uOptions & (1 << 4)) > 0 && (pixelPer.x * (parameters.x - inData.uFirst) < 12.0 || pixelPer.x * (inData.uFirst + inData.uSpan - parameters.x) < 12.0);
+            line = line || ((uOptions & (1 << 4)) > 0 && (pixelPer.y * (parameters.y - inData.vFirst) < 12.0 || pixelPer.y * (inData.vFirst + inData.vSpan - parameters.y) < 12.0));
+            line = line || ((uOptions & (1 << 5)) > 0 && pixelPer.x * (parameters.x - inData.u) < 12.0);
+            line = line || ((uOptions & (1 << 5)) > 0 && pixelPer.y * (parameters.y - inData.v) < 12.0);
+            color = line ? uLineColor : ((uOptions & (1 << 2)) > 0 ? uFillColor : vec4(0.0, 0.0, 0.0, 0.0));
+            color.rgb = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * color.rgb;
             if (color.a == 0.0)
                 discard;
         }
@@ -733,7 +734,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.uSurfaceFillColor = glGetUniformLocation(self.surfaceProgram, 'uFillColor')
             self.uSurfaceLineColor = glGetUniformLocation(self.surfaceProgram, 'uLineColor')
             self.uSurfaceLightDirection = glGetUniformLocation(self.surfaceProgram, 'uLightDirection')
-            self.lightDirection = np.array((0.6, 0.3, 1), np.float32)
+            self.lightDirection = np.array((0.6, 0.3, -1.0), np.float32)
             self.lightDirection = self.lightDirection / np.linalg.norm(self.lightDirection)
             glUniform3fv(self.uSurfaceLightDirection, 1, self.lightDirection)
             self.uSurfaceOptions = glGetUniformLocation(self.surfaceProgram, 'uOptions')
