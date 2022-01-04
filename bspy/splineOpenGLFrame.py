@@ -745,7 +745,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
             glEnable( GL_DEPTH_TEST )
             #glClearColor(1.0, 1.0, 1.0, 1.0)
-            glClearColor(0.0, 0.0, 0.0, 1.0)
+            glClearColor(0.0, 0.2, 0.2, 1.0)
 
             self.glInitialized = True
 
@@ -755,7 +755,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         xExtent = self.width / self.height
         clipDistance = np.sqrt(3.0)
         zDropoff = 3.0
-        near = 0.1
+        near = 0.01
         far = zDropoff + clipDistance
         top = clipDistance * near / zDropoff # Choose frustum that displays [-clipDistance,clipDistance] in y for z = -zDropoff
         glFrustum(-top*xExtent, top*xExtent, -top, top, near, far)
