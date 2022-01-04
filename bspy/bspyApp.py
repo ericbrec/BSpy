@@ -31,12 +31,13 @@ class bspyApp(tk.Tk):
     def __init__(self, *args, **kw):
         tk.Tk.__init__(self, *args, **kw)
         self.title('bspy')
+        self.geometry('600x500')
 
         # Controls on the left
         controls = tk.Frame(self)
         controls.pack(side=tk.LEFT, fill=tk.Y)
 
-        adjustButton = tk.Button(controls, text='Adjust', command=self.Adjust)
+        adjustButton = tk.Button(controls, text='Adjust Splines', command=self.Adjust)
         adjustButton.pack(side=tk.BOTTOM, fill=tk.X)
 
         self.listBox = tk.Listbox(controls, selectmode=tk.MULTIPLE)
@@ -48,9 +49,24 @@ class bspyApp(tk.Tk):
         self.listBox.configure(yscrollcommand=verticalScroll.set)
         verticalScroll.config(command=self.listBox.yview)
 
-        # OpenGL display frame
-        self.frame = SplineOpenGLFrame(self, width=500, height=500)
-        self.frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=tk.YES)
+        # Controls on the right
+        controls = tk.Frame(self)
+        controls.pack(side=tk.RIGHT, fill=tk.BOTH, expand=tk.YES)
+
+        self.frame = SplineOpenGLFrame(controls)
+        self.frame.pack(side=tk.TOP, fill=tk.BOTH, expand=tk.YES)
+
+        buttons = tk.Frame(controls)
+        buttons.pack(side=tk.BOTTOM)
+        tk.Button(buttons, text='Reset View', command=self.frame.Reset).pack(side=tk.LEFT)
+        self.frameMode = tk.IntVar()
+        tk.Radiobutton(buttons, text='Rotate', variable=self.frameMode, value=SplineOpenGLFrame.ROTATE, command=self.ChangeFrameMode).pack(side=tk.LEFT)
+        tk.Radiobutton(buttons, text='Pan', variable=self.frameMode, value=SplineOpenGLFrame.PAN, command=self.ChangeFrameMode).pack(side=tk.LEFT)
+        tk.Radiobutton(buttons, text='Fly', variable=self.frameMode, value=SplineOpenGLFrame.FLY, command=self.ChangeFrameMode).pack(side=tk.LEFT)
+        self.frameMode.set(SplineOpenGLFrame.ROTATE)
+        self.scale = tk.Scale(buttons, orient=tk.HORIZONTAL, from_=0, to=1, resolution=0.1, showvalue=0, command=self.frame.SetScale)
+        self.scale.pack(side=tk.LEFT)
+        self.scale.set(0.3)
 
         self.splineList = []
         self.adjust = None
@@ -73,6 +89,9 @@ class bspyApp(tk.Tk):
                 button.Update()
 
         self.frame.tkExpose(None)
+    
+    def ChangeFrameMode(self):
+        self.frame.SetMode(self.frameMode.get())
 
     def Adjust(self):
         if self.adjust is None:

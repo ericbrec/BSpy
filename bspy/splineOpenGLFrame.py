@@ -8,6 +8,10 @@ from bspy.spline import Spline
 
 class SplineOpenGLFrame(OpenGLFrame):
 
+    ROTATE = 1
+    PAN = 2
+    FLY = 3
+
     computeBasisCode = """
         void ComputeBasis(in int offset, in int order, in int n, in int m, in float u, 
             out float uBasis[{maxBasis}], out float duBasis[{maxBasis}])
@@ -652,7 +656,6 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.lastQ = quat.one
         self.origin = None
 
-        self.bind("<ButtonPress-3>", self.Home)
         self.bind("<ButtonPress-1>", self.RotateStartHandler)
         self.bind("<ButtonRelease-1>", self.RotateEndHandler)
         self.bind("<B1-Motion>", self.RotateDragHandler)
@@ -796,10 +799,16 @@ class SplineOpenGLFrame(OpenGLFrame):
     def Unmap(self, event):
         self.glInitialized = False
 
-    def Home(self, event):
+    def Reset(self):
         self.lastQ = quat.one
         self.currentQ = quat.one
         self.tkExpose(None)
+    
+    def SetMode(self, mode):
+        print("Mode: ", mode)
+    
+    def SetScale(self, scale):
+        print("Scale: ", scale)
 
     def ProjectToSphere(self, point):
         length = np.linalg.norm(point)
