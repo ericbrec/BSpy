@@ -630,7 +630,7 @@ class SplineOpenGLFrame(OpenGLFrame):
      
         void main()
         {
-            float specular = pow(abs(dot(normal, normalize(uLightDirection + worldPosition.xyz / length(worldPosition)))), 10.0);
+            float specular = pow(abs(dot(normal, normalize(uLightDirection + worldPosition.xyz / length(worldPosition)))), 25.0);
             bool line = (uOptions & (1 << 4)) > 0 && (pixelPer.x * (parameters.x - inData.uFirst) < 12.0 || pixelPer.x * (inData.uFirst + inData.uSpan - parameters.x) < 12.0);
             line = line || ((uOptions & (1 << 4)) > 0 && (pixelPer.y * (parameters.y - inData.vFirst) < 12.0 || pixelPer.y * (inData.vFirst + inData.vSpan - parameters.y) < 12.0));
             line = line || ((uOptions & (1 << 5)) > 0 && pixelPer.x * (parameters.x - inData.u) < 12.0);
@@ -755,7 +755,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         xExtent = self.width / self.height
         clipDistance = np.sqrt(3.0)
         zDropoff = 3.0
-        near = zDropoff - clipDistance
+        near = 0.1
         far = zDropoff + clipDistance
         top = clipDistance * near / zDropoff # Choose frustum that displays [-clipDistance,clipDistance] in y for z = -zDropoff
         glFrustum(-top*xExtent, top*xExtent, -top, top, near, far)
