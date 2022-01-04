@@ -631,10 +631,10 @@ class SplineOpenGLFrame(OpenGLFrame):
         void main()
         {
             float specular = pow(abs(dot(normal, normalize(uLightDirection + worldPosition.xyz / length(worldPosition)))), 25.0);
-            bool line = (uOptions & (1 << 4)) > 0 && (pixelPer.x * (parameters.x - inData.uFirst) <= 1.0 || pixelPer.x * (inData.uFirst + inData.uSpan - parameters.x) <= 1.0);
-            line = line || ((uOptions & (1 << 4)) > 0 && (pixelPer.y * (parameters.y - inData.vFirst) <= 1.0 || pixelPer.y * (inData.vFirst + inData.vSpan - parameters.y) <= 1.0));
-            line = line || ((uOptions & (1 << 5)) > 0 && pixelPer.x * (parameters.x - inData.u) <= 1.0);
-            line = line || ((uOptions & (1 << 5)) > 0 && pixelPer.y * (parameters.y - inData.v) <= 1.0);
+            bool line = (uOptions & (1 << 4)) > 0 && (pixelPer.x * (parameters.x - inData.uFirst) < 1.5 || pixelPer.x * (inData.uFirst + inData.uSpan - parameters.x) < 1.5);
+            line = line || ((uOptions & (1 << 4)) > 0 && (pixelPer.y * (parameters.y - inData.vFirst) < 1.5 || pixelPer.y * (inData.vFirst + inData.vSpan - parameters.y) < 1.5));
+            line = line || ((uOptions & (1 << 5)) > 0 && pixelPer.x * (parameters.x - inData.u) < 1.5);
+            line = line || ((uOptions & (1 << 5)) > 0 && pixelPer.y * (parameters.y - inData.v) < 1.5);
             color = line ? uLineColor : ((uOptions & (1 << 2)) > 0 ? uFillColor : vec4(0.0, 0.0, 0.0, 0.0));
             color.rgb = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * color.rgb;
             if (color.a == 0.0)
