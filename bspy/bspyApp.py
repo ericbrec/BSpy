@@ -142,8 +142,8 @@ class bspyApp(tk.Tk):
 
     def FillColorChange(self):
         if self.frame.splineDrawList:
-            oldColor = 255.0 * self.splineList[0].fillColor
-            newColor = askcolor(title="Set spline color", color="#%02x%02x%02x" % (int(oldColor[0]), int(oldColor[1]), int(oldColor[2])))
+            oldColor = 255.0 * self.frame.splineDrawList[0].fillColor
+            newColor = askcolor(title="Set spline fill color", color="#%02x%02x%02x" % (int(oldColor[0]), int(oldColor[1]), int(oldColor[2])))
             if newColor[0] is not None:
                 for spline in self.frame.splineDrawList:
                     spline.fillColor[:3] = np.array(newColor[0], np.float32) / 255.0
@@ -151,8 +151,8 @@ class bspyApp(tk.Tk):
 
     def LineColorChange(self):
         if self.frame.splineDrawList:
-            oldColor = 255.0 * self.splineList[0].lineColor
-            newColor = askcolor(title="Set spline color", color="#%02x%02x%02x" % (int(oldColor[0]), int(oldColor[1]), int(oldColor[2])))
+            oldColor = 255.0 * self.frame.splineDrawList[0].lineColor
+            newColor = askcolor(title="Set spline line color", color="#%02x%02x%02x" % (int(oldColor[0]), int(oldColor[1]), int(oldColor[2])))
             if newColor[0] is not None:
                 for spline in self.frame.splineDrawList:
                     spline.lineColor[:3] = np.array(newColor[0], np.float32) / 255.0
