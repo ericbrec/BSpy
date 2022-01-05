@@ -33,8 +33,8 @@ class Spline:
             for n in range(m-degree, m+1):
                 gap0 = uKnots[n+degree] - uKnots[n]
                 gap1 = uKnots[n+degree+1] - uKnots[n+1]
-                gap0 = 0.0 if gap0 < 1.0e-8 else 1.0 / gap0
-                gap1 = 0.0 if gap1 < 1.0e-8 else 1.0 / gap1
+                gap0 = 1.0 / gap0 if gap0 > 0.0 else 0.0
+                gap1 = 1.0 / gap1 if gap1 > 0.0 else 0.0
                 val0 = (u - uKnots[n]) * gap0
                 val1 = (uKnots[n+degree+1] - u) * gap1
                 if degree == uOrder - 2:

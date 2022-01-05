@@ -31,8 +31,8 @@ class SplineOpenGLFrame(OpenGLFrame):
                 {{
                     float gap0 = texelFetch(uSplineData, offset + i + degree).x - texelFetch(uSplineData, offset + i).x; // knots[i+degree] - knots[i]
                     float gap1 = texelFetch(uSplineData, offset + i + degree + 1).x - texelFetch(uSplineData, offset + i + 1).x; // knots[i+degree+1] - knots[i+1]
-                    gap0 = gap0 < 1.0e-8 ? 0.0 : 1.0 / gap0;
-                    gap1 = gap1 < 1.0e-8 ? 0.0 : 1.0 / gap1;
+                    gap0 = gap0 > 0.0 ? 1.0 / gap0 : 0.0;
+                    gap1 = gap1 > 0.0 ? 1.0 / gap1 : 0.0;
 
                     float val0 = (u - texelFetch(uSplineData, offset + i).x) * gap0; // (u - knots[i]) * gap0;
                     float val1 = (texelFetch(uSplineData, offset + i + degree + 1).x - u) * gap1; // (knots[i+degree+1] - u) * gap1;
@@ -48,8 +48,8 @@ class SplineOpenGLFrame(OpenGLFrame):
                 {{
                     float gap0 = texelFetch(uSplineData, offset + i + degree).x - texelFetch(uSplineData, offset + i).x; // knots[i+degree] - knots[i]
                     float gap1 = texelFetch(uSplineData, offset + i + degree + 1).x - texelFetch(uSplineData, offset + i + 1).x; // knots[i+degree+1] - knots[i+1]
-                    gap0 = gap0 < 1.0e-8 ? 0.0 : 1.0 / gap0;
-                    gap1 = gap1 < 1.0e-8 ? 0.0 : 1.0 / gap1;
+                    gap0 = gap0 > 0.0 ? 1.0 / gap0 : 0.0;
+                    gap1 = gap1 > 0.0 ? 1.0 / gap1 : 0.0;
 
                     float d0 = degree * gap0;
                     float d1 = -degree * gap1;
@@ -138,7 +138,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                     texelFetch(uSplineData, coefficientOffset+2).x,
                     texelFetch(uSplineData, coefficientOffset+3).x);
                 float gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]
-                gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                gap = gap > 0.0 ? 1.0 / gap : 0.0;
                 vec3 dPoint0 = (outData.uOrder - 1) * gap * (coefficient1.xyz - coefficient0.xyz);
                 while (i < outData.uM-1)
                 {
@@ -149,10 +149,10 @@ class SplineOpenGLFrame(OpenGLFrame):
                         texelFetch(uSplineData, coefficientOffset+2).x,
                         texelFetch(uSplineData, coefficientOffset+3).x);
                     gap = texelFetch(uSplineData, header + i+1+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]
-                    gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                    gap = gap > 0.0 ? 1.0 / gap : 0.0;
                     vec3 dPoint1 = (outData.uOrder - 1) * gap * (coefficient2.xyz - coefficient1.xyz);
                     gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+uOrder] - uKnots[i+2]
-                    gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                    gap = gap > 0.0 ? 1.0 / gap : 0.0;
                     vec3 d2Point = (outData.uOrder - 2) * gap * (dPoint1 - dPoint0);
 
                     sampleRate = max(sampleRate, ComputeSampleRate(coefficient0, dPoint0, d2Point, minRate));
@@ -349,7 +349,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                         texelFetch(uSplineData, coefficientOffset+2).x,
                         texelFetch(uSplineData, coefficientOffset+3).x);
                     float gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]
-                    gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                    gap = gap > 0.0 ? 1.0 / gap : 0.0;
                     vec3 dPoint0 = (outData.uOrder - 1) * gap * (coefficient1.xyz - coefficient0.xyz);
                     while (i < iLimit)
                     {{
@@ -360,10 +360,10 @@ class SplineOpenGLFrame(OpenGLFrame):
                             texelFetch(uSplineData, coefficientOffset+2).x,
                             texelFetch(uSplineData, coefficientOffset+3).x);
                         gap = texelFetch(uSplineData, header + i+1+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]
-                        gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                        gap = gap > 0.0 ? 1.0 / gap : 0.0;
                         vec3 dPoint1 = (outData.uOrder - 1) * gap * (coefficient2.xyz - coefficient1.xyz);
                         gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+uOrder] - uKnots[i+2]
-                        gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                        gap = gap > 0.0 ? 1.0 / gap : 0.0;
                         vec3 d2Point = (outData.uOrder - 2) * gap * (dPoint1 - dPoint0);
 
                         int k = i - outData.uM + outData.uOrder;
@@ -421,7 +421,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                         texelFetch(uSplineData, coefficientOffset+2).x,
                         texelFetch(uSplineData, coefficientOffset+3).x);
                     float gap = texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+outData.vOrder).x - texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+1).x; // vKnots[j+vOrder] - vKnots[j+1]
-                    gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                    gap = gap > 0.0 ? 1.0 / gap : 0.0;
                     vec3 dPoint0 = (outData.vOrder - 1) * gap * (coefficient1.xyz - coefficient0.xyz);
                     while (j < jLimit)
                     {{
@@ -432,10 +432,10 @@ class SplineOpenGLFrame(OpenGLFrame):
                             texelFetch(uSplineData, coefficientOffset+2).x,
                             texelFetch(uSplineData, coefficientOffset+3).x);
                         gap = texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+1+outData.vOrder).x - texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+2).x; // vKnots[j+1+vOrder] - vKnots[j+2]
-                        gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                        gap = gap > 0.0 ? 1.0 / gap : 0.0;
                         vec3 dPoint1 = (outData.vOrder - 1) * gap * (coefficient2.xyz - coefficient1.xyz);
                         gap = texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+outData.vOrder).x - texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+2).x; // vKnots[j+vOrder] - vKnots[j+2]
-                        gap = gap < 1.0e-8 ? 0.0 : 1.0 / gap;
+                        gap = gap > 0.0 ? 1.0 / gap : 0.0;
                         vec3 d2Point = (outData.vOrder - 2) * gap * (dPoint1 - dPoint0);
 
                         int k = j - outData.vM + outData.vOrder;
