@@ -19,12 +19,13 @@ class Spline:
     def __init__(self, order, knots, coefficients):
         floatCount = 0
         coefficientCount = 1
-        for i in range(len(order)):
+        dimension = len(order)
+        for i in range(dimension):
             assert order[i] <= self.maxOrder
-            assert len(knots[i]) == order[i] + coefficients.shape[i]
-            floatCount += 2 + order[i] + coefficients.shape[i]
-            coefficientCount *= coefficients.shape[i]
-        assert coefficients.shape[len(order)] == 4 # Coefficients are all 4-vectors (homogeneous coordinates)
+            assert len(knots[i]) == order[i] + coefficients.shape[dimension - 1 - i]
+            floatCount += 2 + order[i] + coefficients.shape[dimension - 1 - i]
+            coefficientCount *= coefficients.shape[dimension - 1 - i]
+        assert coefficients.shape[dimension] == 4 # Coefficients are all 4-vectors (homogeneous coordinates)
         assert floatCount + 4 * coefficientCount <= self.maxFloats
         for knotArray in knots:
             assert knotArray.dtype == np.float32
@@ -81,7 +82,7 @@ class Spline:
         glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
         offset = 0
         size = 4 * 4
-        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, np.array((self.order[0], self.order[1], drawCoefficients.shape[0], drawCoefficients.shape[1]), np.float32))
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, np.array((self.order[0], self.order[1], drawCoefficients.shape[1], drawCoefficients.shape[0]), np.float32))
         offset += size
         size = 4 * len(self.knots[0])
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, self.knots[0])
@@ -89,11 +90,11 @@ class Spline:
         size = 4 * len(self.knots[1])
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, self.knots[1])
         offset += size
-        size = 4 * 4 * drawCoefficients.shape[0] * drawCoefficients.shape[1]
+        size = 4 * 4 * drawCoefficients.shape[1] * drawCoefficients.shape[0]
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
         glEnableVertexAttribArray(frame.aSurfaceParameters)
         glPatchParameteri(GL_PATCH_VERTICES, 1)
-        glDrawArraysInstanced(GL_PATCHES, 0, 1, (drawCoefficients.shape[0] - self.order[0] + 1) * (drawCoefficients.shape[1] - self.order[1] + 1))
+        glDrawArraysInstanced(GL_PATCHES, 0, 1, (drawCoefficients.shape[1] - self.order[0] + 1) * (drawCoefficients.shape[0] - self.order[1] + 1))
         glDisableVertexAttribArray(frame.aSurfaceParameters)
         glUseProgram(0)
 
