@@ -1,5 +1,4 @@
 import numpy as np
-import quaternion as quat
 import tkinter as tk
 from OpenGL.GL import *
 import OpenGL.GL.shaders as shaders
@@ -512,10 +511,10 @@ class SplineOpenGLFrame(OpenGLFrame):
             float uSamples[3];
             float vSamples[3];
             ComputeSurfaceSamples(uSamples, vSamples);
-            gl_TessLevelOuter[0] = vSamples[0];
-            gl_TessLevelOuter[1] = uSamples[0];
-            gl_TessLevelOuter[2] = vSamples[2];
-            gl_TessLevelOuter[3] = uSamples[2];
+            gl_TessLevelOuter[0] = vSamples[0] > 0.0 ? vSamples[0] : vSamples[1];
+            gl_TessLevelOuter[1] = uSamples[0] > 0.0 ? uSamples[0] : uSamples[1];
+            gl_TessLevelOuter[2] = vSamples[2] > 0.0 ? vSamples[2] : vSamples[1];
+            gl_TessLevelOuter[3] = uSamples[2] > 0.0 ? uSamples[2] : uSamples[1];
             gl_TessLevelInner[0] = uSamples[1];
             gl_TessLevelInner[1] = vSamples[1];
         }}
@@ -652,13 +651,29 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         self.splineDrawList = []
         
-        self.currentQ = quat.one
-        self.lastQ = quat.one
         self.origin = None
+        self.button = None
+        self.mode = self.ROTATE
+        self.initialEye = np.array((0.0, 0.0, 3.0), np.float32)
+        self.initialLook = np.array((0.0, 0.0, 1.0), np.float32)
+        self.initialUp = np.array((0.0, 1.0, 0.0), np.float32)
+        self.anchorDistance = np.linalg.norm(self.initialEye)
+        self.speed = 0.0
 
-        self.bind("<ButtonPress-1>", self.RotateStartHandler)
-        self.bind("<ButtonRelease-1>", self.RotateEndHandler)
-        self.bind("<B1-Motion>", self.RotateDragHandler)
+        self.eye = self.initialEye.copy()
+        self.look = self.initialLook.copy()
+        self.up = self.initialUp.copy()
+        self.horizon = np.cross(self.up, self.look)
+        self.horizon = self.horizon / np.linalg.norm(self.horizon)
+        self.vertical = np.cross(self.look, self.horizon)
+        self.anchorPosition = self.eye - self.anchorDistance * self.look
+
+        self.bind("<ButtonPress-1>", self.MouseDown)
+        self.bind("<B1-Motion>", self.MouseMove)
+        self.bind("<ButtonRelease-1>", self.MouseUp)
+        self.bind("<ButtonPress-3>", self.MouseDown)
+        self.bind("<B3-Motion>", self.MouseMove)
+        self.bind("<ButtonRelease-3>", self.MouseUp)
         self.bind("<Unmap>", self.Unmap)
 
         self.computeBasisCode = self.computeBasisCode.format(maxBasis=Spline.maxOrder+1)
@@ -754,15 +769,12 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        self.translation = np.identity(4, np.float32)
         xExtent = self.width / self.height
         clipDistance = np.sqrt(3.0)
-        zDropoff = 3.0
         near = 0.01
-        far = zDropoff + clipDistance
-        top = clipDistance * near / zDropoff # Choose frustum that displays [-clipDistance,clipDistance] in y for z = -zDropoff
+        far = self.anchorDistance + clipDistance
+        top = clipDistance * near / self.anchorDistance # Choose frustum that displays [-clipDistance,clipDistance] in y for z = -self.anchorDistance
         glFrustum(-top*xExtent, top*xExtent, -top, top, near, far)
-        self.translation[3][2] = -zDropoff
         #glOrtho(-xExtent, xExtent, -1.0, 1.0, -1.0, 1.0)
 
         self.projection = glGetFloatv(GL_PROJECTION_MATRIX)
@@ -786,10 +798,40 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT )
         glLoadIdentity()
-        rotation33 = quat.as_rotation_matrix(self.currentQ * self.lastQ)
-        rotation44 = np.identity(4, np.float32)
-        rotation44[0:3,0:3] = rotation33.T # Transpose to match OpenGL format in numpy
-        transform = rotation44 @ self.translation
+
+        if self.button is not None:
+            if self.mode == self.ROTATE:
+                ratio = self.anchorDistance / (2 * 0.4142 * self.height)
+                self.eye = self.eye - ((self.current[0] - self.origin[0]) * ratio) * self.horizon + \
+                    ((self.current[1] - self.origin[1]) * ratio) * self.vertical
+                self.look = self.anchorDistance * self.eye - self.anchorPosition
+                self.look = self.look / np.linalg.norm(self.look)
+                self.origin = self.current
+            elif self.mode == self.PAN:
+                ratio = self.anchorDistance / (2 * 0.4142 * self.height)
+                self.eye = self.eye - ((self.current[0] - self.origin[0]) * ratio) * self.horizon + \
+                    ((self.current[1] - self.origin[1]) * ratio) * self.vertical
+                self.origin = self.current
+            elif self.mode == self.FLY:
+                self.vertical = self.vertical + 0.5 * self.up
+                self.vertical = self.vertical / np.linalg.norm(self.vertical)
+                x = (1.2 * 50 / 1000) * (self.width - 2 * self.current[0]) / self.width
+                y = (-1.2 * 50 / 1000) * (self.height - 2 * self.current[1]) / self.height
+                self.look = self.look + x * self.horizon + y * self.vertical
+                self.look = self.look / np.linalg.norm(self.look)
+                if self.button == 1:
+                    self.eye = self.eye - self.speed * self.look
+                elif self.button == 3:
+                    self.eye = self.eye + self.speed * self.look
+
+        self.horizon = np.cross(self.vertical, self.look)
+        self.horizon = self.horizon / np.linalg.norm(self.horizon)
+        self.vertical = np.cross(self.look, self.horizon)
+        transform = np.array(
+            ((self.horizon[0], self.vertical[0], self.look[0], 0.0),
+            (self.horizon[1], self.vertical[1], self.look[1], 0.0),
+            (self.horizon[2], self.vertical[2], self.look[2], 0.0),
+            (-np.dot(self.horizon, self.eye), -np.dot(self.vertical, self.eye), -np.dot(self.look, self.eye), 1.0)), np.float32)
 
         for spline in self.splineDrawList:
             spline.Draw(self, transform)
@@ -800,44 +842,40 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.glInitialized = False
 
     def Reset(self):
-        self.lastQ = quat.one
-        self.currentQ = quat.one
+        self.eye[:] = self.initialEye[:]
+        self.look[:] = self.initialLook[:]
+        self.up[:] = self.initialUp[:]
+        self.horizon = np.cross(self.up, self.look)
+        self.horizon = self.horizon / np.linalg.norm(self.horizon)
+        self.vertical = np.cross(self.look, self.horizon)
+        self.anchorPosition = self.eye - self.anchorDistance * self.look
         self.tkExpose(None)
     
     def SetMode(self, mode):
-        print("Mode: ", mode)
+        self.mode = mode
+        if self.mode == self.ROTATE:
+            self.anchorPosition = self.eye - self.anchorDistance * self.look
     
     def SetScale(self, scale):
-        print("Scale: ", scale)
+        self.speed = 0.1 * float(scale)
 
-    def ProjectToSphere(self, point):
-        length = np.linalg.norm(point)
-        if length <= 0.7071: # 1/sqrt(2)
-            projection = np.array((point[0], point[1], np.sqrt(1.0 - length * length)), np.float32)
-        else:
-            projection = np.array((point[0], point[1], 0.5 / length), np.float32)
-            projection = projection / np.linalg.norm(projection)
-        return projection
-
-    def RotateStartHandler(self, event):
-        self.origin = np.array(((2.0 * event.x - self.width)/self.height, (self.height - 2.0 * event.y)/self.height), np.float32)
-
-    def RotateDragHandler(self, event):
-        if self.origin is not None:
-            point = np.array(((2.0 * event.x - self.width)/self.height, (self.height - 2.0 * event.y)/self.height), np.float32)
-            a = self.ProjectToSphere(self.origin)
-            b = self.ProjectToSphere(point)
-            dot = np.dot(a, b)
-            halfCosine = np.sqrt(0.5 * (1.0 + dot))
-            halfSine = np.sqrt(0.5 * (1.0 - dot))
-            n = np.cross(a,b)
-            if 1.0e-8 < halfSine < 1.0:
-                n = (halfSine / np.linalg.norm(n)) * n
-            self.currentQ = quat.from_float_array((halfCosine, n[0], n[1], n[2]))
+    def MouseDown(self, event):
+        self.origin = np.array((event.x, event.y), np.float32)
+        self.current = self.origin
+        self.button = event.num
+        if self.mode == self.FLY:
+            self.animate = 50 # Update every 20th of a second
             self.tkExpose(None)
 
-    def RotateEndHandler(self, event):
-        if self.origin is not None:
-            self.lastQ = self.currentQ * self.lastQ
-            self.currentQ = quat.one
-            self.origin = None
+    
+    def MouseMove(self, event):
+        self.current = np.array((event.x, event.y), np.float32)
+        if self.mode == self.ROTATE or self.mode == self.PAN:
+            self.tkExpose(None)
+
+    def MouseUp(self, event):
+        self.origin = None
+        self.button = None
+        if self.mode == self.FLY:
+            self.animate = 0 # Stop animation
+            self.tkExpose(None)
