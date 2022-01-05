@@ -66,7 +66,7 @@ class bspyApp(tk.Tk):
         self.frameMode.set(SplineOpenGLFrame.ROTATE)
         self.scale = tk.Scale(buttons, orient=tk.HORIZONTAL, from_=0, to=1, resolution=0.1, showvalue=0, command=self.frame.SetScale)
         self.scale.pack(side=tk.LEFT)
-        self.scale.set(0.3)
+        self.scale.set(0.5)
 
         self.splineList = []
         self.adjust = None

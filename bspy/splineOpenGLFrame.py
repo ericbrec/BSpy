@@ -857,7 +857,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.anchorPosition = self.eye - self.anchorDistance * self.look
     
     def SetScale(self, scale):
-        self.speed = 0.1 * float(scale)
+        self.speed = 0.1 * (100.0 ** float(scale) - 1.0) / 99.0
 
     def MouseDown(self, event):
         self.origin = np.array((event.x, event.y), np.float32)
