@@ -674,6 +674,9 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.bind("<ButtonPress-3>", self.MouseDown)
         self.bind("<B3-Motion>", self.MouseMove)
         self.bind("<ButtonRelease-3>", self.MouseUp)
+        self.bind("<MouseWheel>", self.MouseWheel)
+        self.bind("<Button-4>", self.MouseWheel)
+        self.bind("<Button-5>", self.MouseWheel)
         self.bind("<Unmap>", self.Unmap)
 
         self.computeBasisCode = self.computeBasisCode.format(maxBasis=Spline.maxOrder+1)
@@ -804,13 +807,15 @@ class SplineOpenGLFrame(OpenGLFrame):
                 ratio = self.anchorDistance / (2 * 0.4142 * self.height)
                 self.eye = self.eye - ((self.current[0] - self.origin[0]) * ratio) * self.horizon + \
                     ((self.current[1] - self.origin[1]) * ratio) * self.vertical
-                self.look = self.anchorDistance * self.eye - self.anchorPosition
+                self.look = self.eye - self.anchorPosition
                 self.look = self.look / np.linalg.norm(self.look)
+                self.eye = self.anchorPosition + self.anchorDistance * self.look
                 self.origin = self.current
             elif self.mode == self.PAN:
                 ratio = self.anchorDistance / (2 * 0.4142 * self.height)
                 self.eye = self.eye - ((self.current[0] - self.origin[0]) * ratio) * self.horizon + \
                     ((self.current[1] - self.origin[1]) * ratio) * self.vertical
+                self.anchorPosition = self.eye - self.anchorDistance * self.look
                 self.origin = self.current
             elif self.mode == self.FLY:
                 self.vertical = self.vertical + 0.5 * self.up
@@ -823,6 +828,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                     self.eye = self.eye - self.speed * self.look
                 elif self.button == 3:
                     self.eye = self.eye + self.speed * self.look
+                self.anchorPosition = self.eye - self.anchorDistance * self.look
 
         self.horizon = np.cross(self.vertical, self.look)
         self.horizon = self.horizon / np.linalg.norm(self.horizon)
@@ -853,8 +859,6 @@ class SplineOpenGLFrame(OpenGLFrame):
     
     def SetMode(self, mode):
         self.mode = mode
-        if self.mode == self.ROTATE:
-            self.anchorPosition = self.eye - self.anchorDistance * self.look
     
     def SetScale(self, scale):
         self.speed = 0.1 * (100.0 ** float(scale) - 1.0) / 9.0
@@ -878,3 +882,11 @@ class SplineOpenGLFrame(OpenGLFrame):
         if self.mode == self.FLY:
             self.animate = 0 # Stop animation
             self.tkExpose(None)
+
+    def MouseWheel(self, event):
+        if event.num == 5 or event.delta < 0:
+            self.anchorDistance *= 1.1
+        elif event.num == 4 or event.delta > 0:
+            self.anchorDistance *= 0.9
+        self.eye = self.anchorPosition + self.anchorDistance * self.look
+        self.tkExpose(None)
