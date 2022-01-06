@@ -803,7 +803,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         glLoadIdentity()
 
         if self.button is not None:
-            if self.mode == self.ROTATE:
+            if (self.mode == self.ROTATE and self.button == 1) or (self.mode == self.PAN and self.button == 3):
                 ratio = self.anchorDistance / (2 * 0.4142 * self.height)
                 self.eye = self.eye - ((self.current[0] - self.origin[0]) * ratio) * self.horizon + \
                     ((self.current[1] - self.origin[1]) * ratio) * self.vertical
@@ -811,7 +811,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                 self.look = self.look / np.linalg.norm(self.look)
                 self.eye = self.anchorPosition + self.anchorDistance * self.look
                 self.origin = self.current
-            elif self.mode == self.PAN:
+            elif (self.mode == self.PAN and self.button == 1) or (self.mode == self.ROTATE and self.button == 3):
                 ratio = self.anchorDistance / (2 * 0.4142 * self.height)
                 self.eye = self.eye - ((self.current[0] - self.origin[0]) * ratio) * self.horizon + \
                     ((self.current[1] - self.origin[1]) * ratio) * self.vertical
