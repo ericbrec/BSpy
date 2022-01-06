@@ -867,7 +867,6 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.animate = 50 # Update every 20th of a second
             self.tkExpose(None)
 
-    
     def MouseMove(self, event):
         self.current = np.array((event.x, event.y), np.float32)
         if self.mode == self.ROTATE or self.mode == self.PAN:

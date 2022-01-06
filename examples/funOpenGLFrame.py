@@ -302,8 +302,8 @@ class FunOpenGLFrame(OpenGLFrame):
             outData.vM = min(int(gl_InstanceID / stride) + outData.vOrder - 1, outData.vN - 1);
             outData.uFirst = texelFetch(uSplineData, header + outData.uOrder - 1).x; // uKnots[uOrder-1]
             outData.vFirst = texelFetch(uSplineData, header + outData.uOrder + outData.uN + outData.vOrder - 1).x; // vKnots[vOrder-1]
-            outData.uSpan = texelFetch(uSplineData, header + outData.uN - 1).x - outData.uFirst; // uKnots[uN-1] - uKnots[uOrder-1]
-            outData.vSpan = texelFetch(uSplineData, header + outData.uOrder + outData.uN + outData.vN - 1).x - outData.vFirst; // vKnots[vN-1] - vKnots[vOrder-1]
+            outData.uSpan = texelFetch(uSplineData, header + outData.uN).x - outData.uFirst; // uKnots[uN] - uKnots[uOrder-1]
+            outData.vSpan = texelFetch(uSplineData, header + outData.uOrder + outData.uN + outData.vN).x - outData.vFirst; // vKnots[vN] - vKnots[vOrder-1]
             outData.u = texelFetch(uSplineData, header + outData.uM).x; // uKnots[uM]
             outData.v = texelFetch(uSplineData, header + outData.uOrder + outData.uN + outData.vM).x; // vKnots[vM]
             outData.uInterval = texelFetch(uSplineData, header + outData.uM + 1).x - outData.u; // uKnots[uM+1] - uKnots[uM]
