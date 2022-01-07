@@ -1,37 +1,74 @@
 import numpy as np
+from OpenGL.GL import *
+from PIL import Image
 from bspy.spline import Spline
-import tkinter as tk
-from examples.funOpenGLFrame import FunOpenGLFrame
+from bspy.bspyApp import bspyApp
+from bspy.splineOpenGLFrame import SplineOpenGLFrame
 
-class FunApp(tk.Tk):
-    def __init__(self, *args, **kw):
-        tk.Tk.__init__(self, *args, **kw)
-        self.title('bspy')
+class FunOpenGLFrame(SplineOpenGLFrame):
 
-        self.listBox = tk.Listbox(self, selectmode=tk.MULTIPLE)
-        self.listBox.pack(side=tk.LEFT, fill=tk.Y)
-        self.listBox.bind('<<ListboxSelect>>', self.ListChanged)
+    surfaceFragmentShaderCode = """
+        #version 410 core
+     
+        flat in SplineInfo
+        {
+            int uOrder, vOrder;
+            int uN, vN;
+            int uM, vM;
+            float uFirst, vFirst;
+            float uSpan, vSpan;
+            float u, v;
+            float uInterval, vInterval;
+        } inData;
+        in vec4 worldPosition;
+        in vec3 normal;
+        in vec2 parameters;
+        in vec2 pixelPer;
 
-        self.verticalScroll = tk.Scrollbar(self, orient=tk.VERTICAL)
-        self.verticalScroll.pack(side=tk.LEFT, fill=tk.Y)
-        self.listBox.configure(yscrollcommand=self.verticalScroll.set)
-        self.verticalScroll.config(command=self.listBox.yview)
+        uniform vec4 uFillColor;
+        uniform vec4 uLineColor;
+        uniform vec3 uLightDirection;
+        uniform int uOptions;
+        uniform sampler2D uTextureMap;
 
-        self.frame = FunOpenGLFrame(self, width=500, height=500)
-        self.frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=tk.YES)
+        out vec3 color;
+     
+        void main()
+        {
+            float specular = pow(abs(dot(normal, normalize(uLightDirection + worldPosition.xyz / length(worldPosition)))), 25.0);
+            vec3 reflection = normalize(reflect(worldPosition.xyz, normal));
+        	vec2 tex = vec2(0.5 * (1.0 - atan(reflection.x, reflection.z) / 3.1416), 0.5 * (1.0 - reflection.y));
+            color = (uOptions & (1 << 2)) > 0 ? uFillColor.rgb : vec3(0.0, 0.0, 0.0);
+            color = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * texture(uTextureMap, tex).rgb;
 
-        self.splineList = []
+        	tex = vec2((parameters.x - inData.uFirst) / inData.uSpan, (parameters.y - inData.vFirst) / inData.vSpan);
+            color = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * texture(uTextureMap, tex).rgb;
+        }
+    """
 
-    def AddSpline(self, spline):
-        self.splineList.append(spline)
-        self.listBox.insert(tk.END, spline)
+    def CreateGLResources(self):
+        SplineOpenGLFrame.CreateGLResources(self)
 
-    def ListChanged(self, event):
-        self.frame.splineDrawList = []
-        for item in self.listBox.curselection():
-            self.frame.splineDrawList.append(self.splineList[item])
-        self.frame.tkExpose(None)
+        #img = Image.open("C:/Users/ericb/OneDrive/Pictures/Backgrounds/2020 Cannon Beach.jpg")
+        img = Image.open("C:/Users/ericb/OneDrive/Pictures/Backgrounds/Tom Sailing.jpg")
+        img_data = np.array((img.getdata()), np.int8)
+        self.textureBuffer = glGenTextures(1)
+        glActiveTexture(GL_TEXTURE1)
+        glBindTexture(GL_TEXTURE_2D, self.textureBuffer)
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, img.size[0], img.size[1], 0, GL_RGB, GL_UNSIGNED_BYTE, img_data)            
+        glActiveTexture(GL_TEXTURE0)
 
+        glUseProgram(self.surfaceProgram)
+        self.uSurfaceTextureMap = glGetUniformLocation(self.surfaceProgram, 'uTextureMap')
+        glUniform1i(self.uSurfaceTextureMap, 1) # GL_TEXTURE1 is the texture map
+        self.surfaceProgram.check_validate() # Now that textures are assigned, we can validate the program
+        glUseProgram(0)
+        
 def CreateSplineFromMesh(xRange, zRange, yFunction):
     order = (3, 3)
     coefficients = np.zeros((zRange[2], xRange[2], 4), np.float32)
@@ -50,7 +87,7 @@ def CreateSplineFromMesh(xRange, zRange, yFunction):
     return Spline(order, knots, coefficients)
 
 if __name__=='__main__':
-    app = FunApp()
+    app = bspyApp(SplineOpenGLFrame=FunOpenGLFrame)
     app.AddSpline(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: np.sin(4*np.sqrt(x*x + y*y))))
     app.AddSpline(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: x*x + y*y - 1))
     app.AddSpline(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: x*x - y*y))

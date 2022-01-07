@@ -28,7 +28,7 @@ class BitCheckbutton(tk.Checkbutton):
         self.var.set(1 if self.variable.get() & self.bitMask else 0)
 
 class bspyApp(tk.Tk):
-    def __init__(self, *args, **kw):
+    def __init__(self, *args, SplineOpenGLFrame=SplineOpenGLFrame, **kw):
         tk.Tk.__init__(self, *args, **kw)
         self.title('bspy')
         self.geometry('600x500')
@@ -88,7 +88,7 @@ class bspyApp(tk.Tk):
             for button in self.checkButtons.winfo_children():
                 button.Update()
 
-        self.frame.tkExpose(None)
+        self.frame.Update()
     
     def ChangeFrameMode(self):
         self.frame.SetMode(self.frameMode.get())
@@ -138,7 +138,7 @@ class bspyApp(tk.Tk):
     def ChangeOptions(self, options):
         for spline in self.frame.splineDrawList:
             spline.options = options
-        self.frame.tkExpose(None)
+        self.frame.Update()
 
     def FillColorChange(self):
         if self.frame.splineDrawList:
@@ -147,7 +147,7 @@ class bspyApp(tk.Tk):
             if newColor[0] is not None:
                 for spline in self.frame.splineDrawList:
                     spline.fillColor[:3] = np.array(newColor[0], np.float32) / 255.0
-                self.frame.tkExpose(None)
+                self.frame.Update()
 
     def LineColorChange(self):
         if self.frame.splineDrawList:
@@ -156,4 +156,4 @@ class bspyApp(tk.Tk):
             if newColor[0] is not None:
                 for spline in self.frame.splineDrawList:
                     spline.lineColor[:3] = np.array(newColor[0], np.float32) / 255.0
-                self.frame.tkExpose(None)
+                self.frame.Update()
