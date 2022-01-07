@@ -654,19 +654,12 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.origin = None
         self.button = None
         self.mode = self.ROTATE
+        self.speed = 0.0
+
         self.initialEye = np.array((0.0, 0.0, 3.0), np.float32)
         self.initialLook = np.array((0.0, 0.0, 1.0), np.float32)
         self.initialUp = np.array((0.0, 1.0, 0.0), np.float32)
-        self.anchorDistance = np.linalg.norm(self.initialEye)
-        self.speed = 0.0
-
-        self.eye = self.initialEye.copy()
-        self.look = self.initialLook.copy()
-        self.up = self.initialUp.copy()
-        self.horizon = np.cross(self.up, self.look)
-        self.horizon = self.horizon / np.linalg.norm(self.horizon)
-        self.vertical = np.cross(self.look, self.horizon)
-        self.anchorPosition = self.eye - self.anchorDistance * self.look
+        self.ResetEye()
 
         self.bind("<ButtonPress-1>", self.MouseDown)
         self.bind("<B1-Motion>", self.MouseMove)
@@ -695,6 +688,16 @@ class SplineOpenGLFrame(OpenGLFrame):
             maxBasis=Spline.maxOrder+1)
 
         self.glInitialized = False
+    
+    def ResetEye(self):
+        self.eye = self.initialEye.copy()
+        self.look = self.initialLook.copy()
+        self.up = self.initialUp.copy()
+        self.anchorDistance = np.linalg.norm(self.initialEye)
+        self.horizon = np.cross(self.up, self.look)
+        self.horizon = self.horizon / np.linalg.norm(self.horizon)
+        self.vertical = np.cross(self.look, self.horizon)
+        self.anchorPosition = self.eye - self.anchorDistance * self.look
 
     def initgl(self):
         if not self.glInitialized:
@@ -774,9 +777,10 @@ class SplineOpenGLFrame(OpenGLFrame):
         glLoadIdentity()
         xExtent = self.width / self.height
         clipDistance = np.sqrt(3.0)
+        initialAnchorDistance = np.linalg.norm(self.initialEye)
         near = 0.01
-        far = self.anchorDistance + clipDistance
-        top = clipDistance * near / self.anchorDistance # Choose frustum that displays [-clipDistance,clipDistance] in y for z = -self.anchorDistance
+        far = initialAnchorDistance + clipDistance
+        top = clipDistance * near / initialAnchorDistance # Choose frustum that displays [-clipDistance,clipDistance] in y for z = -initialAnchorDistance
         glFrustum(-top*xExtent, top*xExtent, -top, top, near, far)
         #glOrtho(-xExtent, xExtent, -1.0, 1.0, -1.0, 1.0)
 
@@ -848,20 +852,14 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.glInitialized = False
 
     def Reset(self):
-        self.eye[:] = self.initialEye[:]
-        self.look[:] = self.initialLook[:]
-        self.up[:] = self.initialUp[:]
-        self.horizon = np.cross(self.up, self.look)
-        self.horizon = self.horizon / np.linalg.norm(self.horizon)
-        self.vertical = np.cross(self.look, self.horizon)
-        self.anchorPosition = self.eye - self.anchorDistance * self.look
+        self.ResetEye()
         self.tkExpose(None)
     
     def SetMode(self, mode):
         self.mode = mode
     
     def SetScale(self, scale):
-        self.speed = 0.1 * (100.0 ** float(scale) - 1.0) / 9.0
+        self.speed = 0.05 * (100.0 ** float(scale) - 1.0) / 9.0
 
     def MouseDown(self, event):
         self.origin = np.array((event.x, event.y), np.float32)
