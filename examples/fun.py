@@ -68,7 +68,7 @@ class FunOpenGLFrame(SplineOpenGLFrame):
         glUniform1i(self.uSurfaceTextureMap, 1) # GL_TEXTURE1 is the texture map
         self.surfaceProgram.check_validate() # Now that textures are assigned, we can validate the program
         glUseProgram(0)
-        
+
 def CreateSplineFromMesh(xRange, zRange, yFunction):
     order = (3, 3)
     coefficients = np.zeros((zRange[2], xRange[2], 4), np.float32)
@@ -93,4 +93,5 @@ if __name__=='__main__':
     app.AddSpline(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: x*x - y*y))
     for i in range(16):
         app.AddSpline(Spline((3,), (np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.5, 0.5], np.float32),), np.array([[-1, 0, 0, 1], [-0.5, i/16.0, 0, 1], [0,0,0,1], [0.5, -i/16.0, 0, 1], [1,0,0,1]], np.float32)))
+    app.AddSpline(Spline.Load("C:/Users/ericb/OneDrive/Desktop/tomsnasty.npz"))
     app.mainloop()
