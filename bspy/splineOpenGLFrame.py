@@ -661,15 +661,10 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.initialUp = np.array((0.0, 1.0, 0.0), np.float32)
         self.ResetEye()
 
-        self.bind("<ButtonPress-1>", self.MouseDown)
-        self.bind("<B1-Motion>", self.MouseMove)
-        self.bind("<ButtonRelease-1>", self.MouseUp)
-        self.bind("<ButtonPress-3>", self.MouseDown)
-        self.bind("<B3-Motion>", self.MouseMove)
-        self.bind("<ButtonRelease-3>", self.MouseUp)
+        self.bind("<ButtonPress>", self.MouseDown)
+        self.bind("<Motion>", self.MouseMove)
+        self.bind("<ButtonRelease>", self.MouseUp)
         self.bind("<MouseWheel>", self.MouseWheel)
-        self.bind("<Button-4>", self.MouseWheel)
-        self.bind("<Button-5>", self.MouseWheel)
         self.bind("<Unmap>", self.Unmap)
 
         self.computeBasisCode = self.computeBasisCode.format(maxBasis=Spline.maxOrder+1)
@@ -834,9 +829,9 @@ class SplineOpenGLFrame(OpenGLFrame):
                 y = (-1.2 * 50 / 1000) * (self.height - 2 * self.current[1]) / self.height
                 self.look = self.look + x * self.horizon + y * self.vertical
                 self.look = self.look / np.linalg.norm(self.look)
-                if self.button == 1:
+                if self.button == 1: # Left button
                     self.eye = self.eye - self.speed * self.look
-                elif self.button == 3:
+                elif self.button == 2: # Wheel button
                     self.eye = self.eye + self.speed * self.look
                 self.anchorPosition = self.eye - self.anchorDistance * self.look
 
@@ -874,6 +869,12 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.origin = np.array((event.x, event.y), np.float32)
         self.current = self.origin
         self.button = event.num
+
+        if self.button == 4 or self.button == 5: # MouseWheel
+            self.anchorDistance *= 0.9 if self.button == 4 else 1.1
+            self.eye = self.anchorPosition + self.anchorDistance * self.look
+            self.Update()
+        
         if self.mode == self.FLY:
             self.animate = 50 # Update every 20th of a second
             self.Update()
@@ -891,9 +892,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.Update()
 
     def MouseWheel(self, event):
-        if event.num == 5 or event.delta < 0:
+        if event.delta < 0:
             self.anchorDistance *= 1.1
-        elif event.num == 4 or event.delta > 0:
+        elif event.delta > 0:
             self.anchorDistance *= 0.9
         self.eye = self.anchorPosition + self.anchorDistance * self.look
         self.Update()
