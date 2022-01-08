@@ -1,5 +1,6 @@
 import numpy as np
 from OpenGL.GL import *
+from os import path
 
 class Spline:
 
@@ -36,9 +37,10 @@ class Spline:
         self.fillColor = np.array((0.0, 1.0, 0.0, 1.0), np.float32)
         self.lineColor = np.array((0.0, 0.0, 0.0, 1.0), np.float32)
         self.options = self.SHADED | self.BOUNDARY
+        self.name = "[{0}, {1}]".format(self.coefficients[0], self.coefficients[1])
 
     def __str__(self):
-        return "[{0}, {1}]".format(self.coefficients[0], self.coefficients[1])
+        return self.name
     
     def DrawCurve(self, frame, drawCoefficients):
         if self.options & self.LINES:
@@ -121,4 +123,6 @@ class Spline:
         for i in range(len(order)):
             knots.append(kw["knots{count}".format(count=i)])
         coefficients = kw["coefficients"]
-        return Spline(order, knots, coefficients)
+        spline = Spline(order, knots, coefficients)
+        spline.name = path.splitext(path.split(fileName)[1])[0]
+        return spline
