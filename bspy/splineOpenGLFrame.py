@@ -760,7 +760,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.uSurfaceFillColor = glGetUniformLocation(self.surfaceProgram, 'uFillColor')
         self.uSurfaceLineColor = glGetUniformLocation(self.surfaceProgram, 'uLineColor')
         self.uSurfaceLightDirection = glGetUniformLocation(self.surfaceProgram, 'uLightDirection')
-        self.lightDirection = np.array((0.6, 0.3, -1.0), np.float32)
+        self.lightDirection = np.array((0.63960218, 0.63960218, 0.42640144), np.float32)
         self.lightDirection = self.lightDirection / np.linalg.norm(self.lightDirection)
         glUniform3fv(self.uSurfaceLightDirection, 1, self.lightDirection)
         self.uSurfaceOptions = glGetUniformLocation(self.surfaceProgram, 'uOptions')
