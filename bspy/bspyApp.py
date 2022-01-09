@@ -107,13 +107,10 @@ class bspyApp(tk.Tk):
                 self.bits.set(self.frame.splineDrawList[0].options)
             else:
                 self.bits.set(0)
-            BitCheckbutton(self.checkButtons, Spline.POINTS, text="Points", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
-            BitCheckbutton(self.checkButtons, Spline.LINES, text="Lines", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
             BitCheckbutton(self.checkButtons, Spline.SHADED, text="Shaded", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
-            BitCheckbutton(self.checkButtons, Spline.SYMBOL, text="Symbol", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
             BitCheckbutton(self.checkButtons, Spline.BOUNDARY, text="Boundary", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
             BitCheckbutton(self.checkButtons, Spline.ISOPARMS, text="Isoparms", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
-            BitCheckbutton(self.checkButtons, Spline.LABEL, text="Label", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
+            BitCheckbutton(self.checkButtons, Spline.HULL, text="Hull", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
 
             buttons = tk.LabelFrame(self.adjust, text="Color")
             buttons.pack(side=tk.LEFT, fill=tk.BOTH, expand=tk.YES)

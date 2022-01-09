@@ -9,13 +9,10 @@ class Spline:
     maxKnots = maxCoefficients + maxOrder
     maxFloats = 4 + 2 * maxKnots + 4 * maxCoefficients * maxCoefficients
 
-    POINTS = (1 << 0)
-    LINES = (1 << 1)
-    SHADED = (1 << 2)
-    SYMBOL = (1 << 3)
-    BOUNDARY = (1 << 4)
-    ISOPARMS = (1 << 5)
-    LABEL = (1 << 6)
+    HULL = (1 << 0)
+    SHADED = (1 << 1)
+    BOUNDARY = (1 << 2)
+    ISOPARMS = (1 << 3)
 
     def __init__(self, order, knots, coefficients):
         floatCount = 0
@@ -43,7 +40,7 @@ class Spline:
         return self.name
     
     def DrawCurve(self, frame, drawCoefficients):
-        if self.options & self.LINES:
+        if self.options & self.HULL:
             glColor3f(0.0, 0.0, 1.0)
             glBegin(GL_LINE_STRIP)
             for point in drawCoefficients:
@@ -69,7 +66,7 @@ class Spline:
         glUseProgram(0)
 
     def DrawSurface(self, frame, drawCoefficients):
-        if self.options & self.LINES:
+        if self.options & self.HULL:
             glColor3f(0.0, 0.0, 1.0)
             for pointList in drawCoefficients:
                 glBegin(GL_LINE_STRIP)
