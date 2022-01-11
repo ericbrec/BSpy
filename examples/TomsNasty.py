@@ -1,5 +1,5 @@
 import numpy as np
-from bspy.spline import Spline
+from bspy.drawableSpline import DrawableSpline
 from bspy.bspyApp import bspyApp
 
 if __name__=='__main__':
@@ -10093,5 +10093,5 @@ if __name__=='__main__':
         (-0.2599999999999999, 0.1231608688396116, -1.1996283909327388, 1.0),
         (-0.2599999999999999, 0.17470808987183925, -1.2, 1.0)], np.float32)
     coefficients = np.reshape(coefficients, (11,900,4))
-    spline = Spline(order, [uKnots, vKnots], coefficients)
+    spline = DrawableSpline(order, [uKnots, vKnots], coefficients)
     spline.Save("C:/Users/ericb/OneDrive/Desktop/tomsnasty")

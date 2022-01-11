@@ -2,7 +2,7 @@ import numpy as np
 from OpenGL.GL import *
 from os import path
 
-class Spline:
+class DrawableSpline:
 
     maxOrder = 9
     maxCoefficients = 120
@@ -120,6 +120,6 @@ class Spline:
         for i in range(len(order)):
             knots.append(kw["knots{count}".format(count=i)])
         coefficients = kw["coefficients"]
-        spline = Spline(order, knots, coefficients)
+        spline = DrawableSpline(order, knots, coefficients)
         spline.name = path.splitext(path.split(fileName)[1])[0]
         return spline

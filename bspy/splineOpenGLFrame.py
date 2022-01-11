@@ -3,7 +3,7 @@ import tkinter as tk
 from OpenGL.GL import *
 import OpenGL.GL.shaders as shaders
 from pyopengltk import OpenGLFrame
-from bspy.spline import Spline
+from bspy.drawableSpline import DrawableSpline
 
 class SplineOpenGLFrame(OpenGLFrame):
 
@@ -667,20 +667,20 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.bind("<MouseWheel>", self.MouseWheel)
         self.bind("<Unmap>", self.Unmap)
 
-        self.computeBasisCode = self.computeBasisCode.format(maxBasis=Spline.maxOrder+1)
-        self.computeSurfaceSamplesCode = self.computeSurfaceSamplesCode.format(maxOrder=Spline.maxOrder)
+        self.computeBasisCode = self.computeBasisCode.format(maxBasis=DrawableSpline.maxOrder+1)
+        self.computeSurfaceSamplesCode = self.computeSurfaceSamplesCode.format(maxOrder=DrawableSpline.maxOrder)
         self.curveTCShaderCode = self.curveTCShaderCode.format(
             computeSampleRateCode=self.computeSampleRateCode,
             computeCurveSamplesCode=self.computeCurveSamplesCode)
         self.curveTEShaderCode = self.curveTEShaderCode.format(
             computeBasisCode=self.computeBasisCode,
-            maxBasis=Spline.maxOrder+1)
+            maxBasis=DrawableSpline.maxOrder+1)
         self.surfaceTCShaderCode = self.surfaceTCShaderCode.format(
             computeSampleRateCode=self.computeSampleRateCode,
             computeSurfaceSamplesCode=self.computeSurfaceSamplesCode)
         self.surfaceTEShaderCode = self.surfaceTEShaderCode.format(
             computeBasisCode=self.computeBasisCode,
-            maxBasis=Spline.maxOrder+1)
+            maxBasis=DrawableSpline.maxOrder+1)
 
         self.glInitialized = False
     
@@ -733,7 +733,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         glBindBuffer(GL_TEXTURE_BUFFER, self.splineDataBuffer)
         glBindTexture(GL_TEXTURE_BUFFER, self.splineTextureBuffer)
         glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, self.splineDataBuffer)
-        glBufferData(GL_TEXTURE_BUFFER, 4 * Spline.maxFloats, None, GL_STATIC_READ)
+        glBufferData(GL_TEXTURE_BUFFER, 4 * DrawableSpline.maxFloats, None, GL_STATIC_READ)
 
         self.parameterBuffer = glGenBuffers(1)
         glBindBuffer(GL_ARRAY_BUFFER, self.parameterBuffer)

@@ -2,7 +2,7 @@ import numpy as np
 import tkinter as tk
 from tkinter.colorchooser import askcolor
 from bspy.splineOpenGLFrame import SplineOpenGLFrame
-from bspy.spline import Spline
+from bspy.drawableSpline import DrawableSpline
 
 class BitCheckbutton(tk.Checkbutton):
     def __init__(self, parent, bitMask, **kw):
@@ -107,10 +107,10 @@ class bspyApp(tk.Tk):
                 self.bits.set(self.frame.splineDrawList[0].options)
             else:
                 self.bits.set(0)
-            BitCheckbutton(self.checkButtons, Spline.SHADED, text="Shaded", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
-            BitCheckbutton(self.checkButtons, Spline.BOUNDARY, text="Boundary", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
-            BitCheckbutton(self.checkButtons, Spline.ISOPARMS, text="Isoparms", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
-            BitCheckbutton(self.checkButtons, Spline.HULL, text="Hull", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
+            BitCheckbutton(self.checkButtons, DrawableSpline.SHADED, text="Shaded", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
+            BitCheckbutton(self.checkButtons, DrawableSpline.BOUNDARY, text="Boundary", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
+            BitCheckbutton(self.checkButtons, DrawableSpline.ISOPARMS, text="Isoparms", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
+            BitCheckbutton(self.checkButtons, DrawableSpline.HULL, text="Hull", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
 
             buttons = tk.LabelFrame(self.adjust, text="Color")
             buttons.pack(side=tk.LEFT, fill=tk.BOTH, expand=tk.YES)
