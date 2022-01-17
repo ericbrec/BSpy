@@ -346,23 +346,6 @@ teapotVertices = (
 	( 1.4250, -0.7980,  0.0000)
 )
 
-def CreateSplineFromMesh(xRange, zRange, yFunction):
-    order = (3, 3)
-    coefficients = np.zeros((zRange[2], xRange[2], 4), np.float32)
-    knots = (np.zeros(xRange[2] + order[0], np.float32), np.zeros(zRange[2] + order[1], np.float32))
-    knots[0][:xRange[2]] = np.linspace(xRange[0], xRange[1], xRange[2], dtype=np.float32)[:]
-    knots[0][xRange[2]:] = xRange[1]
-    knots[1][:zRange[2]] = np.linspace(zRange[0], zRange[1], zRange[2], dtype=np.float32)[:]
-    knots[1][zRange[2]:] = zRange[1]
-    for j in range(zRange[2]):
-        for i in range(xRange[2]):
-            coefficients[j, i, 0] = knots[0][i]
-            coefficients[j, i, 1] = yFunction(knots[0][i], knots[1][j])
-            coefficients[j, i, 2] = knots[1][j]
-            coefficients[j, i, 3] = 1.0
-    
-    return DrawableSpline(order, knots, coefficients)
-
 if __name__=='__main__':
     app = bspyApp()
     knots = np.array((0,0,0,0,1,1,1,1), np.float32)
