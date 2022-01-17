@@ -14,7 +14,7 @@ class DrawableSpline:
     BOUNDARY = (1 << 2)
     ISOPARMS = (1 << 3)
 
-    def __init__(self, order, knots, coefficients):
+    def __init__(self, order, knots, coefficients, name=None):
         floatCount = 0
         coefficientCount = 1
         dimension = len(order)
@@ -34,7 +34,10 @@ class DrawableSpline:
         self.fillColor = np.array((0.0, 1.0, 0.0, 1.0), np.float32)
         self.lineColor = np.array((0.0, 0.0, 0.0, 1.0), np.float32)
         self.options = self.SHADED | self.BOUNDARY
-        self.name = "[{0}, {1}]".format(self.coefficients[0], self.coefficients[1])
+        if name is None:
+            self.name = "[{0}, {1}]".format(self.coefficients[0], self.coefficients[1])
+        else:
+            self.name = name
 
     def __str__(self):
         return self.name
@@ -120,6 +123,5 @@ class DrawableSpline:
         for i in range(len(order)):
             knots.append(kw["knots{count}".format(count=i)])
         coefficients = kw["coefficients"]
-        spline = DrawableSpline(order, knots, coefficients)
-        spline.name = path.splitext(path.split(fileName)[1])[0]
+        spline = DrawableSpline(order, knots, coefficients, path.splitext(path.split(fileName)[1])[0])
         return spline
