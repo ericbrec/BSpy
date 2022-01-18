@@ -22,36 +22,38 @@ class Spline:
         return "[{0}, {1}]".format(self.coefficients[0], self.coefficients[1])
 
     def DrawPoint(self, screenScale, drawCoefficients, m, u, deltaU):
-        uBasis = np.zeros(self.order + 1, np.float32)
-        duBasis = np.zeros(self.order + 1, np.float32)
-        du2Basis = np.zeros(self.order + 1, np.float32)
-        uBasis[self.order-1] = 1.0
-        for degree in range(1, self.order):
-            b = self.order - degree - 1
-            for n in range(m-degree, m+1):
-                gap0 = self.knots[n+degree] - self.knots[n]
-                gap1 = self.knots[n+degree+1] - self.knots[n+1]
-                gap0 = 0.0 if gap0 < 1.0e-8 else 1.0 / gap0
-                gap1 = 0.0 if gap1 < 1.0e-8 else 1.0 / gap1
-                val0 = (u - self.knots[n]) * gap0
-                val1 = (self.knots[n+degree+1] - u) * gap1
+        uBasis = np.zeros(self.order, np.float32)
+        duBasis = np.zeros(self.order, np.float32)
+        du2Basis = np.zeros(self.order, np.float32)
+        order = self.order
+        knots = self.knots
+        uBasis = np.zeros(order)
+        uBasis[order-1] = 1.0
+        for degree in range(1, order):
+            b = order - degree
+            for i in range(m - degree, m):
+                gap = knots[i+degree] - knots[i]
+                gap = 1.0 / gap if gap > 0.0 else 0.0
                 if degree == self.order - 2:
-                    d0 = degree * gap0
-                    d1 = -degree * gap1
-                    du2Basis[b] = uBasis[b] * d0 + uBasis[b+1] * d1
+                    alpha = degree * gap
+                    du2Basis[b-1] += -alpha * uBasis[b]
+                    du2Basis[b] = alpha * uBasis[b]
                 elif degree == self.order - 1:
-                    d0 = degree * gap0
-                    d1 = -degree * gap1
-                    duBasis[b] = uBasis[b] * d0 + uBasis[b+1] * d1
-                    du2Basis[b] = du2Basis[b] * d0 + du2Basis[b+1] * d1
-                uBasis[b] = uBasis[b] * val0 + uBasis[b+1] * val1
+                    alpha = degree * gap
+                    duBasis[b-1] += -alpha * uBasis[b]
+                    duBasis[b] = alpha * uBasis[b]
+                    du2Basis[b-1] += -alpha * du2Basis[b]
+                    du2Basis[b] *= alpha
+                alpha = (u - knots[i]) * gap
+                uBasis[b-1] += (1.0 - alpha) * uBasis[b]
+                uBasis[b] *= alpha
                 b += 1
         
         point = np.zeros(4, np.float32)
         dPoint = np.zeros(4, np.float32)
         d2Point = np.zeros(4, np.float32)
         b = 0
-        for n in range(m+1-self.order, m+1):
+        for n in range(m-self.order, m):
             point += uBasis[b] * drawCoefficients[n]
             dPoint += duBasis[b] * drawCoefficients[n]
             d2Point += du2Basis[b] * drawCoefficients[n]
@@ -99,16 +101,16 @@ class Spline:
         glEnd()
 
         glColor3f(0.0, 1.0, 0.0)
-        for m in range(self.order-1, len(self.knots)-self.order):
-            u = self.knots[m]
-            deltaU = 0.5 * (self.knots[m+1] - u)
+        for m in range(self.order, len(self.knots)-self.order+1):
+            u = self.knots[m-1]
+            deltaU = 0.5 * (self.knots[m] - u)
             vertices = 0
             glBegin(GL_LINE_STRIP)
-            while u < self.knots[m+1] and vertices < GL_MAX_GEOMETRY_OUTPUT_VERTICES - 1:
+            while u < self.knots[m] and vertices < GL_MAX_GEOMETRY_OUTPUT_VERTICES - 1:
                 deltaU = self.DrawPoint(frame.screenScale, drawCoefficients, m, u, deltaU)
                 u += deltaU
                 vertices += 1
-            self.DrawPoint(frame.screenScale, drawCoefficients, m, self.knots[m+1], deltaU)
+            self.DrawPoint(frame.screenScale, drawCoefficients, m, self.knots[m], deltaU)
             glEnd()
 
         glUseProgram(frame.program)
@@ -127,7 +129,7 @@ class Spline:
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
 
         glEnableVertexAttribArray(frame.aParameters)
-        glDrawArraysInstanced(GL_POINTS, 0, 1, len(drawCoefficients) - self.order + 1)
+        #glDrawArraysInstanced(GL_POINTS, 0, 1, len(drawCoefficients) - self.order + 1)
         glDisableVertexAttribArray(frame.aParameters)
 
         glUseProgram(0)
@@ -337,7 +339,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             glUniform1i(self.uSplineData, 0) # 0 is the active texture (default is 0)
             glUseProgram(0)
 
-            glEnable( GL_DEPTH_TEST )
+            #glEnable( GL_DEPTH_TEST )
             glClearColor(1.0, 1.0, 1.0, 0.0)
             self.initialized = True
 
