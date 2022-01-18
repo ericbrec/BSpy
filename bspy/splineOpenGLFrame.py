@@ -13,11 +13,11 @@ class SplineOpenGLFrame(OpenGLFrame):
 
     computeBasisCode = """
         void ComputeBasis(in int offset, in int order, in int n, in int m, in float u, 
-            out float uBasis[{maxBasis}], out float duBasis[{maxBasis}])
+            out float uBasis[{maxOrder}], out float duBasis[{maxOrder}])
         {{
             int degree = 1;
 
-            for (int i = 0; i < {maxBasis}; i++)
+            for (int i = 0; i < {maxOrder}; i++)
             {{
                 uBasis[i] = 0.0;
                 duBasis[i] = 0.0;
@@ -26,37 +26,34 @@ class SplineOpenGLFrame(OpenGLFrame):
 
             while (degree < order - 1)
             {{
-                int b = order - degree - 1;
-                for (int i = m - degree; i < m + 1; i++)
+                int b = order - degree;
+                for (int i = m - degree; i < m; i++)
                 {{
-                    float gap0 = texelFetch(uSplineData, offset + i + degree).x - texelFetch(uSplineData, offset + i).x; // knots[i+degree] - knots[i]
-                    float gap1 = texelFetch(uSplineData, offset + i + degree + 1).x - texelFetch(uSplineData, offset + i + 1).x; // knots[i+degree+1] - knots[i+1]
-                    gap0 = gap0 > 0.0 ? 1.0 / gap0 : 0.0;
-                    gap1 = gap1 > 0.0 ? 1.0 / gap1 : 0.0;
+                    float gap = texelFetch(uSplineData, offset + i + degree).x - texelFetch(uSplineData, offset + i).x; // knots[i+degree] - knots[i]
+                    gap = gap > 0.0 ? 1.0 / gap : 0.0;
 
-                    float val0 = (u - texelFetch(uSplineData, offset + i).x) * gap0; // (u - knots[i]) * gap0;
-                    float val1 = (texelFetch(uSplineData, offset + i + degree + 1).x - u) * gap1; // (knots[i+degree+1] - u) * gap1;
-                    uBasis[b] = uBasis[b] * val0 + uBasis[b+1] * val1;
+                    float alpha = (u - texelFetch(uSplineData, offset + i).x) * gap; // (u - knots[i]) * gap;
+                    uBasis[b-1] += (1.0 - alpha) * uBasis[b];
+                    uBasis[b] *= alpha;
                     b++;
                 }}
                 degree++;
             }}
             if (degree < order)
             {{
-                int b = order - degree - 1;
-                for (int i = m - degree; i < m + 1; i++)
+                int b = order - degree;
+                for (int i = m - degree; i < m; i++)
                 {{
-                    float gap0 = texelFetch(uSplineData, offset + i + degree).x - texelFetch(uSplineData, offset + i).x; // knots[i+degree] - knots[i]
-                    float gap1 = texelFetch(uSplineData, offset + i + degree + 1).x - texelFetch(uSplineData, offset + i + 1).x; // knots[i+degree+1] - knots[i+1]
-                    gap0 = gap0 > 0.0 ? 1.0 / gap0 : 0.0;
-                    gap1 = gap1 > 0.0 ? 1.0 / gap1 : 0.0;
+                    float gap = texelFetch(uSplineData, offset + i + degree).x - texelFetch(uSplineData, offset + i).x; // knots[i+degree] - knots[i]
+                    gap = gap > 0.0 ? 1.0 / gap : 0.0;
 
-                    float d0 = degree * gap0;
-                    float d1 = -degree * gap1;
-                    duBasis[b] = uBasis[b] * d0 + uBasis[b+1] * d1;
-                    float val0 = (u - texelFetch(uSplineData, offset + i).x) * gap0; // (u - knots[i]) * gap0;
-                    float val1 = (texelFetch(uSplineData, offset + i + degree + 1).x - u) * gap1; // (knots[i+degree+1] - u) * gap1;
-                    uBasis[b] = uBasis[b] * val0 + uBasis[b+1] * val1;
+                    float alpha = degree * gap;
+                    duBasis[b-1] += -alpha * uBasis[b];
+                    duBasis[b] = alpha * uBasis[b];
+
+                    alpha = (u - texelFetch(uSplineData, offset + i).x) * gap; // (u - knots[i]) * gap;
+                    uBasis[b-1] += (1.0 - alpha) * uBasis[b];
+                    uBasis[b] *= alpha;
                     b++;
                 }}
             }}
@@ -238,9 +235,9 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         void main()
         {{
-            float uBasis[{maxBasis}];
-            float duBasis[{maxBasis}];
-            ComputeBasis(header, inData.uOrder, inData.uN, inData.uM,
+            float uBasis[{maxOrder}];
+            float duBasis[{maxOrder}];
+            ComputeBasis(header, inData.uOrder, inData.uN, inData.uM+1,
                 inData.u + gl_TessCoord.x * inData.uInterval, 
                 uBasis, duBasis);
             
@@ -561,15 +558,15 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         void main()
         {{
-            float uBasis[{maxBasis}];
-            float duBasis[{maxBasis}];
+            float uBasis[{maxOrder}];
+            float duBasis[{maxOrder}];
             parameters.x = inData.u + gl_TessCoord.x * inData.uInterval;
-            ComputeBasis(header, inData.uOrder, inData.uN, inData.uM, parameters.x, uBasis, duBasis);
+            ComputeBasis(header, inData.uOrder, inData.uN, inData.uM+1, parameters.x, uBasis, duBasis);
 
-            float vBasis[{maxBasis}];
-            float dvBasis[{maxBasis}];
+            float vBasis[{maxOrder}];
+            float dvBasis[{maxOrder}];
             parameters.y = inData.v + gl_TessCoord.y * inData.vInterval;
-            ComputeBasis(header + inData.uOrder+inData.uN, inData.vOrder, inData.vN, inData.vM, parameters.y, vBasis, dvBasis);
+            ComputeBasis(header + inData.uOrder+inData.uN, inData.vOrder, inData.vN, inData.vM+1, parameters.y, vBasis, dvBasis);
             
             vec4 point = vec4(0.0, 0.0, 0.0, 0.0);
             vec3 duPoint = vec3(0.0, 0.0, 0.0);
@@ -667,20 +664,20 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.bind("<MouseWheel>", self.MouseWheel)
         self.bind("<Unmap>", self.Unmap)
 
-        self.computeBasisCode = self.computeBasisCode.format(maxBasis=DrawableSpline.maxOrder+1)
+        self.computeBasisCode = self.computeBasisCode.format(maxOrder=DrawableSpline.maxOrder)
         self.computeSurfaceSamplesCode = self.computeSurfaceSamplesCode.format(maxOrder=DrawableSpline.maxOrder)
         self.curveTCShaderCode = self.curveTCShaderCode.format(
             computeSampleRateCode=self.computeSampleRateCode,
             computeCurveSamplesCode=self.computeCurveSamplesCode)
         self.curveTEShaderCode = self.curveTEShaderCode.format(
             computeBasisCode=self.computeBasisCode,
-            maxBasis=DrawableSpline.maxOrder+1)
+            maxOrder=DrawableSpline.maxOrder)
         self.surfaceTCShaderCode = self.surfaceTCShaderCode.format(
             computeSampleRateCode=self.computeSampleRateCode,
             computeSurfaceSamplesCode=self.computeSurfaceSamplesCode)
         self.surfaceTEShaderCode = self.surfaceTEShaderCode.format(
             computeBasisCode=self.computeBasisCode,
-            maxBasis=DrawableSpline.maxOrder+1)
+            maxOrder=DrawableSpline.maxOrder)
 
         self.glInitialized = False
     
