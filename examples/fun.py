@@ -14,7 +14,7 @@ class FunOpenGLFrame(SplineOpenGLFrame):
         {
             int uOrder, vOrder;
             int uN, vN;
-            int uM, vM;
+            int uKnot, vKnot;
             float uFirst, vFirst;
             float uSpan, vSpan;
             float u, v;
