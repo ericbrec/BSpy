@@ -29,10 +29,11 @@ class SplineOpenGLFrame(OpenGLFrame):
                 int b = order - degree;
                 for (int i = knot - degree; i < knot; i++)
                 {{
-                    float gap = texelFetch(uSplineData, offset + i + degree).x - texelFetch(uSplineData, offset + i).x; // knots[i+degree] - knots[i]
+                    float knotValue = texelFetch(uSplineData, offset + i).x; // knots[i]
+                    float gap = texelFetch(uSplineData, offset + i + degree).x - knotValue; // knots[i+degree] - knots[i]
                     gap = gap > 0.0 ? 1.0 / gap : 0.0;
 
-                    float alpha = (u - texelFetch(uSplineData, offset + i).x) * gap; // (u - knots[i]) * gap;
+                    float alpha = (u - knotValue) * gap; // (u - knots[i]) * gap;
                     uBasis[b-1] += (1.0 - alpha) * uBasis[b];
                     uBasis[b] *= alpha;
                     b++;
@@ -44,14 +45,15 @@ class SplineOpenGLFrame(OpenGLFrame):
                 int b = order - degree;
                 for (int i = knot - degree; i < knot; i++)
                 {{
-                    float gap = texelFetch(uSplineData, offset + i + degree).x - texelFetch(uSplineData, offset + i).x; // knots[i+degree] - knots[i]
+                    float knotValue = texelFetch(uSplineData, offset + i).x; // knots[i]
+                    float gap = texelFetch(uSplineData, offset + i + degree).x - knotValue; // knots[i+degree] - knots[i]
                     gap = gap > 0.0 ? 1.0 / gap : 0.0;
 
                     float alpha = degree * gap;
                     duBasis[b-1] += -alpha * uBasis[b];
                     duBasis[b] = alpha * uBasis[b];
 
-                    alpha = (u - texelFetch(uSplineData, offset + i).x) * gap; // (u - knots[i]) * gap;
+                    alpha = (u - knotValue) * gap; // (u - knots[i]) * gap;
                     uBasis[b-1] += (1.0 - alpha) * uBasis[b];
                     uBasis[b] *= alpha;
                     b++;
