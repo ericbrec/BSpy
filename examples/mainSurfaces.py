@@ -21,13 +21,13 @@ class Spline:
     def __str__(self):
         return "[{0}, {1}]".format(self.coefficients[0], self.coefficients[1])
 
-    def ComputeBasis(self, dimension, knot, u):
+    def ComputeBSpline(self, dimension, knot, u):
         uOrder = self.order[dimension]
         uKnots = self.knots[dimension]
-        uBasis = np.zeros(uOrder + 1, np.float32)
-        duBasis = np.zeros(uOrder + 1, np.float32)
-        du2Basis = np.zeros(uOrder + 1, np.float32)
-        uBasis[uOrder-1] = 1.0
+        uBSpline = np.zeros(uOrder + 1, np.float32)
+        duBSpline = np.zeros(uOrder + 1, np.float32)
+        du2BSpline = np.zeros(uOrder + 1, np.float32)
+        uBSpline[uOrder-1] = 1.0
         for degree in range(1, uOrder):
             b = uOrder - degree - 1
             for n in range(knot-degree, knot+1):
@@ -40,16 +40,16 @@ class Spline:
                 if degree == uOrder - 2:
                     d0 = degree * gap0
                     d1 = -degree * gap1
-                    du2Basis[b] = uBasis[b] * d0 + uBasis[b+1] * d1
+                    du2BSpline[b] = uBSpline[b] * d0 + uBSpline[b+1] * d1
                 elif degree == uOrder - 1:
                     d0 = degree * gap0
                     d1 = -degree * gap1
-                    duBasis[b] = uBasis[b] * d0 + uBasis[b+1] * d1
-                    du2Basis[b] = du2Basis[b] * d0 + du2Basis[b+1] * d1
-                uBasis[b] = uBasis[b] * val0 + uBasis[b+1] * val1
+                    duBSpline[b] = uBSpline[b] * d0 + uBSpline[b+1] * d1
+                    du2BSpline[b] = du2BSpline[b] * d0 + du2BSpline[b+1] * d1
+                uBSpline[b] = uBSpline[b] * val0 + uBSpline[b+1] * val1
                 b += 1
         
-        return uBasis, duBasis, du2Basis
+        return uBSpline, duBSpline, du2BSpline
     
     def ComputeDelta(self, screenScale, point, dPoint, d2Point, delta):
         d2Screen = np.empty(2, np.float32)
@@ -94,16 +94,16 @@ class Spline:
 
     def DrawCurvePoints(self, screenScale, drawCoefficients, knot, u, deltaU):
         uOrder = self.order[0]
-        uBasis, duBasis, du2Basis = self.ComputeBasis(0, knot, u)
+        uBSpline, duBSpline, du2BSpline = self.ComputeBSpline(0, knot, u)
 
         point = np.zeros(4, np.float32)
         dPoint = np.zeros(4, np.float32)
         d2Point = np.zeros(4, np.float32)
         b = 0
         for n in range(knot+1-uOrder, knot+1):
-            point += uBasis[b] * drawCoefficients[n]
-            dPoint += duBasis[b] * drawCoefficients[n]
-            d2Point += du2Basis[b] * drawCoefficients[n]
+            point += uBSpline[b] * drawCoefficients[n]
+            dPoint += duBSpline[b] * drawCoefficients[n]
+            d2Point += du2BSpline[b] * drawCoefficients[n]
             b += 1
         
         glVertex3f(point[0], point[1], point[2])
@@ -221,10 +221,10 @@ class Spline:
         self.samples = max(self.samples, uInterval / deltaU, vInterval / deltaV)
         return deltaU, deltaV
 
-    def DrawSurfacePoints(self, screenScale, drawCoefficients, uKnot, uBasis, duBasis, uBasisNext, duBasisNext, vKnot, v, deltaV):
+    def DrawSurfacePoints(self, screenScale, drawCoefficients, uKnot, uBSpline, duBSpline, uBSplineNext, duBSplineNext, vKnot, v, deltaV):
         uOrder = self.order[0]
         vOrder = self.order[1]
-        vBasis, dvBasis, dv2Basis = self.ComputeBasis(1, vKnot, v)
+        vBSpline, dvBSpline, dv2BSpline = self.ComputeBSpline(1, vKnot, v)
 
         point = np.zeros(4, np.float32)
         duPoint = np.zeros(4, np.float32)
@@ -234,10 +234,10 @@ class Spline:
         for vN in range(vKnot+1-vOrder, vKnot+1):
             uB = 0
             for uN in range(uKnot+1-uOrder, uKnot+1):
-                point += uBasis[uB] * vBasis[vB] * drawCoefficients[uN, vN]
-                duPoint += duBasis[uB] * vBasis[vB] * drawCoefficients[uN, vN]
-                dvPoint += uBasis[uB] * dvBasis[vB] * drawCoefficients[uN, vN]
-                dv2Point += uBasis[uB] * dv2Basis[vB] * drawCoefficients[uN, vN]
+                point += uBSpline[uB] * vBSpline[vB] * drawCoefficients[uN, vN]
+                duPoint += duBSpline[uB] * vBSpline[vB] * drawCoefficients[uN, vN]
+                dvPoint += uBSpline[uB] * dvBSpline[vB] * drawCoefficients[uN, vN]
+                dv2Point += uBSpline[uB] * dv2BSpline[vB] * drawCoefficients[uN, vN]
                 uB += 1
             vB += 1
 
@@ -253,10 +253,10 @@ class Spline:
         for vN in range(vKnot+1-vOrder, vKnot+1):
             uB = 0
             for uN in range(uKnot+1-uOrder, uKnot+1):
-                point += uBasisNext[uB] * vBasis[vB] * drawCoefficients[uN, vN]
-                duPoint += duBasisNext[uB] * vBasis[vB] * drawCoefficients[uN, vN]
-                dvPoint += uBasisNext[uB] * dvBasis[vB] * drawCoefficients[uN, vN]
-                dv2Point += uBasisNext[uB] * dv2Basis[vB] * drawCoefficients[uN, vN]
+                point += uBSplineNext[uB] * vBSpline[vB] * drawCoefficients[uN, vN]
+                duPoint += duBSplineNext[uB] * vBSpline[vB] * drawCoefficients[uN, vN]
+                dvPoint += uBSplineNext[uB] * dvBSpline[vB] * drawCoefficients[uN, vN]
+                dv2Point += uBSplineNext[uB] * dv2BSpline[vB] * drawCoefficients[uN, vN]
                 uB += 1
             vB += 1
 
@@ -286,7 +286,7 @@ class Spline:
             vKnot = vOrder - 1 + instance % (drawCoefficients.shape[1] - vOrder + 1)
             minDeltaU, minDeltaV = self.ComputeSurfaceDeltas(frame.screenScale, drawCoefficients, uKnot, vKnot)
             u = uKnots[uKnot]
-            uBasis, duBasis, du2Basis = self.ComputeBasis(0, uKnot, u)
+            uBSpline, duBSpline, du2BSpline = self.ComputeBSpline(0, uKnot, u)
             vertices = 0
             verticesPerU = 0
             while u < uKnots[uKnot+1]:
@@ -298,9 +298,9 @@ class Spline:
                     du2Point = np.zeros(4, np.float32)
                     uB = 0
                     for uN in range(uKnot+1-uOrder, uKnot+1):
-                        point += uBasis[uB] * drawCoefficients[uN, vN]
-                        duPoint += duBasis[uB] * drawCoefficients[uN, vN]
-                        du2Point += du2Basis[uB] * drawCoefficients[uN, vN]
+                        point += uBSpline[uB] * drawCoefficients[uN, vN]
+                        duPoint += duBSpline[uB] * drawCoefficients[uN, vN]
+                        du2Point += du2BSpline[uB] * drawCoefficients[uN, vN]
                         uB += 1
                     newDeltaU = self.ComputeDelta(frame.screenScale, point, duPoint, du2Point, deltaU)
                     deltaU = min(newDeltaU, deltaU)
@@ -310,24 +310,24 @@ class Spline:
                 #deltaU = deltaU if vertices + verticesPerU + 8 <= frame.maxVertices else 2.0 * (uKnots[uKnot+1] - u)
 
                 u = min(u + deltaU, uKnots[uKnot+1])
-                uBasisNext, duBasisNext, du2BasisNext = self.ComputeBasis(0, uKnot, u)
+                uBSplineNext, duBSplineNext, du2BSplineNext = self.ComputeBSpline(0, uKnot, u)
 
                 v = vKnots[vKnot]
                 deltaV = 0.5 * (vKnots[vKnot+1] - v)
                 verticesPerU = 0
                 glBegin(GL_LINE_STRIP)
                 while v < vKnots[vKnot+1] and vertices <= frame.maxVertices - 4: # Save room for the vertices at v and lastV
-                    deltaV = self.DrawSurfacePoints(frame.screenScale, drawCoefficients, uKnot, uBasis, duBasis, uBasisNext, duBasisNext, vKnot, v, deltaV)
+                    deltaV = self.DrawSurfacePoints(frame.screenScale, drawCoefficients, uKnot, uBSpline, duBSpline, uBSplineNext, duBSplineNext, vKnot, v, deltaV)
                     v += deltaV
                     vertices += 2
                     verticesPerU += 2
-                self.DrawSurfacePoints(frame.screenScale, drawCoefficients, uKnot, uBasis, duBasis, uBasisNext, duBasisNext, vKnot, vKnots[vKnot+1], deltaV)
+                self.DrawSurfacePoints(frame.screenScale, drawCoefficients, uKnot, uBSpline, duBSpline, uBSplineNext, duBSplineNext, vKnot, vKnots[vKnot+1], deltaV)
                 vertices += 2
                 verticesPerU += 2
                 glEnd()
-                uBasis = uBasisNext
-                duBasis = duBasisNext
-                du2Basis = du2BasisNext
+                uBSpline = uBSplineNext
+                duBSpline = duBSplineNext
+                du2BSpline = du2BSplineNext
         print(self.samples)
 
         glUseProgram(frame.surfaceProgram)
@@ -363,15 +363,15 @@ class Spline:
 
 class SplineOpenGLFrame(OpenGLFrame):
 
-    computeBasisCode = """
-        void ComputeBasis(in int offset, in int order, in int n, in int knot, in float u, 
-            out float uBasis[{maxBasis}], out float duBasis[{maxBasis}], out float du2Basis[{maxBasis}]) {{
+    computeBSplineCode = """
+        void ComputeBSpline(in int offset, in int order, in int n, in int knot, in float u, 
+            out float uBSpline[{maxBSpline}], out float duBSpline[{maxBSpline}], out float du2BSpline[{maxBSpline}]) {{
             int degree = 1;
 
-            uBasis = float[{maxBasis}](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-            duBasis = float[{maxBasis}](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-            du2Basis = float[{maxBasis}](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-            uBasis[order-1] = 1.0;
+            uBSpline = float[{maxBSpline}](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+            duBSpline = float[{maxBSpline}](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+            du2BSpline = float[{maxBSpline}](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+            uBSpline[order-1] = 1.0;
 
             while (degree < order - 2) {{
                 int b = order - degree - 1;
@@ -383,7 +383,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
                     float val0 = (u - texelFetch(uSplineData, offset + i).x) * gap0; // (u - knots[i]) * gap0;
                     float val1 = (texelFetch(uSplineData, offset + i + degree + 1).x - u) * gap1; // (knots[i+degree+1] - u) * gap1;
-                    uBasis[b] = uBasis[b] * val0 + uBasis[b+1] * val1;
+                    uBSpline[b] = uBSpline[b] * val0 + uBSpline[b+1] * val1;
                     b++;
                 }}
                 degree++;
@@ -398,10 +398,10 @@ class SplineOpenGLFrame(OpenGLFrame):
 
                     float d0 = degree * gap0;
                     float d1 = -degree * gap1;
-                    du2Basis[b] = uBasis[b] * d0 + uBasis[b+1] * d1;
+                    du2BSpline[b] = uBSpline[b] * d0 + uBSpline[b+1] * d1;
                     float val0 = (u - texelFetch(uSplineData, offset + i).x) * gap0; // (u - knots[i]) * gap0;
                     float val1 = (texelFetch(uSplineData, offset + i + degree + 1).x - u) * gap1; // (knots[i+degree+1] - u) * gap1;
-                    uBasis[b] = uBasis[b] * val0 + uBasis[b+1] * val1;
+                    uBSpline[b] = uBSpline[b] * val0 + uBSpline[b+1] * val1;
                     b++;
                 }}
                 degree++;
@@ -416,11 +416,11 @@ class SplineOpenGLFrame(OpenGLFrame):
 
                     float d0 = degree * gap0;
                     float d1 = -degree * gap1;
-                    duBasis[b] = uBasis[b] * d0 + uBasis[b+1] * d1;
-                    du2Basis[b] = du2Basis[b] * d0 + du2Basis[b+1] * d1;
+                    duBSpline[b] = uBSpline[b] * d0 + uBSpline[b+1] * d1;
+                    du2BSpline[b] = du2BSpline[b] * d0 + du2BSpline[b+1] * d1;
                     float val0 = (u - texelFetch(uSplineData, offset + i).x) * gap0; // (u - knots[i]) * gap0;
                     float val1 = (texelFetch(uSplineData, offset + i + degree + 1).x - u) * gap1; // (knots[i+degree+1] - u) * gap1;
-                    uBasis[b] = uBasis[b] * val0 + uBasis[b+1] * val1;
+                    uBSpline[b] = uBSpline[b] * val0 + uBSpline[b+1] * val1;
                     b++;
                 }}
                 degree++;
@@ -483,32 +483,32 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         out vec3 splineColor;
 
-        {computeBasisCode}
+        {computeBSplineCode}
 
         {computeDeltaCode}
 
         void DrawCurvePoints(in int order, in int n, in int knot, in float u, inout float deltaU) {{
-            float uBasis[{maxBasis}];
-            float duBasis[{maxBasis}];
-            float du2Basis[{maxBasis}];
+            float uBSpline[{maxBSpline}];
+            float duBSpline[{maxBSpline}];
+            float du2BSpline[{maxBSpline}];
 
-            ComputeBasis(header, order, n, knot, u, uBasis, duBasis, du2Basis);
+            ComputeBSpline(header, order, n, knot, u, uBSpline, duBSpline, du2BSpline);
             
             vec4 point = vec4(0.0, 0.0, 0.0, 0.0);
             vec3 dPoint = vec3(0.0, 0.0, 0.0);
             vec3 d2Point = vec3(0.0, 0.0, 0.0);
             int i = header + order + n + 4 * (knot + 1 - order);
             for (int b = 0; b < order; b++) {{ // loop from coefficient[knot+1-order] to coefficient[knot+1]
-                point.x += uBasis[b] * texelFetch(uSplineData, i).x;
-                point.y += uBasis[b] * texelFetch(uSplineData, i+1).x;
-                point.z += uBasis[b] * texelFetch(uSplineData, i+2).x;
-                point.w += uBasis[b] * texelFetch(uSplineData, i+3).x;
-                dPoint.x += duBasis[b] * texelFetch(uSplineData, i).x;
-                dPoint.y += duBasis[b] * texelFetch(uSplineData, i+1).x;
-                dPoint.z += duBasis[b] * texelFetch(uSplineData, i+2).x;
-                d2Point.x += du2Basis[b] * texelFetch(uSplineData, i).x;
-                d2Point.y += du2Basis[b] * texelFetch(uSplineData, i+1).x;
-                d2Point.z += du2Basis[b] * texelFetch(uSplineData, i+2).x;
+                point.x += uBSpline[b] * texelFetch(uSplineData, i).x;
+                point.y += uBSpline[b] * texelFetch(uSplineData, i+1).x;
+                point.z += uBSpline[b] * texelFetch(uSplineData, i+2).x;
+                point.w += uBSpline[b] * texelFetch(uSplineData, i+3).x;
+                dPoint.x += duBSpline[b] * texelFetch(uSplineData, i).x;
+                dPoint.y += duBSpline[b] * texelFetch(uSplineData, i+1).x;
+                dPoint.z += duBSpline[b] * texelFetch(uSplineData, i+2).x;
+                d2Point.x += du2BSpline[b] * texelFetch(uSplineData, i).x;
+                d2Point.y += du2BSpline[b] * texelFetch(uSplineData, i+1).x;
+                d2Point.z += du2BSpline[b] * texelFetch(uSplineData, i+2).x;
                 i += 4;
             }}
 
@@ -589,19 +589,19 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         out vec3 splineColor;
 
-        {computeBasisCode}
+        {computeBSplineCode}
 
         {computeDeltaCode}
 
         void DrawSurfacePoints(in int uOrder, in int uN, in int uKnot,
-            in float uBasis[{maxBasis}], in float duBasis[{maxBasis}],
-            in float uBasisNext[{maxBasis}], in float duBasisNext[{maxBasis}],
+            in float uBSpline[{maxBSpline}], in float duBSpline[{maxBSpline}],
+            in float uBSplineNext[{maxBSpline}], in float duBSplineNext[{maxBSpline}],
             in int vOrder, in int vN, in int vKnot, in float v, inout float deltaV) {{
-            float vBasis[{maxBasis}];
-            float dvBasis[{maxBasis}];
-            float dv2Basis[{maxBasis}];
+            float vBSpline[{maxBSpline}];
+            float dvBSpline[{maxBSpline}];
+            float dv2BSpline[{maxBSpline}];
 
-            ComputeBasis(header + uOrder + uN, vOrder, vN, vKnot, v, vBasis, dvBasis, dv2Basis);
+            ComputeBSpline(header + uOrder + uN, vOrder, vN, vKnot, v, vBSpline, dvBSpline, dv2BSpline);
             
             vec4 point = vec4(0.0, 0.0, 0.0, 0.0);
             vec3 duPoint = vec3(0.0, 0.0, 0.0);
@@ -611,19 +611,19 @@ class SplineOpenGLFrame(OpenGLFrame):
             for (int vB = 0; vB < vOrder; vB++) {{
                 int i = j + (uKnot + 1 - uOrder) * vN * 4;
                 for (int uB = 0; uB < uOrder; uB++) {{
-                    point.x += uBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i).x;
-                    point.y += uBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i+1).x;
-                    point.z += uBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i+2).x;
-                    point.w += uBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i+3).x;
-                    duPoint.x += duBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i).x;
-                    duPoint.y += duBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i+1).x;
-                    duPoint.z += duBasis[uB] * vBasis[vB] * texelFetch(uSplineData, i+2).x;
-                    dvPoint.x += uBasis[uB] * dvBasis[vB] * texelFetch(uSplineData, i).x;
-                    dvPoint.y += uBasis[uB] * dvBasis[vB] * texelFetch(uSplineData, i+1).x;
-                    dvPoint.z += uBasis[uB] * dvBasis[vB] * texelFetch(uSplineData, i+2).x;
-                    dv2Point.x += uBasis[uB] * dv2Basis[vB] * texelFetch(uSplineData, i).x;
-                    dv2Point.y += uBasis[uB] * dv2Basis[vB] * texelFetch(uSplineData, i+1).x;
-                    dv2Point.z += uBasis[uB] * dv2Basis[vB] * texelFetch(uSplineData, i+2).x;
+                    point.x += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;
+                    point.y += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;
+                    point.z += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;
+                    point.w += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;
+                    duPoint.x += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;
+                    duPoint.y += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;
+                    duPoint.z += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;
+                    dvPoint.x += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i).x;
+                    dvPoint.y += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+1).x;
+                    dvPoint.z += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+2).x;
+                    dv2Point.x += uBSpline[uB] * dv2BSpline[vB] * texelFetch(uSplineData, i).x;
+                    dv2Point.y += uBSpline[uB] * dv2BSpline[vB] * texelFetch(uSplineData, i+1).x;
+                    dv2Point.z += uBSpline[uB] * dv2BSpline[vB] * texelFetch(uSplineData, i+2).x;
                     i += vN * 4;
                 }}
                 j += 4;
@@ -645,19 +645,19 @@ class SplineOpenGLFrame(OpenGLFrame):
             for (int vB = 0; vB < vOrder; vB++) {{
                 int i = j + (uKnot + 1 - uOrder) * vN * 4;
                 for (int uB = 0; uB < uOrder; uB++) {{
-                    point.x += uBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i).x;
-                    point.y += uBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i+1).x;
-                    point.z += uBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i+2).x;
-                    point.w += uBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i+3).x;
-                    duPoint.x += duBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i).x;
-                    duPoint.y += duBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i+1).x;
-                    duPoint.z += duBasisNext[uB] * vBasis[vB] * texelFetch(uSplineData, i+2).x;
-                    dvPoint.x += uBasisNext[uB] * dvBasis[vB] * texelFetch(uSplineData, i).x;
-                    dvPoint.y += uBasisNext[uB] * dvBasis[vB] * texelFetch(uSplineData, i+1).x;
-                    dvPoint.z += uBasisNext[uB] * dvBasis[vB] * texelFetch(uSplineData, i+2).x;
-                    dv2Point.x += uBasisNext[uB] * dv2Basis[vB] * texelFetch(uSplineData, i).x;
-                    dv2Point.y += uBasisNext[uB] * dv2Basis[vB] * texelFetch(uSplineData, i+1).x;
-                    dv2Point.z += uBasisNext[uB] * dv2Basis[vB] * texelFetch(uSplineData, i+2).x;
+                    point.x += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;
+                    point.y += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;
+                    point.z += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;
+                    point.w += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;
+                    duPoint.x += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;
+                    duPoint.y += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;
+                    duPoint.z += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;
+                    dvPoint.x += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uSplineData, i).x;
+                    dvPoint.y += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+1).x;
+                    dvPoint.z += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+2).x;
+                    dv2Point.x += uBSplineNext[uB] * dv2BSpline[vB] * texelFetch(uSplineData, i).x;
+                    dv2Point.y += uBSplineNext[uB] * dv2BSpline[vB] * texelFetch(uSplineData, i+1).x;
+                    dv2Point.z += uBSplineNext[uB] * dv2BSpline[vB] * texelFetch(uSplineData, i+2).x;
                     i += vN * 4;
                 }}
                 j += 4;
@@ -686,12 +686,12 @@ class SplineOpenGLFrame(OpenGLFrame):
             float u = firstU;
             int vertices = 0;
             int verticesPerU = 0;
-            float uBasis[{maxBasis}];
-            float duBasis[{maxBasis}];
-            float du2Basis[{maxBasis}];
+            float uBSpline[{maxBSpline}];
+            float duBSpline[{maxBSpline}];
+            float du2BSpline[{maxBSpline}];
 
             splineColor = uSplineColor;
-            ComputeBasis(header, uOrder, uN, uKnot, u, uBasis, duBasis, du2Basis);
+            ComputeBSpline(header, uOrder, uN, uKnot, u, uBSpline, duBSpline, du2BSpline);
             while (u < lastU && vertices < {maxVertices}) {{
                 // Calculate deltaU (min deltaU value over the comvex hull of v values)
                 float deltaU = 0.5 * (lastU - firstU);
@@ -702,16 +702,16 @@ class SplineOpenGLFrame(OpenGLFrame):
                     vec3 du2Point = vec3(0.0, 0.0, 0.0);
                     int i = j + (uKnot + 1 - uOrder) * vN * 4;
                     for (int uB = 0; uB < uOrder; uB++) {{
-                        point.x += uBasis[uB] * texelFetch(uSplineData, i).x;
-                        point.y += uBasis[uB] * texelFetch(uSplineData, i+1).x;
-                        point.z += uBasis[uB] * texelFetch(uSplineData, i+2).x;
-                        point.w += uBasis[uB] * texelFetch(uSplineData, i+3).x;
-                        duPoint.x += duBasis[uB] * texelFetch(uSplineData, i).x;
-                        duPoint.y += duBasis[uB] * texelFetch(uSplineData, i+1).x;
-                        duPoint.z += duBasis[uB] * texelFetch(uSplineData, i+2).x;
-                        du2Point.x += du2Basis[uB] * texelFetch(uSplineData, i).x;
-                        du2Point.y += du2Basis[uB] * texelFetch(uSplineData, i+1).x;
-                        du2Point.z += du2Basis[uB] * texelFetch(uSplineData, i+2).x;
+                        point.x += uBSpline[uB] * texelFetch(uSplineData, i).x;
+                        point.y += uBSpline[uB] * texelFetch(uSplineData, i+1).x;
+                        point.z += uBSpline[uB] * texelFetch(uSplineData, i+2).x;
+                        point.w += uBSpline[uB] * texelFetch(uSplineData, i+3).x;
+                        duPoint.x += duBSpline[uB] * texelFetch(uSplineData, i).x;
+                        duPoint.y += duBSpline[uB] * texelFetch(uSplineData, i+1).x;
+                        duPoint.z += duBSpline[uB] * texelFetch(uSplineData, i+2).x;
+                        du2Point.x += du2BSpline[uB] * texelFetch(uSplineData, i).x;
+                        du2Point.y += du2BSpline[uB] * texelFetch(uSplineData, i+1).x;
+                        du2Point.z += du2BSpline[uB] * texelFetch(uSplineData, i+2).x;
                         i += vN * 4;
                     }}
                     float newDeltaU = deltaU;
@@ -725,30 +725,30 @@ class SplineOpenGLFrame(OpenGLFrame):
                 //deltaU = vertices + verticesPerU + 8 <= {maxVertices} ? deltaU : 2.0 * (lastU - u);
 
                 u = min(u + deltaU, lastU);
-                float uBasisNext[{maxBasis}];
-                float duBasisNext[{maxBasis}];
-                float du2BasisNext[{maxBasis}];
-                ComputeBasis(header, uOrder, uN, uKnot, u, uBasisNext, duBasisNext, du2BasisNext);
+                float uBSplineNext[{maxBSpline}];
+                float duBSplineNext[{maxBSpline}];
+                float du2BSplineNext[{maxBSpline}];
+                ComputeBSpline(header, uOrder, uN, uKnot, u, uBSplineNext, duBSplineNext, du2BSplineNext);
 
                 float v = texelFetch(uSplineData, header + uOrder + uN + vKnot).x; // vKnots[vKnot]
                 float lastV = texelFetch(uSplineData, header + uOrder + uN + vKnot + 1).x; // vKnots[vKnot+1]
                 float deltaV = 0.5 * (lastV - v);
                 verticesPerU = 0;
                 while (v < lastV && vertices <= {maxVertices} - 4) {{ // Save room for the vertices at v and lastV
-                    DrawSurfacePoints(uOrder, uN, uKnot, uBasis, duBasis, uBasisNext, duBasisNext,
+                    DrawSurfacePoints(uOrder, uN, uKnot, uBSpline, duBSpline, uBSplineNext, duBSplineNext,
                         vOrder, vN, vKnot, v, deltaV);
                     v = min(v + deltaV, lastV);
                     vertices += 2;
                     verticesPerU += 2;
                 }}
-                DrawSurfacePoints(uOrder, uN, uKnot, uBasis, duBasis, uBasisNext, duBasisNext,
+                DrawSurfacePoints(uOrder, uN, uKnot, uBSpline, duBSpline, uBSplineNext, duBSplineNext,
                     vOrder, vN, vKnot, v, deltaV); //lastV, deltaV);
                 vertices += 2;
                 verticesPerU += 2;
                 EndPrimitive();
-                uBasis = uBasisNext;
-                duBasis = duBasisNext;
-                du2Basis = du2BasisNext;
+                uBSpline = uBSplineNext;
+                duBSpline = duBSplineNext;
+                du2BSpline = du2BSplineNext;
             }}
         }}
     """
@@ -787,21 +787,21 @@ class SplineOpenGLFrame(OpenGLFrame):
             print("GL_MAX_TESS_GEN_LEVEL: ", glGetIntegerv(GL_MAX_TESS_GEN_LEVEL))
 
             try:
-                self.computeBasisCode = self.computeBasisCode.format(maxBasis=Spline.maxOrder+1)
+                self.computeBSplineCode = self.computeBSplineCode.format(maxBSpline=Spline.maxOrder+1)
 
                 self.curveGeometryShaderCode = self.curveGeometryShaderCode.format(maxVertices=self.maxVertices,
-                    computeBasisCode=self.computeBasisCode,
+                    computeBSplineCode=self.computeBSplineCode,
                     computeDeltaCode=self.computeDeltaCode,
-                    maxBasis=Spline.maxOrder+1)
+                    maxBSpline=Spline.maxOrder+1)
                 self.curveProgram = shaders.compileProgram(
                     shaders.compileShader(self.curveVertexShaderCode, GL_VERTEX_SHADER), 
                     shaders.compileShader(self.curveGeometryShaderCode, GL_GEOMETRY_SHADER), 
                     shaders.compileShader(self.fragmentShaderCode, GL_FRAGMENT_SHADER))
                 
                 self.surfaceGeometryShaderCode = self.surfaceGeometryShaderCode.format(maxVertices=self.maxVertices,
-                    computeBasisCode=self.computeBasisCode,
+                    computeBSplineCode=self.computeBSplineCode,
                     computeDeltaCode=self.computeDeltaCode,
-                    maxBasis=Spline.maxOrder+1)
+                    maxBSpline=Spline.maxOrder+1)
                 self.surfaceProgram = shaders.compileProgram(
                     shaders.compileShader(self.surfaceVertexShaderCode, GL_VERTEX_SHADER), 
                     shaders.compileShader(self.surfaceGeometryShaderCode, GL_GEOMETRY_SHADER), 
