@@ -1,68 +1,81 @@
 import numpy as np
-import functools
 from error import *
 
-########################################################################
-##
-##     Header and constructor for the Spline class
-##
-########################################################################
-
 class Spline:
+    """
+    A class to model, represent, and process piecewise polynomial tensor product
+    functions (spline functions) as linear combinations of B-splines.  The
+    attributes of this class have the following meaning: 
+
+    nInd - the number of independent variables of the spline
+    nDep - the number of dependent variables of the spline
+    order - a tuple of length nInd where each integer entry represents the
+            polynomial order of the function in that variable
+    nCoef - a tuple of length nInd where each integer entry represents the
+            dimension (i.e. number of B-spline coefficients) of the function
+            space in that variable
+    knots - a list of the lists of the knots of the spline in each independent
+            variable
+    coefs - a list of the B-spline coefficients of the spline
+    accuracy - each spline function is presumed to be an approximation of
+               something else.  This attribute stores the infinity norm error of
+               the difference between the given spline function and that
+               something else
+    metadata - a pointer to any ancillary data to store with the spline 
+    """
+    
     def __init__(self, nInd = 1, nDep = 1, order = [4], nCoef = [4],
                  knots = [[0, 0, 0, 0, 1, 1, 1, 1]],
-                 coefs = [[0], [0], [0], [1]]):
+                 coefs = [[0, 0, 0 ,1]], accuracy = 0.0, metadata = None):
         assert nInd >= 0, "nInd < 0"
         self.nInd = int(nInd)
         assert nDep >= 0, "nDep < 0"
         self.nDep = int(nDep)
         assert len(order) == self.nInd, "len(order) != nInd"
-        self.order = [int(no) for no in order]
+        self.order = tuple(int(x) for x in order)
         assert len(nCoef) == self.nInd, "len(nCoef) != nInd"
-        self.nCoef = [int(nc) for nc in nCoef]
+        self.nCoef = tuple(int(x) for x in nCoef)
         assert len(knots) == nInd, "len(knots) != nInd"
-        for ix in range(len(knots)):
-            knotlength = self.order[ix] + self.nCoef[ix]
-            assert len(knots[ix]) == knotlength, \
-                "Knots array for variable " + str(ix) + \
-                " should have length " + str(knotlength)
-        self.knots = [np.array([knot for knot in knotlist], float)
-                      for knotlist in knots]
-        for klist, no, nc in zip(self.knots, self.order, self.nCoef):
-            for ix in range(nc):
-                assert klist[ix] <= klist[ix + 1] and \
-                       klist[ix] < klist[ix + no], \
+        for i in range(len(knots)):
+            nKnots = self.order[i] + self.nCoef[i]
+            assert len(knots[i]) == nKnots, \
+                f"Knots array for variable {i} should have length {nKnots}"
+        self.knots = tuple(np.array([k for k in kk], float) for kk in knots)
+        for knots, order, nCoef in zip(self.knots, self.order, self.nCoef):
+            for i in range(nCoef):
+                assert knots[i] <= knots[i + 1] and knots[i] < knots[i + order],\
                        "Improperly ordered knot sequence"
-        nc = functools.reduce(lambda a, b: a * b, self.nCoef)
-        assert len(coefs) == nc or len(coefs) == self.nDep, \
-            "Length of coefs should be " + str(nc) + " or " + \
-            str(self.nDep)
-        ncoef = list(self.nCoef)
-        ncoef.reverse()
-        if len(coefs) == nc:
-            self.coefs = np.array(coefs, float).reshape(
-                ncoef + [self.nDep]).T
+        totalCoefs = 1
+        for nCoef in self.nCoef:
+            totalCoefs *= nCoef
+        assert len(coefs) == totalCoefs or len(coefs) == self.nDep, \
+            f"Length of coefs should be {totalCoefs} or {self.nDep}"
+        nCoef = list(self.nCoef)
+        nCoef.reverse()
+        if len(coefs) == totalCoefs:
+            self.coefs = np.array(coefs, float).reshape(nCoef + [self.nDep]).T
         else:
-            self.coefs = [np.array(cl, float).reshape(ncoef).T
-                          for cl in coefs]
-            self.coefs = np.array(self.coefs)
-
-########################################################################
-##
-##     The __call__ method uses the de Boor recurrence relations for a
-##     B-spline series to evaluate a spline function.
-##
-########################################################################
+            self.coefs = np.array([np.array(c, float) for c in coefs])
+            if coefs.shape != [self.nDep] + nCoef:
+                self.coefs = np.array([c.reshape(nCoef).T for c in coefs])
+        self.accuracy = accuracy
+        self.metadata = metadata
 
     def __call__(self, uvw):
+        """
+        The __call__ method uses the de Boor recurrence relations for a B-spline
+        series to evaluate a spline function.  The non-zero B-splines are
+        evaluated, then the dot product of those B-splines with the vector of
+        B-spline coefficients is computed
+        """
         def b_spline_values(knot, knots, order, u):
             basis = np.zeros(order)
             basis[-1] = 1.0
             for degree in range(1, order):
                 b = order - degree
-                for ix in range(knot - degree, knot):
-                    gap = knots[ix + degree] - knots[ix]
-                    alpha = (u - knots[ix]) / gap
+                for i in range(knot - degree, knot):
+                    gap = knots[i + degree] - knots[i]
+                    alpha = (u - knots[i]) / gap
                     basis[b - 1] += (1.0 - alpha) * basis[b]
                     basis[b] *= alpha
                     b += 1
@@ -92,25 +105,16 @@ class Spline:
             mycoefs = mycoefs @ bvals
         return mycoefs
 
-########################################################################
-##
-##     Show actual spline definition when requested
-##
-########################################################################
-
     def __repr__(self):
-        return "Spline" + str((self.nInd, self.nDep, self.order,
-                               self.nCoef, list(self.knots), self.coefs))
-
-########################################################################
-##
-##     Return the domain of a spline
-##
-########################################################################
+        return f"Spline({self.nInd}, {self.nDep}, {self.order}, " + \
+               f"{self.nCoef}, {self.knots} {self.coefs}, {self.accuracy}, " + \
+               f"{self.metadata})"
 
     def domain(self):
-        dom = []
-        for ix in range(self.nInd):
-            dom.append([self.knots[ix][self.order[ix] - 1],
-                        self.knots[ix][self.nCoef[ix]]])
+        """
+        Return the domain of a spline as upper and lower bounds on each of the
+        independent variables
+        """
+        dom = [[self.knots[i][self.order[i] - 1],
+                self.knots[i][self.nCoef[i]]] for i in range(self.nInd)]
         return np.array(dom)
