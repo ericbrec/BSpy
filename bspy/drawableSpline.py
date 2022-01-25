@@ -1,8 +1,9 @@
 import numpy as np
 from OpenGL.GL import *
 from os import path
+from bspy import Spline
 
-class DrawableSpline:
+class DrawableSpline(Spline):
 
     maxOrder = 9
     maxCoefficients = 120
@@ -28,14 +29,15 @@ class DrawableSpline:
         for knotArray in knots:
             assert knotArray.dtype == np.float32
         assert coefficients.dtype == np.float32
-        self.order = order
-        self.knots = knots
-        self.coefficients = coefficients
+
+        coefs = coefficients.T
+        Spline.__init__(self, dimension, 4, order, coefs.shape[1:], knots, coefs)
+
         self.fillColor = np.array((0.0, 1.0, 0.0, 1.0), np.float32)
         self.lineColor = np.array((0.0, 0.0, 0.0, 1.0), np.float32)
         self.options = self.SHADED | self.BOUNDARY
         if name is None:
-            self.name = "[{0}, {1}]".format(self.coefficients[0], self.coefficients[1])
+            self.name = "[{0}, {1}]".format(self.coefs[0], self.coefs[1])
         else:
             self.name = name
 
@@ -101,7 +103,7 @@ class DrawableSpline:
         glUseProgram(0)
 
     def Draw(self, frame, transform):
-        drawCoefficients = self.coefficients @ transform
+        drawCoefficients = self.coefs.T @ transform
         if len(self.order) == 1:
             self.DrawCurve(frame, drawCoefficients)
         elif len(self.order) == 2:
@@ -112,7 +114,7 @@ class DrawableSpline:
         kw["order"] = order=np.array(self.order, np.int32)
         for i in range(len(self.knots)):
             kw["knots{count}".format(count=i)] = self.knots[i]
-        kw["coefficients"] = self.coefficients
+        kw["coefficients"] = self.coefs
         np.savez(fileName, **kw )
     
     @staticmethod

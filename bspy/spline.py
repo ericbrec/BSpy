@@ -1,5 +1,5 @@
 import numpy as np
-from error import *
+from bspy.error import *
 
 class Spline:
     """
@@ -40,7 +40,7 @@ class Spline:
             nKnots = self.order[i] + self.nCoef[i]
             assert len(knots[i]) == nKnots, \
                 f"Knots array for variable {i} should have length {nKnots}"
-        self.knots = tuple(np.array([k for k in kk], float) for kk in knots)
+        self.knots = tuple(np.array(kk) for kk in knots)
         for knots, order, nCoef in zip(self.knots, self.order, self.nCoef):
             for i in range(nCoef):
                 assert knots[i] <= knots[i + 1] and knots[i] < knots[i + order],\
@@ -50,14 +50,11 @@ class Spline:
             totalCoefs *= nCoef
         assert len(coefs) == totalCoefs or len(coefs) == self.nDep, \
             f"Length of coefs should be {totalCoefs} or {self.nDep}"
-        nCoef = list(self.nCoef)
-        nCoef.reverse()
-        if len(coefs) == totalCoefs:
-            self.coefs = np.array(coefs, float).reshape(nCoef + [self.nDep]).T
-        else:
-            self.coefs = np.array([np.array(c, float) for c in coefs])
-            if coefs.shape != [self.nDep] + nCoef:
-                self.coefs = np.array([c.reshape(nCoef).T for c in coefs])
+        self.coefs = np.array(coefs)
+        if len(self.coefs) == totalCoefs:
+            self.coefs = self.coefs.T.reshape((self.nDep, *self.nCoef))
+        elif coefs.shape != (self.nDep, *self.nCoef):
+            self.coefs = np.array([c.T for c in self.coefs]).reshape((self.nDep, *self.nCoef))
         self.accuracy = accuracy
         self.metadata = metadata
 
@@ -90,20 +87,20 @@ class Spline:
 
 # Grab all of the appropriate coefficients
 
-        mysection = [range(self.nDep)]
-        myix = []
+        mySection = [range(self.nDep)]
+        myIndices = []
         for iv in range(self.nInd):
             ix = np.searchsorted(self.knots[iv], uvw[iv], 'right')
             ix = min(ix, self.nCoef[iv])
-            myix.append(ix)
-            mysection.append(range(ix - self.order[iv], ix))
-        mysection = np.ix_(*mysection)
-        mycoefs = self.coefs[mysection]
+            myIndices.append(ix)
+            mySection.append(range(ix - self.order[iv], ix))
+        mySection = np.ix_(*mySection)
+        myCoefs = self.coefs[mySection]
         for iv in range(self.nInd - 1, -1, -1):
-            bvals = b_spline_values(myix[iv], self.knots[iv],
+            bValues = b_spline_values(myIndices[iv], self.knots[iv],
                                      self.order[iv], uvw[iv])
-            mycoefs = mycoefs @ bvals
-        return mycoefs
+            myCoefs = myCoefs @ bValues
+        return myCoefs
 
     def __repr__(self):
         return f"Spline({self.nInd}, {self.nDep}, {self.order}, " + \
@@ -118,3 +115,12 @@ class Spline:
         dom = [[self.knots[i][self.order[i] - 1],
                 self.knots[i][self.nCoef[i]]] for i in range(self.nInd)]
         return np.array(dom)
+
+    def range_bounds(self):
+        """
+        Return the range of a spline as upper and lower bounds on each of the
+        dependent variables
+        """
+        # Assumes self.nDep is the first value in self.coefs.shape
+        bounds = [[coefficient.min(), coefficient.max()] for coefficient in self.coefs]
+        return np.array(bounds)

@@ -1,7 +1,8 @@
 import numpy as np
+import pytest
 import bspy
 
-mycrv = bspy.Spline(1, 2, [4], [5], [[0,0,0,0,0.3,1,1,1,1]], [[0, 0], [0.3, 1],
+myCurve = bspy.Spline(1, 2, [4], [5], [[0,0,0,0,0.3,1,1,1,1]], [[0, 0], [0.3, 1],
                     [0.5, 0.0], [0.7, -0.5], [1, 1]])
 truth = \
 [[0.000000000000000000e+00, 0.000000000000000000e+00, 0.000000000000000000e+00],
@@ -105,8 +106,10 @@ truth = \
  [9.799999999999999822e-01, 9.746738192419825975e-01, 8.759217492711370845e-01],
  [9.899999999999999911e-01, 9.872403498542273725e-01, 9.368422594752183752e-01],
  [1.000000000000000000e+00, 1.000000000000000000e+00, 1.000000000000000000e+00]]
-maxerror = 0.0
-for [u, x, y] in truth:
-    [xtest, ytest] = mycrv([u])
-    maxerror = max(maxerror, sqrt((xtest - x) ** 2 + (ytest - y) ** 2))
-assert maxerror <= np.finfo(float).eps, "Spline evaluation test #1 failed"
+
+def test_spline():
+    maxerror = 0.0
+    for [u, x, y] in truth:
+        [xTest, yTest] = myCurve([u])
+        maxerror = max(maxerror, np.sqrt((xTest - x) ** 2 + (yTest - y) ** 2))
+    assert maxerror <= np.finfo(float).eps, "Spline evaluation test #1 failed"
