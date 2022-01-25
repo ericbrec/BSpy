@@ -1,6 +1,6 @@
 import numpy as np
-from bspy.drawableSpline import DrawableSpline
-from bspy.bspyApp import bspyApp
+from bspy import DrawableSpline
+from bspy import bspyApp
 
 if __name__=='__main__':
     app = bspyApp()

@@ -3,7 +3,7 @@ import tkinter as tk
 from OpenGL.GL import *
 import OpenGL.GL.shaders as shaders
 from pyopengltk import OpenGLFrame
-from bspy.drawableSpline import DrawableSpline
+from bspy import DrawableSpline
 
 class SplineOpenGLFrame(OpenGLFrame):
 

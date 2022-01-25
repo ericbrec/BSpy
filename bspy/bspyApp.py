@@ -1,8 +1,8 @@
 import numpy as np
 import tkinter as tk
 from tkinter.colorchooser import askcolor
-from bspy.splineOpenGLFrame import SplineOpenGLFrame
-from bspy.drawableSpline import DrawableSpline
+from bspy import SplineOpenGLFrame
+from bspy import DrawableSpline
 
 class BitCheckbutton(tk.Checkbutton):
     def __init__(self, parent, bitMask, **kw):

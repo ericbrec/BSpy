@@ -1,9 +1,9 @@
 import numpy as np
 from OpenGL.GL import *
 from PIL import Image
-from bspy.drawableSpline import DrawableSpline
-from bspy.bspyApp import bspyApp
-from bspy.splineOpenGLFrame import SplineOpenGLFrame
+from bspy import DrawableSpline
+from bspy import bspyApp
+from bspy import SplineOpenGLFrame
 
 class FunOpenGLFrame(SplineOpenGLFrame):
 
@@ -73,10 +73,12 @@ def CreateSplineFromMesh(xRange, zRange, yFunction):
     order = (3, 3)
     coefficients = np.zeros((zRange[2], xRange[2], 4), np.float32)
     knots = (np.zeros(xRange[2] + order[0], np.float32), np.zeros(zRange[2] + order[1], np.float32))
-    knots[0][:xRange[2]] = np.linspace(xRange[0], xRange[1], xRange[2], dtype=np.float32)[:]
-    knots[0][xRange[2]:] = xRange[1]
-    knots[1][:zRange[2]] = np.linspace(zRange[0], zRange[1], zRange[2], dtype=np.float32)[:]
-    knots[1][zRange[2]:] = zRange[1]
+    knots[0][0] = xRange[0]
+    knots[0][1:xRange[2]+1] = np.linspace(xRange[0], xRange[1], xRange[2], dtype=np.float32)[:]
+    knots[0][xRange[2]+1:] = xRange[1]
+    knots[1][0] = zRange[0]
+    knots[1][1:zRange[2]+1] = np.linspace(zRange[0], zRange[1], zRange[2], dtype=np.float32)[:]
+    knots[1][zRange[2]+1:] = zRange[1]
     for j in range(zRange[2]):
         for i in range(xRange[2]):
             coefficients[j, i, 0] = knots[0][i]
