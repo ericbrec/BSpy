@@ -1,10 +1,7 @@
 import numpy as np
-from bspy import DrawableSpline
-from bspy import bspyApp
+from bspy import Spline
 
 if __name__=='__main__':
-    app = bspyApp()
-    order = (4, 5)
     uKnots = np.array([0.        , 0.        , 0.        , 0.        , 0.00111483,
         0.00222965, 0.00334448, 0.00445931, 0.00557414, 0.00668896,
         0.00780379, 0.00891862, 0.01003344, 0.01114827, 0.0122631 ,
@@ -10092,6 +10089,5 @@ if __name__=='__main__':
         (-0.2599999999999999, 0.019741213473388388, -1.1988851727982162, 1.0),
         (-0.2599999999999999, 0.1231608688396116, -1.1996283909327388, 1.0),
         (-0.2599999999999999, 0.17470808987183925, -1.2, 1.0)], np.float32)
-    coefficients = np.reshape(coefficients, (11,900,4))
-    spline = DrawableSpline(order, [uKnots, vKnots], coefficients)
-    spline.Save("C:/Users/ericb/OneDrive/Desktop/tomsnasty")
+    spline = Spline(2, 4, (4, 5), (900, 11), [uKnots, vKnots], coefficients)
+    spline.save("C:/Users/ericb/OneDrive/Desktop/tomsnasty")

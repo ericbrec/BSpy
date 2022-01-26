@@ -1,6 +1,5 @@
 import numpy as np
 from OpenGL.GL import *
-from os import path
 from bspy import Spline
 
 class DrawableSpline(Spline):
@@ -15,34 +14,27 @@ class DrawableSpline(Spline):
     BOUNDARY = (1 << 2)
     ISOPARMS = (1 << 3)
 
-    def __init__(self, order, knots, coefficients, name=None):
+    def __init__(self, *args, **kwargs):
+        Spline.__init__(self, *args, **kwargs)
+
         floatCount = 0
         coefficientCount = 1
-        dimension = len(order)
-        for i in range(dimension):
-            assert order[i] <= self.maxOrder
-            assert len(knots[i]) == order[i] + coefficients.shape[dimension - 1 - i]
-            floatCount += 2 + order[i] + coefficients.shape[dimension - 1 - i]
-            coefficientCount *= coefficients.shape[dimension - 1 - i]
-        assert coefficients.shape[dimension] == 4 # Coefficients are all 4-vectors (homogeneous coordinates)
+        for i in range(self.nInd):
+            assert self.order[i] <= self.maxOrder
+            floatCount += 2 + self.order[i] + self.nCoef[i]
+            coefficientCount *= self.nCoef[i]
+        assert self.nDep == 4 # Coefficients are all 4-vectors (homogeneous coordinates)
         assert floatCount + 4 * coefficientCount <= self.maxFloats
-        for knotArray in knots:
+        for knotArray in self.knots:
             assert knotArray.dtype == np.float32
-        assert coefficients.dtype == np.float32
-
-        coefs = coefficients.T
-        Spline.__init__(self, dimension, 4, order, coefs.shape[1:], knots, coefs)
+        assert self.coefs.dtype == np.float32
 
         self.fillColor = np.array((0.0, 1.0, 0.0, 1.0), np.float32)
         self.lineColor = np.array((0.0, 0.0, 0.0, 1.0), np.float32)
         self.options = self.SHADED | self.BOUNDARY
-        if name is None:
-            self.name = "[{0}, {1}]".format(self.coefs[0], self.coefs[1])
-        else:
-            self.name = name
 
     def __str__(self):
-        return self.name
+        return self.metadata.get("Name", "[{0}, {1}]".format(self.coefs[0], self.coefs[1]))
     
     def DrawCurve(self, frame, drawCoefficients):
         if self.options & self.HULL:
@@ -108,22 +100,3 @@ class DrawableSpline(Spline):
             self.DrawCurve(frame, drawCoefficients)
         elif len(self.order) == 2:
             self.DrawSurface(frame, drawCoefficients)
-
-    def Save(self, fileName):
-        kw = {}
-        kw["order"] = order=np.array(self.order, np.int32)
-        for i in range(len(self.knots)):
-            kw["knots{count}".format(count=i)] = self.knots[i]
-        kw["coefficients"] = self.coefs
-        np.savez(fileName, **kw )
-    
-    @staticmethod
-    def Load(fileName):
-        kw = np.load(fileName)
-        order = kw["order"]
-        knots = []
-        for i in range(len(order)):
-            knots.append(kw["knots{count}".format(count=i)])
-        coefficients = kw["coefficients"]
-        spline = DrawableSpline(order, knots, coefficients, path.splitext(path.split(fileName)[1])[0])
-        return spline

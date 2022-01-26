@@ -1,4 +1,5 @@
 import numpy as np
+from os import path
 from bspy.error import *
 
 class Spline:
@@ -21,12 +22,12 @@ class Spline:
                something else.  This attribute stores the infinity norm error of
                the difference between the given spline function and that
                something else
-    metadata - a pointer to any ancillary data to store with the spline 
+    metadata - a dictionary of ancillary data to store with the spline 
     """
     
     def __init__(self, nInd = 1, nDep = 1, order = [4], nCoef = [4],
                  knots = [[0, 0, 0, 0, 1, 1, 1, 1]],
-                 coefs = [[0, 0, 0 ,1]], accuracy = 0.0, metadata = None):
+                 coefs = [[0, 0, 0 ,1]], accuracy = 0.0, metadata = {}):
         assert nInd >= 0, "nInd < 0"
         self.nInd = int(nInd)
         assert nDep >= 0, "nDep < 0"
@@ -52,7 +53,7 @@ class Spline:
             f"Length of coefs should be {totalCoefs} or {self.nDep}"
         self.coefs = np.array(coefs)
         if len(self.coefs) == totalCoefs:
-            self.coefs = self.coefs.T.reshape((self.nDep, *self.nCoef))
+            self.coefs = self.coefs.reshape((*self.nCoef[::-1], self.nDep)).T
         elif coefs.shape != (self.nDep, *self.nCoef):
             self.coefs = np.array([c.T for c in self.coefs]).reshape((self.nDep, *self.nCoef))
         self.accuracy = accuracy
@@ -124,3 +125,26 @@ class Spline:
         # Assumes self.nDep is the first value in self.coefs.shape
         bounds = [[coefficient.min(), coefficient.max()] for coefficient in self.coefs]
         return np.array(bounds)
+
+    def save(self, fileName):
+        kw = {}
+        kw["order"] = order=np.array(self.order, np.int32)
+        for i in range(len(self.knots)):
+            kw[f"knots{i}"] = self.knots[i]
+        kw["coefficients"] = self.coefs
+        np.savez(fileName, **kw )
+    
+    @staticmethod
+    def load(fileName, splineType=None):
+        kw = np.load(fileName)
+        order = kw["order"]
+        nInd = len(order)
+        knots = []
+        for i in range(nInd):
+            knots.append(kw[f"knots{i}"])
+        coefficients = kw["coefficients"]
+
+        if splineType is None:
+            splineType = Spline
+        spline = splineType(nInd, coefficients.shape[0], order, coefficients.shape[1:], knots, coefficients, metadata=dict(Path=path, Name=path.splitext(path.split(fileName)[1])[0]))
+        return spline

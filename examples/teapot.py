@@ -353,8 +353,8 @@ if __name__=='__main__':
         coefficients = np.ones((4, 4, 4), np.float32)
         for i in range(4):
             for j in range(4):
-                coefficients[j,i,0] = teapotVertices[patch[4*i + j + 1] - 1][0] / 3.0
-                coefficients[j,i,1] = -0.5 + 4.0 * teapotVertices[patch[4*i + j + 1] - 1][2] / 9.0
-                coefficients[j,i,2] = teapotVertices[patch[4*i + j + 1] - 1][1] / 3.0
-        app.AddSpline(DrawableSpline((4,4), (knots, knots), coefficients, patch[0]))
+                coefficients[0,i,j] = teapotVertices[patch[4*i + j + 1] - 1][0] / 3.0
+                coefficients[1,i,j] = -0.5 + 4.0 * teapotVertices[patch[4*i + j + 1] - 1][2] / 9.0
+                coefficients[2,i,j] = teapotVertices[patch[4*i + j + 1] - 1][1] / 3.0
+        app.AddSpline(DrawableSpline(2, 4, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=patch[0])))
     app.mainloop()
