@@ -60,11 +60,137 @@ class Spline:
         self.metadata = metadata
 
     def __call__(self, uvw):
+        return self.evaluate(uvw)
+
+    def __repr__(self):
+        return f"Spline({self.nInd}, {self.nDep}, {self.order}, " + \
+               f"{self.nCoef}, {self.knots} {self.coefs}, {self.accuracy}, " + \
+               f"{self.metadata})"
+
+    def derivative(self, with_respect_to, uvw):
         """
-        The __call__ method uses the de Boor recurrence relations for a B-spline
+        Compute the derivative of the spline at a given parameter value.
+
+        Parameters
+        ----------
+        with_respect_to : `iterable`
+            An iterable of length nInd that specifies the integer order of derivative for each independent variable.
+            A zero-order derivative just evaluates the spline normally.
+        
+        uvw : `iterable`
+            An iterable of length nInd that specifies the values of each independent variable (the parameter value).
+
+        Returns
+        -------
+        value : `numpy.array`
+            The value of the derivative of the spline at the given parameter value.
+
+        See Also
+        --------
+        `evaluate` : Compute the value of the spline at a given parameter value.
+        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.
+
+        Notes
+        -----
+        The derivative method uses the de Boor recurrence relations for a B-spline
         series to evaluate a spline function.  The non-zero B-splines are
         evaluated, then the dot product of those B-splines with the vector of
-        B-spline coefficients is computed
+        B-spline coefficients is computed.
+        """
+        def b_spline_values(knot, knots, splineOrder, derivativeOrder, u):
+            basis = np.zeros(splineOrder)
+            basis[-1] = 1.0
+            for degree in range(1, splineOrder - derivativeOrder):
+                b = splineOrder - degree
+                for i in range(knot - degree, knot):
+                    alpha = (u - knots[i]) / (knots[i + degree] - knots[i])
+                    basis[b - 1] += (1.0 - alpha) * basis[b]
+                    basis[b] *= alpha
+                    b += 1
+            for degree in range(splineOrder - derivativeOrder, splineOrder):
+                b = splineOrder - degree
+                for i in range(knot - degree, knot):
+                    alpha = degree / (knots[i + degree] - knots[i])
+                    basis[b - 1] += -alpha * basis[b]
+                    basis[b] *= alpha
+                    b += 1
+            return basis
+
+        # Check for evaluation point inside domain
+        dom = self.domain()
+        for ix in range(self.nInd):
+            if uvw[ix] < dom[ix][0] or uvw[ix] > dom[ix][1]:
+                raise ArgumentOutsideDomainError(uvw)
+
+        # Grab all of the appropriate coefficients
+        mySection = [range(self.nDep)]
+        myIndices = []
+        for iv in range(self.nInd):
+            ix = np.searchsorted(self.knots[iv], uvw[iv], 'right')
+            ix = min(ix, self.nCoef[iv])
+            myIndices.append(ix)
+            mySection.append(range(ix - self.order[iv], ix))
+        mySection = np.ix_(*mySection)
+        myCoefs = self.coefs[mySection]
+        for iv in range(self.nInd - 1, -1, -1):
+            bValues = b_spline_values(myIndices[iv], self.knots[iv], self.order[iv], with_respect_to[iv], uvw[iv])
+            myCoefs = myCoefs @ bValues
+        return myCoefs
+
+    def differentiate(self, with_respect_to):
+        """
+        Differentiate a spline with respect to one of its independent variables, returning the resulting spline.
+
+        Parameters
+        ----------
+        with_respect_to : integer
+            The number of the independent variable to differentiate.
+
+        Returns
+        -------
+        spline : `Spline`
+            The spline that results from differentiating the original spline with respect to the given independent variable.
+
+        See Also
+        --------
+        `derivative` : Compute the derivative of the spline at a given parameter value.
+        """
+        assert 0 <= with_respect_to < self.nDep
+        leftCoefs = self.coefs
+
+    def domain(self):
+        """
+        Return the domain of a spline as upper and lower bounds on each of the
+        independent variables
+        """
+        dom = [[self.knots[i][self.order[i] - 1],
+                self.knots[i][self.nCoef[i]]] for i in range(self.nInd)]
+        return np.array(dom)
+
+    def evaluate(self, uvw):
+        """
+        Compute the value of the spline at a given parameter value.
+
+        Parameters
+        ----------
+        uvw : `iterable`
+            An iterable of length nInd that specifies the values of each independent variable (the parameter value).
+
+        Returns
+        -------
+        value : `numpy.array`
+            The value of the spline at the given parameter value.
+
+        See Also
+        --------
+        `derivative` : Compute the derivative of the spline at a given parameter value.
+
+        Notes
+        -----
+        The evaluate method uses the de Boor recurrence relations for a B-spline
+        series to evaluate a spline function.  The non-zero B-splines are
+        evaluated, then the dot product of those B-splines with the vector of
+        B-spline coefficients is computed.
         """
         def b_spline_values(knot, knots, order, u):
             basis = np.zeros(order)
@@ -72,22 +198,19 @@ class Spline:
             for degree in range(1, order):
                 b = order - degree
                 for i in range(knot - degree, knot):
-                    gap = knots[i + degree] - knots[i]
-                    alpha = (u - knots[i]) / gap
+                    alpha = (u - knots[i]) / (knots[i + degree] - knots[i])
                     basis[b - 1] += (1.0 - alpha) * basis[b]
                     basis[b] *= alpha
                     b += 1
             return basis
 
-# Check for evaluation point inside domain
-
+        # Check for evaluation point inside domain
         dom = self.domain()
         for ix in range(self.nInd):
             if uvw[ix] < dom[ix][0] or uvw[ix] > dom[ix][1]:
                 raise ArgumentOutsideDomainError(uvw)
 
-# Grab all of the appropriate coefficients
-
+        # Grab all of the appropriate coefficients
         mySection = [range(self.nDep)]
         myIndices = []
         for iv in range(self.nInd):
@@ -102,20 +225,21 @@ class Spline:
                                      self.order[iv], uvw[iv])
             myCoefs = myCoefs @ bValues
         return myCoefs
+    
+    @staticmethod
+    def load(fileName, splineType=None):
+        kw = np.load(fileName)
+        order = kw["order"]
+        nInd = len(order)
+        knots = []
+        for i in range(nInd):
+            knots.append(kw[f"knots{i}"])
+        coefficients = kw["coefficients"]
 
-    def __repr__(self):
-        return f"Spline({self.nInd}, {self.nDep}, {self.order}, " + \
-               f"{self.nCoef}, {self.knots} {self.coefs}, {self.accuracy}, " + \
-               f"{self.metadata})"
-
-    def domain(self):
-        """
-        Return the domain of a spline as upper and lower bounds on each of the
-        independent variables
-        """
-        dom = [[self.knots[i][self.order[i] - 1],
-                self.knots[i][self.nCoef[i]]] for i in range(self.nInd)]
-        return np.array(dom)
+        if splineType is None:
+            splineType = Spline
+        spline = splineType(nInd, coefficients.shape[0], order, coefficients.shape[1:], knots, coefficients, metadata=dict(Path=path, Name=path.splitext(path.split(fileName)[1])[0]))
+        return spline
 
     def range_bounds(self):
         """
@@ -133,18 +257,3 @@ class Spline:
             kw[f"knots{i}"] = self.knots[i]
         kw["coefficients"] = self.coefs
         np.savez(fileName, **kw )
-    
-    @staticmethod
-    def load(fileName, splineType=None):
-        kw = np.load(fileName)
-        order = kw["order"]
-        nInd = len(order)
-        knots = []
-        for i in range(nInd):
-            knots.append(kw[f"knots{i}"])
-        coefficients = kw["coefficients"]
-
-        if splineType is None:
-            splineType = Spline
-        spline = splineType(nInd, coefficients.shape[0], order, coefficients.shape[1:], knots, coefficients, metadata=dict(Path=path, Name=path.splitext(path.split(fileName)[1])[0]))
-        return spline
