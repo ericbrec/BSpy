@@ -107,9 +107,18 @@ truth = \
  [9.899999999999999911e-01, 9.872403498542273725e-01, 9.368422594752183752e-01],
  [1.000000000000000000e+00, 1.000000000000000000e+00, 1.000000000000000000e+00]]
 
-def test_spline():
+def test_evaluate():
     maxerror = 0.0
     for [u, x, y] in truth:
-        [xTest, yTest] = myCurve([u])
+        [xTest, yTest] = myCurve.evaluate([u])
         maxerror = max(maxerror, np.sqrt((xTest - x) ** 2 + (yTest - y) ** 2))
+    assert maxerror <= np.finfo(float).eps, "Spline evaluation test #1 failed"
+
+def test_derivatives():
+    maxerror = 0.0
+    myDerivative = myCurve.differentiate()
+    for [u, x, y] in truth:
+        [xTest, yTest] = myCurve.derivative([1], [u])
+        [x, y] = myDerivative.evaluate([u])
+        maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
     assert maxerror <= np.finfo(float).eps, "Spline evaluation test #1 failed"

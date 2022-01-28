@@ -1,3 +1,4 @@
+from turtle import width
 import numpy as np
 from os import path
 from bspy.error import *
@@ -52,10 +53,11 @@ class Spline:
         assert len(coefs) == totalCoefs or len(coefs) == self.nDep, \
             f"Length of coefs should be {totalCoefs} or {self.nDep}"
         self.coefs = np.array(coefs)
-        if len(self.coefs) == totalCoefs:
-            self.coefs = self.coefs.reshape((*self.nCoef[::-1], self.nDep)).T
-        elif coefs.shape != (self.nDep, *self.nCoef):
-            self.coefs = np.array([c.T for c in self.coefs]).reshape((self.nDep, *self.nCoef))
+        if self.coefs.shape != (self.nDep, *self.nCoef):
+            if len(self.coefs) == totalCoefs:
+                self.coefs = self.coefs.reshape((*self.nCoef[::-1], self.nDep)).T
+            else:
+                self.coefs = np.array([c.T for c in self.coefs]).reshape((self.nDep, *self.nCoef))
         self.accuracy = accuracy
         self.metadata = metadata
 
@@ -137,7 +139,7 @@ class Spline:
             myCoefs = myCoefs @ bValues
         return myCoefs
 
-    def differentiate(self, with_respect_to):
+    def differentiate(self, with_respect_to = 0):
         """
         Differentiate a spline with respect to one of its independent variables, returning the resulting spline.
 
@@ -155,8 +157,29 @@ class Spline:
         --------
         `derivative` : Compute the derivative of the spline at a given parameter value.
         """
-        assert 0 <= with_respect_to < self.nDep
-        leftCoefs = self.coefs
+        assert 0 <= with_respect_to < self.nInd
+        assert self.order[with_respect_to] > 1
+
+        order = [*self.order]
+        order[with_respect_to] -= 1
+        degree = order[with_respect_to] 
+
+        nCoef = [*self.nCoef]
+        nCoef[with_respect_to] -= 1
+
+        dKnots = self.knots[with_respect_to][1:-1]
+        knots = [self.knots]
+        knots[with_respect_to] = dKnots
+
+        coefs = np.delete(self.coefs, 0, axis=with_respect_to + 1) # first axis is the dependent variable
+        sliceList = (self.nInd + 1) * [slice(None)]
+        for i in range(nCoef[with_respect_to]):
+            sliceList[with_respect_to + 1] = i
+            sliceTuple = tuple(sliceList)
+            alpha =  degree / (dKnots[i+degree] - dKnots[i])
+            coefs[sliceTuple] = alpha * (coefs[sliceTuple] - self.coefs[sliceTuple])
+        
+        return type(self)(self.nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy, self.metadata)
 
     def domain(self):
         """
