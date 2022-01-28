@@ -99,13 +99,13 @@ class Spline:
             return NotImplemented
 
     def __mul__(self, other):
-        if isIterable(other):
+        if np.isscalar(other) or isIterable(other):
             return self.scale(other)
         else:
             return NotImplemented
 
     def __rmul__(self, other):
-        if isIterable(other):
+        if np.isscalar(other) or isIterable(other):
             return self.scale(other)
         else:
             return NotImplemented
@@ -355,14 +355,14 @@ class Spline:
         kw["coefficients"] = self.coefs
         np.savez(fileName, **kw )
 
-    def scale(self, scaleVector):
+    def scale(self, multiplier):
         """
-        Scale a spline by the given scale vector.
+        Scale a spline by the given scalar or scale vector.
 
         Parameters
         ----------
-        scaleVector : array-like
-            An array of length `nDep` that specifies the scale vector.
+        multiplier : scalar or array-like
+            A scalar or an array of length `nDep` that specifies the multiplier.
 
         Returns
         -------
@@ -371,13 +371,17 @@ class Spline:
 
         See Also
         --------
+        `transform` : Transform a spline by the given matrix.
         `translate` : Translate a spline by the given translation vector.
         """
-        assert len(scaleVector) == self.nDep
+        assert np.isscalar(multiplier) or len(multiplier) == self.nDep
 
-        coefs = np.array(self.coefs)
-        for i in range(self.nDep):
-            coefs[i] *= scaleVector[i]
+        if np.isscalar(multiplier):
+            coefs = multiplier * self.coefs
+        else:
+            coefs = np.array(self.coefs)
+            for i in range(self.nDep):
+                coefs[i] *= multiplier[i]
         return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
 
     def transform(self, matrix):
@@ -393,6 +397,11 @@ class Spline:
         -------
         spline : `Spline`
             The transformed spline.
+
+        See Also
+        --------
+        `scale` : Scale a spline by the given scalar or scale vector.
+        `translate` : Translate a spline by the given translation vector.
         """
         assert matrix.shape == (self.nDep, self.nDep)
 
@@ -414,7 +423,8 @@ class Spline:
 
         See Also
         --------
-        `scale` : Scale a spline by the given scale vector.
+        `scale` : Scale a spline by the given scalar or scale vector.
+        `transform` : Transform a spline by the given matrix.
         """
         assert len(translationVector) == self.nDep
 

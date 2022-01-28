@@ -139,6 +139,13 @@ def test_scale():
         maxerror = max(maxerror, (xTest - 2.0 * x) ** 2 + (yTest - 3.0 * y) ** 2)
     assert maxerror <= np.finfo(float).eps
 
+    maxerror = 0.0
+    scaledCurve = 3.0 * myCurve
+    for [u, x, y] in truth:
+        [xTest, yTest] = scaledCurve.evaluate([u])
+        maxerror = max(maxerror, (xTest - 3.0 * x) ** 2 + (yTest - 3.0 * y) ** 2)
+    assert maxerror <= np.finfo(float).eps
+
 def test_transform():
     maxerror = 0.0
     transformedCurve = myCurve.transform(np.array([[2.0, 3.0], [-1.0, -4.0]]))
