@@ -107,13 +107,6 @@ truth = \
  [9.899999999999999911e-01, 9.872403498542273725e-01, 9.368422594752183752e-01],
  [1.000000000000000000e+00, 1.000000000000000000e+00, 1.000000000000000000e+00]]
 
-def test_evaluate():
-    maxerror = 0.0
-    for [u, x, y] in truth:
-        [xTest, yTest] = myCurve.evaluate([u])
-        maxerror = max(maxerror, np.sqrt((xTest - x) ** 2 + (yTest - y) ** 2))
-    assert maxerror <= np.finfo(float).eps, "Spline evaluation test #1 failed"
-
 def test_derivatives():
     maxerror = 0.0
     myDerivative = myCurve.differentiate()
@@ -121,4 +114,43 @@ def test_derivatives():
         [xTest, yTest] = myCurve.derivative([1], [u])
         [x, y] = myDerivative.evaluate([u])
         maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
-    assert maxerror <= np.finfo(float).eps, "Spline evaluation test #1 failed"
+    assert maxerror <= np.finfo(float).eps
+
+def test_dot():
+    maxerror = 0.0
+    dottedCurve = myCurve.dot([2.0, 3.0])
+    for [u, x, y] in truth:
+        valueTest = dottedCurve.evaluate([u])
+        maxerror = max(maxerror, (valueTest - 2.0 * x - 3.0 * y) ** 2)
+    assert maxerror <= np.finfo(float).eps
+
+def test_evaluate():
+    maxerror = 0.0
+    for [u, x, y] in truth:
+        [xTest, yTest] = myCurve.evaluate([u])
+        maxerror = max(maxerror, np.sqrt((xTest - x) ** 2 + (yTest - y) ** 2))
+    assert maxerror <= np.finfo(float).eps
+
+def test_scale():
+    maxerror = 0.0
+    scaledCurve = myCurve.scale([2.0, 3.0])
+    for [u, x, y] in truth:
+        [xTest, yTest] = scaledCurve.evaluate([u])
+        maxerror = max(maxerror, (xTest - 2.0 * x) ** 2 + (yTest - 3.0 * y) ** 2)
+    assert maxerror <= np.finfo(float).eps
+
+def test_transform():
+    maxerror = 0.0
+    transformedCurve = myCurve.transform(np.array([[2.0, 3.0], [-1.0, -4.0]]))
+    for [u, x, y] in truth:
+        [xTest, yTest] = transformedCurve.evaluate([u])
+        maxerror = max(maxerror, (xTest - (2.0 * x + 3.0 * y)) ** 2 + (yTest - (-1.0 * x - 4.0 * y)) ** 2)
+    assert maxerror <= np.finfo(float).eps
+
+def test_translate():
+    maxerror = 0.0
+    translatedCurve = myCurve.translate([2.0, 3.0])
+    for [u, x, y] in truth:
+        [xTest, yTest] = translatedCurve.evaluate([u])
+        maxerror = max(maxerror, (xTest - (2.0 + x)) ** 2 + (yTest - (3.0 + y)) ** 2)
+    assert maxerror <= np.finfo(float).eps

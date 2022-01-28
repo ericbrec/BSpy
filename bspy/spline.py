@@ -76,11 +76,11 @@ class Spline:
         Parameters
         ----------
         with_respect_to : `iterable`
-            An iterable of length nInd that specifies the integer order of derivative for each independent variable.
+            An iterable of length `nInd` that specifies the integer order of derivative for each independent variable.
             A zero-order derivative just evaluates the spline normally.
         
         uvw : `iterable`
-            An iterable of length nInd that specifies the values of each independent variable (the parameter value).
+            An iterable of length `nInd` that specifies the values of each independent variable (the parameter value).
 
         Returns
         -------
@@ -190,6 +190,27 @@ class Spline:
                 self.knots[i][self.nCoef[i]]] for i in range(self.nInd)]
         return np.array(dom)
 
+    def dot(self, vector):
+        """
+        Dot product a spline by the given vector.
+
+        Parameters
+        ----------
+        vector : array-like
+            An array of length `nDep` that specifies the vector.
+
+        Returns
+        -------
+        spline : `Spline`
+            The dotted spline.
+        """
+        assert len(vector) == self.nDep
+
+        coefs = vector[0] * self.coefs[0]
+        for i in range(1, self.nDep):
+            coefs += vector[i] * self.coefs[i]
+        return type(self)(self.nInd, 1, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
+
     def evaluate(self, uvw):
         """
         Compute the value of the spline at a given parameter value.
@@ -197,7 +218,7 @@ class Spline:
         Parameters
         ----------
         uvw : `iterable`
-            An iterable of length nInd that specifies the values of each independent variable (the parameter value).
+            An iterable of length `nInd` that specifies the values of each independent variable (the parameter value).
 
         Returns
         -------
@@ -244,8 +265,7 @@ class Spline:
         mySection = np.ix_(*mySection)
         myCoefs = self.coefs[mySection]
         for iv in range(self.nInd - 1, -1, -1):
-            bValues = b_spline_values(myIndices[iv], self.knots[iv],
-                                     self.order[iv], uvw[iv])
+            bValues = b_spline_values(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv])
             myCoefs = myCoefs @ bValues
         return myCoefs
     
@@ -280,3 +300,71 @@ class Spline:
             kw[f"knots{i}"] = self.knots[i]
         kw["coefficients"] = self.coefs
         np.savez(fileName, **kw )
+
+    def scale(self, scaleVector):
+        """
+        Scale a spline by the given scale vector.
+
+        Parameters
+        ----------
+        scaleVector : array-like
+            An array of length `nDep` that specifies the scale vector.
+
+        Returns
+        -------
+        spline : `Spline`
+            The scaled spline.
+
+        See Also
+        --------
+        `translate` : Translate a spline by the given translation vector.
+        """
+        assert len(scaleVector) == self.nDep
+
+        coefs = np.array(self.coefs)
+        for i in range(self.nDep):
+            coefs[i] *= scaleVector[i]
+        return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
+
+    def transform(self, matrix):
+        """
+        Transform a spline by the given matrix.
+
+        Parameters
+        ----------
+        matrix : array-like
+            An array of size `nDep`x`nDep` that specifies the transform matrix.
+
+        Returns
+        -------
+        spline : `Spline`
+            The transformed spline.
+        """
+        assert matrix.shape == (self.nDep, self.nDep)
+
+        return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, matrix @ self.coefs, self.accuracy, self.metadata)
+
+    def translate(self, translationVector):
+        """
+        Translate a spline by the given translation vector.
+
+        Parameters
+        ----------
+        translationVector : array-like
+            An array of length `nDep` that specifies the translation vector.
+
+        Returns
+        -------
+        spline : `Spline`
+            The translated spline.
+
+        See Also
+        --------
+        `scale` : Scale a spline by the given scale vector.
+        """
+        assert len(translationVector) == self.nDep
+
+        coefs = np.array(self.coefs)
+        for i in range(self.nDep):
+            coefs[i] += translationVector[i]
+        return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
