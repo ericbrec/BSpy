@@ -3,6 +3,14 @@ import numpy as np
 from os import path
 from bspy.error import *
 
+def isIterable(object):
+    result = True
+    try:
+        iterator = iter(object)
+    except TypeError:
+        result = False
+    return result
+
 class Spline:
     """
     A class to model, represent, and process piecewise polynomial tensor product
@@ -68,6 +76,52 @@ class Spline:
         return f"Spline({self.nInd}, {self.nDep}, {self.order}, " + \
                f"{self.nCoef}, {self.knots} {self.coefs}, {self.accuracy}, " + \
                f"{self.metadata})"
+
+    def __add__(self, other):
+        if isIterable(other):
+            return self.translate(other)
+        else:
+            return NotImplemented
+
+    def __radd__(self, other):
+        if isIterable(other):
+            return self.translate(other)
+        else:
+            return NotImplemented
+
+    def __rmatmul__ (self, other):
+        if isIterable(other):
+            if isinstance(other, np.ndarray) and len(other.shape) == 2:
+                return self.transform(other)
+            else:
+                return self.dot(other)
+        else:
+            return NotImplemented
+
+    def __mul__(self, other):
+        if isIterable(other):
+            return self.scale(other)
+        else:
+            return NotImplemented
+
+    def __rmul__(self, other):
+        if isIterable(other):
+            return self.scale(other)
+        else:
+            return NotImplemented
+
+    def __sub__(self, other):
+        if isIterable(other):
+            return self.translate(-np.array(other))
+        else:
+            return NotImplemented
+
+    def __rsub__(self, other):
+        if isIterable(other):
+            spline = self.scale(self.nDep * [-1.0])
+            return spline.translate(other)
+        else:
+            return NotImplemented
 
     def derivative(self, with_respect_to, uvw):
         """
