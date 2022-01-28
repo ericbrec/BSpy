@@ -179,14 +179,14 @@ class Spline:
                 raise ArgumentOutsideDomainError(uvw)
 
         # Grab all of the appropriate coefficients
-        mySection = [range(self.nDep)]
+        mySection = [slice(0, self.nDep)]
         myIndices = []
         for iv in range(self.nInd):
             ix = np.searchsorted(self.knots[iv], uvw[iv], 'right')
             ix = min(ix, self.nCoef[iv])
             myIndices.append(ix)
-            mySection.append(range(ix - self.order[iv], ix))
-        mySection = np.ix_(*mySection)
+            mySection.append(slice(ix - self.order[iv], ix))
+        myCoefs = self.coefs[tuple(mySection)]
         myCoefs = self.coefs[mySection]
         for iv in range(self.nInd - 1, -1, -1):
             bValues = b_spline_values(myIndices[iv], self.knots[iv], self.order[iv], with_respect_to[iv], uvw[iv])
@@ -309,15 +309,14 @@ class Spline:
                 raise ArgumentOutsideDomainError(uvw)
 
         # Grab all of the appropriate coefficients
-        mySection = [range(self.nDep)]
+        mySection = [slice(0, self.nDep)]
         myIndices = []
         for iv in range(self.nInd):
             ix = np.searchsorted(self.knots[iv], uvw[iv], 'right')
             ix = min(ix, self.nCoef[iv])
             myIndices.append(ix)
-            mySection.append(range(ix - self.order[iv], ix))
-        mySection = np.ix_(*mySection)
-        myCoefs = self.coefs[mySection]
+            mySection.append(slice(ix - self.order[iv], ix))
+        myCoefs = self.coefs[tuple(mySection)]
         for iv in range(self.nInd - 1, -1, -1):
             bValues = b_spline_values(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv])
             myCoefs = myCoefs @ bValues
