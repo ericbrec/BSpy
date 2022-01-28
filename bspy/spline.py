@@ -187,7 +187,6 @@ class Spline:
             myIndices.append(ix)
             mySection.append(slice(ix - self.order[iv], ix))
         myCoefs = self.coefs[tuple(mySection)]
-        myCoefs = self.coefs[mySection]
         for iv in range(self.nInd - 1, -1, -1):
             bValues = b_spline_values(myIndices[iv], self.knots[iv], self.order[iv], with_respect_to[iv], uvw[iv])
             myCoefs = myCoefs @ bValues
