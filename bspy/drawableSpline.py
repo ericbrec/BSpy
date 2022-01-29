@@ -30,7 +30,7 @@ class DrawableSpline(Spline):
         assert self.coefs.dtype == np.float32
 
         self.fillColor = np.array((0.0, 1.0, 0.0, 1.0), np.float32)
-        self.lineColor = np.array((0.0, 0.0, 0.0, 1.0), np.float32)
+        self.lineColor = np.array((0.0, 0.0, 0.0, 1.0) if self.nInd > 1 else (1.0, 1.0, 1.0, 1.0), np.float32)
         self.options = self.SHADED | self.BOUNDARY
 
     def __str__(self):
