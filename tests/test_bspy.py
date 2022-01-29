@@ -131,6 +131,55 @@ def test_evaluate():
         maxerror = max(maxerror, np.sqrt((xTest - x) ** 2 + (yTest - y) ** 2))
     assert maxerror <= np.finfo(float).eps
 
+def test_fold_unfold():
+    nInd = 3
+    nDep = 3
+    order = (2, 3, 4)
+    nCoef = (4, 5, 6)
+    knots = [np.linspace(0.0, 1.0, order[k] + nCoef[k]) for k in range(nInd)]
+    coefs = np.empty((nDep, *nCoef))
+    for i in range(coefs.shape[0]):
+        for j in range(coefs.shape[1]):
+            for k in range(coefs.shape[2]):
+                for l in range(coefs.shape[3]):
+                    coefs[i,j,k,l] = i + 0.1*j + 0.01*k + 0.001*l
+    spline = bspy.Spline(nInd, nDep, order, nCoef, knots, coefs)
+    
+    folded, coefficientless = spline.fold([0, 2])
+
+    assert folded.nInd == 1
+    assert folded.nDep == 72
+    assert folded.order == (3,)
+    assert folded.nCoef == (5,)
+    assert (folded.knots[0] == spline.knots[1]).all()
+    assert folded.coefs.shape == (72, 5)
+
+    assert coefficientless.nInd == 2
+    assert coefficientless.nDep == 0
+    assert coefficientless.order == (2, 4)
+    assert coefficientless.nCoef == (4, 6)
+    assert (coefficientless.knots[0] == spline.knots[0]).all()
+    assert (coefficientless.knots[1] == spline.knots[2]).all()
+
+    unfolded = folded.unfold([0, 2], coefficientless)
+
+    assert unfolded.nInd == spline.nInd
+    assert unfolded.nDep == spline.nDep
+    assert unfolded.order == spline.order
+    assert unfolded.nCoef == spline.nCoef
+    assert (unfolded.knots[0] == spline.knots[0]).all()
+    assert (unfolded.knots[1] == spline.knots[1]).all()
+    assert (unfolded.knots[2] == spline.knots[2]).all()
+    assert unfolded.coefs.shape == spline.coefs.shape
+
+    maxerror = 0.0
+    for i in range(coefs.shape[0]):
+        for j in range(coefs.shape[1]):
+            for k in range(coefs.shape[2]):
+                for l in range(coefs.shape[3]):
+                    maxerror = max(maxerror, abs(unfolded.coefs[i, j, k, l] - spline.coefs[i, j, k, l]))
+    assert maxerror <= np.finfo(float).eps
+
 def test_scale():
     maxerror = 0.0
     scaledCurve = myCurve.scale([2.0, 3.0])

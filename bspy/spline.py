@@ -320,6 +320,70 @@ class Spline:
             bValues = b_spline_values(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv])
             myCoefs = myCoefs @ bValues
         return myCoefs
+
+    def fold(self, foldedInd):
+        """
+        Fold the coefficients of a spline's indicated independent variables into the coefficients of the remaining independent variables, retaining the 
+        indicated independent variables' knots and orders in a second spline with no coefficients.
+
+        Parameters
+        ----------
+        foldedInd : `iterable`
+            An iterable that specifies the independent variables whose coefficients should be folded.
+
+        Returns
+        -------
+        foldedSpline, coefficientlessSpline : `Spline`, `Spline`
+            The folded spline and the coefficientless spline that retains the indicated independent variables' knots and orders.
+
+        See Also
+        --------
+        `unfold` : Unfold the coefficients of an original spline's indicated independent variables back into the spline.
+
+        Notes
+        -----
+        Given a spline whose coefficients are an nDep x n0 x ... x nk array and a list of (ordered) indices which form a proper subset of {n0, ... , nk}, it should return 2 splines.
+        The first one is a spline with k + 1 - length(index subset) independent variables where the knot sets of all the dimensions which have been removed have been removed.  However, 
+        all of the coefficient data is still intact, so that the resulting coefficient array has shape (nDep nj0 nj1 ... njj) x nk0 x ... x nkk.  The second spline should be a spline 
+        with 0 dependent variables which contains all the knot sequences that were removed from the spline.  The unfold method takes the two splines as input and reverses the process, 
+        returning the original spline.
+
+        Here's an example. Suppose spl is a spline with 3 independent variables and 3 dependent variables which has nCoef = [4, 5, 6] and knots = [knots0, knots1, knots2]. 
+        Then spl.fold([0, 2]) should return a spline with 1 independent variable and 72 dependent variables.  It should have nCoef = [5], knots = [knots1], and its coefs array should have 
+        shape (72, 5).  The other spline should have 0 dependent variables, 2 independent variables, and knots = [knots0, knots2].  How things get ordered in coefs probably doesn't matter 
+        so long as unfold unscrambles things in the corresponding way.  The second spline is needed to hold the basis information that was dropped so that it can be undone.
+        """
+        assert 0 < len(foldedInd) < self.nInd
+        foldedOrder = []
+        foldedNCoef = []
+        foldedKnots = []
+
+        coefficientlessOrder = []
+        coefficientlessNCoef = []
+        coefficientlessKnots = []
+
+        coefficientMoveFrom = []
+        foldedNDep = self.nDep
+
+        for ind in range(self.nInd):
+            if ind in foldedInd:
+                coefficientlessOrder.append(self.order[ind])
+                coefficientlessNCoef.append(self.nCoef[ind])
+                coefficientlessKnots.append(self.knots[ind])
+                coefficientMoveFrom.append(ind + 1)
+                foldedNDep *= self.nCoef[ind]
+            else:
+                foldedOrder.append(self.order[ind])
+                foldedNCoef.append(self.nCoef[ind])
+                foldedKnots.append(self.knots[ind])
+
+        coefficientMoveTo = range(1, len(coefficientMoveFrom) + 1)
+        foldedCoefs = np.moveaxis(self.coefs, coefficientMoveFrom, coefficientMoveTo).reshape((foldedNDep, *foldedNCoef))
+        coefficientlessCoefs = np.empty((0, *coefficientlessNCoef))
+
+        foldedSpline = type(self)(len(foldedOrder), foldedNDep, foldedOrder, foldedNCoef, foldedKnots, foldedCoefs, self.accuracy, self.metadata)
+        coefficientlessSpline = type(self)(len(coefficientlessOrder), 0, coefficientlessOrder, coefficientlessNCoef, coefficientlessKnots, coefficientlessCoefs, self.accuracy, self.metadata)
+        return foldedSpline, coefficientlessSpline
     
     @staticmethod
     def load(fileName, splineType=None):
@@ -375,12 +439,14 @@ class Spline:
         assert np.isscalar(multiplier) or len(multiplier) == self.nDep
 
         if np.isscalar(multiplier):
+            accuracy = multiplier * self.accuracy
             coefs = multiplier * self.coefs
         else:
+            accuracy = np.linalg.norm(multiplier) * self.accuracy
             coefs = np.array(self.coefs)
             for i in range(self.nDep):
                 coefs[i] *= multiplier[i]
-        return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
+        return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, coefs, accuracy, self.metadata)
 
     def transform(self, matrix):
         """
@@ -430,3 +496,68 @@ class Spline:
         for i in range(self.nDep):
             coefs[i] += translationVector[i]
         return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
+
+    def unfold(self, foldedInd, coefficientlessSpline):
+        """
+        Unfold the coefficients of an original spline's indicated independent variables back into the spline, using the 
+        indicated independent variables' knots and orders from a second spline with no coefficients.
+
+        Parameters
+        ----------
+        foldedInd : `iterable`
+            An iterable that specifies the independent variables whose coefficients should be unfolded.
+
+        coefficientlessSpline : `Spline`
+            The coefficientless spline that retains the indicated independent variables' knots and orders.
+
+        Returns
+        -------
+        unfoldedSpline : `Spline`, `Spline`
+            The unfolded spline.
+
+        See Also
+        --------
+        `fold` : Fold the coefficients of a spline's indicated independent variables into the coefficients of the remaining independent variables.
+
+        Notes
+        -----
+        Given a spline whose coefficients are an nDep x n0 x ... x nk array and a list of (ordered) indices which form a proper subset of {n0, ... , nk}, it should return 2 splines.
+        The first one is a spline with k + 1 - length(index subset) independent variables where the knot sets of all the dimensions which have been removed have been removed.  However, 
+        all of the coefficient data is still intact, so that the resulting coefficient array has shape (nDep nj0 nj1 ... njj) x nk0 x ... x nkk.  The second spline should be a spline 
+        with 0 dependent variables which contains all the knot sequences that were removed from the spline.  The unfold method takes the two splines as input and reverses the process, 
+        returning the original spline.
+
+        Here's an example. Suppose spl is a spline with 3 independent variables and 3 dependent variables which has nCoef = [4, 5, 6] and knots = [knots0, knots1, knots2]. 
+        Then spl.fold([0, 2]) should return a spline with 1 independent variable and 72 dependent variables.  It should have nCoef = [5], knots = [knots1], and its coefs array should have 
+        shape (72, 5).  The other spline should have 0 dependent variables, 2 independent variables, and knots = [knots0, knots2].  How things get ordered in coefs probably doesn't matter 
+        so long as unfold unscrambles things in the corresponding way.  The second spline is needed to hold the basis information that was dropped so that it can be undone.
+        """
+        assert len(foldedInd) == coefficientlessSpline.nInd
+        unfoldedOrder = []
+        unfoldedNCoef = []
+        unfoldedKnots = []
+        
+        coefficientMoveTo = []
+        unfoldedNDep = self.nDep
+        indFolded = 0
+        indCoefficientless = 0
+
+        for ind in range(self.nInd + coefficientlessSpline.nInd):
+            if ind in foldedInd:
+                unfoldedOrder.append(coefficientlessSpline.order[indCoefficientless])
+                unfoldedNCoef.append(coefficientlessSpline.nCoef[indCoefficientless])
+                unfoldedKnots.append(coefficientlessSpline.knots[indCoefficientless])
+                unfoldedNDep //= coefficientlessSpline.nCoef[indCoefficientless]
+                coefficientMoveTo.append(ind + 1)
+                indCoefficientless += 1
+            else:
+                unfoldedOrder.append(self.order[indFolded])
+                unfoldedNCoef.append(self.nCoef[indFolded])
+                unfoldedKnots.append(self.knots[indFolded])
+                indFolded += 1
+
+        coefficientMoveFrom = range(1, coefficientlessSpline.nInd + 1)
+        unfoldedCoefs = np.moveaxis(self.coefs.reshape(unfoldedNDep, *coefficientlessSpline.nCoef, *self.nCoef), coefficientMoveFrom, coefficientMoveTo)
+
+        unfoldedSpline = type(self)(len(unfoldedOrder), unfoldedNDep, unfoldedOrder, unfoldedNCoef, unfoldedKnots, unfoldedCoefs, self.accuracy, self.metadata)
+        return unfoldedSpline
