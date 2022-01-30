@@ -186,7 +186,7 @@ class Spline:
             ix = min(ix, self.nCoef[iv])
             myIndices.append(ix)
             mySection.append(slice(ix - self.order[iv], ix))
-        myCoefs = self.coefs[tuple(mySection)]
+        myCoefs = self.coefs[mySection]
         for iv in range(self.nInd - 1, -1, -1):
             bValues = b_spline_values(myIndices[iv], self.knots[iv], self.order[iv], with_respect_to[iv], uvw[iv])
             myCoefs = myCoefs @ bValues
@@ -228,9 +228,8 @@ class Spline:
         sliceList = (self.nInd + 1) * [slice(None)]
         for i in range(nCoef[with_respect_to]):
             sliceList[with_respect_to + 1] = i
-            sliceTuple = tuple(sliceList)
             alpha =  degree / (dKnots[i+degree] - dKnots[i])
-            coefs[sliceTuple] = alpha * (coefs[sliceTuple] - self.coefs[sliceTuple])
+            coefs[sliceList] = alpha * (coefs[sliceList] - self.coefs[sliceList])
         
         return type(self)(self.nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy, self.metadata)
 
@@ -315,7 +314,7 @@ class Spline:
             ix = min(ix, self.nCoef[iv])
             myIndices.append(ix)
             mySection.append(slice(ix - self.order[iv], ix))
-        myCoefs = self.coefs[tuple(mySection)]
+        myCoefs = self.coefs[mySection]
         for iv in range(self.nInd - 1, -1, -1):
             bValues = b_spline_values(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv])
             myCoefs = myCoefs @ bValues
