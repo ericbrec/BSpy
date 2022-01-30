@@ -180,6 +180,14 @@ def test_fold_unfold():
                     maxerror = max(maxerror, abs(unfolded.coefs[i, j, k, l] - spline.coefs[i, j, k, l]))
     assert maxerror <= np.finfo(float).eps
 
+def test_insert_knots():
+    maxerror = 0.0
+    newCurve = myCurve.insert_knots([[.2, .3]])
+    for [u, x, y] in truth:
+        [xTest, yTest] = newCurve.evaluate([u])
+        maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxerror <= np.finfo(float).eps
+
 def test_scale():
     maxerror = 0.0
     scaledCurve = myCurve.scale([2.0, 3.0])

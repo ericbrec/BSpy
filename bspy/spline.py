@@ -385,6 +385,40 @@ class Spline:
         coefficientlessSpline = type(self)(len(coefficientlessOrder), 0, coefficientlessOrder, coefficientlessNCoef, coefficientlessKnots, coefficientlessCoefs, self.accuracy, self.metadata)
         return foldedSpline, coefficientlessSpline
     
+    def insert_knots(self, newKnots):
+        """
+        Insert new knots into a spline.
+
+        Parameters
+        ----------
+        newKnots : `iterable` of length `nInd`
+            An iterable that specifies the knots to be added to each independent variable's knots. 
+            len(newKnots[ind]) == 0 if no knots are to be added for the `ind` independent variable.
+
+        Returns
+        -------
+        spline : `Spline`
+            A spline with the new knots inserted.
+        """
+        assert len(newKnots) == self.nInd
+        knots = list(self.knots)
+        coefs = self.coefs
+        for ind in range(self.nInd):
+            for knot in newKnots[ind]:
+                position = np.searchsorted(knots[ind], knot, 'right')
+                newCoefs = np.insert(coefs, position - 1, 0.0, axis=ind + 1)
+                sliceList = (self.nInd + 1) * [slice(None)]
+                sliceList2 = (self.nInd + 1) * [slice(None)]
+                for i in range(position - self.order[ind] + 1, position):
+                    alpha = (knot - knots[ind][i]) / (knots[ind][i + self.order[ind] - 1] - knots[ind][i])
+                    sliceList[ind + 1] = i - 1
+                    sliceList2[ind + 1] = i
+                    newCoefs[sliceList2] = (1.0 - alpha) * coefs[sliceList] + alpha * coefs[sliceList2]
+                knots[ind] = np.insert(knots[ind], position, knot)
+                coefs = newCoefs
+        
+        return type(self)(self.nInd, self.nDep, self.order, coefs.shape[1:], knots, coefs, self.accuracy, self.metadata)
+
     @staticmethod
     def load(fileName, splineType=None):
         kw = np.load(fileName)
