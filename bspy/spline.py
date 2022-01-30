@@ -402,19 +402,22 @@ class Spline:
         assert len(newKnots) == self.nInd
         knots = list(self.knots)
         coefs = self.coefs
+        fullSlice = slice(None)
+        sliceListIm1 = (self.nInd + 1) * [fullSlice]
+        sliceListI = (self.nInd + 1) * [fullSlice]
         for ind in range(self.nInd):
             for knot in newKnots[ind]:
                 position = np.searchsorted(knots[ind], knot, 'right')
                 newCoefs = np.insert(coefs, position - 1, 0.0, axis=ind + 1)
-                sliceList = (self.nInd + 1) * [slice(None)]
-                sliceList2 = (self.nInd + 1) * [slice(None)]
                 for i in range(position - self.order[ind] + 1, position):
                     alpha = (knot - knots[ind][i]) / (knots[ind][i + self.order[ind] - 1] - knots[ind][i])
-                    sliceList[ind + 1] = i - 1
-                    sliceList2[ind + 1] = i
-                    newCoefs[sliceList2] = (1.0 - alpha) * coefs[sliceList] + alpha * coefs[sliceList2]
+                    sliceListIm1[ind + 1] = i - 1
+                    sliceListI[ind + 1] = i
+                    newCoefs[sliceListI] = (1.0 - alpha) * coefs[sliceListIm1] + alpha * coefs[sliceListI]
                 knots[ind] = np.insert(knots[ind], position, knot)
                 coefs = newCoefs
+            sliceListIm1[ind + 1] = fullSlice
+            sliceListI[ind + 1] = fullSlice
         
         return type(self)(self.nInd, self.nDep, self.order, coefs.shape[1:], knots, coefs, self.accuracy, self.metadata)
 
