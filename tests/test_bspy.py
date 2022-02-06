@@ -124,6 +124,19 @@ def test_dot():
         maxerror = max(maxerror, (valueTest - 2.0 * x - 3.0 * y) ** 2)
     assert maxerror <= np.finfo(float).eps
 
+def test_elevate():
+    maxerror = 0.0
+    original = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0, 0.5, 0.5, 1, 1, 1, 1], float)], 
+        np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
+    #elevated = bspy.Spline(1, 2, (5,), (8,), [np.array([0, 0, 0, 0, 0, 0.5, 0.5, 0.5, 1, 1, 1, 1, 1], float)], 
+    #    np.array(((260, 100), (140, 220), (180, 340), (280, 420), (400, 420), (500, 340), (540, 220), (420, 100)), float))
+    elevated = original.elevate((1,))
+    for u in np.linspace(original.knots[0][original.order[0]-1], original.knots[0][original.nCoef[0]], 100):
+        [x, y] = original.evaluate([u])
+        [xTest, yTest] = elevated.evaluate([u])
+        maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxerror <= np.finfo(float).eps
+
 def test_evaluate():
     maxerror = 0.0
     for [u, x, y] in truth:

@@ -1,6 +1,8 @@
 from turtle import width
 import numpy as np
 from os import path
+
+from scipy.misc import derivative
 from bspy.error import *
 
 def isIterable(object):
@@ -154,7 +156,7 @@ class Spline:
         B-spline coefficients is computed.
         """
         def b_spline_values(knot, knots, splineOrder, derivativeOrder, u):
-            basis = np.zeros(splineOrder)
+            basis = np.zeros(splineOrder, knots.dtype)
             basis[-1] = 1.0
             for degree in range(1, splineOrder - derivativeOrder):
                 b = splineOrder - degree
@@ -225,11 +227,11 @@ class Spline:
         knots[with_respect_to] = dKnots
 
         coefs = np.delete(self.coefs, 0, axis=with_respect_to + 1) # first axis is the dependent variable
-        sliceList = (self.nInd + 1) * [slice(None)]
+        sliceI = (self.nInd + 1) * [slice(None)]
         for i in range(nCoef[with_respect_to]):
-            sliceList[with_respect_to + 1] = i
+            sliceI[with_respect_to + 1] = i
             alpha =  degree / (dKnots[i+degree] - dKnots[i])
-            coefs[sliceList] = alpha * (coefs[sliceList] - self.coefs[sliceList])
+            coefs[sliceI] = alpha * (coefs[sliceI] - self.coefs[sliceI])
         
         return type(self)(self.nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy, self.metadata)
 
@@ -289,7 +291,7 @@ class Spline:
         B-spline coefficients is computed.
         """
         def b_spline_values(knot, knots, order, u):
-            basis = np.zeros(order)
+            basis = np.zeros(order, knots.dtype)
             basis[-1] = 1.0
             for degree in range(1, order):
                 b = order - degree
@@ -319,6 +321,134 @@ class Spline:
             bValues = b_spline_values(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv])
             myCoefs = myCoefs @ bValues
         return myCoefs
+
+    def elevate(self, m):
+        """
+        Elevate a spline, increasing its order by `m`.
+
+        Parameters
+        ----------
+        m : `iterable` of length `nInd`
+            An iterable that specifies the non-negative integer amount to increase the order 
+            for each independent variable of the spline.
+
+        Returns
+        -------
+        spline : `Spline`
+            A spline with the order of the current spline plus `m`.
+
+        See Also
+        --------
+        `insert_knots` : Insert new knots into a spline.
+
+        Notes
+        -----
+        Implements the algorithm from Huang, Qi-Xing, Shi-Min Hu, and Ralph R. Martin. 
+        "Fast degree elevation and knot insertion for B-spline curves." Computer Aided Geometric Design 22, no. 2 (2005): 183-197.
+        """
+        assert len(m) == self.nInd
+        order = [*self.order]
+        nCoef = [*self.nCoef]
+        knots = list(self.knots)
+        coefs = self.coefs
+        fullSlice = slice(None)
+        sliceJI = (self.nInd + 2) * [fullSlice]
+        sliceJm1Ip1 = (self.nInd + 2) * [fullSlice]
+        sliceJm1I = (self.nInd + 2) * [fullSlice]
+        for ind in range(self.nInd):
+            # Step 1: Compute derivatives of coefficients at original knots, adjusted for elevated spline.
+
+            # Step 1.1: Calculate multiplicities "beta" array and new knot list.
+            assert m[ind] >= 0
+            knotList = []
+            beta = []
+            multiplicity = 0
+            previousKnot = knots[ind][0]
+            for knot in knots[ind]:
+                if knot == previousKnot:
+                    multiplicity += 1
+                else:
+                    knotList += (multiplicity + m[ind]) * [previousKnot]
+                    beta.append(multiplicity)
+                    multiplicity = 1
+                    previousKnot = knot
+            knotList += (multiplicity + m[ind]) * [previousKnot]
+            k = order[ind] # Use k for the original order to better match the paper's algorithm
+            assert beta[0] == k
+
+            # Step 1.2: Set 0th derivative to original coefficients.
+            sliceJI[0] = 0
+            sliceJI[ind + 2] = fullSlice
+            dCoefs = np.full((k, *coefs.shape), np.inf, coefs.dtype)
+            dCoefs[sliceJI] = coefs[sliceJI[1:]]
+
+            # Step 1.3: Compute derivative values at each unique knot except the rightmost knot, adjusted for elevated spline.
+            iStart = 0
+            for multiplicity in beta:
+                # Loop to the highest valid derivative for this unique knot with given multiplicity.
+                for j in range(1, k - multiplicity + 1 if iStart > 0 else k):
+                    sliceJI[0] = j
+                    sliceJm1Ip1[0] = j - 1
+                    sliceJm1I[0] = j - 1
+                    derivativeAdjustment = (k - j) / (k + m[ind] - j)
+                    for i in range(max(iStart - j, 0), iStart + multiplicity - j):
+                        sliceJI[ind + 2] = i
+                        sliceJm1Ip1[ind + 2] = i + 1
+                        sliceJm1I[ind + 2] = i
+                        dCoefs[sliceJI] = (derivativeAdjustment / (knots[ind][i + k] - knots[ind][i + j])) * (dCoefs[sliceJm1Ip1] - dCoefs[sliceJm1I])
+                # Move to the next unique knot
+                iStart += multiplicity
+ 
+            # Step 2: Construct elevated order, nCoef, knots, and coefs.
+            order[ind] += m[ind]
+            knots[ind] = np.array(knotList, knots[ind].dtype)
+            nCoef[ind] = knots[ind].shape[0] - order[ind]
+            coefs = np.full((k - 1, self.nDep, *nCoef), np.inf, coefs.dtype)
+            
+            # Step 3: Compute derivatives of coefficients at elevated knots.
+
+            # Step 3.1: Initialize the leftmost derivative coefficient for all derivatives.
+            sliceJI[0] = slice(k - 1)
+            sliceJI[ind + 2] = 0
+            coefs[sliceJI] = dCoefs[sliceJI]
+
+            # Step 3.2: Compute remaining derivatives of coefficients at elevated knots.
+            iOriginalStart = 0
+            iStart = 0
+            for multiplicity in beta:
+                # Start at highest valid derivative for this unique knot with given multiplicity.
+                j = k - multiplicity if iStart > 0 else k - 1
+                # Increase multiplicity by elevation.
+                multiplicity += m[ind]
+                # Replicate the highest value derivative from the original knots (dCoefs[sliceJI]), 
+                # and compute the next lower derivative.
+                sliceJI[0] = j
+                sliceJm1Ip1[0] = j - 1
+                sliceJm1I[0] = j - 1
+                for i in range(max(iStart - j, 0), iStart + multiplicity - j):
+                    sliceJI[ind + 2] = max(iOriginalStart - j, 0)
+                    sliceJm1Ip1[ind + 2] = i + 1
+                    sliceJm1I[ind + 2] = i
+                    coefs[sliceJm1Ip1] = coefs[sliceJm1I] + (knots[ind][i + order[ind]] - knots[ind][i + j]) * dCoefs[sliceJI]
+                # Compute the remaining lower derivatives until you get down to zero.
+                for j in range(j - 1, 0, -1):
+                    sliceJI[0] = j
+                    sliceJm1Ip1[0] = j - 1
+                    sliceJm1I[0] = j - 1
+                    for i in range(max(iStart - j, 0), iStart + multiplicity - j):
+                        sliceJI[ind + 2] = i
+                        sliceJm1Ip1[ind + 2] = i + 1
+                        sliceJm1I[ind + 2] = i
+                        coefs[sliceJm1Ip1] = coefs[sliceJm1I] + (knots[ind][i + order[ind]] - knots[ind][i + j]) * coefs[sliceJI]
+                # Move to the next unique knot
+                iOriginalStart += multiplicity - m[ind]
+                iStart += multiplicity
+
+            sliceJI[ind + 2] = fullSlice
+            sliceJm1Ip1[ind + 2] = fullSlice
+            sliceJm1I[ind + 2] = fullSlice
+        
+        return type(self)(self.nInd, self.nDep, self.order, coefs.shape[1:], knots, coefs, self.accuracy, self.metadata)
 
     def fold(self, foldedInd):
         """
@@ -378,7 +508,7 @@ class Spline:
 
         coefficientMoveTo = range(1, len(coefficientMoveFrom) + 1)
         foldedCoefs = np.moveaxis(self.coefs, coefficientMoveFrom, coefficientMoveTo).reshape((foldedNDep, *foldedNCoef))
-        coefficientlessCoefs = np.empty((0, *coefficientlessNCoef))
+        coefficientlessCoefs = np.empty((0, *coefficientlessNCoef), self.coefs.dtype)
 
         foldedSpline = type(self)(len(foldedOrder), foldedNDep, foldedOrder, foldedNCoef, foldedKnots, foldedCoefs, self.accuracy, self.metadata)
         coefficientlessSpline = type(self)(len(coefficientlessOrder), 0, coefficientlessOrder, coefficientlessNCoef, coefficientlessKnots, coefficientlessCoefs, self.accuracy, self.metadata)
@@ -403,21 +533,21 @@ class Spline:
         knots = list(self.knots)
         coefs = self.coefs
         fullSlice = slice(None)
-        sliceListIm1 = (self.nInd + 1) * [fullSlice]
-        sliceListI = (self.nInd + 1) * [fullSlice]
+        sliceIm1 = (self.nInd + 1) * [fullSlice]
+        sliceI = (self.nInd + 1) * [fullSlice]
         for ind in range(self.nInd):
             for knot in newKnots[ind]:
                 position = np.searchsorted(knots[ind], knot, 'right')
                 newCoefs = np.insert(coefs, position - 1, 0.0, axis=ind + 1)
                 for i in range(position - self.order[ind] + 1, position):
                     alpha = (knot - knots[ind][i]) / (knots[ind][i + self.order[ind] - 1] - knots[ind][i])
-                    sliceListIm1[ind + 1] = i - 1
-                    sliceListI[ind + 1] = i
-                    newCoefs[sliceListI] = (1.0 - alpha) * coefs[sliceListIm1] + alpha * coefs[sliceListI]
+                    sliceIm1[ind + 1] = i - 1
+                    sliceI[ind + 1] = i
+                    newCoefs[sliceI] = (1.0 - alpha) * coefs[sliceIm1] + alpha * coefs[sliceI]
                 knots[ind] = np.insert(knots[ind], position, knot)
                 coefs = newCoefs
-            sliceListIm1[ind + 1] = fullSlice
-            sliceListI[ind + 1] = fullSlice
+            sliceIm1[ind + 1] = fullSlice
+            sliceI[ind + 1] = fullSlice
         
         return type(self)(self.nInd, self.nDep, self.order, coefs.shape[1:], knots, coefs, self.accuracy, self.metadata)
 
@@ -443,7 +573,7 @@ class Spline:
         """
         # Assumes self.nDep is the first value in self.coefs.shape
         bounds = [[coefficient.min(), coefficient.max()] for coefficient in self.coefs]
-        return np.array(bounds)
+        return np.array(bounds, self.coefs.dtype)
 
     def save(self, fileName):
         kw = {}
