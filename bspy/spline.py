@@ -355,13 +355,14 @@ class Spline:
         sliceJI = (self.nInd + 2) * [fullSlice]
         sliceJm1Ip1 = (self.nInd + 2) * [fullSlice]
         sliceJm1I = (self.nInd + 2) * [fullSlice]
+        indexJm1Ip1 = (self.nInd + 2) * [0]
         for ind in range(self.nInd):
             # Step 1: Compute derivatives of coefficients at original knots, adjusted for elevated spline.
 
-            # Step 1.1: Calculate multiplicities "beta" array and new knot list.
+            # Step 1.1: Calculate multiplicities "z" array and new knot list.
             assert m[ind] >= 0
             knotList = []
-            beta = []
+            z = []
             multiplicity = 0
             previousKnot = knots[ind][0]
             for knot in knots[ind]:
@@ -369,12 +370,12 @@ class Spline:
                     multiplicity += 1
                 else:
                     knotList += (multiplicity + m[ind]) * [previousKnot]
-                    beta.append(multiplicity)
+                    z.append(multiplicity)
                     multiplicity = 1
                     previousKnot = knot
             knotList += (multiplicity + m[ind]) * [previousKnot]
             k = order[ind] # Use k for the original order to better match the paper's algorithm
-            assert beta[0] == k
+            assert z[0] == k
 
             # Step 1.2: Set 0th derivative to original coefficients.
             sliceJI[0] = 0
@@ -382,73 +383,69 @@ class Spline:
             dCoefs = np.full((k, *coefs.shape), np.inf, coefs.dtype)
             dCoefs[sliceJI] = coefs[sliceJI[1:]]
 
-            # Step 1.3: Compute derivative values at each unique knot except the rightmost knot, adjusted for elevated spline.
-            iStart = 0
-            for multiplicity in beta:
-                # Loop to the highest valid derivative for this unique knot with given multiplicity.
-                for j in range(1, k - multiplicity + 1 if iStart > 0 else k):
-                    sliceJI[0] = j
-                    sliceJm1Ip1[0] = j - 1
-                    sliceJm1I[0] = j - 1
-                    derivativeAdjustment = (k - j) / (k + m[ind] - j)
-                    for i in range(max(iStart - j, 0), iStart + multiplicity - j):
-                        sliceJI[ind + 2] = i
-                        sliceJm1Ip1[ind + 2] = i + 1
-                        sliceJm1I[ind + 2] = i
-                        dCoefs[sliceJI] = (derivativeAdjustment / (knots[ind][i + k] - knots[ind][i + j])) * (dCoefs[sliceJm1Ip1] - dCoefs[sliceJm1I])
-                # Move to the next unique knot
-                iStart += multiplicity
+            # Step 1.3: Compute derivative coefficients, adjusted for elevated spline.
+            for j in range(1, k):
+                sliceJI[0] = j
+                sliceJm1Ip1[0] = j - 1
+                sliceJm1I[0] = j - 1
+                derivativeAdjustment = (k - j) / (k + m[ind] - j)
+                for i in range(0, nCoef[ind] - j):
+                    sliceJI[ind + 2] = i
+                    sliceJm1Ip1[ind + 2] = i + 1
+                    sliceJm1I[ind + 2] = i
+                    gap = knots[ind][i + k] - knots[ind][i + j]
+                    alpha = derivativeAdjustment / gap if gap > 0.0 else 0.0
+                    dCoefs[sliceJI] = alpha * (dCoefs[sliceJm1Ip1] - dCoefs[sliceJm1I])
  
             # Step 2: Construct elevated order, nCoef, knots, and coefs.
             order[ind] += m[ind]
             knots[ind] = np.array(knotList, knots[ind].dtype)
             nCoef[ind] = knots[ind].shape[0] - order[ind]
-            coefs = np.full((k - 1, self.nDep, *nCoef), np.inf, coefs.dtype)
+            coefs = np.full((k, self.nDep, *nCoef), np.inf, coefs.dtype)
             
             # Step 3: Compute derivatives of coefficients at elevated knots.
 
-            # Step 3.1: Initialize the leftmost derivative coefficient for all derivatives.
-            sliceJI[0] = slice(k - 1)
-            sliceJI[ind + 2] = 0
-            coefs[sliceJI] = dCoefs[sliceJI]
+            # Step 3.1: Initialize known elevated coefficients at beta values.
+            beta = -k
+            betaPlusM = -order[ind]
+            for multiplicity in z:
+                beta += multiplicity
+                betaPlusM += multiplicity + m[ind]
+                # Reusing sliceJI to mean sliceJBeta, forgive me.
+                sliceJI[0] = slice(k - multiplicity, k)
+                sliceJI[ind + 2] = beta
+                # Reusing sliceJm1I to mean sliceJBetaPlusM, forgive me.
+                sliceJm1I[0] = sliceJI[0]
+                sliceJm1I[ind + 2] = betaPlusM
+                coefs[sliceJm1I] = dCoefs[sliceJI]
+                for i in range(betaPlusM + 1, betaPlusM + m[ind] + 1):
+                    sliceJm1I[0] = k - 1
+                    sliceJm1I[ind + 2] = i
+                    sliceJm1Ip1[0] = k - 1
+                    sliceJm1Ip1[ind + 2] = betaPlusM
+                    coefs[sliceJm1I] = coefs[sliceJm1Ip1]
 
             # Step 3.2: Compute remaining derivatives of coefficients at elevated knots.
-            iOriginalStart = 0
-            iStart = 0
-            for multiplicity in beta:
-                # Start at highest valid derivative for this unique knot with given multiplicity.
-                j = k - multiplicity if iStart > 0 else k - 1
-                # Increase multiplicity by elevation.
-                multiplicity += m[ind]
-                # Replicate the highest value derivative from the original knots (dCoefs[sliceJI]), 
-                # and compute the next lower derivative.
+            for j in range(k - 1, 0, -1):
                 sliceJI[0] = j
                 sliceJm1Ip1[0] = j - 1
                 sliceJm1I[0] = j - 1
-                for i in range(max(iStart - j, 0), iStart + multiplicity - j):
-                    sliceJI[ind + 2] = max(iOriginalStart - j, 0)
-                    sliceJm1Ip1[ind + 2] = i + 1
-                    sliceJm1I[ind + 2] = i
-                    coefs[sliceJm1Ip1] = coefs[sliceJm1I] + (knots[ind][i + order[ind]] - knots[ind][i + j]) * dCoefs[sliceJI]
-                # Compute the remaining lower derivatives until you get down to zero.
-                for j in range(j - 1, 0, -1):
-                    sliceJI[0] = j
-                    sliceJm1Ip1[0] = j - 1
-                    sliceJm1I[0] = j - 1
-                    for i in range(max(iStart - j, 0), iStart + multiplicity - j):
+                indexJm1Ip1[0] = j - 1
+                for i in range(0, nCoef[ind] - j):
+                    indexJm1Ip1[ind + 2] = i + 1
+                    if coefs[tuple(indexJm1Ip1)] == np.inf:
                         sliceJI[ind + 2] = i
                         sliceJm1Ip1[ind + 2] = i + 1
                         sliceJm1I[ind + 2] = i
                         coefs[sliceJm1Ip1] = coefs[sliceJm1I] + (knots[ind][i + order[ind]] - knots[ind][i + j]) * coefs[sliceJI]
-                # Move to the next unique knot
-                iOriginalStart += multiplicity - m[ind]
-                iStart += multiplicity
-
+            
+            coefs = coefs[0]
             sliceJI[ind + 2] = fullSlice
             sliceJm1Ip1[ind + 2] = fullSlice
             sliceJm1I[ind + 2] = fullSlice
+            indexJm1Ip1[ind + 2] = 0
         
-        return type(self)(self.nInd, self.nDep, self.order, coefs.shape[1:], knots, coefs, self.accuracy, self.metadata)
+        return type(self)(self.nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy, self.metadata)
 
     def fold(self, foldedInd):
         """
