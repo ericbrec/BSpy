@@ -107,6 +107,14 @@ truth = \
  [9.899999999999999911e-01, 9.872403498542273725e-01, 9.368422594752183752e-01],
  [1.000000000000000000e+00, 1.000000000000000000e+00, 1.000000000000000000e+00]]
 
+def compare_1D_splines(spline1, spline2, samples):
+    maxerror = 0.0
+    for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], samples):
+        [x, y] = spline1.evaluate([u])
+        [xTest, yTest] = spline2.evaluate([u])
+        maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxerror <= np.finfo(float).eps
+
 def test_derivatives():
     maxerror = 0.0
     myDerivative = myCurve.differentiate()
@@ -128,12 +136,8 @@ def test_elevate():
     maxerror = 0.0
     original = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0, 0.5, 0.5, 1, 1, 1, 1], float)], 
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
-    elevated = original.elevate((1,))
-    for u in np.linspace(original.knots[0][original.order[0]-1], original.knots[0][original.nCoef[0]], 100):
-        [x, y] = original.evaluate([u])
-        [xTest, yTest] = elevated.evaluate([u])
-        maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
-    assert maxerror <= np.finfo(float).eps
+    elevated = original.elevate((0,))
+    compare_1D_splines(original, elevated, 100)
 
 def test_evaluate():
     maxerror = 0.0

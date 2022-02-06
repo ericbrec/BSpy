@@ -324,7 +324,7 @@ class Spline:
 
     def elevate(self, m):
         """
-        Elevate a spline, increasing its order by `m`.
+        Elevate a left-clamped spline, increasing its order by `m`.
 
         Parameters
         ----------
@@ -377,7 +377,7 @@ class Spline:
             k = order[ind] # Use k for the original order to better match the paper's algorithm
             assert z[0] == k
 
-            # Step 1.2: Set 0th derivative to original coefficients.
+            # Step 1.2: Set zeroth derivative to original coefficients.
             sliceJI[0] = 0
             sliceJI[ind + 2] = fullSlice
             dCoefs = np.full((k, *coefs.shape), np.nan, coefs.dtype)
@@ -403,9 +403,7 @@ class Spline:
             nCoef[ind] = knots[ind].shape[0] - order[ind]
             coefs = np.full((k, self.nDep, *nCoef), np.nan, coefs.dtype)
             
-            # Step 3: Compute derivatives of coefficients at elevated knots.
-
-            # Step 3.1: Initialize known elevated coefficients at beta values.
+            # Step 3: Initialize known elevated coefficients at beta values.
             beta = -k
             betaPlusM = -order[ind]
             for multiplicity in z:
@@ -425,7 +423,7 @@ class Spline:
                     sliceJm1Ip1[ind + 2] = betaPlusM
                     coefs[sliceJm1I] = coefs[sliceJm1Ip1]
 
-            # Step 3.2: Compute remaining derivatives of coefficients at elevated knots.
+            # Step 4: Compute remaining derivative coefficients at elevated knots.
             for j in range(k - 1, 0, -1):
                 sliceJI[0] = j
                 sliceJm1Ip1[0] = j - 1
@@ -439,6 +437,7 @@ class Spline:
                         sliceJm1I[ind + 2] = i
                         coefs[sliceJm1Ip1] = coefs[sliceJm1I] + (knots[ind][i + order[ind]] - knots[ind][i + j]) * coefs[sliceJI]
             
+            # Set new coefs to the elevated zeroth derivative coefficients and reset slices.
             coefs = coefs[0]
             sliceJI[ind + 2] = fullSlice
             sliceJm1Ip1[ind + 2] = fullSlice
@@ -525,6 +524,10 @@ class Spline:
         -------
         spline : `Spline`
             A spline with the new knots inserted.
+
+        See Also
+        --------
+        `elevate` : Elevate a left-clamped spline, increasing its order by `m`.
         """
         assert len(newKnots) == self.nInd
         knots = list(self.knots)
