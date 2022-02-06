@@ -128,8 +128,6 @@ def test_elevate():
     maxerror = 0.0
     original = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0, 0.5, 0.5, 1, 1, 1, 1], float)], 
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
-    #elevated = bspy.Spline(1, 2, (5,), (8,), [np.array([0, 0, 0, 0, 0, 0.5, 0.5, 0.5, 1, 1, 1, 1, 1], float)], 
-    #    np.array(((260, 100), (140, 220), (180, 340), (280, 420), (400, 420), (500, 340), (540, 220), (420, 100)), float))
     elevated = original.elevate((1,))
     for u in np.linspace(original.knots[0][original.order[0]-1], original.knots[0][original.nCoef[0]], 100):
         [x, y] = original.evaluate([u])

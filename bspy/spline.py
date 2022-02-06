@@ -380,7 +380,7 @@ class Spline:
             # Step 1.2: Set 0th derivative to original coefficients.
             sliceJI[0] = 0
             sliceJI[ind + 2] = fullSlice
-            dCoefs = np.full((k, *coefs.shape), np.inf, coefs.dtype)
+            dCoefs = np.full((k, *coefs.shape), np.nan, coefs.dtype)
             dCoefs[sliceJI] = coefs[sliceJI[1:]]
 
             # Step 1.3: Compute derivative coefficients, adjusted for elevated spline.
@@ -401,7 +401,7 @@ class Spline:
             order[ind] += m[ind]
             knots[ind] = np.array(knotList, knots[ind].dtype)
             nCoef[ind] = knots[ind].shape[0] - order[ind]
-            coefs = np.full((k, self.nDep, *nCoef), np.inf, coefs.dtype)
+            coefs = np.full((k, self.nDep, *nCoef), np.nan, coefs.dtype)
             
             # Step 3: Compute derivatives of coefficients at elevated knots.
 
@@ -433,7 +433,7 @@ class Spline:
                 indexJm1Ip1[0] = j - 1
                 for i in range(0, nCoef[ind] - j):
                     indexJm1Ip1[ind + 2] = i + 1
-                    if coefs[tuple(indexJm1Ip1)] == np.inf:
+                    if np.isnan(coefs[tuple(indexJm1Ip1)]):
                         sliceJI[ind + 2] = i
                         sliceJm1Ip1[ind + 2] = i + 1
                         sliceJm1I[ind + 2] = i
