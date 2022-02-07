@@ -340,6 +340,38 @@ class Spline:
         See Also
         --------
         `insert_knots` : Insert new knots into a spline.
+        `elevate_and_insert_knots` : Elevate a left-clamped spline and insert new knots.
+
+        Notes
+        -----
+        Implements the algorithm from Huang, Qi-Xing, Shi-Min Hu, and Ralph R. Martin. 
+        "Fast degree elevation and knot insertion for B-spline curves." Computer Aided Geometric Design 22, no. 2 (2005): 183-197.
+        """
+        return self.elevate_and_insert_knots(m, self.nInd * [[]])
+
+    def elevate_and_insert_knots(self, m, newKnots):
+        """
+        Elevate a left-clamped spline and insert new knots.
+
+        Parameters
+        ----------
+        m : `iterable` of length `nInd`
+            An iterable that specifies the non-negative integer amount to increase the order 
+            for each independent variable of the spline.
+
+        newKnots : `iterable` of length `nInd`
+            An iterable that specifies the knots to be added to each independent variable's knots. 
+            len(newKnots[ind]) == 0 if no knots are to be added for the `ind` independent variable.
+
+        Returns
+        -------
+        spline : `Spline`
+            A spline with the order of the current spline plus `m` that includes the new knots.
+
+        See Also
+        --------
+        `insert_knots` : Insert new knots into a spline.
+        `elevate` : Elevate a left-clamped spline, increasing its order by `m`.
 
         Notes
         -----
@@ -347,6 +379,7 @@ class Spline:
         "Fast degree elevation and knot insertion for B-spline curves." Computer Aided Geometric Design 22, no. 2 (2005): 183-197.
         """
         assert len(m) == self.nInd
+        assert len(newKnots) == self.nInd
         order = [*self.order]
         nCoef = [*self.nCoef]
         knots = list(self.knots)
@@ -355,35 +388,19 @@ class Spline:
         sliceJI = (self.nInd + 2) * [fullSlice]
         sliceJm1Ip1 = (self.nInd + 2) * [fullSlice]
         sliceJm1I = (self.nInd + 2) * [fullSlice]
-        indexJm1Ip1 = (self.nInd + 2) * [0]
+        index = (self.nInd + 2) * [0]
         for ind in range(self.nInd):
             # Step 1: Compute derivatives of coefficients at original knots, adjusted for elevated spline.
 
-            # Step 1.1: Calculate multiplicities "z" array and new knot list.
+            # Step 1.1: Set zeroth derivative to original coefficients.
             assert m[ind] >= 0
-            knotList = []
-            z = []
-            multiplicity = 0
-            previousKnot = knots[ind][0]
-            for knot in knots[ind]:
-                if knot == previousKnot:
-                    multiplicity += 1
-                else:
-                    knotList += (multiplicity + m[ind]) * [previousKnot]
-                    z.append(multiplicity)
-                    multiplicity = 1
-                    previousKnot = knot
-            knotList += (multiplicity + m[ind]) * [previousKnot]
             k = order[ind] # Use k for the original order to better match the paper's algorithm
-            assert z[0] == k
-
-            # Step 1.2: Set zeroth derivative to original coefficients.
             sliceJI[0] = 0
             sliceJI[ind + 2] = fullSlice
             dCoefs = np.full((k, *coefs.shape), np.nan, coefs.dtype)
             dCoefs[sliceJI] = coefs[sliceJI[1:]]
 
-            # Step 1.3: Compute derivative coefficients, adjusted for elevated spline.
+            # Step 1.2: Compute original derivative coefficients, adjusted for elevated spline.
             for j in range(1, k):
                 sliceJI[0] = j
                 sliceJm1Ip1[0] = j - 1
@@ -398,40 +415,59 @@ class Spline:
                     dCoefs[sliceJI] = alpha * (dCoefs[sliceJm1Ip1] - dCoefs[sliceJm1I])
  
             # Step 2: Construct elevated order, nCoef, knots, and coefs.
+            u, z = np.unique(knots[ind], return_counts=True)
+            assert z[0] == k
             order[ind] += m[ind]
-            knots[ind] = np.array(knotList, knots[ind].dtype)
+            uBar, zBar = np.unique(np.append(knots[ind], newKnots[ind]), return_counts=True)
+            i = 0
+            for iBar in range(zBar.shape[0]):
+                if u[i] == uBar[iBar]:
+                    zBar[iBar] = max(zBar[iBar], z[i] + m[ind])
+                    i += 1
+            assert zBar[0] == order[ind]
+            knots[ind] = np.repeat(uBar, zBar)
             nCoef[ind] = knots[ind].shape[0] - order[ind]
             coefs = np.full((k, self.nDep, *nCoef), np.nan, coefs.dtype)
             
             # Step 3: Initialize known elevated coefficients at beta values.
             beta = -k
-            betaPlusM = -order[ind]
-            for multiplicity in z:
-                beta += multiplicity
-                betaPlusM += multiplicity + m[ind]
-                # Reusing sliceJI to mean sliceJBeta, forgive me.
-                sliceJI[0] = slice(k - multiplicity, k)
-                sliceJI[ind + 2] = beta
-                # Reusing sliceJm1I to mean sliceJBetaPlusM, forgive me.
-                sliceJm1I[0] = sliceJI[0]
-                sliceJm1I[ind + 2] = betaPlusM
-                coefs[sliceJm1I] = dCoefs[sliceJI]
-                for i in range(betaPlusM + 1, betaPlusM + m[ind] + 1):
-                    sliceJm1I[0] = k - 1
+            betaBarL = -order[ind]
+            betaBar = betaBarL
+            i = 0
+            for iBar in range(zBar.shape[0] - 1):
+                betaBar += zBar[iBar]
+                if u[i] == uBar[iBar]:
+                    beta += z[i]
+                    betaBarL += z[i] + m[ind]
+                    # Reusing sliceJI to mean sliceJBeta, forgive me.
+                    sliceJI[0] = slice(k - z[i], k)
+                    sliceJI[ind + 2] = beta
+                    # Reusing sliceJm1I to mean sliceJBetaBarL, forgive me.
+                    sliceJm1I[0] = sliceJI[0]
+                    sliceJm1I[ind + 2] = betaBarL
+                    coefs[sliceJm1I] = dCoefs[sliceJI]
+                    i += 1
+                betaBarL = betaBar
+            # Spread known <k-1>th derivatives across coefficients, since kth derivatives are zero.
+            sliceJm1I[0] = k - 1
+            sliceJm1Ip1[0] = k - 1
+            index[0] = k - 1
+            for i in range(0, nCoef[ind] - k):
+                index[ind + 2] = i + 1
+                if np.isnan(coefs[tuple(index)]):
                     sliceJm1I[ind + 2] = i
-                    sliceJm1Ip1[0] = k - 1
-                    sliceJm1Ip1[ind + 2] = betaPlusM
-                    coefs[sliceJm1I] = coefs[sliceJm1Ip1]
+                    sliceJm1Ip1[ind + 2] = i + 1
+                    coefs[sliceJm1Ip1] = coefs[sliceJm1I]
 
-            # Step 4: Compute remaining derivative coefficients at elevated knots.
+            # Step 4: Compute remaining derivative coefficients at elevated and new knots.
             for j in range(k - 1, 0, -1):
                 sliceJI[0] = j
                 sliceJm1Ip1[0] = j - 1
                 sliceJm1I[0] = j - 1
-                indexJm1Ip1[0] = j - 1
+                index[0] = j - 1
                 for i in range(0, nCoef[ind] - j):
-                    indexJm1Ip1[ind + 2] = i + 1
-                    if np.isnan(coefs[tuple(indexJm1Ip1)]):
+                    index[ind + 2] = i + 1
+                    if np.isnan(coefs[tuple(index)]):
                         sliceJI[ind + 2] = i
                         sliceJm1Ip1[ind + 2] = i + 1
                         sliceJm1I[ind + 2] = i
@@ -442,7 +478,7 @@ class Spline:
             sliceJI[ind + 2] = fullSlice
             sliceJm1Ip1[ind + 2] = fullSlice
             sliceJm1I[ind + 2] = fullSlice
-            indexJm1Ip1[ind + 2] = 0
+            index[ind + 2] = 0
         
         return type(self)(self.nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy, self.metadata)
 
@@ -528,6 +564,11 @@ class Spline:
         See Also
         --------
         `elevate` : Elevate a left-clamped spline, increasing its order by `m`.
+        `elevate_and_insert_knots` : Elevate a left-clamped spline and insert new knots.
+
+        Notes
+        -----
+        Implements Boehm's standard knot insertion algorithm.
         """
         assert len(newKnots) == self.nInd
         knots = list(self.knots)

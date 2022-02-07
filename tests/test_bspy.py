@@ -136,7 +136,14 @@ def test_elevate():
     maxerror = 0.0
     original = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0, 0.5, 0.5, 1, 1, 1, 1], float)], 
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
-    elevated = original.elevate((0,))
+    elevated = original.elevate((1,))
+    compare_1D_splines(original, elevated, 100)
+
+def test_elevate_and_insert_knots():
+    maxerror = 0.0
+    original = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0, 0.5, 0.5, 1, 1, 1, 1], float)], 
+        np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
+    elevated = original.elevate_and_insert_knots((1,), ((.5,.3, .6, .6),))
     compare_1D_splines(original, elevated, 100)
 
 def test_evaluate():
