@@ -125,6 +125,172 @@ class Spline:
         else:
             return NotImplemented
 
+    def add(self, other, indMap = None):
+        """
+        Add two splines.
+
+        Parameters
+        ----------
+        other : `Spline`
+            The spline to add to self. The number of dependent variables must match self.
+
+        indMap : `iterable` or `None` (default)
+            An iterable of pairs of indices. 
+            Each pair (n, m) maps the mth independent variable of other to the nth independent variable of self. 
+            The domains of the nth and mth independent variables must match. 
+            An independent variable can map to no more than one other independent variable.
+            Unmapped independent variables remain independent (the default).
+
+        Returns
+        -------
+        spline : `Spline`
+            The result of adding other to self.
+
+        See Also
+        --------
+        `subtract` : Subtract two splines.
+        `clamp` : Clamp the left and/or right side of a spline.
+        `elevate_and_insert_knots` : Elevate a left-clamped spline and insert new knots.
+
+        Notes
+        -----
+        Uses `elevate_and_insert_knots` to ensure mapped variables share the same order and knots. 
+        If a mapped variable is not left clamped, knots are inserted to make it clamped.
+        """
+        assert self.nDep == other.nDep
+        selfMapped = []
+        otherMapped = []
+        otherToSelf = {}
+        if indMap is not None:
+            selfMapped = [map[0] for map in indMap]
+            self = self.clamp(selfMapped, [])
+            otherMapped = [map[1] for map in indMap]
+            other = other.clamp(otherMapped, [])
+            selfM = self.nInd * [0]
+            otherM = other.nInd * [0]
+            selfNewKnots = self.nInd * [[]]
+            otherNewKnots = self.nInd * [[]]
+            for map in indMap:
+                assert len(map) == 2
+                assert self.knots[map[0]][0] == other.knots[map[1]][0]
+                assert self.knots[map[0]][-1] == other.knots[map[1]][-1]
+                # Add to map dictionary
+                otherToSelf[map[1]] = map[0]
+                # Calculate elevation adjustments
+                newOrder = max(self.order[map[0]], other.order[map[1]])
+                selfM[map[0]] = newOrder - self.order[map[0]]
+                otherM[map[1]] = newOrder - other.order[map[1]]
+                # Compute elevated knots
+                if selfM[map[0]] > 0:
+                    selfKnots, counts = np.unique(self.knots[map[0]], return_counts=True)
+                    counts += selfM[map[0]]
+                    selfKnots = np.repeat(selfKnots, counts)
+                else:
+                    selfKnots = self.knots[map[0]]
+                if otherM[map[1]] > 0:
+                    otherKnots, counts = np.unique(other.knots[map[1]], return_counts=True)
+                    counts += otherM[map[1]]
+                    otherKnots = np.repeat(otherKnots, counts)
+                else:
+                    otherKnots = other.knots[map[1]]
+                # Collect missing knots
+                i = 0
+                for knot in selfKnots:
+                    while (i < len(otherKnots) and otherKnots[i] < knot):
+                        selfNewKnots[map[0]].append(otherKnots[i])
+                        i += 1
+                    if i < len(otherKnots):
+                        if knot < otherKnots[i]:
+                            otherNewKnots[map[1]].append(knot)
+                        else:
+                            i += 1
+                    else:
+                        otherNewKnots[map[1]].append(knot)
+                while (i < len(otherKnots)):
+                    selfNewKnots[map[0]].append(otherKnots[i])
+                    i += 1
+
+            # Make order and knots match for mapped independent variables.
+            self = self.elevate_and_insert_knots(selfM, selfNewKnots)
+            other = other.elevate_and_insert_knots(otherM, otherNewKnots)
+
+        # Construct new spline parameters.
+        # We index backwards because we're adding transposed coefficients (see below). 
+        nInd = self.nInd
+        nCoef = [*self.nCoef]
+        knots = list(self.knots)
+        permutation = [] # Used to transpose coefs to match other.coefs.T.
+        for i in range(self.nInd - 1, -1, -1):
+            if i not in selfMapped:
+                permutation.append(i + 1) # Add 1 to account for dependent variables.
+        for i in range(other.nInd - 1, -1, -1):
+            if i not in otherMapped:
+                nCoef.append(other.nCoef[i])
+                knots.append(other.knots[i])
+                permutation.append(nInd + 1) # Add 1 to account for dependent variables.
+                nInd += 1
+            else:
+                permutation.append(otherToSelf[i] + 1) # Add 1 to account for dependent variables.
+        permutation.append(0) # Account for dependent variables.
+        permutation = np.array(permutation)
+        coefs = np.zeros((self.nDep, *nCoef), self.coefs.dtype)
+
+        # Build coefs array by transposing the changing coefficients to the end, including the dependent variables.
+        # First, add in self.coefs.
+        coefs = coefs.T
+        coefs += self.coefs.T
+        # Permutation for other.coefs.T accounts for coefs being transposed by subtracting permutation from ndim - 1.
+        coefs = coefs.transpose((coefs.ndim - 1) - permutation)
+        # Add in other.coefs. 
+        coefs += other.coefs.T
+        # Reverse the permutation.
+        coefs = coefs.transpose(np.argsort(permutation)) 
+        
+        return type(self)(nInd, self.nDep, self.order, nCoef, knots, coefs, self.accuracy, self.metadata)
+
+    def clamp(self, left, right):
+        """
+        Clamp the left and/or right side of a spline.
+
+        Parameters
+        ----------
+        left : `iterable`
+            An iterable of independent variables to clamp on the left side.
+
+        right : `iterable`
+            An iterable of independent variables to clamp on the right side.
+
+        Returns
+        -------
+        spline : `Spline`
+            The clamped spline. If the spline was already clamped, the original spline is returned.
+
+        See Also
+        --------
+        `insert_knots` : Insert new knots into a spline.
+        """
+        newKnots = self.nInd * [[]]
+
+        for ind in left:
+            insertions = self.order[ind]
+            for i in range(len(self.knots[ind])):
+                if self.knots[ind][i] > self.knots[ind][0]:
+                    break
+                else:
+                    insertions -= 1
+            newKnots[ind] += insertions * [self.knots[ind][0]]
+
+        for ind in right:
+            insertions = self.order[ind]
+            for i in range(len(self.knots[ind])):
+                if self.knots[ind][-i - 1] < self.knots[ind][-1]:
+                    break
+                else:
+                    insertions -= 1
+            newKnots[ind] += insertions * [self.knots[ind][-1]]
+
+        return self.insert_knots(newKnots)
+
     def derivative(self, with_respect_to, uvw):
         """
         Compute the derivative of the spline at a given parameter value.
@@ -559,7 +725,7 @@ class Spline:
         Returns
         -------
         spline : `Spline`
-            A spline with the new knots inserted.
+            A spline with the new knots inserted. If no knots were inserted, the original spline is returned.
 
         See Also
         --------
@@ -589,8 +755,11 @@ class Spline:
                 coefs = newCoefs
             sliceIm1[ind + 1] = fullSlice
             sliceI[ind + 1] = fullSlice
-        
-        return type(self)(self.nInd, self.nDep, self.order, coefs.shape[1:], knots, coefs, self.accuracy, self.metadata)
+
+        if self.coefs is coefs:
+            return self
+        else: 
+            return type(self)(self.nInd, self.nDep, self.order, coefs.shape[1:], knots, coefs, self.accuracy, self.metadata)
 
     @staticmethod
     def load(fileName, splineType=None):
