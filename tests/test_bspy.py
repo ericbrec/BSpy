@@ -124,7 +124,7 @@ def test_add():
     assert maxerror <= np.finfo(float).eps
 
     # Add with completely independent variables.
-    added = spline1.add(spline2)
+    added = spline1 + spline2
     maxerror = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
         for v in np.linspace(spline2.knots[0][spline2.order[0]-1], spline2.knots[0][spline2.nCoef[0]], 100):
@@ -251,6 +251,32 @@ def test_scale():
     for [u, x, y] in truth:
         [xTest, yTest] = scaledCurve.evaluate([u])
         maxerror = max(maxerror, (xTest - 3.0 * x) ** 2 + (yTest - 3.0 * y) ** 2)
+    assert maxerror <= np.finfo(float).eps
+
+def test_subtract():
+    maxerror = 0.0
+    spline1 = bspy.Spline(1, 2, (5,), (5,), [np.array([0, 0, 0, 0, 0.3, 0.5, 0.5, 1, 1, 1], float)], 
+        np.array(((260, 100), (100, 260), (260, 420), (580, 260), (420, 100)), float))
+    spline2 = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0, 0.5, 0.5, 1, 1, 1, 1], float)], 
+        np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
+    
+    # Subtract with shared independent variable.
+    subtracted = spline1.subtract(spline2, [[0, 0]])
+    maxerror = 0.0
+    for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
+        [x, y] = spline1.evaluate([u]) - spline2.evaluate([u])
+        [xTest, yTest] = subtracted.evaluate([u])
+        maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxerror <= np.finfo(float).eps
+
+    # Subtract with completely independent variables.
+    subtracted = spline1 - spline2
+    maxerror = 0.0
+    for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
+        for v in np.linspace(spline2.knots[0][spline2.order[0]-1], spline2.knots[0][spline2.nCoef[0]], 100):
+            [x, y] = spline1.evaluate([u]) - spline2.evaluate([v])
+            [xTest, yTest] = subtracted.evaluate([u,v])
+            maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
     assert maxerror <= np.finfo(float).eps
 
 def test_transform():

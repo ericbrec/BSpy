@@ -80,13 +80,17 @@ class Spline:
                f"{self.metadata})"
 
     def __add__(self, other):
-        if isIterable(other):
+        if isinstance(other, Spline):
+            return self.add(other)
+        elif isIterable(other):
             return self.translate(other)
         else:
             return NotImplemented
 
     def __radd__(self, other):
-        if isIterable(other):
+        if isinstance(other, Spline):
+            return other.add(self)
+        elif isIterable(other):
             return self.translate(other)
         else:
             return NotImplemented
@@ -113,14 +117,18 @@ class Spline:
             return NotImplemented
 
     def __sub__(self, other):
-        if isIterable(other):
+        if isinstance(other, Spline):
+            return self.subtract(other)
+        elif isIterable(other):
             return self.translate(-np.array(other))
         else:
             return NotImplemented
 
     def __rsub__(self, other):
-        if isIterable(other):
-            spline = self.scale(self.nDep * [-1.0])
+        if isinstance(other, Spline):
+            return other.subtract(self)
+        elif isIterable(other):
+            spline = self.scale(-1.0)
             return spline.translate(other)
         else:
             return NotImplemented
@@ -825,6 +833,40 @@ class Spline:
             for i in range(self.nDep):
                 coefs[i] *= multiplier[i]
         return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, coefs, accuracy, self.metadata)
+
+    def subtract(self, other, indMap = None):
+        """
+        Subtract two splines.
+
+        Parameters
+        ----------
+        other : `Spline`
+            The spline to subtract from self. The number of dependent variables must match self.
+
+        indMap : `iterable` or `None` (default)
+            An iterable of pairs of indices. 
+            Each pair (n, m) maps the mth independent variable of other to the nth independent variable of self. 
+            The domains of the nth and mth independent variables must match. 
+            An independent variable can map to no more than one other independent variable.
+            Unmapped independent variables remain independent (the default).
+
+        Returns
+        -------
+        spline : `Spline`
+            The result of subtracting other from self.
+
+        See Also
+        --------
+        `Add` : Add two splines.
+        `clamp` : Clamp the left and/or right side of a spline.
+        `elevate_and_insert_knots` : Elevate a left-clamped spline and insert new knots.
+
+        Notes
+        -----
+        Uses `elevate_and_insert_knots` to ensure mapped variables share the same order and knots. 
+        If a mapped variable is not left clamped, knots are inserted to make it clamped.
+        """
+        return self.add(other.scale(-1.0), indMap)
 
     def transform(self, matrix):
         """
