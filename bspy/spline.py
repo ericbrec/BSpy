@@ -217,6 +217,7 @@ class Spline:
         # Construct new spline parameters.
         # We index backwards because we're adding transposed coefficients (see below). 
         nInd = self.nInd
+        order = [*self.order]
         nCoef = [*self.nCoef]
         knots = list(self.knots)
         permutation = [] # Used to transpose coefs to match other.coefs.T.
@@ -225,6 +226,7 @@ class Spline:
                 permutation.append(i + 1) # Add 1 to account for dependent variables.
         for i in range(other.nInd - 1, -1, -1):
             if i not in otherMapped:
+                order.append(other.order[i])
                 nCoef.append(other.nCoef[i])
                 knots.append(other.knots[i])
                 permutation.append(nInd + 1) # Add 1 to account for dependent variables.
@@ -246,7 +248,7 @@ class Spline:
         # Reverse the permutation.
         coefs = coefs.transpose(np.argsort(permutation)) 
         
-        return type(self)(nInd, self.nDep, self.order, nCoef, knots, coefs, self.accuracy, self.metadata)
+        return type(self)(nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy, self.metadata)
 
     def clamp(self, left, right):
         """
