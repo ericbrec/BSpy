@@ -754,7 +754,12 @@ class Spline:
         sliceI = (self.nInd + 1) * [fullSlice]
         for ind in range(self.nInd):
             for knot in newKnots[ind]:
-                position = np.searchsorted(knots[ind], knot, 'right')
+                if knot < knots[ind][0] or knot > knots[ind][self.nCoef[ind]]:
+                    raise ArgumentOutsideDomainError(knot)
+                if knot == knots[ind][self.nCoef[ind]]:
+                    position = self.nCoef[ind]
+                else:
+                    position = np.searchsorted(knots[ind], knot, 'right')
                 newCoefs = np.insert(coefs, position - 1, 0.0, axis=ind + 1)
                 for i in range(position - self.order[ind] + 1, position):
                     alpha = (knot - knots[ind][i]) / (knots[ind][i + self.order[ind] - 1] - knots[ind][i])
