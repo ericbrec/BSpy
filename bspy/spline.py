@@ -260,7 +260,8 @@ class Spline:
 
     def clamp(self, left, right):
         """
-        Clamp the left and/or right side of a spline.
+        Ensure the leftmost/rightmost knot has a full order multiplicity, clamping the spline's 
+        value at the first/last knot to its first/last coefficient.
 
         Parameters
         ----------
@@ -556,6 +557,14 @@ class Spline:
         """
         assert len(m) == self.nInd
         assert len(newKnots) == self.nInd
+
+        # Quick check to see if any elevation or insertion is needed. If none, return self unchanged.
+        totalDelta = 0
+        for ind in self.nInd:
+            totalDelta += m[ind] + len(newKnots[ind])
+        if totalDelta == 0:
+            return self
+
         order = [*self.order]
         nCoef = [*self.nCoef]
         knots = list(self.knots)
