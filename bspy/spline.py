@@ -207,7 +207,7 @@ class Spline:
         # Reverse the permutation.
         coefs = coefs.transpose(np.argsort(permutation)) 
         
-        return type(self)(nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy, self.metadata)
+        return type(self)(nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy + other.accuracy, self.metadata)
 
     def clamp(self, left, right):
         """
@@ -924,14 +924,18 @@ class Spline:
         """
         return self.add(other.scale(-1.0), indMap)
 
-    def transform(self, matrix):
+    def transform(self, matrix, maxSingularValue=None):
         """
         Transform a spline by the given matrix.
 
         Parameters
         ----------
         matrix : array-like
-            An array of size `nDep`x`nDep` that specifies the transform matrix.
+            An array of size `newNDep`x`nDep` that specifies the transform matrix.
+
+        maxSingularValue : `float`
+            The largest singular value of `matrix`, used to update the accuracy of the spline. 
+            If no value is provided (default), the largest singular value is computed.
 
         Returns
         -------
@@ -943,9 +947,12 @@ class Spline:
         `scale` : Scale a spline by the given scalar or scale vector.
         `translate` : Translate a spline by the given translation vector.
         """
-        assert matrix.shape == (self.nDep, self.nDep)
+        assert matrix.ndim == 2 and matrix.shape[1] == self.nDep
 
-        return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, matrix @ self.coefs, self.accuracy, self.metadata)
+        if maxSingularValue is None:
+            maxSingularValue = np.linalg.svd(matrix, compute_uv=False)[0]
+
+        return type(self)(self.nInd, matrix.shape[0], self.order, self.nCoef, self.knots, matrix @ self.coefs, maxSingularValue * self.accuracy, self.metadata)
 
     def translate(self, translationVector):
         """
