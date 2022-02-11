@@ -1,4 +1,3 @@
-from turtle import width
 import numpy as np
 from os import path
 
@@ -157,70 +156,22 @@ class Spline:
         See Also
         --------
         `subtract` : Subtract two splines.
-        `clamp` : Clamp the left and/or right side of a spline.
-        `elevate_and_insert_knots` : Elevate a left-clamped spline and insert new knots.
+        `common_basis : Align a collection of splines to a common basis, elevating the order and adding knots as needed.
 
         Notes
         -----
-        Uses `elevate_and_insert_knots` to ensure mapped variables share the same order and knots. 
-        If a mapped variable is not left clamped, knots are inserted to make it clamped.
+        Uses `common_basis` to ensure mapped variables share the same order and knots. 
         """
         assert self.nDep == other.nDep
         selfMapped = []
         otherMapped = []
         otherToSelf = {}
         if indMap is not None:
-            selfMapped = [map[0] for map in indMap]
-            self = self.clamp(selfMapped, [])
-            otherMapped = [map[1] for map in indMap]
-            other = other.clamp(otherMapped, [])
-            selfM = self.nInd * [0]
-            otherM = other.nInd * [0]
-            selfNewKnots = self.nInd * [[]]
-            otherNewKnots = self.nInd * [[]]
+            (self, other) = self.common_basis((other,), indMap)
             for map in indMap:
-                assert len(map) == 2
-                assert self.knots[map[0]][0] == other.knots[map[1]][0]
-                assert self.knots[map[0]][-1] == other.knots[map[1]][-1]
-                # Add to map dictionary
+                selfMapped.append(map[0])
+                otherMapped.append(map[1])
                 otherToSelf[map[1]] = map[0]
-                # Calculate elevation adjustments
-                newOrder = max(self.order[map[0]], other.order[map[1]])
-                selfM[map[0]] = newOrder - self.order[map[0]]
-                otherM[map[1]] = newOrder - other.order[map[1]]
-                # Compute elevated knots
-                if selfM[map[0]] > 0:
-                    selfKnots, counts = np.unique(self.knots[map[0]], return_counts=True)
-                    counts += selfM[map[0]]
-                    selfKnots = np.repeat(selfKnots, counts)
-                else:
-                    selfKnots = self.knots[map[0]]
-                if otherM[map[1]] > 0:
-                    otherKnots, counts = np.unique(other.knots[map[1]], return_counts=True)
-                    counts += otherM[map[1]]
-                    otherKnots = np.repeat(otherKnots, counts)
-                else:
-                    otherKnots = other.knots[map[1]]
-                # Collect missing knots
-                i = 0
-                for knot in selfKnots:
-                    while (i < len(otherKnots) and otherKnots[i] < knot):
-                        selfNewKnots[map[0]].append(otherKnots[i])
-                        i += 1
-                    if i < len(otherKnots):
-                        if knot < otherKnots[i]:
-                            otherNewKnots[map[1]].append(knot)
-                        else:
-                            i += 1
-                    else:
-                        otherNewKnots[map[1]].append(knot)
-                while (i < len(otherKnots)):
-                    selfNewKnots[map[0]].append(otherKnots[i])
-                    i += 1
-
-            # Make order and knots match for mapped independent variables.
-            self = self.elevate_and_insert_knots(selfM, selfNewKnots)
-            other = other.elevate_and_insert_knots(otherM, otherNewKnots)
 
         # Construct new spline parameters.
         # We index backwards because we're adding transposed coefficients (see below). 
@@ -301,6 +252,94 @@ class Spline:
             newKnots[ind] += insertions * [self.knots[ind][-1]]
 
         return self.insert_knots(newKnots)
+
+    def common_basis(self, splines, indMap):
+        """
+        Align a collection of splines to a common basis, elevating the order and adding knots as needed.
+
+        Parameters
+        ----------
+        splines : `iterable`
+            The collection of N - 1 splines to align (N total splines, including self).
+
+        indMap : `iterable`
+            The collection of independent variables to align. Since each spline can have multiple 
+            independent variables, `indMap` is an `iterable` of `iterables` (like a list of lists). 
+            Each collection of indices (i0, i1, .. iN) maps the i'th independent variable to each other. 
+            The domains of mapped independent variables must match. 
+            An independent variable can map to no more than one other independent variable.
+            If all the splines are curves (1 independent variable), then `indMap` is ((0, 0, .. 0)).
+
+        Returns
+        -------
+        splines : `tuple`
+            The aligned collection of N splines.
+
+        See Also
+        --------
+        `elevate_and_insert_knots` : Elevate a spline and insert new knots.
+
+        Notes
+        -----
+        Uses `elevate_and_insert_knots` to ensure mapped variables share the same order and knots. 
+        """
+        # Step 1: Compute the order for each aligned independent variable.
+        orders = []
+        splines = (self, *splines)
+        for map in indMap:
+            assert len(map) == len(splines)
+            order = 0
+            for (spline, ind) in zip(splines, map):
+                order = max(order, spline.order[ind])
+            orders.append(order)
+        
+        # Step 2: Compute knot multiplicities for each aligned independent variable.
+        knots = []
+        for (map, order) in zip(indMap, orders):
+            multiplicities = []
+            leftKnot = splines[0].knots[map[0]][0]
+            rightKnot = splines[0].knots[map[0]][-1]
+            for (spline, ind) in zip(splines, map):
+                assert spline.knots[ind][0] == leftKnot
+                assert spline.knots[ind][-1] == rightKnot
+                uniqueKnots, counts = np.unique(spline.knots[ind], return_counts=True)
+                match = 0
+                for (knot, count) in zip(uniqueKnots, counts):
+                    while match < len(multiplicities) and knot > multiplicities[match][0]:
+                        match += 1
+                    if match == len(multiplicities) or knot < multiplicities[match][0]:
+                        # Account for elevation increase in knot count.
+                        multiplicities.insert(match, [knot, count + order - spline.order[ind]])
+                    else:
+                        # Account for elevation increase in knot count.
+                        multiplicities[match][1] = max(multiplicities[match][1], count + order - spline.order[ind])
+                        match += 1
+            knots.append(multiplicities)
+
+        # Step 3: Elevate and insert missing knots to each spline accordingly.
+        alignedSplines = []
+        for (spline, i) in zip(splines, range(len(splines))):
+            m = spline.nInd * [0]
+            newKnots = spline.nInd * [[]]
+            for (map, order, multiplicities) in zip(indMap, orders, knots):
+                ind = map[i]
+                m[ind] = order - spline.order[ind]
+                uniqueKnots, counts = np.unique(spline.knots[ind], return_counts=True)
+                match = 0
+                for (knot, count) in zip(uniqueKnots, counts):
+                    while match < len(multiplicities) and knot > multiplicities[match][0]:
+                        newKnots[ind] += multiplicities[match][1] * [multiplicities[match][0]]
+                        match += 1
+                    assert knot == multiplicities[match][0]
+                    newKnots[ind] += (multiplicities[match][1] - count) * [knot]
+                    match += 1
+                while match < len(multiplicities) and knot > multiplicities[match][0]:
+                    newKnots[ind] += multiplicities[match][1] * [multiplicities[match][0]]
+                    match += 1
+            spline = spline.elevate_and_insert_knots(m, newKnots)
+            alignedSplines.append(spline)
+
+        return tuple(alignedSplines)
 
     def derivative(self, with_respect_to, uvw):
         """
@@ -501,7 +540,7 @@ class Spline:
 
     def elevate(self, m):
         """
-        Elevate a left-clamped spline, increasing its order by `m`.
+        Elevate a spline, increasing its order by `m`.
 
         Parameters
         ----------
@@ -517,7 +556,7 @@ class Spline:
         See Also
         --------
         `insert_knots` : Insert new knots into a spline.
-        `elevate_and_insert_knots` : Elevate a left-clamped spline and insert new knots.
+        `elevate_and_insert_knots` : Elevate a spline and insert new knots.
 
         Notes
         -----
@@ -528,7 +567,7 @@ class Spline:
 
     def elevate_and_insert_knots(self, m, newKnots):
         """
-        Elevate a left-clamped spline and insert new knots.
+        Elevate a spline and insert new knots.
 
         Parameters
         ----------
@@ -548,7 +587,8 @@ class Spline:
         See Also
         --------
         `insert_knots` : Insert new knots into a spline.
-        `elevate` : Elevate a left-clamped spline, increasing its order by `m`.
+        `clamp` : Clamp the left and/or right side of a spline.
+        `elevate` : Elevate a spline, increasing its order by `m`.
 
         Notes
         -----
@@ -558,13 +598,18 @@ class Spline:
         assert len(m) == self.nInd
         assert len(newKnots) == self.nInd
 
-        # Quick check to see if any elevation or insertion is needed. If none, return self unchanged.
-        totalDelta = 0
-        for ind in self.nInd:
-            totalDelta += m[ind] + len(newKnots[ind])
-        if totalDelta == 0:
+        # Check if any elevation or insertion is needed. If none, return self unchanged.
+        impactedInd = []
+        for ind in range(self.nInd):
+            if m[ind] + len(newKnots[ind]) > 0:
+                impactedInd.append(ind)
+        if len(impactedInd) == 0:
             return self
 
+        # Ensure the spline is clamped on the left side.
+        self = self.clamp(impactedInd, [])
+
+        # Initialize new order, nCoef, knots, coefs, and working slices and indices.
         order = [*self.order]
         nCoef = [*self.nCoef]
         knots = list(self.knots)
@@ -607,7 +652,7 @@ class Spline:
             i = 0
             for iBar in range(zBar.shape[0]):
                 if u[i] == uBar[iBar]:
-                    zBar[iBar] = max(zBar[iBar], z[i] + m[ind])
+                    zBar[iBar] = min(max(zBar[iBar], z[i] + m[ind]), order[ind])
                     i += 1
             assert zBar[0] == order[ind]
             knots[ind] = np.repeat(uBar, zBar)
@@ -748,8 +793,7 @@ class Spline:
 
         See Also
         --------
-        `elevate` : Elevate a left-clamped spline, increasing its order by `m`.
-        `elevate_and_insert_knots` : Elevate a left-clamped spline and insert new knots.
+        `clamp` : Clamp the left and/or right side of a spline.
 
         Notes
         -----
@@ -871,14 +915,12 @@ class Spline:
 
         See Also
         --------
-        `Add` : Add two splines.
-        `clamp` : Clamp the left and/or right side of a spline.
-        `elevate_and_insert_knots` : Elevate a left-clamped spline and insert new knots.
+        `add` : Add two splines.
+        `common_basis : Align a collection of splines to a common basis, elevating the order and adding knots as needed.
 
         Notes
         -----
-        Uses `elevate_and_insert_knots` to ensure mapped variables share the same order and knots. 
-        If a mapped variable is not left clamped, knots are inserted to make it clamped.
+        Uses `common_basis` to ensure mapped variables share the same order and knots. 
         """
         return self.add(other.scale(-1.0), indMap)
 
