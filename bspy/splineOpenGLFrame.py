@@ -916,9 +916,9 @@ class SplineOpenGLFrame(OpenGLFrame):
         Parameters
         ----------
         mode : `int` with the following values:
-            `SplineOpenGLFrame.ROTATE` Dragging the left mouse rotates the view.
-            `SplineOpenGLFrame.PAN` Dragging the left mouse pans the view.
-            `SplineOpenGLFrame.FLY` Dragging the left mouse flies toward the mouse position.
+            * `SplineOpenGLFrame.ROTATE` Dragging the left mouse rotates the view.
+            * `SplineOpenGLFrame.PAN` Dragging the left mouse pans the view.
+            * `SplineOpenGLFrame.FLY` Dragging the left mouse flies toward the mouse position.
         """
         self.mode = mode
     

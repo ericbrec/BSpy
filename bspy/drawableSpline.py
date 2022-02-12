@@ -240,9 +240,9 @@ class DrawableSpline(Spline):
         Parameters
         ----------
         options : `int` bitwise or (`|`) of zero or more of the following values:
-            `DrawableSpline.HULL` Draw the convex hull of the spline (the coefficients). Off by default.
-            `DrawableSpline.SHADED` Draw the spline shaded (only useful for nInd >= 2). On by default.
-            `DrawableSpline.BOUNDARY` Draw the boundary of the spline in the line color (only useful for nInd >= 2). On by default.
-            `DrawableSpline.ISOPARMS` Draw the lines of constant knot values of the spline in the line color (only useful for nInd >= 2). Off by default.
+            * `DrawableSpline.HULL` Draw the convex hull of the spline (the coefficients). Off by default.
+            * `DrawableSpline.SHADED` Draw the spline shaded (only useful for nInd >= 2). On by default.
+            * `DrawableSpline.BOUNDARY` Draw the boundary of the spline in the line color (only useful for nInd >= 2). On by default.
+            * `DrawableSpline.ISOPARMS` Draw the lines of constant knot values of the spline in the line color (only useful for nInd >= 2). Off by default.
         """
         self.options = options
