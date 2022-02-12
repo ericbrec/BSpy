@@ -1,7 +1,5 @@
 import numpy as np
 from os import path
-
-from scipy.misc import derivative
 from bspy.error import *
 
 def isIterable(object):
@@ -268,7 +266,7 @@ class Spline:
             Each collection of indices (i0, i1, .. iN) maps the i'th independent variable to each other. 
             The domains of mapped independent variables must match. 
             An independent variable can map to no more than one other independent variable.
-            If all the splines are curves (1 independent variable), then `indMap` is ((0, 0, .. 0)).
+            If all the splines are curves (1 independent variable), then `indMap` is ((0, 0, .. 0),).
 
         Returns
         -------

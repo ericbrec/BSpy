@@ -5,6 +5,7 @@ from bspy import SplineOpenGLFrame
 from bspy import DrawableSpline
 
 class BitCheckbutton(tk.Checkbutton):
+    """A tkinter `CheckButton` that gets/sets its variable based on a given `bitmask`."""
     def __init__(self, parent, bitMask, **kw):
         self.bitMask = bitMask
         self.variable = kw.get("variable")
@@ -18,6 +19,10 @@ class BitCheckbutton(tk.Checkbutton):
         tk.Checkbutton.__init__(self, parent, **kw)
     
     def Command(self):
+        """
+        Handles when the checkbutton is pushed, updating the variable based on the 
+        bitmask and then calling the checkbutton command.
+        """
         if self.var.get() == 1:
             self.variable.set(self.variable.get() | self.bitMask)
         else:
@@ -25,9 +30,22 @@ class BitCheckbutton(tk.Checkbutton):
         self.command(self.variable.get())
 
     def Update(self):
+        """Updates checkbutton state."""
         self.var.set(1 if self.variable.get() & self.bitMask else 0)
 
 class bspyApp(tk.Tk):
+    """
+    A tkinter app (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a listbox full of 
+    splines, and a set of controls to adjust and view the selected splines.
+
+    Example
+    -------
+    >>> app = bspyApp()
+    >>> app.AddSpline(spline1)
+    >>> app.AddSpline(spline2)
+    >>> app.AddSpline(spline3)
+    >>> app.mainloop()
+    """
     def __init__(self, *args, SplineOpenGLFrame=SplineOpenGLFrame, **kw):
         tk.Tk.__init__(self, *args, **kw)
         self.title('bspy')
@@ -72,10 +90,17 @@ class bspyApp(tk.Tk):
         self.adjust = None
 
     def AddSpline(self, spline):
+        """Add a `DrawableSpline` to the listbox."""
         self.splineList.append(spline)
         self.listBox.insert(tk.END, spline)
 
+    def RemoveSpline(self, spline):
+        """Remove a `DrawableSpline` from the listbox."""
+        self.splineList.remove(spline)
+        self.listBox.delete(self.listBox.get(0, tk.END).index(spline))
+
     def ListChanged(self, event):
+        """Handle when the listbox selection has changed."""
         self.frame.splineDrawList = []
         for item in self.listBox.curselection():
             self.frame.splineDrawList.append(self.splineList[item])
@@ -91,9 +116,11 @@ class bspyApp(tk.Tk):
         self.frame.Update()
     
     def ChangeFrameMode(self):
+        """Handle when the view mode has changed."""
         self.frame.SetMode(self.frameMode.get())
 
     def Adjust(self):
+        """Handle when the Adjust button is pressed."""
         if self.adjust is None:
             self.adjust = tk.Toplevel()
             self.adjust.title("Adjust")
@@ -129,28 +156,32 @@ class bspyApp(tk.Tk):
             self.adjust.geometry("{width}x{height}+{x}+{y}".format(width=205, height=self.adjust.winfo_height(), x=self.winfo_screenwidth() - 205, y=self.winfo_y()))
 
     def AdjustDestroy(self, event):
+        """Handle when the adjust dialog is destroyed."""
         self.adjust = None
         self.checkButtons = None
     
     def ChangeOptions(self, options):
+        """Handle when the spline options are changed."""
         for spline in self.frame.splineDrawList:
-            spline.options = options
+            spline.SetOptions(options)
         self.frame.Update()
 
     def FillColorChange(self):
+        """Handle when the fill color changed."""
         if self.frame.splineDrawList:
             oldColor = 255.0 * self.frame.splineDrawList[0].fillColor
             newColor = askcolor(title="Set spline fill color", color="#%02x%02x%02x" % (int(oldColor[0]), int(oldColor[1]), int(oldColor[2])))
             if newColor[0] is not None:
                 for spline in self.frame.splineDrawList:
-                    spline.fillColor[:3] = np.array(newColor[0], np.float32) / 255.0
+                    spline.SetFillColor(newColor[0])
                 self.frame.Update()
 
     def LineColorChange(self):
+        """Handle when the line color changed."""
         if self.frame.splineDrawList:
             oldColor = 255.0 * self.frame.splineDrawList[0].lineColor
             newColor = askcolor(title="Set spline line color", color="#%02x%02x%02x" % (int(oldColor[0]), int(oldColor[1]), int(oldColor[2])))
             if newColor[0] is not None:
                 for spline in self.frame.splineDrawList:
-                    spline.lineColor[:3] = np.array(newColor[0], np.float32) / 255.0
+                    spline.SetLineColor(newColor[0])
                 self.frame.Update()

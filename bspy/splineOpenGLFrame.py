@@ -6,10 +6,16 @@ from pyopengltk import OpenGLFrame
 from bspy import DrawableSpline
 
 class SplineOpenGLFrame(OpenGLFrame):
+    """
+    A tkinter `OpenGLFrame` with shaders to display a `DrawableSpline` list. 
+    """
 
     ROTATE = 1
+    """Default view mode in which dragging the left mouse rotates the view."""
     PAN = 2
+    """View mode in which dragging the left mouse pans the view."""
     FLY = 3
+    """View mode in which dragging the left mouse flies toward the mouse position."""
 
     computeBSplineCode = """
         void ComputeBSpline(in int offset, in int order, in int n, in int knot, in float u, 
@@ -665,10 +671,8 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.mode = self.ROTATE
         self.speed = 0.01
 
-        self.initialEye = np.array((0.0, 0.0, 3.0), np.float32)
-        self.initialLook = np.array((0.0, 0.0, 1.0), np.float32)
-        self.initialUp = np.array((0.0, 1.0, 0.0), np.float32)
-        self.ResetEye()
+        self.SetInitialView((0.0, 0.0, 3.0), (0.0, 0.0, 1.0), (0.0, 1.0, 0.0))
+        self.ResetView()
 
         self.bind("<ButtonPress>", self.MouseDown)
         self.bind("<Motion>", self.MouseMove)
@@ -692,8 +696,25 @@ class SplineOpenGLFrame(OpenGLFrame):
             maxOrder=DrawableSpline.maxOrder)
 
         self.glInitialized = False
+
+    def SetInitialView(self, eye, look, up):
+        """
+        Set the initial view values used when reseting the view.
+        """
+        self.initialEye = np.array(eye, np.float32)
+        self.initialLook = np.array(look, np.float32)
+        self.initialUp = np.array(up, np.float32)
+
+    def SetSplineList(self, list):
+        """
+        Set the `DrawableSpline` list which determines the splines to display.
+        """
+        self.splineDrawList = list
     
-    def ResetEye(self):
+    def ResetView(self):
+        """
+        Update the view position to initial values.
+        """
         self.eye = self.initialEye.copy()
         self.look = self.initialLook.copy()
         self.up = self.initialUp.copy()
@@ -704,6 +725,9 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.anchorPosition = self.eye - self.anchorDistance * self.look
 
     def initgl(self):
+        """
+        Handle `OpenGLFrame` initgl action. Calls `CreateGLResources` and `HandleScreenSizeUpdate`.
+        """
         if not self.glInitialized:
             self.CreateGLResources()
             self.glInitialized = True
@@ -711,6 +735,9 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.HandleScreenSizeUpdate()
 
     def CreateGLResources(self):
+        """
+        Create OpenGL resources upon creation of the frame and window recovery (un-minimize).
+        """
         #print("GL_VERSION: ", glGetString(GL_VERSION))
         #print("GL_SHADING_LANGUAGE_VERSION: ", glGetString(GL_SHADING_LANGUAGE_VERSION))
         #print("GL_MAX_TESS_GEN_LEVEL: ", glGetIntegerv(GL_MAX_TESS_GEN_LEVEL))
@@ -783,6 +810,9 @@ class SplineOpenGLFrame(OpenGLFrame):
         glClearColor(0.0, 0.2, 0.2, 1.0)
 
     def HandleScreenSizeUpdate(self):
+        """
+        Handle window size update (typically after a window resize).
+        """
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         xExtent = self.width / self.height
@@ -812,7 +842,9 @@ class SplineOpenGLFrame(OpenGLFrame):
         glLoadIdentity()
 
     def redraw(self):
-
+        """
+        Handle `OpenGLFrame` redraw action. Updates view and draws spline list.
+        """
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT )
         glLoadIdentity()
 
@@ -859,22 +891,52 @@ class SplineOpenGLFrame(OpenGLFrame):
         glFlush()
 
     def Unmap(self, event):
+        """
+        Handle window unmap.
+        """
         self.glInitialized = False
 
     def Update(self):
+        """
+        Update the frame, typically after updating the spline list.
+        """
         self.tkExpose(None)
 
     def Reset(self):
-        self.ResetEye()
+        """
+        Reset the view and update the frame.
+        """
+        self.ResetView()
         self.Update()
     
     def SetMode(self, mode):
+        """
+        Set the view mode for the frame.
+
+        Parameters
+        ----------
+        mode : `int` with the following values:
+            `SplineOpenGLFrame.ROTATE` Dragging the left mouse rotates the view.
+            `SplineOpenGLFrame.PAN` Dragging the left mouse pans the view.
+            `SplineOpenGLFrame.FLY` Dragging the left mouse flies toward the mouse position.
+        """
         self.mode = mode
     
     def SetScale(self, scale):
+        """
+        Set the flying speed scale.
+
+        Parameters
+        ----------
+        scale : `float`
+            Speed scale betwen 0 and 1.
+        """
         self.speed = 0.1 * (100.0 ** float(scale) - 1.0) / 99.0
 
     def MouseDown(self, event):
+        """
+        Handle mouse down event.
+        """
         self.origin = np.array((event.x, event.y), np.float32)
         self.current = self.origin
         self.button = event.num
@@ -889,11 +951,17 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.Update()
 
     def MouseMove(self, event):
+        """
+        Handle mouse move event.
+        """
         self.current = np.array((event.x, event.y), np.float32)
         if self.mode == self.ROTATE or self.mode == self.PAN:
             self.Update()
 
     def MouseUp(self, event):
+        """
+        Handle mouse up event.
+        """
         self.origin = None
         self.button = None
         if self.mode == self.FLY:
@@ -901,6 +969,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.Update()
 
     def MouseWheel(self, event):
+        """
+        Handle mouse wheel event.
+        """
         if event.delta < 0:
             self.anchorDistance *= 1.1
         elif event.delta > 0:
