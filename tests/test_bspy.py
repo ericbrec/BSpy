@@ -294,3 +294,13 @@ def test_translate():
         [xTest, yTest] = translatedCurve.evaluate([u])
         maxerror = max(maxerror, (xTest - (2.0 + x)) ** 2 + (yTest - (3.0 + y)) ** 2)
     assert maxerror <= np.finfo(float).eps
+
+def test_trim():
+    maxerror = 0.0
+    left = 13
+    right = 89
+    trimmed = myCurve.trim([[truth[left][0], truth[right][0]]])
+    for [u, x, y] in truth[left:right+1]:
+        [xTest, yTest] = trimmed.evaluate([u])
+        maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxerror <= np.finfo(float).eps

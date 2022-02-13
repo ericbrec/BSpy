@@ -451,8 +451,16 @@ class Spline:
 
     def domain(self):
         """
-        Return the domain of a spline as upper and lower bounds on each of the
-        independent variables
+        Return the domain of a spline.
+
+        Returns
+        -------
+        bounds : `numpy.array`
+            nInd x 2 array of the upper and lower bounds on each of the independent variables.
+
+        See Also
+        --------
+        `trim` : Trim the domain of a spline.
         """
         dom = [[self.knots[i][self.order[i] - 1],
                 self.knots[i][self.nCoef[i]]] for i in range(self.nInd)]
@@ -805,10 +813,10 @@ class Spline:
         sliceI = (self.nInd + 1) * [fullSlice]
         for ind in range(self.nInd):
             for knot in newKnots[ind]:
-                if knot < knots[ind][0] or knot > knots[ind][self.nCoef[ind]]:
+                if knot < knots[ind][0] or knot > knots[ind][-self.order[ind]]:
                     raise ArgumentOutsideDomainError(knot)
-                if knot == knots[ind][self.nCoef[ind]]:
-                    position = self.nCoef[ind]
+                if knot == knots[ind][-self.order[ind]]:
+                    position = len(knots[ind]) - self.order[ind]
                 else:
                     position = np.searchsorted(knots[ind], knot, 'right')
                 newCoefs = np.insert(coefs, position - 1, 0.0, axis=ind + 1)
@@ -977,6 +985,63 @@ class Spline:
         for i in range(self.nDep):
             coefs[i] += translationVector[i]
         return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
+
+    def trim(self, newDomain):
+        """
+        Trim the domain of a spline.
+
+        Parameters
+        ----------
+        newDomain : array-like
+            nInd x 2 array of the new upper and lower bounds on each of the independent variables. 
+            Same form as returned from `domain`.
+
+        Returns
+        -------
+        spline : `Spline`
+            Trimmed spline.
+
+        See Also
+        --------
+        `domain` : Return the domain of a spline.
+        """
+        assert len(newDomain) == self.nInd
+
+        # Step 1: Determine the knots to insert at the new domain bounds.
+        newKnotsList = []
+        for (order, knots, bounds) in zip(self.order, self.knots, newDomain):
+            assert len(bounds) == 2
+            assert knots[order - 1] <= bounds[0] < bounds[1] <= knots[-order]
+            unique, counts = np.unique(knots, return_counts=True)
+
+            multiplicity = order
+            i = np.searchsorted(unique, bounds[0])
+            if unique[i] == bounds[0]:
+                multiplicity -= counts[i]
+            newKnots = multiplicity * [bounds[0]]
+
+            multiplicity = order
+            i = np.searchsorted(unique, bounds[1])
+            if unique[i] == bounds[1]:
+                multiplicity -= counts[i]
+            newKnots += multiplicity * [bounds[1]]
+
+            newKnotsList.append(newKnots)
+        
+        # Step 2: Insert the knots.
+        spline = self.insert_knots(newKnotsList)
+
+        # Step 3: Trim the knots and coefficients.
+        knotsList = []
+        coefIndex = [slice(None)] # First index is for nDep
+        for (order, knots, bounds) in zip(spline.order, spline.knots, newDomain):
+            leftIndex = np.searchsorted(knots, bounds[0])
+            rightIndex = np.searchsorted(knots, bounds[1])
+            knotsList.append(knots[leftIndex:rightIndex + order])
+            coefIndex.append(slice(leftIndex, rightIndex))
+        coefs = spline.coefs[coefIndex]
+
+        return type(spline)(spline.nInd, spline.nDep, spline.order, coefs.shape[1:], knotsList, coefs, spline.accuracy, spline.metadata)
 
     def unfold(self, foldedInd, coefficientlessSpline):
         """
