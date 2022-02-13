@@ -238,6 +238,14 @@ def test_insert_knots():
         maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
     assert maxerror <= np.finfo(float).eps
 
+def test_reparametrize():
+    maxerror = 0.0
+    reparametrized = myCurve.reparametrize([[1.5, 2.0]])
+    for [u, x, y] in truth:
+        [xTest, yTest] = reparametrized.evaluate([u * 0.5 + 1.5])
+        maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxerror <= np.finfo(float).eps
+
 def test_scale():
     maxerror = 0.0
     scaledCurve = myCurve.scale([2.0, 3.0])

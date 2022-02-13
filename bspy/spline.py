@@ -460,6 +460,7 @@ class Spline:
 
         See Also
         --------
+        `reparametrize` : Reparametrize a spline to match new domain bounds
         `trim` : Trim the domain of a spline.
         """
         dom = [[self.knots[i][self.order[i] - 1],
@@ -858,6 +859,35 @@ class Spline:
         # Assumes self.nDep is the first value in self.coefs.shape
         bounds = [[coefficient.min(), coefficient.max()] for coefficient in self.coefs]
         return np.array(bounds, self.coefs.dtype)
+
+    def reparametrize(self, newDomain):
+        """
+        Reparametrize a spline to match new domain bounds. The spline's number of knots and its coefficients remain unchanged.
+
+        Parameters
+        ----------
+        newDomain : array-like
+            nInd x 2 array of the new upper and lower bounds on each of the independent variables. 
+            Same form as returned from `domain`.
+
+        Returns
+        -------
+        spline : `Spline`
+            Reparametrized spline.
+
+        See Also
+        --------
+        `domain` : Return the domain of a spline.
+        """
+        assert len(newDomain) == self.nInd
+        domain = self.domain()
+        knotList = []
+        for knots, d, nD in zip(self.knots, domain, newDomain):
+            slope = (nD[1] - nD[0]) / (d[1] - d[0])
+            intercept = (nD[0] * d[1] - nD[1] * d[0]) / (d[1] - d[0])
+            knotList.append(knots * slope + intercept)
+        
+        return type(self)(self.nInd, self.nDep, self.order, self.nCoef, knotList, self.coefs, self.accuracy, self.metadata)   
 
     def save(self, fileName):
         kw = {}
