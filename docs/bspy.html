@@ -45,10 +45,39 @@
                     <h1 class="modulename">
 bspy    </h1>
 
-                
+                        <div class="docstring"><p>bspy is a python library for manipulating and rendering non-uniform b-splines.</p>
+
+<h6 id="available-subpackages">Available subpackages</h6>
+
+<p><code><a href="bspy/spline.html">bspy.spline</a></code> : A class to model, represent, and process piecewise polynomial tensor product
+    functions (spline functions) as linear combinations of B-splines.</p>
+
+<p><code><a href="bspy/drawableSpline.html">bspy.drawableSpline</a></code> : A <code>Spline</code> that can be drawn within a <code>SplineOpenGLFrame</code>.</p>
+
+<p><code><a href="bspy/splineOpenGLFrame.html">bspy.splineOpenGLFrame</a></code> : A tkinter <code>OpenGLFrame</code> with shaders to display a <code>DrawableSpline</code> list.</p>
+
+<p><code><a href="bspy/bspyApp.html">bspy.bspyApp</a></code> : A tkinter app (<code>tkinter.Tk</code>) that hosts a <code>SplineOpenGLFrame</code>, a listbox full of 
+    splines, and a set of controls to adjust and view the selected splines.</p>
+</div>
+
                         <details>
             <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">bspy.spline</span> <span class="kn">import</span> <span class="n">Spline</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">bspy is a python library for manipulating and rendering non-uniform b-splines.</span>
+
+<span class="sd">Available subpackages</span>
+<span class="sd">---------------------</span>
+<span class="sd">`bspy.spline` : A class to model, represent, and process piecewise polynomial tensor product</span>
+<span class="sd">    functions (spline functions) as linear combinations of B-splines.</span>
+
+<span class="sd">`bspy.drawableSpline` : A `Spline` that can be drawn within a `SplineOpenGLFrame`.</span>
+
+<span class="sd">`bspy.splineOpenGLFrame` : A tkinter `OpenGLFrame` with shaders to display a `DrawableSpline` list.</span>
+
+<span class="sd">`bspy.bspyApp` : A tkinter app (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a listbox full of </span>
+<span class="sd">    splines, and a set of controls to adjust and view the selected splines.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">bspy.spline</span> <span class="kn">import</span> <span class="n">Spline</span>
 <span class="kn">from</span> <span class="nn">bspy.drawableSpline</span> <span class="kn">import</span> <span class="n">DrawableSpline</span>
 <span class="kn">from</span> <span class="nn">bspy.splineOpenGLFrame</span> <span class="kn">import</span> <span class="n">SplineOpenGLFrame</span>
 <span class="kn">from</span> <span class="nn">bspy.bspyApp</span> <span class="kn">import</span> <span class="n">bspyApp</span>

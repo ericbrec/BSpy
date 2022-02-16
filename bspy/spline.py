@@ -3,7 +3,7 @@ from os import path
 from collections import namedtuple
 from bspy.error import *
 
-def isIterable(object):
+def _isIterable(object):
     result = True
     try:
         iterator = iter(object)
@@ -80,7 +80,7 @@ class Spline:
     def __add__(self, other):
         if isinstance(other, Spline):
             return self.add(other)
-        elif isIterable(other):
+        elif _isIterable(other):
             return self.translate(other)
         else:
             return NotImplemented
@@ -88,13 +88,13 @@ class Spline:
     def __radd__(self, other):
         if isinstance(other, Spline):
             return other.add(self)
-        elif isIterable(other):
+        elif _isIterable(other):
             return self.translate(other)
         else:
             return NotImplemented
 
     def __rmatmul__ (self, other):
-        if isIterable(other):
+        if _isIterable(other):
             if isinstance(other, np.ndarray) and len(other.shape) == 2:
                 return self.transform(other)
             else:
@@ -103,13 +103,13 @@ class Spline:
             return NotImplemented
 
     def __mul__(self, other):
-        if np.isscalar(other) or isIterable(other):
+        if np.isscalar(other) or _isIterable(other):
             return self.scale(other)
         else:
             return NotImplemented
 
     def __rmul__(self, other):
-        if np.isscalar(other) or isIterable(other):
+        if np.isscalar(other) or _isIterable(other):
             return self.scale(other)
         else:
             return NotImplemented
@@ -117,7 +117,7 @@ class Spline:
     def __sub__(self, other):
         if isinstance(other, Spline):
             return self.subtract(other)
-        elif isIterable(other):
+        elif _isIterable(other):
             return self.translate(-np.array(other))
         else:
             return NotImplemented
@@ -125,7 +125,7 @@ class Spline:
     def __rsub__(self, other):
         if isinstance(other, Spline):
             return other.subtract(self)
-        elif isIterable(other):
+        elif _isIterable(other):
             spline = self.scale(-1.0)
             return spline.translate(other)
         else:
