@@ -13,24 +13,38 @@ def _isIterable(object):
 class Spline:
     """
     A class to model, represent, and process piecewise polynomial tensor product
-    functions (spline functions) as linear combinations of B-splines.  The
-    attributes of this class have the following meaning: 
+    functions (spline functions) as linear combinations of B-splines. 
 
-    nInd - the number of independent variables of the spline
-    nDep - the number of dependent variables of the spline
-    order - a tuple of length nInd where each integer entry represents the
-            polynomial order of the function in that variable
-    nCoef - a tuple of length nInd where each integer entry represents the
-            dimension (i.e. number of B-spline coefficients) of the function
-            space in that variable
-    knots - a list of the lists of the knots of the spline in each independent
-            variable
-    coefs - a list of the B-spline coefficients of the spline
-    accuracy - each spline function is presumed to be an approximation of
-               something else.  This attribute stores the infinity norm error of
-               the difference between the given spline function and that
-               something else
-    metadata - a dictionary of ancillary data to store with the spline 
+    Parameters
+    ----------
+    nInd : `int`
+        The number of independent variables of the spline
+
+    nDep : `int`
+        The number of dependent variables of the spline
+    
+    order : `tuple`
+        A tuple of length nInd where each integer entry represents the
+        polynomial order of the function in that variable
+
+    nCoef : `tuple`
+        A tuple of length nInd where each integer entry represents the
+        dimension (i.e. number of B-spline coefficients) of the function
+        space in that variable
+
+    knots : `list`
+        A list of the lists of the knots of the spline in each independent variable
+
+    coefs : array-like
+        A list of the B-spline coefficients of the spline.
+    
+    accuracy : `float`
+        Each spline function is presumed to be an approximation of something else. 
+        The `accuracy` stores the infinity norm error of the difference between 
+        the given spline function and that something else.
+
+    metadata : `dict`
+        A dictionary of ancillary data to store with the spline 
     """
     
     def __init__(self, nInd = 1, nDep = 1, order = [4], nCoef = [4],

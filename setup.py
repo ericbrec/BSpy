@@ -11,10 +11,7 @@ setup(
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     packages=['bspy'],
-    install_requires=[
-        'numpy',
-        'pyopengl',
-    ],
+    install_requires=['numpy','pyopengl','tk','pyopengltk'],
     keywords=['opengl', 'bspline', 'b-spline', 'nub', 'tkinter'],
     classifiers=[
         'License :: OSI Approved :: MIT License',

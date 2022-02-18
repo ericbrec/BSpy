@@ -142,24 +142,38 @@
 <span class="k">class</span> <span class="nc">Spline</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A class to model, represent, and process piecewise polynomial tensor product</span>
-<span class="sd">    functions (spline functions) as linear combinations of B-splines.  The</span>
-<span class="sd">    attributes of this class have the following meaning: </span>
+<span class="sd">    functions (spline functions) as linear combinations of B-splines. </span>
 
-<span class="sd">    nInd - the number of independent variables of the spline</span>
-<span class="sd">    nDep - the number of dependent variables of the spline</span>
-<span class="sd">    order - a tuple of length nInd where each integer entry represents the</span>
-<span class="sd">            polynomial order of the function in that variable</span>
-<span class="sd">    nCoef - a tuple of length nInd where each integer entry represents the</span>
-<span class="sd">            dimension (i.e. number of B-spline coefficients) of the function</span>
-<span class="sd">            space in that variable</span>
-<span class="sd">    knots - a list of the lists of the knots of the spline in each independent</span>
-<span class="sd">            variable</span>
-<span class="sd">    coefs - a list of the B-spline coefficients of the spline</span>
-<span class="sd">    accuracy - each spline function is presumed to be an approximation of</span>
-<span class="sd">               something else.  This attribute stores the infinity norm error of</span>
-<span class="sd">               the difference between the given spline function and that</span>
-<span class="sd">               something else</span>
-<span class="sd">    metadata - a dictionary of ancillary data to store with the spline </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    nInd : `int`</span>
+<span class="sd">        The number of independent variables of the spline</span>
+
+<span class="sd">    nDep : `int`</span>
+<span class="sd">        The number of dependent variables of the spline</span>
+<span class="sd">    </span>
+<span class="sd">    order : `tuple`</span>
+<span class="sd">        A tuple of length nInd where each integer entry represents the</span>
+<span class="sd">        polynomial order of the function in that variable</span>
+
+<span class="sd">    nCoef : `tuple`</span>
+<span class="sd">        A tuple of length nInd where each integer entry represents the</span>
+<span class="sd">        dimension (i.e. number of B-spline coefficients) of the function</span>
+<span class="sd">        space in that variable</span>
+
+<span class="sd">    knots : `list`</span>
+<span class="sd">        A list of the lists of the knots of the spline in each independent variable</span>
+
+<span class="sd">    coefs : array-like</span>
+<span class="sd">        A list of the B-spline coefficients of the spline.</span>
+<span class="sd">    </span>
+<span class="sd">    accuracy : `float`</span>
+<span class="sd">        Each spline function is presumed to be an approximation of something else. </span>
+<span class="sd">        The `accuracy` stores the infinity norm error of the difference between </span>
+<span class="sd">        the given spline function and that something else.</span>
+
+<span class="sd">    metadata : `dict`</span>
+<span class="sd">        A dictionary of ancillary data to store with the spline </span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nInd</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">nDep</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">order</span> <span class="o">=</span> <span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="n">nCoef</span> <span class="o">=</span> <span class="p">[</span><span class="mi">4</span><span class="p">],</span>
@@ -1366,24 +1380,38 @@
             <div class="pdoc-code codehilite"><pre><span></span><span class="k">class</span> <span class="nc">Spline</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A class to model, represent, and process piecewise polynomial tensor product</span>
-<span class="sd">    functions (spline functions) as linear combinations of B-splines.  The</span>
-<span class="sd">    attributes of this class have the following meaning: </span>
+<span class="sd">    functions (spline functions) as linear combinations of B-splines. </span>
 
-<span class="sd">    nInd - the number of independent variables of the spline</span>
-<span class="sd">    nDep - the number of dependent variables of the spline</span>
-<span class="sd">    order - a tuple of length nInd where each integer entry represents the</span>
-<span class="sd">            polynomial order of the function in that variable</span>
-<span class="sd">    nCoef - a tuple of length nInd where each integer entry represents the</span>
-<span class="sd">            dimension (i.e. number of B-spline coefficients) of the function</span>
-<span class="sd">            space in that variable</span>
-<span class="sd">    knots - a list of the lists of the knots of the spline in each independent</span>
-<span class="sd">            variable</span>
-<span class="sd">    coefs - a list of the B-spline coefficients of the spline</span>
-<span class="sd">    accuracy - each spline function is presumed to be an approximation of</span>
-<span class="sd">               something else.  This attribute stores the infinity norm error of</span>
-<span class="sd">               the difference between the given spline function and that</span>
-<span class="sd">               something else</span>
-<span class="sd">    metadata - a dictionary of ancillary data to store with the spline </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    nInd : `int`</span>
+<span class="sd">        The number of independent variables of the spline</span>
+
+<span class="sd">    nDep : `int`</span>
+<span class="sd">        The number of dependent variables of the spline</span>
+<span class="sd">    </span>
+<span class="sd">    order : `tuple`</span>
+<span class="sd">        A tuple of length nInd where each integer entry represents the</span>
+<span class="sd">        polynomial order of the function in that variable</span>
+
+<span class="sd">    nCoef : `tuple`</span>
+<span class="sd">        A tuple of length nInd where each integer entry represents the</span>
+<span class="sd">        dimension (i.e. number of B-spline coefficients) of the function</span>
+<span class="sd">        space in that variable</span>
+
+<span class="sd">    knots : `list`</span>
+<span class="sd">        A list of the lists of the knots of the spline in each independent variable</span>
+
+<span class="sd">    coefs : array-like</span>
+<span class="sd">        A list of the B-spline coefficients of the spline.</span>
+<span class="sd">    </span>
+<span class="sd">    accuracy : `float`</span>
+<span class="sd">        Each spline function is presumed to be an approximation of something else. </span>
+<span class="sd">        The `accuracy` stores the infinity norm error of the difference between </span>
+<span class="sd">        the given spline function and that something else.</span>
+
+<span class="sd">    metadata : `dict`</span>
+<span class="sd">        A dictionary of ancillary data to store with the spline </span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nInd</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">nDep</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">order</span> <span class="o">=</span> <span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="n">nCoef</span> <span class="o">=</span> <span class="p">[</span><span class="mi">4</span><span class="p">],</span>
@@ -2576,24 +2604,33 @@
         </details>
 
             <div class="docstring"><p>A class to model, represent, and process piecewise polynomial tensor product
-functions (spline functions) as linear combinations of B-splines.  The
-attributes of this class have the following meaning: </p>
+functions (spline functions) as linear combinations of B-splines. </p>
 
-<p>nInd - the number of independent variables of the spline
-nDep - the number of dependent variables of the spline
-order - a tuple of length nInd where each integer entry represents the
-        polynomial order of the function in that variable
-nCoef - a tuple of length nInd where each integer entry represents the
-        dimension (i.e. number of B-spline coefficients) of the function
-        space in that variable
-knots - a list of the lists of the knots of the spline in each independent
-        variable
-coefs - a list of the B-spline coefficients of the spline
-accuracy - each spline function is presumed to be an approximation of
-           something else.  This attribute stores the infinity norm error of
-           the difference between the given spline function and that
-           something else
-metadata - a dictionary of ancillary data to store with the spline</p>
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>nInd</strong> (<code>int</code>):
+The number of independent variables of the spline</li>
+<li><strong>nDep</strong> (<code>int</code>):
+The number of dependent variables of the spline</li>
+<li><strong>order</strong> (<code>tuple</code>):
+A tuple of length nInd where each integer entry represents the
+polynomial order of the function in that variable</li>
+<li><strong>nCoef</strong> (<code>tuple</code>):
+A tuple of length nInd where each integer entry represents the
+dimension (i.e. number of B-spline coefficients) of the function
+space in that variable</li>
+<li><strong>knots</strong> (<code>list</code>):
+A list of the lists of the knots of the spline in each independent variable</li>
+<li><strong>coefs</strong> (array-like):
+A list of the B-spline coefficients of the spline.</li>
+<li><strong>accuracy</strong> (<code>float</code>):
+Each spline function is presumed to be an approximation of something else. 
+The <code>accuracy</code> stores the infinity norm error of the difference between 
+the given spline function and that something else.</li>
+<li><strong>metadata</strong> (<code>dict</code>):
+A dictionary of ancillary data to store with the spline</li>
+</ul>
 </div>
 
 
