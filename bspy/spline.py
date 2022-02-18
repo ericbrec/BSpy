@@ -1,7 +1,6 @@
 import numpy as np
 from os import path
 from collections import namedtuple
-from bspy.error import *
 
 def _isIterable(object):
     result = True
