@@ -393,7 +393,7 @@ class Spline:
         dom = self.domain()
         for ix in range(self.nInd):
             if uvw[ix] < dom[ix][0] or uvw[ix] > dom[ix][1]:
-                raise ArgumentOutsideDomainError(uvw)
+                raise ValueError(f"Spline evaluation outside domain: {uvw}")
 
         # Grab all of the appropriate coefficients
         mySection = [slice(0, self.nDep)]
@@ -530,7 +530,7 @@ class Spline:
         dom = self.domain()
         for ix in range(self.nInd):
             if uvw[ix] < dom[ix][0] or uvw[ix] > dom[ix][1]:
-                raise ArgumentOutsideDomainError(uvw)
+                raise ValueError(f"Spline evaluation outside domain: {uvw}")
 
         # Grab all of the appropriate coefficients
         mySection = [slice(0, self.nDep)]
@@ -886,7 +886,7 @@ class Spline:
         for ind in range(self.nInd):
             for knot in newKnots[ind]:
                 if knot < knots[ind][0] or knot > knots[ind][-self.order[ind]]:
-                    raise ArgumentOutsideDomainError(knot)
+                    raise ValueError(f"Knot insertion outside domain: {knot}")
                 if knot == knots[ind][-self.order[ind]]:
                     position = len(knots[ind]) - self.order[ind]
                 else:
