@@ -61,6 +61,12 @@
                                 <a class="variable" href="#DrawableSpline.ISOPARMS">ISOPARMS</a>
                         </li>
                         <li>
+                                <a class="function" href="#DrawableSpline.make_drawable">make_drawable</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#DrawableSpline.DrawPoints">DrawPoints</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#DrawableSpline.DrawCurve">DrawCurve</a>
                         </li>
                         <li>
@@ -103,6 +109,67 @@
             <div class="pdoc-code codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">OpenGL.GL</span> <span class="kn">import</span> <span class="o">*</span>
 <span class="kn">from</span> <span class="nn">bspy</span> <span class="kn">import</span> <span class="n">Spline</span>
+
+<span class="k">def</span> <span class="nf">_set_color</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return an array with the specified color.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    r : `float`, `int` or array-like of floats or ints</span>
+<span class="sd">        The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).</span>
+<span class="sd">    </span>
+<span class="sd">    g: `float` or `int`</span>
+<span class="sd">        The green value [0, 1] as a float or [0, 255] as an int.</span>
+<span class="sd">    </span>
+<span class="sd">    b: `float` or `int`</span>
+<span class="sd">        The blue value [0, 1] as a float or [0, 255] as an int.</span>
+<span class="sd">    </span>
+<span class="sd">    a: `float`, `int`, or None</span>
+<span class="sd">        The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    color : `numpy.array`</span>
+<span class="sd">        The specified color as an array of 4 float32 values between 0 and 1.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
+        <span class="n">red</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
+        <span class="n">green</span> <span class="o">=</span> <span class="n">red</span>
+        <span class="n">blue</span> <span class="o">=</span> <span class="n">red</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
+        <span class="n">red</span> <span class="o">=</span> <span class="n">r</span>
+        <span class="n">green</span> <span class="o">=</span> <span class="n">red</span>
+        <span class="n">blue</span> <span class="o">=</span> <span class="n">red</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
+        <span class="n">red</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
+        <span class="n">green</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
+        <span class="n">blue</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">4</span> <span class="k">else</span> <span class="mf">1.0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">red</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">green</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">blue</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">4</span> <span class="k">else</span> <span class="mf">1.0</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
+        <span class="n">green</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
+    <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">g</span><span class="p">):</span>
+        <span class="n">green</span> <span class="o">=</span> <span class="n">g</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
+        <span class="n">blue</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
+    <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">b</span><span class="p">):</span>
+        <span class="n">blue</span> <span class="o">=</span> <span class="n">b</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
+    <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="n">a</span>
+    
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="n">red</span><span class="p">,</span> <span class="n">green</span><span class="p">,</span> <span class="n">blue</span><span class="p">,</span> <span class="n">alpha</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 
 <span class="k">class</span> <span class="nc">DrawableSpline</span><span class="p">(</span><span class="n">Spline</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -148,7 +215,45 @@
 
     <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Name&quot;</span><span class="p">,</span> <span class="s2">&quot;[</span><span class="si">{0}</span><span class="s2">, </span><span class="si">{1}</span><span class="s2">]&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
-    
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">make_drawable</span><span class="p">(</span><span class="n">spline</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spline</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">spline</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spline</span><span class="p">,</span> <span class="n">Spline</span><span class="p">)</span>
+        
+        <span class="n">knotList</span> <span class="o">=</span> <span class="p">[</span><span class="n">knots</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">knots</span> <span class="ow">in</span> <span class="n">spline</span><span class="o">.</span><span class="n">knots</span><span class="p">]</span>
+        <span class="n">coefs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">4</span><span class="p">,</span> <span class="o">*</span><span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">coefs</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="k">if</span> <span class="n">spline</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">spline</span><span class="o">.</span><span class="n">nDep</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">knotList</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">spline</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span> <span class="n">knotList</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">spline</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">spline</span><span class="o">.</span><span class="n">nDep</span> <span class="o">&lt;=</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">spline</span><span class="o">.</span><span class="n">nDep</span><span class="p">]</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">coefs</span>
+        <span class="k">elif</span> <span class="n">spline</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">spline</span><span class="o">.</span><span class="n">nDep</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">xValues</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">knotList</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">spline</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span> <span class="n">knotList</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)[:]</span>
+            <span class="n">zValues</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">knotList</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">spline</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span> <span class="n">knotList</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)[:]</span>
+            <span class="n">xMesh</span><span class="p">,</span> <span class="n">zMesh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">xValues</span><span class="p">,</span> <span class="n">zValues</span><span class="p">)</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">xValues</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">zValues</span>
+        <span class="k">elif</span> <span class="n">spline</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">spline</span><span class="o">.</span><span class="n">nDep</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">coefs</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Can&#39;t convert to drawable spline.&quot;</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">DrawableSpline</span><span class="p">(</span><span class="n">spline</span><span class="o">.</span><span class="n">nInd</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">spline</span><span class="o">.</span><span class="n">order</span><span class="p">,</span> <span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">,</span> <span class="n">knotList</span><span class="p">,</span> <span class="n">coefs</span><span class="p">,</span> <span class="n">spline</span><span class="o">.</span><span class="n">accuracy</span><span class="p">,</span> <span class="n">spline</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">DrawPoints</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw spline points for an order 1 spline within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">glColor4fv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span><span class="p">)</span>
+        <span class="n">glBegin</span><span class="p">(</span><span class="n">GL_POINTS</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">drawCoefficients</span><span class="p">:</span>
+            <span class="n">glVertex4fv</span><span class="p">(</span><span class="n">point</span><span class="p">)</span>
+        <span class="n">glEnd</span><span class="p">()</span>
+
     <span class="k">def</span> <span class="nf">DrawCurve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Draw a spline curve (nInd == 1) within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
@@ -218,9 +323,11 @@
 <span class="sd">        Draw a spline  within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">drawCoefficients</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">transform</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">DrawPoints</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">DrawCurve</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">DrawSurface</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
     
     <span class="k">def</span> <span class="nf">SetFillColor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -241,43 +348,7 @@
 <span class="sd">        a: `float`, `int`, or None</span>
 <span class="sd">            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="mf">1.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="n">r</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="mf">1.0</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">4</span> <span class="k">else</span> <span class="mf">1.0</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">4</span> <span class="k">else</span> <span class="mf">1.0</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">g</span><span class="p">):</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">g</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">b</span><span class="p">):</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">b</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="n">a</span>
-        
-        <span class="bp">self</span><span class="o">.</span><span class="n">fillColor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="n">red</span><span class="p">,</span> <span class="n">green</span><span class="p">,</span> <span class="n">blue</span><span class="p">,</span> <span class="n">alpha</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fillColor</span> <span class="o">=</span> <span class="n">_set_color</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">SetLineColor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -297,43 +368,7 @@
 <span class="sd">        a: `float`, `int`, or None</span>
 <span class="sd">            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="mf">1.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="n">r</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="mf">1.0</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">4</span> <span class="k">else</span> <span class="mf">1.0</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">4</span> <span class="k">else</span> <span class="mf">1.0</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">g</span><span class="p">):</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">g</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">b</span><span class="p">):</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">b</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="n">a</span>
-        
-        <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="n">red</span><span class="p">,</span> <span class="n">green</span><span class="p">,</span> <span class="n">blue</span><span class="p">,</span> <span class="n">alpha</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span> <span class="o">=</span> <span class="n">_set_color</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">SetOptions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">options</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -408,7 +443,45 @@
 
     <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Name&quot;</span><span class="p">,</span> <span class="s2">&quot;[</span><span class="si">{0}</span><span class="s2">, </span><span class="si">{1}</span><span class="s2">]&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
-    
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">make_drawable</span><span class="p">(</span><span class="n">spline</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spline</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">spline</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spline</span><span class="p">,</span> <span class="n">Spline</span><span class="p">)</span>
+        
+        <span class="n">knotList</span> <span class="o">=</span> <span class="p">[</span><span class="n">knots</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">knots</span> <span class="ow">in</span> <span class="n">spline</span><span class="o">.</span><span class="n">knots</span><span class="p">]</span>
+        <span class="n">coefs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">4</span><span class="p">,</span> <span class="o">*</span><span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">coefs</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="k">if</span> <span class="n">spline</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">spline</span><span class="o">.</span><span class="n">nDep</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">knotList</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">spline</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span> <span class="n">knotList</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">spline</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">spline</span><span class="o">.</span><span class="n">nDep</span> <span class="o">&lt;=</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">spline</span><span class="o">.</span><span class="n">nDep</span><span class="p">]</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">coefs</span>
+        <span class="k">elif</span> <span class="n">spline</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">spline</span><span class="o">.</span><span class="n">nDep</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">xValues</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">knotList</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">spline</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span> <span class="n">knotList</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)[:]</span>
+            <span class="n">zValues</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">knotList</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">spline</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span> <span class="n">knotList</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)[:]</span>
+            <span class="n">xMesh</span><span class="p">,</span> <span class="n">zMesh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">xValues</span><span class="p">,</span> <span class="n">zValues</span><span class="p">)</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">xValues</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">zValues</span>
+        <span class="k">elif</span> <span class="n">spline</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">spline</span><span class="o">.</span><span class="n">nDep</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">coefs</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Can&#39;t convert to drawable spline.&quot;</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">DrawableSpline</span><span class="p">(</span><span class="n">spline</span><span class="o">.</span><span class="n">nInd</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">spline</span><span class="o">.</span><span class="n">order</span><span class="p">,</span> <span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">,</span> <span class="n">knotList</span><span class="p">,</span> <span class="n">coefs</span><span class="p">,</span> <span class="n">spline</span><span class="o">.</span><span class="n">accuracy</span><span class="p">,</span> <span class="n">spline</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">DrawPoints</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw spline points for an order 1 spline within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">glColor4fv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span><span class="p">)</span>
+        <span class="n">glBegin</span><span class="p">(</span><span class="n">GL_POINTS</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">drawCoefficients</span><span class="p">:</span>
+            <span class="n">glVertex4fv</span><span class="p">(</span><span class="n">point</span><span class="p">)</span>
+        <span class="n">glEnd</span><span class="p">()</span>
+
     <span class="k">def</span> <span class="nf">DrawCurve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Draw a spline curve (nInd == 1) within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
@@ -478,9 +551,11 @@
 <span class="sd">        Draw a spline  within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">drawCoefficients</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">transform</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">DrawPoints</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">DrawCurve</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">DrawSurface</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
     
     <span class="k">def</span> <span class="nf">SetFillColor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -501,43 +576,7 @@
 <span class="sd">        a: `float`, `int`, or None</span>
 <span class="sd">            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="mf">1.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="n">r</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="mf">1.0</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">4</span> <span class="k">else</span> <span class="mf">1.0</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">4</span> <span class="k">else</span> <span class="mf">1.0</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">g</span><span class="p">):</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">g</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">b</span><span class="p">):</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">b</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="n">a</span>
-        
-        <span class="bp">self</span><span class="o">.</span><span class="n">fillColor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="n">red</span><span class="p">,</span> <span class="n">green</span><span class="p">,</span> <span class="n">blue</span><span class="p">,</span> <span class="n">alpha</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fillColor</span> <span class="o">=</span> <span class="n">_set_color</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">SetLineColor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -557,43 +596,7 @@
 <span class="sd">        a: `float`, `int`, or None</span>
 <span class="sd">            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="mf">1.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="n">r</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="mf">1.0</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">4</span> <span class="k">else</span> <span class="mf">1.0</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">4</span> <span class="k">else</span> <span class="mf">1.0</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">g</span><span class="p">):</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">g</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">b</span><span class="p">):</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">b</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="n">a</span>
-        
-        <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="n">red</span><span class="p">,</span> <span class="n">green</span><span class="p">,</span> <span class="n">blue</span><span class="p">,</span> <span class="n">alpha</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span> <span class="o">=</span> <span class="n">_set_color</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">SetOptions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">options</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -746,6 +749,79 @@
 
 
                             </div>
+                            <div id="DrawableSpline.make_drawable" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#DrawableSpline.make_drawable">#&nbsp;&nbsp</a>
+
+                <div class="decorator">@staticmethod</div>
+
+            <span class="def">def</span>
+            <span class="name">make_drawable</span><span class="signature">(spline)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">make_drawable</span><span class="p">(</span><span class="n">spline</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spline</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">spline</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spline</span><span class="p">,</span> <span class="n">Spline</span><span class="p">)</span>
+        
+        <span class="n">knotList</span> <span class="o">=</span> <span class="p">[</span><span class="n">knots</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">knots</span> <span class="ow">in</span> <span class="n">spline</span><span class="o">.</span><span class="n">knots</span><span class="p">]</span>
+        <span class="n">coefs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">4</span><span class="p">,</span> <span class="o">*</span><span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">coefs</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="k">if</span> <span class="n">spline</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">spline</span><span class="o">.</span><span class="n">nDep</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">knotList</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">spline</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span> <span class="n">knotList</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">spline</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">spline</span><span class="o">.</span><span class="n">nDep</span> <span class="o">&lt;=</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">spline</span><span class="o">.</span><span class="n">nDep</span><span class="p">]</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">coefs</span>
+        <span class="k">elif</span> <span class="n">spline</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">spline</span><span class="o">.</span><span class="n">nDep</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">xValues</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">knotList</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">spline</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span> <span class="n">knotList</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)[:]</span>
+            <span class="n">zValues</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">knotList</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">spline</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span> <span class="n">knotList</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)[:]</span>
+            <span class="n">xMesh</span><span class="p">,</span> <span class="n">zMesh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">xValues</span><span class="p">,</span> <span class="n">zValues</span><span class="p">)</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">xValues</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">zValues</span>
+        <span class="k">elif</span> <span class="n">spline</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">spline</span><span class="o">.</span><span class="n">nDep</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">coefs</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Can&#39;t convert to drawable spline.&quot;</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">DrawableSpline</span><span class="p">(</span><span class="n">spline</span><span class="o">.</span><span class="n">nInd</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">spline</span><span class="o">.</span><span class="n">order</span><span class="p">,</span> <span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">,</span> <span class="n">knotList</span><span class="p">,</span> <span class="n">coefs</span><span class="p">,</span> <span class="n">spline</span><span class="o">.</span><span class="n">accuracy</span><span class="p">,</span> <span class="n">spline</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
+</pre></div>
+
+        </details>
+
+    
+
+                            </div>
+                            <div id="DrawableSpline.DrawPoints" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#DrawableSpline.DrawPoints">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">DrawPoints</span><span class="signature">(self, frame, drawCoefficients)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">DrawPoints</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw spline points for an order 1 spline within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">glColor4fv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span><span class="p">)</span>
+        <span class="n">glBegin</span><span class="p">(</span><span class="n">GL_POINTS</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">drawCoefficients</span><span class="p">:</span>
+            <span class="n">glVertex4fv</span><span class="p">(</span><span class="n">point</span><span class="p">)</span>
+        <span class="n">glEnd</span><span class="p">()</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Draw spline points for an order 1 spline within a <code>SplineOpenGLFrame</code>. The frame will call this method for you.</p>
+</div>
+
+
+                            </div>
                             <div id="DrawableSpline.DrawCurve" class="classattr">
                                         <div class="attr function"><a class="headerlink" href="#DrawableSpline.DrawCurve">#&nbsp;&nbsp</a>
 
@@ -861,9 +937,11 @@
 <span class="sd">        Draw a spline  within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">drawCoefficients</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">transform</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">DrawPoints</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">DrawCurve</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">DrawSurface</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
 </pre></div>
 
@@ -902,43 +980,7 @@
 <span class="sd">        a: `float`, `int`, or None</span>
 <span class="sd">            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="mf">1.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="n">r</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="mf">1.0</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">4</span> <span class="k">else</span> <span class="mf">1.0</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">4</span> <span class="k">else</span> <span class="mf">1.0</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">g</span><span class="p">):</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">g</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">b</span><span class="p">):</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">b</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="n">a</span>
-        
-        <span class="bp">self</span><span class="o">.</span><span class="n">fillColor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="n">red</span><span class="p">,</span> <span class="n">green</span><span class="p">,</span> <span class="n">blue</span><span class="p">,</span> <span class="n">alpha</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fillColor</span> <span class="o">=</span> <span class="n">_set_color</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
 </pre></div>
 
         </details>
@@ -989,43 +1031,7 @@ The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> th
 <span class="sd">        a: `float`, `int`, or None</span>
 <span class="sd">            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="mf">1.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="n">r</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">red</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="mf">1.0</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">/</span> <span class="mf">255.0</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">4</span> <span class="k">else</span> <span class="mf">1.0</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">red</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">4</span> <span class="k">else</span> <span class="mf">1.0</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">g</span><span class="p">):</span>
-            <span class="n">green</span> <span class="o">=</span> <span class="n">g</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">b</span><span class="p">):</span>
-            <span class="n">blue</span> <span class="o">=</span> <span class="n">b</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="n">a</span>
-        
-        <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="n">red</span><span class="p">,</span> <span class="n">green</span><span class="p">,</span> <span class="n">blue</span><span class="p">,</span> <span class="n">alpha</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span> <span class="o">=</span> <span class="n">_set_color</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
 </pre></div>
 
         </details>
@@ -1106,7 +1112,6 @@ The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> th
                 <dd id="DrawableSpline.evaluate" class="function"><a href="spline.html#Spline.evaluate">evaluate</a></dd>
                 <dd id="DrawableSpline.elevate" class="function"><a href="spline.html#Spline.elevate">elevate</a></dd>
                 <dd id="DrawableSpline.elevate_and_insert_knots" class="function"><a href="spline.html#Spline.elevate_and_insert_knots">elevate_and_insert_knots</a></dd>
-                <dd id="DrawableSpline.find_roots" class="function"><a href="spline.html#Spline.find_roots">find_roots</a></dd>
                 <dd id="DrawableSpline.fold" class="function"><a href="spline.html#Spline.fold">fold</a></dd>
                 <dd id="DrawableSpline.insert_knots" class="function"><a href="spline.html#Spline.insert_knots">insert_knots</a></dd>
                 <dd id="DrawableSpline.load" class="function"><a href="spline.html#Spline.load">load</a></dd>
@@ -1119,6 +1124,7 @@ The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> th
                 <dd id="DrawableSpline.translate" class="function"><a href="spline.html#Spline.translate">translate</a></dd>
                 <dd id="DrawableSpline.trim" class="function"><a href="spline.html#Spline.trim">trim</a></dd>
                 <dd id="DrawableSpline.unfold" class="function"><a href="spline.html#Spline.unfold">unfold</a></dd>
+                <dd id="DrawableSpline.zeros" class="function"><a href="spline.html#Spline.zeros">zeros</a></dd>
 
             </div>
                                 </dl>

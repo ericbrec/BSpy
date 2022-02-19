@@ -4,6 +4,7 @@ from OpenGL.GL import *
 import OpenGL.GL.shaders as shaders
 from pyopengltk import OpenGLFrame
 from bspy import DrawableSpline
+from bspy.drawableSpline import _set_color
 
 class SplineOpenGLFrame(OpenGLFrame):
     """
@@ -671,6 +672,8 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.mode = self.ROTATE
         self.speed = 0.01
 
+        self.backgroundColor = np.array((0.0, 0.2, 0.2, 1.0), np.float32)
+
         self.SetInitialView((0.0, 0.0, 3.0), (0.0, 0.0, 1.0), (0.0, 1.0, 0.0))
         self.ResetView()
 
@@ -704,6 +707,26 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.initialEye = np.array(eye, np.float32)
         self.initialLook = np.array(look, np.float32)
         self.initialUp = np.array(up, np.float32)
+    
+    def SetBackgroundColor(self, r, g=None, b=None, a=None):
+        """
+        Set the background color for the frame.
+
+        Parameters
+        ----------
+        r : `float`, `int` or array-like of floats or ints
+            The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).
+        
+        g: `float` or `int`
+            The green value [0, 1] as a float or [0, 255] as an int.
+        
+        b: `float` or `int`
+            The blue value [0, 1] as a float or [0, 255] as an int.
+        
+        a: `float`, `int`, or None
+            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.
+        """
+        self.backgroundColor = _set_color(r, g, b, a)
 
     def SetSplineList(self, list):
         """
@@ -806,8 +829,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         glUseProgram(0)
 
         glEnable( GL_DEPTH_TEST )
-        #glClearColor(1.0, 1.0, 1.0, 1.0)
-        glClearColor(0.0, 0.2, 0.2, 1.0)
+        glClearColor(self.backgroundColor[0], self.backgroundColor[1], self.backgroundColor[2], self.backgroundColor[3])
 
     def HandleScreenSizeUpdate(self):
         """

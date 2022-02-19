@@ -31,52 +31,25 @@
         <h2>API Documentation</h2>
             <ul class="memberlist">
             <li>
-                    <a class="class" href="#BitCheckbutton">BitCheckbutton</a>
-                            <ul class="memberlist">
-                        <li>
-                                <a class="function" href="#BitCheckbutton.__init__">BitCheckbutton</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#BitCheckbutton.Command">Command</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#BitCheckbutton.Update">Update</a>
-                        </li>
-                </ul>
-
-            </li>
-            <li>
                     <a class="class" href="#bspyApp">bspyApp</a>
                             <ul class="memberlist">
                         <li>
                                 <a class="function" href="#bspyApp.__init__">bspyApp</a>
                         </li>
                         <li>
-                                <a class="function" href="#bspyApp.AddSpline">AddSpline</a>
+                                <a class="function" href="#bspyApp.add_spline">add_spline</a>
                         </li>
                         <li>
-                                <a class="function" href="#bspyApp.RemoveSpline">RemoveSpline</a>
+                                <a class="function" href="#bspyApp.draw">draw</a>
                         </li>
                         <li>
-                                <a class="function" href="#bspyApp.ListChanged">ListChanged</a>
+                                <a class="function" href="#bspyApp.erase_all">erase_all</a>
                         </li>
                         <li>
-                                <a class="function" href="#bspyApp.ChangeFrameMode">ChangeFrameMode</a>
+                                <a class="function" href="#bspyApp.empty">empty</a>
                         </li>
                         <li>
-                                <a class="function" href="#bspyApp.Adjust">Adjust</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#bspyApp.AdjustDestroy">AdjustDestroy</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#bspyApp.ChangeOptions">ChangeOptions</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#bspyApp.FillColorChange">FillColorChange</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#bspyApp.LineColorChange">LineColorChange</a>
+                                <a class="function" href="#bspyApp.set_background_color">set_background_color</a>
                         </li>
                 </ul>
 
@@ -106,7 +79,7 @@
 <span class="kn">from</span> <span class="nn">bspy</span> <span class="kn">import</span> <span class="n">SplineOpenGLFrame</span>
 <span class="kn">from</span> <span class="nn">bspy</span> <span class="kn">import</span> <span class="n">DrawableSpline</span>
 
-<span class="k">class</span> <span class="nc">BitCheckbutton</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">Checkbutton</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">_BitCheckbutton</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">Checkbutton</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;A tkinter `CheckButton` that gets/sets its variable based on a given `bitmask`.&quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">bitMask</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">bitMask</span> <span class="o">=</span> <span class="n">bitMask</span>
@@ -143,9 +116,9 @@
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
 <span class="sd">    &gt;&gt;&gt; app = bspyApp()</span>
-<span class="sd">    &gt;&gt;&gt; app.AddSpline(spline1)</span>
-<span class="sd">    &gt;&gt;&gt; app.AddSpline(spline2)</span>
-<span class="sd">    &gt;&gt;&gt; app.AddSpline(spline3)</span>
+<span class="sd">    &gt;&gt;&gt; app.add_spline(spline1)</span>
+<span class="sd">    &gt;&gt;&gt; app.add_spline(spline2)</span>
+<span class="sd">    &gt;&gt;&gt; app.add_spline(spline3)</span>
 <span class="sd">    &gt;&gt;&gt; app.mainloop()</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">SplineOpenGLFrame</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
@@ -157,12 +130,13 @@
         <span class="n">controls</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Frame</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="n">controls</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">Y</span><span class="p">)</span>
 
-        <span class="n">adjustButton</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Adjust Splines&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">Adjust</span><span class="p">)</span>
-        <span class="n">adjustButton</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+        <span class="c1">#tk.Button(controls, text=&#39;Empty Splines&#39;, command=self.empty).pack(side=tk.BOTTOM, fill=tk.X)</span>
+        <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Erase Splines&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">erase_all</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Adjust Splines&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_Adjust</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Listbox</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">selectmode</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">MULTIPLE</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">Y</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="s1">&#39;&lt;&lt;ListboxSelect&gt;&gt;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ListChanged</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="s1">&#39;&lt;&lt;ListboxSelect&gt;&gt;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">)</span>
 
         <span class="n">verticalScroll</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Scrollbar</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">orient</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
         <span class="n">verticalScroll</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">Y</span><span class="p">)</span>
@@ -180,9 +154,9 @@
         <span class="n">buttons</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">)</span>
         <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Reset View&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Reset</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">IntVar</span><span class="p">()</span>
-        <span class="n">tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Rotate&#39;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">ROTATE</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeFrameMode</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
-        <span class="n">tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Pan&#39;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">PAN</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeFrameMode</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
-        <span class="n">tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Fly&#39;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">FLY</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeFrameMode</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
+        <span class="n">tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Rotate&#39;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">ROTATE</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ChangeFrameMode</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
+        <span class="n">tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Pan&#39;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">PAN</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ChangeFrameMode</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
+        <span class="n">tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Fly&#39;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">FLY</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ChangeFrameMode</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">ROTATE</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">orient</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span> <span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">showvalue</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">SetScale</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
@@ -191,17 +165,49 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span> <span class="o">=</span> <span class="kc">None</span>
 
-    <span class="k">def</span> <span class="nf">AddSpline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add a `DrawableSpline` to the listbox.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">add_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox. Can be called before app is running.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">,</span> <span class="n">spline</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">RemoveSpline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Remove a `DrawableSpline` from the listbox.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">)</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">spline</span><span class="p">))</span>
+    <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox and draw it. Can only be called after the app is running.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">,</span> <span class="n">spline</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">activate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">ListChanged</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">erase_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">selection_clear</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">empty</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">set_background_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the background color.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        r : `float`, `int` or array-like of floats or ints</span>
+<span class="sd">            The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).</span>
+<span class="sd">        </span>
+<span class="sd">        g: `float` or `int`</span>
+<span class="sd">            The green value [0, 1] as a float or [0, 255] as an int.</span>
+<span class="sd">        </span>
+<span class="sd">        b: `float` or `int`</span>
+<span class="sd">            The blue value [0, 1] as a float or [0, 255] as an int.</span>
+<span class="sd">        </span>
+<span class="sd">        a: `float`, `int`, or None</span>
+<span class="sd">            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">SetBackgroundColor</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_ListSelectionChanged</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Handle when the listbox selection has changed.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">curselection</span><span class="p">():</span>
@@ -217,16 +223,16 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
     
-    <span class="k">def</span> <span class="nf">ChangeFrameMode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_ChangeFrameMode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Handle when the view mode has changed.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">SetMode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
 
-    <span class="k">def</span> <span class="nf">Adjust</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_Adjust</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Handle when the Adjust button is pressed.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Toplevel</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Adjust&quot;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="s1">&#39;&lt;Destroy&gt;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">AdjustDestroy</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="s1">&#39;&lt;Destroy&gt;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_AdjustDestroy</span><span class="p">)</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">LabelFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Style&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTH</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">YES</span><span class="p">)</span>
@@ -236,15 +242,15 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">options</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-            <span class="n">BitCheckbutton</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">SHADED</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Shaded&quot;</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeOptions</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
-            <span class="n">BitCheckbutton</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">BOUNDARY</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Boundary&quot;</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeOptions</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
-            <span class="n">BitCheckbutton</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">ISOPARMS</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Isoparms&quot;</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeOptions</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
-            <span class="n">BitCheckbutton</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">HULL</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Hull&quot;</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeOptions</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+            <span class="n">_BitCheckbutton</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">SHADED</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Shaded&quot;</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ChangeOptions</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+            <span class="n">_BitCheckbutton</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">BOUNDARY</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Boundary&quot;</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ChangeOptions</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+            <span class="n">_BitCheckbutton</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">ISOPARMS</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Isoparms&quot;</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ChangeOptions</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+            <span class="n">_BitCheckbutton</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">HULL</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Hull&quot;</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ChangeOptions</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
 
             <span class="n">buttons</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">LabelFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Color&quot;</span><span class="p">)</span>
             <span class="n">buttons</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTH</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">YES</span><span class="p">)</span>
-            <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Fill color&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">FillColorChange</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
-            <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Line color&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">LineColorChange</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+            <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Fill color&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_FillColorChange</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+            <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Line color&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_LineColorChange</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
             <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Dismiss&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">withdraw</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
@@ -257,18 +263,18 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">geometry</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{width}</span><span class="s2">x</span><span class="si">{height}</span><span class="s2">+</span><span class="si">{x}</span><span class="s2">+</span><span class="si">{y}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="mi">205</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">winfo_height</span><span class="p">(),</span> <span class="n">x</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">winfo_screenwidth</span><span class="p">()</span> <span class="o">-</span> <span class="mi">205</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">winfo_y</span><span class="p">()))</span>
 
-    <span class="k">def</span> <span class="nf">AdjustDestroy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_AdjustDestroy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Handle when the adjust dialog is destroyed.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span> <span class="o">=</span> <span class="kc">None</span>
     
-    <span class="k">def</span> <span class="nf">ChangeOptions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">options</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_ChangeOptions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">options</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Handle when the spline options are changed.&quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">spline</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">:</span>
             <span class="n">spline</span><span class="o">.</span><span class="n">SetOptions</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">FillColorChange</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_FillColorChange</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Handle when the fill color changed.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">:</span>
             <span class="n">oldColor</span> <span class="o">=</span> <span class="mf">255.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">fillColor</span>
@@ -278,7 +284,7 @@
                     <span class="n">spline</span><span class="o">.</span><span class="n">SetFillColor</span><span class="p">(</span><span class="n">newColor</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">LineColorChange</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_LineColorChange</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Handle when the line color changed.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">:</span>
             <span class="n">oldColor</span> <span class="o">=</span> <span class="mf">255.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lineColor</span>
@@ -292,325 +298,6 @@
         </details>
 
             </section>
-                <section id="BitCheckbutton">
-                                <div class="attr class">
-        <a class="headerlink" href="#BitCheckbutton">#&nbsp;&nbsp</a>
-
-        
-        <span class="def">class</span>
-        <span class="name">BitCheckbutton</span><wbr>(<span class="base">tkinter.Checkbutton</span>):
-    </div>
-
-            <details>
-            <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span><span class="k">class</span> <span class="nc">BitCheckbutton</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">Checkbutton</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;A tkinter `CheckButton` that gets/sets its variable based on a given `bitmask`.&quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">bitMask</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">bitMask</span> <span class="o">=</span> <span class="n">bitMask</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">variable</span> <span class="o">=</span> <span class="n">kw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;variable&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">command</span> <span class="o">=</span> <span class="n">kw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;command&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">var</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">IntVar</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">variable</span><span class="o">.</span><span class="n">get</span><span class="p">()</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">bitMask</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span>
-        <span class="n">kw</span><span class="p">[</span><span class="s2">&quot;variable&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">var</span>
-        <span class="n">kw</span><span class="p">[</span><span class="s2">&quot;onvalue&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-        <span class="n">kw</span><span class="p">[</span><span class="s2">&quot;offvalue&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="n">kw</span><span class="p">[</span><span class="s2">&quot;command&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Command</span>
-        <span class="n">tk</span><span class="o">.</span><span class="n">Checkbutton</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
-    
-    <span class="k">def</span> <span class="nf">Command</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Handles when the checkbutton is pushed, updating the variable based on the </span>
-<span class="sd">        bitmask and then calling the checkbutton command.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">get</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">variable</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variable</span><span class="o">.</span><span class="n">get</span><span class="p">()</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">bitMask</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">variable</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variable</span><span class="o">.</span><span class="n">get</span><span class="p">()</span> <span class="o">&amp;</span> <span class="o">~</span><span class="bp">self</span><span class="o">.</span><span class="n">bitMask</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variable</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
-
-    <span class="k">def</span> <span class="nf">Update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Updates checkbutton state.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">variable</span><span class="o">.</span><span class="n">get</span><span class="p">()</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">bitMask</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>A tkinter <code>CheckButton</code> that gets/sets its variable based on a given <code>bitmask</code>.</p>
-</div>
-
-
-                            <div id="BitCheckbutton.__init__" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#BitCheckbutton.__init__">#&nbsp;&nbsp</a>
-
-        
-            <span class="name">BitCheckbutton</span><span class="signature">(parent, bitMask, **kw)</span>
-    </div>
-
-            <details>
-            <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">bitMask</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">bitMask</span> <span class="o">=</span> <span class="n">bitMask</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">variable</span> <span class="o">=</span> <span class="n">kw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;variable&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">command</span> <span class="o">=</span> <span class="n">kw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;command&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">var</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">IntVar</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">variable</span><span class="o">.</span><span class="n">get</span><span class="p">()</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">bitMask</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span>
-        <span class="n">kw</span><span class="p">[</span><span class="s2">&quot;variable&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">var</span>
-        <span class="n">kw</span><span class="p">[</span><span class="s2">&quot;onvalue&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-        <span class="n">kw</span><span class="p">[</span><span class="s2">&quot;offvalue&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="n">kw</span><span class="p">[</span><span class="s2">&quot;command&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Command</span>
-        <span class="n">tk</span><span class="o">.</span><span class="n">Checkbutton</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>Construct a checkbutton widget with the parent MASTER.</p>
-
-<p>Valid resource names: activebackground, activeforeground, anchor,
-background, bd, bg, bitmap, borderwidth, command, cursor,
-disabledforeground, fg, font, foreground, height,
-highlightbackground, highlightcolor, highlightthickness, image,
-indicatoron, justify, offvalue, onvalue, padx, pady, relief,
-selectcolor, selectimage, state, takefocus, text, textvariable,
-underline, variable, width, wraplength.</p>
-</div>
-
-
-                            </div>
-                            <div id="BitCheckbutton.Command" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#BitCheckbutton.Command">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">Command</span><span class="signature">(self)</span>:
-    </div>
-
-            <details>
-            <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">Command</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Handles when the checkbutton is pushed, updating the variable based on the </span>
-<span class="sd">        bitmask and then calling the checkbutton command.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">get</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">variable</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variable</span><span class="o">.</span><span class="n">get</span><span class="p">()</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">bitMask</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">variable</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variable</span><span class="o">.</span><span class="n">get</span><span class="p">()</span> <span class="o">&amp;</span> <span class="o">~</span><span class="bp">self</span><span class="o">.</span><span class="n">bitMask</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variable</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>Handles when the checkbutton is pushed, updating the variable based on the 
-bitmask and then calling the checkbutton command.</p>
-</div>
-
-
-                            </div>
-                            <div id="BitCheckbutton.Update" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#BitCheckbutton.Update">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">Update</span><span class="signature">(self)</span>:
-    </div>
-
-            <details>
-            <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">Update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Updates checkbutton state.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">variable</span><span class="o">.</span><span class="n">get</span><span class="p">()</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">bitMask</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>Updates checkbutton state.</p>
-</div>
-
-
-                            </div>
-                            <div class="inherited">
-                                <h5>Inherited Members</h5>
-                                <dl>
-                                    <div><dt>tkinter.Checkbutton</dt>
-                                <dd id="BitCheckbutton.deselect" class="function">deselect</dd>
-                <dd id="BitCheckbutton.flash" class="function">flash</dd>
-                <dd id="BitCheckbutton.invoke" class="function">invoke</dd>
-                <dd id="BitCheckbutton.select" class="function">select</dd>
-                <dd id="BitCheckbutton.toggle" class="function">toggle</dd>
-
-            </div>
-            <div><dt>tkinter.BaseWidget</dt>
-                                <dd id="BitCheckbutton.destroy" class="function">destroy</dd>
-
-            </div>
-            <div><dt>tkinter.Misc</dt>
-                                <dd id="BitCheckbutton.deletecommand" class="function">deletecommand</dd>
-                <dd id="BitCheckbutton.tk_strictMotif" class="function">tk_strictMotif</dd>
-                <dd id="BitCheckbutton.tk_bisque" class="function">tk_bisque</dd>
-                <dd id="BitCheckbutton.tk_setPalette" class="function">tk_setPalette</dd>
-                <dd id="BitCheckbutton.wait_variable" class="function">wait_variable</dd>
-                <dd id="BitCheckbutton.waitvar" class="function">waitvar</dd>
-                <dd id="BitCheckbutton.wait_window" class="function">wait_window</dd>
-                <dd id="BitCheckbutton.wait_visibility" class="function">wait_visibility</dd>
-                <dd id="BitCheckbutton.setvar" class="function">setvar</dd>
-                <dd id="BitCheckbutton.getvar" class="function">getvar</dd>
-                <dd id="BitCheckbutton.getint" class="function">getint</dd>
-                <dd id="BitCheckbutton.getdouble" class="function">getdouble</dd>
-                <dd id="BitCheckbutton.getboolean" class="function">getboolean</dd>
-                <dd id="BitCheckbutton.focus_set" class="function">focus_set</dd>
-                <dd id="BitCheckbutton.focus" class="function">focus</dd>
-                <dd id="BitCheckbutton.focus_force" class="function">focus_force</dd>
-                <dd id="BitCheckbutton.focus_get" class="function">focus_get</dd>
-                <dd id="BitCheckbutton.focus_displayof" class="function">focus_displayof</dd>
-                <dd id="BitCheckbutton.focus_lastfor" class="function">focus_lastfor</dd>
-                <dd id="BitCheckbutton.tk_focusFollowsMouse" class="function">tk_focusFollowsMouse</dd>
-                <dd id="BitCheckbutton.tk_focusNext" class="function">tk_focusNext</dd>
-                <dd id="BitCheckbutton.tk_focusPrev" class="function">tk_focusPrev</dd>
-                <dd id="BitCheckbutton.after" class="function">after</dd>
-                <dd id="BitCheckbutton.after_idle" class="function">after_idle</dd>
-                <dd id="BitCheckbutton.after_cancel" class="function">after_cancel</dd>
-                <dd id="BitCheckbutton.bell" class="function">bell</dd>
-                <dd id="BitCheckbutton.clipboard_get" class="function">clipboard_get</dd>
-                <dd id="BitCheckbutton.clipboard_clear" class="function">clipboard_clear</dd>
-                <dd id="BitCheckbutton.clipboard_append" class="function">clipboard_append</dd>
-                <dd id="BitCheckbutton.grab_current" class="function">grab_current</dd>
-                <dd id="BitCheckbutton.grab_release" class="function">grab_release</dd>
-                <dd id="BitCheckbutton.grab_set" class="function">grab_set</dd>
-                <dd id="BitCheckbutton.grab_set_global" class="function">grab_set_global</dd>
-                <dd id="BitCheckbutton.grab_status" class="function">grab_status</dd>
-                <dd id="BitCheckbutton.option_add" class="function">option_add</dd>
-                <dd id="BitCheckbutton.option_clear" class="function">option_clear</dd>
-                <dd id="BitCheckbutton.option_get" class="function">option_get</dd>
-                <dd id="BitCheckbutton.option_readfile" class="function">option_readfile</dd>
-                <dd id="BitCheckbutton.selection_clear" class="function">selection_clear</dd>
-                <dd id="BitCheckbutton.selection_get" class="function">selection_get</dd>
-                <dd id="BitCheckbutton.selection_handle" class="function">selection_handle</dd>
-                <dd id="BitCheckbutton.selection_own" class="function">selection_own</dd>
-                <dd id="BitCheckbutton.selection_own_get" class="function">selection_own_get</dd>
-                <dd id="BitCheckbutton.send" class="function">send</dd>
-                <dd id="BitCheckbutton.lower" class="function">lower</dd>
-                <dd id="BitCheckbutton.tkraise" class="function">tkraise</dd>
-                <dd id="BitCheckbutton.lift" class="function">lift</dd>
-                <dd id="BitCheckbutton.winfo_atom" class="function">winfo_atom</dd>
-                <dd id="BitCheckbutton.winfo_atomname" class="function">winfo_atomname</dd>
-                <dd id="BitCheckbutton.winfo_cells" class="function">winfo_cells</dd>
-                <dd id="BitCheckbutton.winfo_children" class="function">winfo_children</dd>
-                <dd id="BitCheckbutton.winfo_class" class="function">winfo_class</dd>
-                <dd id="BitCheckbutton.winfo_colormapfull" class="function">winfo_colormapfull</dd>
-                <dd id="BitCheckbutton.winfo_containing" class="function">winfo_containing</dd>
-                <dd id="BitCheckbutton.winfo_depth" class="function">winfo_depth</dd>
-                <dd id="BitCheckbutton.winfo_exists" class="function">winfo_exists</dd>
-                <dd id="BitCheckbutton.winfo_fpixels" class="function">winfo_fpixels</dd>
-                <dd id="BitCheckbutton.winfo_geometry" class="function">winfo_geometry</dd>
-                <dd id="BitCheckbutton.winfo_height" class="function">winfo_height</dd>
-                <dd id="BitCheckbutton.winfo_id" class="function">winfo_id</dd>
-                <dd id="BitCheckbutton.winfo_interps" class="function">winfo_interps</dd>
-                <dd id="BitCheckbutton.winfo_ismapped" class="function">winfo_ismapped</dd>
-                <dd id="BitCheckbutton.winfo_manager" class="function">winfo_manager</dd>
-                <dd id="BitCheckbutton.winfo_name" class="function">winfo_name</dd>
-                <dd id="BitCheckbutton.winfo_parent" class="function">winfo_parent</dd>
-                <dd id="BitCheckbutton.winfo_pathname" class="function">winfo_pathname</dd>
-                <dd id="BitCheckbutton.winfo_pixels" class="function">winfo_pixels</dd>
-                <dd id="BitCheckbutton.winfo_pointerx" class="function">winfo_pointerx</dd>
-                <dd id="BitCheckbutton.winfo_pointerxy" class="function">winfo_pointerxy</dd>
-                <dd id="BitCheckbutton.winfo_pointery" class="function">winfo_pointery</dd>
-                <dd id="BitCheckbutton.winfo_reqheight" class="function">winfo_reqheight</dd>
-                <dd id="BitCheckbutton.winfo_reqwidth" class="function">winfo_reqwidth</dd>
-                <dd id="BitCheckbutton.winfo_rgb" class="function">winfo_rgb</dd>
-                <dd id="BitCheckbutton.winfo_rootx" class="function">winfo_rootx</dd>
-                <dd id="BitCheckbutton.winfo_rooty" class="function">winfo_rooty</dd>
-                <dd id="BitCheckbutton.winfo_screen" class="function">winfo_screen</dd>
-                <dd id="BitCheckbutton.winfo_screencells" class="function">winfo_screencells</dd>
-                <dd id="BitCheckbutton.winfo_screendepth" class="function">winfo_screendepth</dd>
-                <dd id="BitCheckbutton.winfo_screenheight" class="function">winfo_screenheight</dd>
-                <dd id="BitCheckbutton.winfo_screenmmheight" class="function">winfo_screenmmheight</dd>
-                <dd id="BitCheckbutton.winfo_screenmmwidth" class="function">winfo_screenmmwidth</dd>
-                <dd id="BitCheckbutton.winfo_screenvisual" class="function">winfo_screenvisual</dd>
-                <dd id="BitCheckbutton.winfo_screenwidth" class="function">winfo_screenwidth</dd>
-                <dd id="BitCheckbutton.winfo_server" class="function">winfo_server</dd>
-                <dd id="BitCheckbutton.winfo_toplevel" class="function">winfo_toplevel</dd>
-                <dd id="BitCheckbutton.winfo_viewable" class="function">winfo_viewable</dd>
-                <dd id="BitCheckbutton.winfo_visual" class="function">winfo_visual</dd>
-                <dd id="BitCheckbutton.winfo_visualid" class="function">winfo_visualid</dd>
-                <dd id="BitCheckbutton.winfo_visualsavailable" class="function">winfo_visualsavailable</dd>
-                <dd id="BitCheckbutton.winfo_vrootheight" class="function">winfo_vrootheight</dd>
-                <dd id="BitCheckbutton.winfo_vrootwidth" class="function">winfo_vrootwidth</dd>
-                <dd id="BitCheckbutton.winfo_vrootx" class="function">winfo_vrootx</dd>
-                <dd id="BitCheckbutton.winfo_vrooty" class="function">winfo_vrooty</dd>
-                <dd id="BitCheckbutton.winfo_width" class="function">winfo_width</dd>
-                <dd id="BitCheckbutton.winfo_x" class="function">winfo_x</dd>
-                <dd id="BitCheckbutton.winfo_y" class="function">winfo_y</dd>
-                <dd id="BitCheckbutton.update" class="function">update</dd>
-                <dd id="BitCheckbutton.update_idletasks" class="function">update_idletasks</dd>
-                <dd id="BitCheckbutton.bindtags" class="function">bindtags</dd>
-                <dd id="BitCheckbutton.bind" class="function">bind</dd>
-                <dd id="BitCheckbutton.unbind" class="function">unbind</dd>
-                <dd id="BitCheckbutton.bind_all" class="function">bind_all</dd>
-                <dd id="BitCheckbutton.unbind_all" class="function">unbind_all</dd>
-                <dd id="BitCheckbutton.bind_class" class="function">bind_class</dd>
-                <dd id="BitCheckbutton.unbind_class" class="function">unbind_class</dd>
-                <dd id="BitCheckbutton.mainloop" class="function">mainloop</dd>
-                <dd id="BitCheckbutton.quit" class="function">quit</dd>
-                <dd id="BitCheckbutton.nametowidget" class="function">nametowidget</dd>
-                <dd id="BitCheckbutton.register" class="function">register</dd>
-                <dd id="BitCheckbutton.configure" class="function">configure</dd>
-                <dd id="BitCheckbutton.config" class="function">config</dd>
-                <dd id="BitCheckbutton.cget" class="function">cget</dd>
-                <dd id="BitCheckbutton.keys" class="function">keys</dd>
-                <dd id="BitCheckbutton.pack_propagate" class="function">pack_propagate</dd>
-                <dd id="BitCheckbutton.propagate" class="function">propagate</dd>
-                <dd id="BitCheckbutton.pack_slaves" class="function">pack_slaves</dd>
-                <dd id="BitCheckbutton.slaves" class="function">slaves</dd>
-                <dd id="BitCheckbutton.place_slaves" class="function">place_slaves</dd>
-                <dd id="BitCheckbutton.grid_anchor" class="function">grid_anchor</dd>
-                <dd id="BitCheckbutton.anchor" class="function">anchor</dd>
-                <dd id="BitCheckbutton.grid_bbox" class="function">grid_bbox</dd>
-                <dd id="BitCheckbutton.bbox" class="function">bbox</dd>
-                <dd id="BitCheckbutton.grid_columnconfigure" class="function">grid_columnconfigure</dd>
-                <dd id="BitCheckbutton.columnconfigure" class="function">columnconfigure</dd>
-                <dd id="BitCheckbutton.grid_location" class="function">grid_location</dd>
-                <dd id="BitCheckbutton.grid_propagate" class="function">grid_propagate</dd>
-                <dd id="BitCheckbutton.grid_rowconfigure" class="function">grid_rowconfigure</dd>
-                <dd id="BitCheckbutton.rowconfigure" class="function">rowconfigure</dd>
-                <dd id="BitCheckbutton.grid_size" class="function">grid_size</dd>
-                <dd id="BitCheckbutton.size" class="function">size</dd>
-                <dd id="BitCheckbutton.grid_slaves" class="function">grid_slaves</dd>
-                <dd id="BitCheckbutton.event_add" class="function">event_add</dd>
-                <dd id="BitCheckbutton.event_delete" class="function">event_delete</dd>
-                <dd id="BitCheckbutton.event_generate" class="function">event_generate</dd>
-                <dd id="BitCheckbutton.event_info" class="function">event_info</dd>
-                <dd id="BitCheckbutton.image_names" class="function">image_names</dd>
-                <dd id="BitCheckbutton.image_types" class="function">image_types</dd>
-
-            </div>
-            <div><dt>tkinter.Pack</dt>
-                                <dd id="BitCheckbutton.pack_configure" class="function">pack_configure</dd>
-                <dd id="BitCheckbutton.pack_forget" class="function">pack_forget</dd>
-                <dd id="BitCheckbutton.forget" class="function">forget</dd>
-                <dd id="BitCheckbutton.pack_info" class="function">pack_info</dd>
-                <dd id="BitCheckbutton.info" class="function">info</dd>
-                <dd id="BitCheckbutton.pack" class="function">pack</dd>
-
-            </div>
-            <div><dt>tkinter.Place</dt>
-                                <dd id="BitCheckbutton.place_configure" class="function">place_configure</dd>
-                <dd id="BitCheckbutton.place_forget" class="function">place_forget</dd>
-                <dd id="BitCheckbutton.place_info" class="function">place_info</dd>
-                <dd id="BitCheckbutton.place" class="function">place</dd>
-
-            </div>
-            <div><dt>tkinter.Grid</dt>
-                                <dd id="BitCheckbutton.grid_configure" class="function">grid_configure</dd>
-                <dd id="BitCheckbutton.grid_forget" class="function">grid_forget</dd>
-                <dd id="BitCheckbutton.grid_remove" class="function">grid_remove</dd>
-                <dd id="BitCheckbutton.grid_info" class="function">grid_info</dd>
-                <dd id="BitCheckbutton.grid" class="function">grid</dd>
-                <dd id="BitCheckbutton.location" class="function">location</dd>
-
-            </div>
-                                </dl>
-                            </div>
-                </section>
                 <section id="bspyApp">
                                 <div class="attr class">
         <a class="headerlink" href="#bspyApp">#&nbsp;&nbsp</a>
@@ -630,9 +317,9 @@ bitmask and then calling the checkbutton command.</p>
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
 <span class="sd">    &gt;&gt;&gt; app = bspyApp()</span>
-<span class="sd">    &gt;&gt;&gt; app.AddSpline(spline1)</span>
-<span class="sd">    &gt;&gt;&gt; app.AddSpline(spline2)</span>
-<span class="sd">    &gt;&gt;&gt; app.AddSpline(spline3)</span>
+<span class="sd">    &gt;&gt;&gt; app.add_spline(spline1)</span>
+<span class="sd">    &gt;&gt;&gt; app.add_spline(spline2)</span>
+<span class="sd">    &gt;&gt;&gt; app.add_spline(spline3)</span>
 <span class="sd">    &gt;&gt;&gt; app.mainloop()</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">SplineOpenGLFrame</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
@@ -644,12 +331,13 @@ bitmask and then calling the checkbutton command.</p>
         <span class="n">controls</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Frame</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="n">controls</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">Y</span><span class="p">)</span>
 
-        <span class="n">adjustButton</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Adjust Splines&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">Adjust</span><span class="p">)</span>
-        <span class="n">adjustButton</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+        <span class="c1">#tk.Button(controls, text=&#39;Empty Splines&#39;, command=self.empty).pack(side=tk.BOTTOM, fill=tk.X)</span>
+        <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Erase Splines&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">erase_all</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Adjust Splines&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_Adjust</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Listbox</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">selectmode</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">MULTIPLE</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">Y</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="s1">&#39;&lt;&lt;ListboxSelect&gt;&gt;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ListChanged</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="s1">&#39;&lt;&lt;ListboxSelect&gt;&gt;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">)</span>
 
         <span class="n">verticalScroll</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Scrollbar</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">orient</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
         <span class="n">verticalScroll</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">Y</span><span class="p">)</span>
@@ -667,9 +355,9 @@ bitmask and then calling the checkbutton command.</p>
         <span class="n">buttons</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">)</span>
         <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Reset View&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Reset</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">IntVar</span><span class="p">()</span>
-        <span class="n">tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Rotate&#39;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">ROTATE</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeFrameMode</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
-        <span class="n">tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Pan&#39;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">PAN</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeFrameMode</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
-        <span class="n">tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Fly&#39;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">FLY</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeFrameMode</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
+        <span class="n">tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Rotate&#39;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">ROTATE</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ChangeFrameMode</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
+        <span class="n">tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Pan&#39;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">PAN</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ChangeFrameMode</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
+        <span class="n">tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Fly&#39;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">FLY</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ChangeFrameMode</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">ROTATE</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">orient</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span> <span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">showvalue</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">SetScale</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
@@ -678,17 +366,49 @@ bitmask and then calling the checkbutton command.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span> <span class="o">=</span> <span class="kc">None</span>
 
-    <span class="k">def</span> <span class="nf">AddSpline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add a `DrawableSpline` to the listbox.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">add_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox. Can be called before app is running.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">,</span> <span class="n">spline</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">RemoveSpline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Remove a `DrawableSpline` from the listbox.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">)</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">spline</span><span class="p">))</span>
+    <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox and draw it. Can only be called after the app is running.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">,</span> <span class="n">spline</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">activate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">ListChanged</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">erase_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">selection_clear</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">empty</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">set_background_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the background color.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        r : `float`, `int` or array-like of floats or ints</span>
+<span class="sd">            The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).</span>
+<span class="sd">        </span>
+<span class="sd">        g: `float` or `int`</span>
+<span class="sd">            The green value [0, 1] as a float or [0, 255] as an int.</span>
+<span class="sd">        </span>
+<span class="sd">        b: `float` or `int`</span>
+<span class="sd">            The blue value [0, 1] as a float or [0, 255] as an int.</span>
+<span class="sd">        </span>
+<span class="sd">        a: `float`, `int`, or None</span>
+<span class="sd">            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">SetBackgroundColor</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_ListSelectionChanged</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Handle when the listbox selection has changed.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">curselection</span><span class="p">():</span>
@@ -704,16 +424,16 @@ bitmask and then calling the checkbutton command.</p>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
     
-    <span class="k">def</span> <span class="nf">ChangeFrameMode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_ChangeFrameMode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Handle when the view mode has changed.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">SetMode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
 
-    <span class="k">def</span> <span class="nf">Adjust</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_Adjust</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Handle when the Adjust button is pressed.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Toplevel</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Adjust&quot;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="s1">&#39;&lt;Destroy&gt;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">AdjustDestroy</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="s1">&#39;&lt;Destroy&gt;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_AdjustDestroy</span><span class="p">)</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">LabelFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Style&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTH</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">YES</span><span class="p">)</span>
@@ -723,15 +443,15 @@ bitmask and then calling the checkbutton command.</p>
                 <span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">options</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-            <span class="n">BitCheckbutton</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">SHADED</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Shaded&quot;</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeOptions</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
-            <span class="n">BitCheckbutton</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">BOUNDARY</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Boundary&quot;</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeOptions</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
-            <span class="n">BitCheckbutton</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">ISOPARMS</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Isoparms&quot;</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeOptions</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
-            <span class="n">BitCheckbutton</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">HULL</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Hull&quot;</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeOptions</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+            <span class="n">_BitCheckbutton</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">SHADED</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Shaded&quot;</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ChangeOptions</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+            <span class="n">_BitCheckbutton</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">BOUNDARY</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Boundary&quot;</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ChangeOptions</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+            <span class="n">_BitCheckbutton</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">ISOPARMS</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Isoparms&quot;</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ChangeOptions</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+            <span class="n">_BitCheckbutton</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">HULL</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Hull&quot;</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ChangeOptions</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
 
             <span class="n">buttons</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">LabelFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Color&quot;</span><span class="p">)</span>
             <span class="n">buttons</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTH</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">YES</span><span class="p">)</span>
-            <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Fill color&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">FillColorChange</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
-            <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Line color&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">LineColorChange</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+            <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Fill color&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_FillColorChange</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+            <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Line color&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_LineColorChange</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
             <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Dismiss&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">withdraw</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
@@ -744,18 +464,18 @@ bitmask and then calling the checkbutton command.</p>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">geometry</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{width}</span><span class="s2">x</span><span class="si">{height}</span><span class="s2">+</span><span class="si">{x}</span><span class="s2">+</span><span class="si">{y}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="mi">205</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">winfo_height</span><span class="p">(),</span> <span class="n">x</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">winfo_screenwidth</span><span class="p">()</span> <span class="o">-</span> <span class="mi">205</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">winfo_y</span><span class="p">()))</span>
 
-    <span class="k">def</span> <span class="nf">AdjustDestroy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_AdjustDestroy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Handle when the adjust dialog is destroyed.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span> <span class="o">=</span> <span class="kc">None</span>
     
-    <span class="k">def</span> <span class="nf">ChangeOptions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">options</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_ChangeOptions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">options</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Handle when the spline options are changed.&quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">spline</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">:</span>
             <span class="n">spline</span><span class="o">.</span><span class="n">SetOptions</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">FillColorChange</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_FillColorChange</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Handle when the fill color changed.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">:</span>
             <span class="n">oldColor</span> <span class="o">=</span> <span class="mf">255.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">fillColor</span>
@@ -765,7 +485,7 @@ bitmask and then calling the checkbutton command.</p>
                     <span class="n">spline</span><span class="o">.</span><span class="n">SetFillColor</span><span class="p">(</span><span class="n">newColor</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">LineColorChange</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_LineColorChange</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Handle when the line color changed.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">:</span>
             <span class="n">oldColor</span> <span class="o">=</span> <span class="mf">255.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lineColor</span>
@@ -784,9 +504,9 @@ splines, and a set of controls to adjust and view the selected splines.</p>
 <h6 id="example">Example</h6>
 
 <div class="pdoc-code codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">app</span> <span class="o">=</span> <span class="n">bspyApp</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">AddSpline</span><span class="p">(</span><span class="n">spline1</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">AddSpline</span><span class="p">(</span><span class="n">spline2</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">AddSpline</span><span class="p">(</span><span class="n">spline3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">add_spline</span><span class="p">(</span><span class="n">spline1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">add_spline</span><span class="p">(</span><span class="n">spline2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">add_spline</span><span class="p">(</span><span class="n">spline3</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">mainloop</span><span class="p">()</span>
 </code></pre></div>
 </div>
@@ -814,12 +534,13 @@ splines, and a set of controls to adjust and view the selected splines.</p>
         <span class="n">controls</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Frame</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="n">controls</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">Y</span><span class="p">)</span>
 
-        <span class="n">adjustButton</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Adjust Splines&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">Adjust</span><span class="p">)</span>
-        <span class="n">adjustButton</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+        <span class="c1">#tk.Button(controls, text=&#39;Empty Splines&#39;, command=self.empty).pack(side=tk.BOTTOM, fill=tk.X)</span>
+        <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Erase Splines&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">erase_all</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Adjust Splines&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_Adjust</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Listbox</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">selectmode</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">MULTIPLE</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">Y</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="s1">&#39;&lt;&lt;ListboxSelect&gt;&gt;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ListChanged</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="s1">&#39;&lt;&lt;ListboxSelect&gt;&gt;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">)</span>
 
         <span class="n">verticalScroll</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Scrollbar</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">orient</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
         <span class="n">verticalScroll</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">Y</span><span class="p">)</span>
@@ -837,9 +558,9 @@ splines, and a set of controls to adjust and view the selected splines.</p>
         <span class="n">buttons</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">)</span>
         <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Reset View&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Reset</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">IntVar</span><span class="p">()</span>
-        <span class="n">tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Rotate&#39;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">ROTATE</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeFrameMode</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
-        <span class="n">tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Pan&#39;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">PAN</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeFrameMode</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
-        <span class="n">tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Fly&#39;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">FLY</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeFrameMode</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
+        <span class="n">tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Rotate&#39;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">ROTATE</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ChangeFrameMode</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
+        <span class="n">tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Pan&#39;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">PAN</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ChangeFrameMode</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
+        <span class="n">tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Fly&#39;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">FLY</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ChangeFrameMode</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">SplineOpenGLFrame</span><span class="o">.</span><span class="n">ROTATE</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">orient</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span> <span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">showvalue</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">SetScale</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">)</span>
@@ -860,261 +581,143 @@ is the name of the widget class.</p>
 
 
                             </div>
-                            <div id="bspyApp.AddSpline" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#bspyApp.AddSpline">#&nbsp;&nbsp</a>
+                            <div id="bspyApp.add_spline" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#bspyApp.add_spline">#&nbsp;&nbsp</a>
 
         
             <span class="def">def</span>
-            <span class="name">AddSpline</span><span class="signature">(self, spline)</span>:
+            <span class="name">add_spline</span><span class="signature">(self, spline)</span>:
     </div>
 
             <details>
             <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">AddSpline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add a `DrawableSpline` to the listbox.&quot;&quot;&quot;</span>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">add_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox. Can be called before app is running.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">,</span> <span class="n">spline</span><span class="p">)</span>
 </pre></div>
 
         </details>
 
-            <div class="docstring"><p>Add a <code>DrawableSpline</code> to the listbox.</p>
+            <div class="docstring"><p>Add a <code>Spline</code> to the listbox. Can be called before app is running.</p>
 </div>
 
 
                             </div>
-                            <div id="bspyApp.RemoveSpline" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#bspyApp.RemoveSpline">#&nbsp;&nbsp</a>
+                            <div id="bspyApp.draw" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#bspyApp.draw">#&nbsp;&nbsp</a>
 
         
             <span class="def">def</span>
-            <span class="name">RemoveSpline</span><span class="signature">(self, spline)</span>:
+            <span class="name">draw</span><span class="signature">(self, spline)</span>:
     </div>
 
             <details>
             <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">RemoveSpline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Remove a `DrawableSpline` from the listbox.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">)</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">spline</span><span class="p">))</span>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox and draw it. Can only be called after the app is running.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">,</span> <span class="n">spline</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">activate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
 </pre></div>
 
         </details>
 
-            <div class="docstring"><p>Remove a <code>DrawableSpline</code> from the listbox.</p>
+            <div class="docstring"><p>Add a <code>Spline</code> to the listbox and draw it. Can only be called after the app is running.</p>
 </div>
 
 
                             </div>
-                            <div id="bspyApp.ListChanged" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#bspyApp.ListChanged">#&nbsp;&nbsp</a>
+                            <div id="bspyApp.erase_all" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#bspyApp.erase_all">#&nbsp;&nbsp</a>
 
         
             <span class="def">def</span>
-            <span class="name">ListChanged</span><span class="signature">(self, event)</span>:
+            <span class="name">erase_all</span><span class="signature">(self)</span>:
     </div>
 
             <details>
             <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">ListChanged</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Handle when the listbox selection has changed.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">curselection</span><span class="p">():</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="p">[</span><span class="n">item</span><span class="p">])</span>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">erase_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">selection_clear</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+</pre></div>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">:</span> 
-                <span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">options</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">button</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="o">.</span><span class="n">winfo_children</span><span class="p">():</span>
-                <span class="n">button</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
+        </details>
 
+    
+
+                            </div>
+                            <div id="bspyApp.empty" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#bspyApp.empty">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">empty</span><span class="signature">(self)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">empty</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+</pre></div>
+
+        </details>
+
+    
+
+                            </div>
+                            <div id="bspyApp.set_background_color" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#bspyApp.set_background_color">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">set_background_color</span><span class="signature">(self, r, g=None, b=None, a=None)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">set_background_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the background color.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        r : `float`, `int` or array-like of floats or ints</span>
+<span class="sd">            The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).</span>
+<span class="sd">        </span>
+<span class="sd">        g: `float` or `int`</span>
+<span class="sd">            The green value [0, 1] as a float or [0, 255] as an int.</span>
+<span class="sd">        </span>
+<span class="sd">        b: `float` or `int`</span>
+<span class="sd">            The blue value [0, 1] as a float or [0, 255] as an int.</span>
+<span class="sd">        </span>
+<span class="sd">        a: `float`, `int`, or None</span>
+<span class="sd">            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">SetBackgroundColor</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
 </pre></div>
 
         </details>
 
-            <div class="docstring"><p>Handle when the listbox selection has changed.</p>
-</div>
+            <div class="docstring"><p>Set the background color.</p>
 
+<h6 id="parameters">Parameters</h6>
 
-                            </div>
-                            <div id="bspyApp.ChangeFrameMode" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#bspyApp.ChangeFrameMode">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">ChangeFrameMode</span><span class="signature">(self)</span>:
-    </div>
-
-            <details>
-            <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">ChangeFrameMode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Handle when the view mode has changed.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">SetMode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frameMode</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>Handle when the view mode has changed.</p>
-</div>
-
-
-                            </div>
-                            <div id="bspyApp.Adjust" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#bspyApp.Adjust">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">Adjust</span><span class="signature">(self)</span>:
-    </div>
-
-            <details>
-            <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">Adjust</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Handle when the Adjust button is pressed.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Toplevel</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Adjust&quot;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="s1">&#39;&lt;Destroy&gt;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">AdjustDestroy</span><span class="p">)</span>
-
-            <span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">LabelFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Style&quot;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTH</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">YES</span><span class="p">)</span>
-
-            <span class="bp">self</span><span class="o">.</span><span class="n">bits</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">IntVar</span><span class="p">()</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">options</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-            <span class="n">BitCheckbutton</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">SHADED</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Shaded&quot;</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeOptions</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
-            <span class="n">BitCheckbutton</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">BOUNDARY</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Boundary&quot;</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeOptions</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
-            <span class="n">BitCheckbutton</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">ISOPARMS</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Isoparms&quot;</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeOptions</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
-            <span class="n">BitCheckbutton</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">HULL</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Hull&quot;</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ChangeOptions</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
-
-            <span class="n">buttons</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">LabelFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Color&quot;</span><span class="p">)</span>
-            <span class="n">buttons</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTH</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">YES</span><span class="p">)</span>
-            <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Fill color&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">FillColorChange</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
-            <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Line color&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">LineColorChange</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
-            <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">buttons</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Dismiss&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">withdraw</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
-
-            <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">resizable</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">deiconify</span><span class="p">()</span>
-
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">winfo_x</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">winfo_width</span><span class="p">()</span> <span class="o">+</span> <span class="mi">205</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">winfo_screenwidth</span><span class="p">():</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">geometry</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{width}</span><span class="s2">x</span><span class="si">{height}</span><span class="s2">+</span><span class="si">{x}</span><span class="s2">+</span><span class="si">{y}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="mi">205</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">winfo_height</span><span class="p">(),</span> <span class="n">x</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">winfo_x</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">winfo_width</span><span class="p">(),</span> <span class="n">y</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">winfo_y</span><span class="p">()))</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">geometry</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{width}</span><span class="s2">x</span><span class="si">{height}</span><span class="s2">+</span><span class="si">{x}</span><span class="s2">+</span><span class="si">{y}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="mi">205</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">adjust</span><span class="o">.</span><span class="n">winfo_height</span><span class="p">(),</span> <span class="n">x</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">winfo_screenwidth</span><span class="p">()</span> <span class="o">-</span> <span class="mi">205</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">winfo_y</span><span class="p">()))</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>Handle when the Adjust button is pressed.</p>
-</div>
-
-
-                            </div>
-                            <div id="bspyApp.AdjustDestroy" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#bspyApp.AdjustDestroy">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">AdjustDestroy</span><span class="signature">(self, event)</span>:
-    </div>
-
-            <details>
-            <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">AdjustDestroy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Handle when the adjust dialog is destroyed.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span> <span class="o">=</span> <span class="kc">None</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>Handle when the adjust dialog is destroyed.</p>
-</div>
-
-
-                            </div>
-                            <div id="bspyApp.ChangeOptions" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#bspyApp.ChangeOptions">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">ChangeOptions</span><span class="signature">(self, options)</span>:
-    </div>
-
-            <details>
-            <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">ChangeOptions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">options</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Handle when the spline options are changed.&quot;&quot;&quot;</span>
-        <span class="k">for</span> <span class="n">spline</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">:</span>
-            <span class="n">spline</span><span class="o">.</span><span class="n">SetOptions</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>Handle when the spline options are changed.</p>
-</div>
-
-
-                            </div>
-                            <div id="bspyApp.FillColorChange" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#bspyApp.FillColorChange">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">FillColorChange</span><span class="signature">(self)</span>:
-    </div>
-
-            <details>
-            <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">FillColorChange</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Handle when the fill color changed.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">:</span>
-            <span class="n">oldColor</span> <span class="o">=</span> <span class="mf">255.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">fillColor</span>
-            <span class="n">newColor</span> <span class="o">=</span> <span class="n">askcolor</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;Set spline fill color&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;#</span><span class="si">%02x%02x%02x</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">oldColor</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">int</span><span class="p">(</span><span class="n">oldColor</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="nb">int</span><span class="p">(</span><span class="n">oldColor</span><span class="p">[</span><span class="mi">2</span><span class="p">])))</span>
-            <span class="k">if</span> <span class="n">newColor</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">spline</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">:</span>
-                    <span class="n">spline</span><span class="o">.</span><span class="n">SetFillColor</span><span class="p">(</span><span class="n">newColor</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>Handle when the fill color changed.</p>
-</div>
-
-
-                            </div>
-                            <div id="bspyApp.LineColorChange" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#bspyApp.LineColorChange">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">LineColorChange</span><span class="signature">(self)</span>:
-    </div>
-
-            <details>
-            <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">LineColorChange</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Handle when the line color changed.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">:</span>
-            <span class="n">oldColor</span> <span class="o">=</span> <span class="mf">255.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lineColor</span>
-            <span class="n">newColor</span> <span class="o">=</span> <span class="n">askcolor</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;Set spline line color&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;#</span><span class="si">%02x%02x%02x</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">oldColor</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">int</span><span class="p">(</span><span class="n">oldColor</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="nb">int</span><span class="p">(</span><span class="n">oldColor</span><span class="p">[</span><span class="mi">2</span><span class="p">])))</span>
-            <span class="k">if</span> <span class="n">newColor</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">spline</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">:</span>
-                    <span class="n">spline</span><span class="o">.</span><span class="n">SetLineColor</span><span class="p">(</span><span class="n">newColor</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>Handle when the line color changed.</p>
+<ul>
+<li><strong>r</strong> (<code>float</code>, <code>int</code> or array-like of floats or ints):
+The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).</li>
+<li><strong>g</strong> (<code>float</code> or <code>int</code>):
+The green value [0, 1] as a float or [0, 255] as an int.</li>
+<li><strong>b</strong> (<code>float</code> or <code>int</code>):
+The blue value [0, 1] as a float or [0, 255] as an int.</li>
+<li><strong>a</strong> (<code>float</code>, <code>int</code>, or None):
+The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> then alpha is set to 1.</li>
+</ul>
 </div>
 
 

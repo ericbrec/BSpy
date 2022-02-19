@@ -4,7 +4,7 @@ from tkinter.colorchooser import askcolor
 from bspy import SplineOpenGLFrame
 from bspy import DrawableSpline
 
-class BitCheckbutton(tk.Checkbutton):
+class _BitCheckbutton(tk.Checkbutton):
     """A tkinter `CheckButton` that gets/sets its variable based on a given `bitmask`."""
     def __init__(self, parent, bitMask, **kw):
         self.bitMask = bitMask
@@ -41,9 +41,9 @@ class bspyApp(tk.Tk):
     Example
     -------
     >>> app = bspyApp()
-    >>> app.AddSpline(spline1)
-    >>> app.AddSpline(spline2)
-    >>> app.AddSpline(spline3)
+    >>> app.add_spline(spline1)
+    >>> app.add_spline(spline2)
+    >>> app.add_spline(spline3)
     >>> app.mainloop()
     """
     def __init__(self, *args, SplineOpenGLFrame=SplineOpenGLFrame, **kw):
@@ -55,12 +55,13 @@ class bspyApp(tk.Tk):
         controls = tk.Frame(self)
         controls.pack(side=tk.LEFT, fill=tk.Y)
 
-        adjustButton = tk.Button(controls, text='Adjust Splines', command=self.Adjust)
-        adjustButton.pack(side=tk.BOTTOM, fill=tk.X)
+        #tk.Button(controls, text='Empty Splines', command=self.empty).pack(side=tk.BOTTOM, fill=tk.X)
+        tk.Button(controls, text='Erase Splines', command=self.erase_all).pack(side=tk.BOTTOM, fill=tk.X)
+        tk.Button(controls, text='Adjust Splines', command=self._Adjust).pack(side=tk.BOTTOM, fill=tk.X)
 
         self.listBox = tk.Listbox(controls, selectmode=tk.MULTIPLE)
         self.listBox.pack(side=tk.LEFT, fill=tk.Y)
-        self.listBox.bind('<<ListboxSelect>>', self.ListChanged)
+        self.listBox.bind('<<ListboxSelect>>', self._ListSelectionChanged)
 
         verticalScroll = tk.Scrollbar(controls, orient=tk.VERTICAL)
         verticalScroll.pack(side=tk.LEFT, fill=tk.Y)
@@ -78,9 +79,9 @@ class bspyApp(tk.Tk):
         buttons.pack(side=tk.BOTTOM)
         tk.Button(buttons, text='Reset View', command=self.frame.Reset).pack(side=tk.LEFT)
         self.frameMode = tk.IntVar()
-        tk.Radiobutton(buttons, text='Rotate', variable=self.frameMode, value=SplineOpenGLFrame.ROTATE, command=self.ChangeFrameMode).pack(side=tk.LEFT)
-        tk.Radiobutton(buttons, text='Pan', variable=self.frameMode, value=SplineOpenGLFrame.PAN, command=self.ChangeFrameMode).pack(side=tk.LEFT)
-        tk.Radiobutton(buttons, text='Fly', variable=self.frameMode, value=SplineOpenGLFrame.FLY, command=self.ChangeFrameMode).pack(side=tk.LEFT)
+        tk.Radiobutton(buttons, text='Rotate', variable=self.frameMode, value=SplineOpenGLFrame.ROTATE, command=self._ChangeFrameMode).pack(side=tk.LEFT)
+        tk.Radiobutton(buttons, text='Pan', variable=self.frameMode, value=SplineOpenGLFrame.PAN, command=self._ChangeFrameMode).pack(side=tk.LEFT)
+        tk.Radiobutton(buttons, text='Fly', variable=self.frameMode, value=SplineOpenGLFrame.FLY, command=self._ChangeFrameMode).pack(side=tk.LEFT)
         self.frameMode.set(SplineOpenGLFrame.ROTATE)
         self.scale = tk.Scale(buttons, orient=tk.HORIZONTAL, from_=0, to=1, resolution=0.1, showvalue=0, command=self.frame.SetScale)
         self.scale.pack(side=tk.LEFT)
@@ -89,17 +90,49 @@ class bspyApp(tk.Tk):
         self.splineList = []
         self.adjust = None
 
-    def AddSpline(self, spline):
-        """Add a `DrawableSpline` to the listbox."""
+    def add_spline(self, spline):
+        """Add a `Spline` to the listbox. Can be called before app is running."""
         self.splineList.append(spline)
         self.listBox.insert(tk.END, spline)
 
-    def RemoveSpline(self, spline):
-        """Remove a `DrawableSpline` from the listbox."""
-        self.splineList.remove(spline)
-        self.listBox.delete(self.listBox.get(0, tk.END).index(spline))
+    def draw(self, spline):
+        """Add a `Spline` to the listbox and draw it. Can only be called after the app is running."""
+        self.splineList.append(spline)
+        self.listBox.insert(tk.END, spline)
+        self.listBox.activate(self.listBox.size() - 1)
+        self._ListSelectionChanged(None)
 
-    def ListChanged(self, event):
+    def erase_all(self):
+        self.listBox.selection_clear(0, self.listBox.size() - 1)
+        self._ListSelectionChanged(None)
+
+    def empty(self):
+        self.splineList = []
+        self.listBox.delete(0, self.listBox.size() - 1)
+        self._ListSelectionChanged(None)
+
+    def set_background_color(self, r, g=None, b=None, a=None):
+        """
+        Set the background color.
+
+        Parameters
+        ----------
+        r : `float`, `int` or array-like of floats or ints
+            The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).
+        
+        g: `float` or `int`
+            The green value [0, 1] as a float or [0, 255] as an int.
+        
+        b: `float` or `int`
+            The blue value [0, 1] as a float or [0, 255] as an int.
+        
+        a: `float`, `int`, or None
+            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.
+        """
+        self.frame.SetBackgroundColor(r, g, b, a)
+        self.frame.Update()
+
+    def _ListSelectionChanged(self, event):
         """Handle when the listbox selection has changed."""
         self.frame.splineDrawList = []
         for item in self.listBox.curselection():
@@ -115,16 +148,16 @@ class bspyApp(tk.Tk):
 
         self.frame.Update()
     
-    def ChangeFrameMode(self):
+    def _ChangeFrameMode(self):
         """Handle when the view mode has changed."""
         self.frame.SetMode(self.frameMode.get())
 
-    def Adjust(self):
+    def _Adjust(self):
         """Handle when the Adjust button is pressed."""
         if self.adjust is None:
             self.adjust = tk.Toplevel()
             self.adjust.title("Adjust")
-            self.adjust.bind('<Destroy>', self.AdjustDestroy)
+            self.adjust.bind('<Destroy>', self._AdjustDestroy)
 
             self.checkButtons = tk.LabelFrame(self.adjust, text="Style")
             self.checkButtons.pack(side=tk.LEFT, fill=tk.BOTH, expand=tk.YES)
@@ -134,15 +167,15 @@ class bspyApp(tk.Tk):
                 self.bits.set(self.frame.splineDrawList[0].options)
             else:
                 self.bits.set(0)
-            BitCheckbutton(self.checkButtons, DrawableSpline.SHADED, text="Shaded", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
-            BitCheckbutton(self.checkButtons, DrawableSpline.BOUNDARY, text="Boundary", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
-            BitCheckbutton(self.checkButtons, DrawableSpline.ISOPARMS, text="Isoparms", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
-            BitCheckbutton(self.checkButtons, DrawableSpline.HULL, text="Hull", anchor=tk.W, variable=self.bits, command=self.ChangeOptions).pack(side=tk.TOP, fill=tk.X)
+            _BitCheckbutton(self.checkButtons, DrawableSpline.SHADED, text="Shaded", anchor=tk.W, variable=self.bits, command=self._ChangeOptions).pack(side=tk.TOP, fill=tk.X)
+            _BitCheckbutton(self.checkButtons, DrawableSpline.BOUNDARY, text="Boundary", anchor=tk.W, variable=self.bits, command=self._ChangeOptions).pack(side=tk.TOP, fill=tk.X)
+            _BitCheckbutton(self.checkButtons, DrawableSpline.ISOPARMS, text="Isoparms", anchor=tk.W, variable=self.bits, command=self._ChangeOptions).pack(side=tk.TOP, fill=tk.X)
+            _BitCheckbutton(self.checkButtons, DrawableSpline.HULL, text="Hull", anchor=tk.W, variable=self.bits, command=self._ChangeOptions).pack(side=tk.TOP, fill=tk.X)
 
             buttons = tk.LabelFrame(self.adjust, text="Color")
             buttons.pack(side=tk.LEFT, fill=tk.BOTH, expand=tk.YES)
-            tk.Button(buttons, text='Fill color', command=self.FillColorChange).pack(side=tk.TOP, fill=tk.X)
-            tk.Button(buttons, text='Line color', command=self.LineColorChange).pack(side=tk.TOP, fill=tk.X)
+            tk.Button(buttons, text='Fill color', command=self._FillColorChange).pack(side=tk.TOP, fill=tk.X)
+            tk.Button(buttons, text='Line color', command=self._LineColorChange).pack(side=tk.TOP, fill=tk.X)
             tk.Button(buttons, text='Dismiss', command=self.adjust.withdraw).pack(side=tk.TOP, fill=tk.X)
 
             self.adjust.update()
@@ -155,18 +188,18 @@ class bspyApp(tk.Tk):
         else:
             self.adjust.geometry("{width}x{height}+{x}+{y}".format(width=205, height=self.adjust.winfo_height(), x=self.winfo_screenwidth() - 205, y=self.winfo_y()))
 
-    def AdjustDestroy(self, event):
+    def _AdjustDestroy(self, event):
         """Handle when the adjust dialog is destroyed."""
         self.adjust = None
         self.checkButtons = None
     
-    def ChangeOptions(self, options):
+    def _ChangeOptions(self, options):
         """Handle when the spline options are changed."""
         for spline in self.frame.splineDrawList:
             spline.SetOptions(options)
         self.frame.Update()
 
-    def FillColorChange(self):
+    def _FillColorChange(self):
         """Handle when the fill color changed."""
         if self.frame.splineDrawList:
             oldColor = 255.0 * self.frame.splineDrawList[0].fillColor
@@ -176,7 +209,7 @@ class bspyApp(tk.Tk):
                     spline.SetFillColor(newColor[0])
                 self.frame.Update()
 
-    def LineColorChange(self):
+    def _LineColorChange(self):
         """Handle when the line color changed."""
         if self.frame.splineDrawList:
             oldColor = 255.0 * self.frame.splineDrawList[0].lineColor

@@ -67,9 +67,6 @@
                                 <a class="function" href="#Spline.elevate_and_insert_knots">elevate_and_insert_knots</a>
                         </li>
                         <li>
-                                <a class="function" href="#Spline.find_roots">find_roots</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#Spline.fold">fold</a>
                         </li>
                         <li>
@@ -104,6 +101,9 @@
                         </li>
                         <li>
                                 <a class="function" href="#Spline.unfold">unfold</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.zeros">zeros</a>
                         </li>
                 </ul>
 
@@ -862,76 +862,6 @@
         
         <span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)(</span><span class="bp">self</span><span class="o">.</span><span class="n">nInd</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">nCoef</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">coefs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">accuracy</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">find_roots</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">1.0e-6</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Find the roots of a spline (nInd must match nDep).</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        epsilon : `float`</span>
-<span class="sd">            Optional tolerance for root precision. The root will be within epsilon of the actual root. </span>
-<span class="sd">            The default is 1.0e-6.</span>
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        roots : `iterable`</span>
-<span class="sd">            An ordered iterable containing the roots of the spline. If the spline is </span>
-<span class="sd">            zero over an interval, that root will appear as a tuple of the interval.</span>
-
-<span class="sd">        Notes</span>
-<span class="sd">        -----</span>
-<span class="sd">        Currently, the algorithm only works for nInd == 1. </span>
-<span class="sd">        Implements the algorithm from Grandine, Thomas A. &quot;Computing zeroes of spline functions.&quot; Computer Aided Geometric Design 6, no. 2 (1989): 129-136.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span>
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">1</span>
-        <span class="n">roots</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="c1"># Set initial spline, domain, and interval.</span>
-        <span class="n">spline</span> <span class="o">=</span> <span class="bp">self</span>
-        <span class="n">domain</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">domain</span><span class="p">()</span>
-        <span class="n">Interval</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;Interval&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;spline&#39;</span><span class="p">,</span> <span class="s1">&#39;slope&#39;</span><span class="p">,</span> <span class="s1">&#39;intercept&#39;</span><span class="p">))</span>
-        <span class="n">intervalStack</span> <span class="o">=</span> <span class="p">[</span><span class="n">Interval</span><span class="p">(</span><span class="n">spline</span><span class="o">.</span><span class="n">trim</span><span class="p">(</span><span class="n">domain</span><span class="p">)</span><span class="o">.</span><span class="n">reparametrize</span><span class="p">(((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),)),</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])]</span>
-
-        <span class="k">def</span> <span class="nf">test_and_add_domain</span><span class="p">():</span>
-            <span class="sd">&quot;&quot;&quot;Macro to perform common operations when considering a domain as a new interval.&quot;&quot;&quot;</span>
-            <span class="k">if</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mf">1.0</span> <span class="ow">and</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mf">0.0</span><span class="p">:</span>
-                <span class="n">width</span> <span class="o">=</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
-                <span class="k">if</span> <span class="n">width</span> <span class="o">&gt;=</span> <span class="mf">0.0</span><span class="p">:</span>
-                    <span class="n">slope</span> <span class="o">=</span> <span class="n">width</span> <span class="o">*</span> <span class="n">interval</span><span class="o">.</span><span class="n">slope</span>
-                    <span class="n">intercept</span> <span class="o">=</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">interval</span><span class="o">.</span><span class="n">slope</span> <span class="o">+</span> <span class="n">interval</span><span class="o">.</span><span class="n">intercept</span>
-                    <span class="k">if</span> <span class="n">slope</span> <span class="o">&lt;</span> <span class="n">epsilon</span><span class="p">:</span>
-                        <span class="c1">#if spline((domain[0, 0] + 0.5 * width,)) &lt; epsilon:</span>
-                        <span class="n">roots</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">intercept</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">slope</span><span class="p">)</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="n">intervalStack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Interval</span><span class="p">(</span><span class="n">spline</span><span class="o">.</span><span class="n">trim</span><span class="p">(</span><span class="n">domain</span><span class="p">)</span><span class="o">.</span><span class="n">reparametrize</span><span class="p">(((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),)),</span> <span class="n">slope</span><span class="p">,</span> <span class="n">intercept</span><span class="p">))</span>
-
-        <span class="c1"># Process intervals until none remain</span>
-        <span class="k">while</span> <span class="n">intervalStack</span><span class="p">:</span>
-            <span class="n">interval</span> <span class="o">=</span> <span class="n">intervalStack</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
-            <span class="nb">range</span> <span class="o">=</span> <span class="n">interval</span><span class="o">.</span><span class="n">spline</span><span class="o">.</span><span class="n">range_bounds</span><span class="p">()</span>
-            <span class="n">scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="nb">range</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">scale</span> <span class="o">&lt;</span> <span class="n">epsilon</span><span class="p">:</span>
-                <span class="n">roots</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">interval</span><span class="o">.</span><span class="n">intercept</span><span class="p">,</span> <span class="n">interval</span><span class="o">.</span><span class="n">slope</span> <span class="o">+</span> <span class="n">interval</span><span class="o">.</span><span class="n">intercept</span><span class="p">))</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">spline</span> <span class="o">=</span> <span class="n">interval</span><span class="o">.</span><span class="n">spline</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">scale</span><span class="p">)</span>
-                <span class="n">mValue</span> <span class="o">=</span> <span class="n">spline</span><span class="p">((</span><span class="mf">0.5</span><span class="p">,))</span>
-                <span class="n">derivativeRange</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">differentiate</span><span class="p">()</span><span class="o">.</span><span class="n">range_bounds</span><span class="p">()</span>
-                <span class="k">if</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.0</span><span class="p">:</span>
-                    <span class="c1"># Derivative range contains zero, so consider two intervals.</span>
-                    <span class="n">leftIndex</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">mValue</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="mi">1</span>
-                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">)</span>
-                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
-                    <span class="n">test_and_add_domain</span><span class="p">()</span>
-                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
-                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">)</span>
-                    <span class="n">test_and_add_domain</span><span class="p">()</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">leftIndex</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">mValue</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="mi">1</span>
-                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">)</span>
-                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">)</span>
-                    <span class="n">test_and_add_domain</span><span class="p">()</span>
-        
-        <span class="k">return</span> <span class="n">roots</span>
-
     <span class="k">def</span> <span class="nf">fold</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">foldedInd</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Fold the coefficients of a spline&#39;s indicated independent variables into the coefficients of the remaining independent variables, retaining the </span>
@@ -1361,6 +1291,89 @@
 
         <span class="n">unfoldedSpline</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)(</span><span class="nb">len</span><span class="p">(</span><span class="n">unfoldedOrder</span><span class="p">),</span> <span class="n">unfoldedNDep</span><span class="p">,</span> <span class="n">unfoldedOrder</span><span class="p">,</span> <span class="n">unfoldedNCoef</span><span class="p">,</span> <span class="n">unfoldedKnots</span><span class="p">,</span> <span class="n">unfoldedCoefs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">accuracy</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">unfoldedSpline</span>
+
+    <span class="k">def</span> <span class="nf">zeros</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find the roots of a spline (nInd must match nDep).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        epsilon : `float`</span>
+<span class="sd">            Optional tolerance for root precision. The root will be within epsilon of the actual root. </span>
+<span class="sd">            The default is the max of spline accuracy and machine epsilon.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        roots : `iterable`</span>
+<span class="sd">            An ordered iterable containing the roots of the spline. If the spline is </span>
+<span class="sd">            zero over an interval, that root will appear as a tuple of the interval.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Currently, the algorithm only works for nInd == 1. </span>
+<span class="sd">        Implements the algorithm from Grandine, Thomas A. &quot;Computing zeroes of spline functions.&quot; Computer Aided Geometric Design 6, no. 2 (1989): 129-136.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="n">machineEpsilon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">knots</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>
+        <span class="k">if</span> <span class="n">epsilon</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">epsilon</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">accuracy</span><span class="p">,</span> <span class="n">machineEpsilon</span><span class="p">)</span>
+        <span class="n">roots</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># Set initial spline, domain, and interval.</span>
+        <span class="n">spline</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="p">(</span><span class="n">domain</span><span class="p">,)</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">domain</span><span class="p">()</span>
+        <span class="n">Interval</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;Interval&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;spline&#39;</span><span class="p">,</span> <span class="s1">&#39;slope&#39;</span><span class="p">,</span> <span class="s1">&#39;intercept&#39;</span><span class="p">,</span> <span class="s1">&#39;atMachineEpsilon&#39;</span><span class="p">))</span>
+        <span class="n">intervalStack</span> <span class="o">=</span> <span class="p">[</span><span class="n">Interval</span><span class="p">(</span><span class="n">spline</span><span class="o">.</span><span class="n">trim</span><span class="p">((</span><span class="n">domain</span><span class="p">,))</span><span class="o">.</span><span class="n">reparametrize</span><span class="p">(((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),)),</span> <span class="n">domain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="kc">False</span><span class="p">)]</span>
+
+        <span class="k">def</span> <span class="nf">test_and_add_domain</span><span class="p">():</span>
+            <span class="sd">&quot;&quot;&quot;Macro to perform common operations when considering a domain as a new interval.&quot;&quot;&quot;</span>
+            <span class="k">if</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mf">1.0</span> <span class="ow">and</span> <span class="n">domain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+                <span class="n">width</span> <span class="o">=</span> <span class="n">domain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">width</span> <span class="o">&gt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+                    <span class="n">slope</span> <span class="o">=</span> <span class="n">width</span> <span class="o">*</span> <span class="n">interval</span><span class="o">.</span><span class="n">slope</span>
+                    <span class="n">intercept</span> <span class="o">=</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">interval</span><span class="o">.</span><span class="n">slope</span> <span class="o">+</span> <span class="n">interval</span><span class="o">.</span><span class="n">intercept</span>
+                    <span class="c1"># Iteration is complete if the interval actual width (slope) is either</span>
+                    <span class="c1"># one iteration past being less than sqrt(machineEpsilon) or simply less than epsilon.</span>
+                    <span class="k">if</span> <span class="n">interval</span><span class="o">.</span><span class="n">atMachineEpsilon</span> <span class="ow">or</span> <span class="n">slope</span> <span class="o">&lt;</span> <span class="n">epsilon</span><span class="p">:</span>
+                        <span class="n">root</span> <span class="o">=</span> <span class="n">intercept</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">slope</span>
+                        <span class="c1"># Double-check that we&#39;re at an actual zero (avoids boundary case).</span>
+                        <span class="k">if</span> <span class="bp">self</span><span class="p">((</span><span class="n">root</span><span class="p">,))</span> <span class="o">&lt;</span> <span class="n">epsilon</span><span class="p">:</span>
+                            <span class="c1"># Check for duplicate root. We test for a distance between roots of 2*epsilon to account for a left vs. right sided limit.</span>
+                            <span class="k">if</span> <span class="n">roots</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">root</span> <span class="o">-</span> <span class="n">roots</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">epsilon</span><span class="p">:</span>
+                                <span class="c1"># For a duplicate root, return the average value.</span>
+                                <span class="n">roots</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">roots</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">root</span><span class="p">)</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="n">roots</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">intervalStack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Interval</span><span class="p">(</span><span class="n">spline</span><span class="o">.</span><span class="n">trim</span><span class="p">((</span><span class="n">domain</span><span class="p">,))</span><span class="o">.</span><span class="n">reparametrize</span><span class="p">(((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),)),</span> <span class="n">slope</span><span class="p">,</span> <span class="n">intercept</span><span class="p">,</span> <span class="n">slope</span> <span class="o">*</span> <span class="n">slope</span> <span class="o">&lt;</span> <span class="n">machineEpsilon</span><span class="p">))</span>
+
+        <span class="c1"># Process intervals until none remain</span>
+        <span class="k">while</span> <span class="n">intervalStack</span><span class="p">:</span>
+            <span class="n">interval</span> <span class="o">=</span> <span class="n">intervalStack</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="nb">range</span> <span class="o">=</span> <span class="n">interval</span><span class="o">.</span><span class="n">spline</span><span class="o">.</span><span class="n">range_bounds</span><span class="p">()</span>
+            <span class="n">scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="nb">range</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">scale</span> <span class="o">&lt;</span> <span class="n">epsilon</span><span class="p">:</span>
+                <span class="n">roots</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">interval</span><span class="o">.</span><span class="n">intercept</span><span class="p">,</span> <span class="n">interval</span><span class="o">.</span><span class="n">slope</span> <span class="o">+</span> <span class="n">interval</span><span class="o">.</span><span class="n">intercept</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">spline</span> <span class="o">=</span> <span class="n">interval</span><span class="o">.</span><span class="n">spline</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">scale</span><span class="p">)</span>
+                <span class="n">mValue</span> <span class="o">=</span> <span class="n">spline</span><span class="p">((</span><span class="mf">0.5</span><span class="p">,))</span>
+                <span class="n">derivativeRange</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">differentiate</span><span class="p">()</span><span class="o">.</span><span class="n">range_bounds</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+                    <span class="c1"># Derivative range contains zero, so consider two intervals.</span>
+                    <span class="n">leftIndex</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">mValue</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="mi">1</span>
+                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">)</span>
+                    <span class="n">domain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+                    <span class="n">test_and_add_domain</span><span class="p">()</span>
+                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+                    <span class="n">domain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">)</span>
+                    <span class="n">test_and_add_domain</span><span class="p">()</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">leftIndex</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">mValue</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="mi">1</span>
+                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">)</span>
+                    <span class="n">domain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">)</span>
+                    <span class="n">test_and_add_domain</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="n">roots</span>
 </pre></div>
 
         </details>
@@ -2100,76 +2113,6 @@
         
         <span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)(</span><span class="bp">self</span><span class="o">.</span><span class="n">nInd</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">nCoef</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">coefs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">accuracy</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">find_roots</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">1.0e-6</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Find the roots of a spline (nInd must match nDep).</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        epsilon : `float`</span>
-<span class="sd">            Optional tolerance for root precision. The root will be within epsilon of the actual root. </span>
-<span class="sd">            The default is 1.0e-6.</span>
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        roots : `iterable`</span>
-<span class="sd">            An ordered iterable containing the roots of the spline. If the spline is </span>
-<span class="sd">            zero over an interval, that root will appear as a tuple of the interval.</span>
-
-<span class="sd">        Notes</span>
-<span class="sd">        -----</span>
-<span class="sd">        Currently, the algorithm only works for nInd == 1. </span>
-<span class="sd">        Implements the algorithm from Grandine, Thomas A. &quot;Computing zeroes of spline functions.&quot; Computer Aided Geometric Design 6, no. 2 (1989): 129-136.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span>
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">1</span>
-        <span class="n">roots</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="c1"># Set initial spline, domain, and interval.</span>
-        <span class="n">spline</span> <span class="o">=</span> <span class="bp">self</span>
-        <span class="n">domain</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">domain</span><span class="p">()</span>
-        <span class="n">Interval</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;Interval&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;spline&#39;</span><span class="p">,</span> <span class="s1">&#39;slope&#39;</span><span class="p">,</span> <span class="s1">&#39;intercept&#39;</span><span class="p">))</span>
-        <span class="n">intervalStack</span> <span class="o">=</span> <span class="p">[</span><span class="n">Interval</span><span class="p">(</span><span class="n">spline</span><span class="o">.</span><span class="n">trim</span><span class="p">(</span><span class="n">domain</span><span class="p">)</span><span class="o">.</span><span class="n">reparametrize</span><span class="p">(((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),)),</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])]</span>
-
-        <span class="k">def</span> <span class="nf">test_and_add_domain</span><span class="p">():</span>
-            <span class="sd">&quot;&quot;&quot;Macro to perform common operations when considering a domain as a new interval.&quot;&quot;&quot;</span>
-            <span class="k">if</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mf">1.0</span> <span class="ow">and</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mf">0.0</span><span class="p">:</span>
-                <span class="n">width</span> <span class="o">=</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
-                <span class="k">if</span> <span class="n">width</span> <span class="o">&gt;=</span> <span class="mf">0.0</span><span class="p">:</span>
-                    <span class="n">slope</span> <span class="o">=</span> <span class="n">width</span> <span class="o">*</span> <span class="n">interval</span><span class="o">.</span><span class="n">slope</span>
-                    <span class="n">intercept</span> <span class="o">=</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">interval</span><span class="o">.</span><span class="n">slope</span> <span class="o">+</span> <span class="n">interval</span><span class="o">.</span><span class="n">intercept</span>
-                    <span class="k">if</span> <span class="n">slope</span> <span class="o">&lt;</span> <span class="n">epsilon</span><span class="p">:</span>
-                        <span class="c1">#if spline((domain[0, 0] + 0.5 * width,)) &lt; epsilon:</span>
-                        <span class="n">roots</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">intercept</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">slope</span><span class="p">)</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="n">intervalStack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Interval</span><span class="p">(</span><span class="n">spline</span><span class="o">.</span><span class="n">trim</span><span class="p">(</span><span class="n">domain</span><span class="p">)</span><span class="o">.</span><span class="n">reparametrize</span><span class="p">(((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),)),</span> <span class="n">slope</span><span class="p">,</span> <span class="n">intercept</span><span class="p">))</span>
-
-        <span class="c1"># Process intervals until none remain</span>
-        <span class="k">while</span> <span class="n">intervalStack</span><span class="p">:</span>
-            <span class="n">interval</span> <span class="o">=</span> <span class="n">intervalStack</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
-            <span class="nb">range</span> <span class="o">=</span> <span class="n">interval</span><span class="o">.</span><span class="n">spline</span><span class="o">.</span><span class="n">range_bounds</span><span class="p">()</span>
-            <span class="n">scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="nb">range</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">scale</span> <span class="o">&lt;</span> <span class="n">epsilon</span><span class="p">:</span>
-                <span class="n">roots</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">interval</span><span class="o">.</span><span class="n">intercept</span><span class="p">,</span> <span class="n">interval</span><span class="o">.</span><span class="n">slope</span> <span class="o">+</span> <span class="n">interval</span><span class="o">.</span><span class="n">intercept</span><span class="p">))</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">spline</span> <span class="o">=</span> <span class="n">interval</span><span class="o">.</span><span class="n">spline</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">scale</span><span class="p">)</span>
-                <span class="n">mValue</span> <span class="o">=</span> <span class="n">spline</span><span class="p">((</span><span class="mf">0.5</span><span class="p">,))</span>
-                <span class="n">derivativeRange</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">differentiate</span><span class="p">()</span><span class="o">.</span><span class="n">range_bounds</span><span class="p">()</span>
-                <span class="k">if</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.0</span><span class="p">:</span>
-                    <span class="c1"># Derivative range contains zero, so consider two intervals.</span>
-                    <span class="n">leftIndex</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">mValue</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="mi">1</span>
-                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">)</span>
-                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
-                    <span class="n">test_and_add_domain</span><span class="p">()</span>
-                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
-                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">)</span>
-                    <span class="n">test_and_add_domain</span><span class="p">()</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">leftIndex</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">mValue</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="mi">1</span>
-                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">)</span>
-                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">)</span>
-                    <span class="n">test_and_add_domain</span><span class="p">()</span>
-        
-        <span class="k">return</span> <span class="n">roots</span>
-
     <span class="k">def</span> <span class="nf">fold</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">foldedInd</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Fold the coefficients of a spline&#39;s indicated independent variables into the coefficients of the remaining independent variables, retaining the </span>
@@ -2599,6 +2542,89 @@
 
         <span class="n">unfoldedSpline</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)(</span><span class="nb">len</span><span class="p">(</span><span class="n">unfoldedOrder</span><span class="p">),</span> <span class="n">unfoldedNDep</span><span class="p">,</span> <span class="n">unfoldedOrder</span><span class="p">,</span> <span class="n">unfoldedNCoef</span><span class="p">,</span> <span class="n">unfoldedKnots</span><span class="p">,</span> <span class="n">unfoldedCoefs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">accuracy</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">unfoldedSpline</span>
+
+    <span class="k">def</span> <span class="nf">zeros</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find the roots of a spline (nInd must match nDep).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        epsilon : `float`</span>
+<span class="sd">            Optional tolerance for root precision. The root will be within epsilon of the actual root. </span>
+<span class="sd">            The default is the max of spline accuracy and machine epsilon.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        roots : `iterable`</span>
+<span class="sd">            An ordered iterable containing the roots of the spline. If the spline is </span>
+<span class="sd">            zero over an interval, that root will appear as a tuple of the interval.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Currently, the algorithm only works for nInd == 1. </span>
+<span class="sd">        Implements the algorithm from Grandine, Thomas A. &quot;Computing zeroes of spline functions.&quot; Computer Aided Geometric Design 6, no. 2 (1989): 129-136.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="n">machineEpsilon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">knots</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>
+        <span class="k">if</span> <span class="n">epsilon</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">epsilon</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">accuracy</span><span class="p">,</span> <span class="n">machineEpsilon</span><span class="p">)</span>
+        <span class="n">roots</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># Set initial spline, domain, and interval.</span>
+        <span class="n">spline</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="p">(</span><span class="n">domain</span><span class="p">,)</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">domain</span><span class="p">()</span>
+        <span class="n">Interval</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;Interval&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;spline&#39;</span><span class="p">,</span> <span class="s1">&#39;slope&#39;</span><span class="p">,</span> <span class="s1">&#39;intercept&#39;</span><span class="p">,</span> <span class="s1">&#39;atMachineEpsilon&#39;</span><span class="p">))</span>
+        <span class="n">intervalStack</span> <span class="o">=</span> <span class="p">[</span><span class="n">Interval</span><span class="p">(</span><span class="n">spline</span><span class="o">.</span><span class="n">trim</span><span class="p">((</span><span class="n">domain</span><span class="p">,))</span><span class="o">.</span><span class="n">reparametrize</span><span class="p">(((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),)),</span> <span class="n">domain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="kc">False</span><span class="p">)]</span>
+
+        <span class="k">def</span> <span class="nf">test_and_add_domain</span><span class="p">():</span>
+            <span class="sd">&quot;&quot;&quot;Macro to perform common operations when considering a domain as a new interval.&quot;&quot;&quot;</span>
+            <span class="k">if</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mf">1.0</span> <span class="ow">and</span> <span class="n">domain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+                <span class="n">width</span> <span class="o">=</span> <span class="n">domain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">width</span> <span class="o">&gt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+                    <span class="n">slope</span> <span class="o">=</span> <span class="n">width</span> <span class="o">*</span> <span class="n">interval</span><span class="o">.</span><span class="n">slope</span>
+                    <span class="n">intercept</span> <span class="o">=</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">interval</span><span class="o">.</span><span class="n">slope</span> <span class="o">+</span> <span class="n">interval</span><span class="o">.</span><span class="n">intercept</span>
+                    <span class="c1"># Iteration is complete if the interval actual width (slope) is either</span>
+                    <span class="c1"># one iteration past being less than sqrt(machineEpsilon) or simply less than epsilon.</span>
+                    <span class="k">if</span> <span class="n">interval</span><span class="o">.</span><span class="n">atMachineEpsilon</span> <span class="ow">or</span> <span class="n">slope</span> <span class="o">&lt;</span> <span class="n">epsilon</span><span class="p">:</span>
+                        <span class="n">root</span> <span class="o">=</span> <span class="n">intercept</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">slope</span>
+                        <span class="c1"># Double-check that we&#39;re at an actual zero (avoids boundary case).</span>
+                        <span class="k">if</span> <span class="bp">self</span><span class="p">((</span><span class="n">root</span><span class="p">,))</span> <span class="o">&lt;</span> <span class="n">epsilon</span><span class="p">:</span>
+                            <span class="c1"># Check for duplicate root. We test for a distance between roots of 2*epsilon to account for a left vs. right sided limit.</span>
+                            <span class="k">if</span> <span class="n">roots</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">root</span> <span class="o">-</span> <span class="n">roots</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">epsilon</span><span class="p">:</span>
+                                <span class="c1"># For a duplicate root, return the average value.</span>
+                                <span class="n">roots</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">roots</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">root</span><span class="p">)</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="n">roots</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">intervalStack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Interval</span><span class="p">(</span><span class="n">spline</span><span class="o">.</span><span class="n">trim</span><span class="p">((</span><span class="n">domain</span><span class="p">,))</span><span class="o">.</span><span class="n">reparametrize</span><span class="p">(((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),)),</span> <span class="n">slope</span><span class="p">,</span> <span class="n">intercept</span><span class="p">,</span> <span class="n">slope</span> <span class="o">*</span> <span class="n">slope</span> <span class="o">&lt;</span> <span class="n">machineEpsilon</span><span class="p">))</span>
+
+        <span class="c1"># Process intervals until none remain</span>
+        <span class="k">while</span> <span class="n">intervalStack</span><span class="p">:</span>
+            <span class="n">interval</span> <span class="o">=</span> <span class="n">intervalStack</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="nb">range</span> <span class="o">=</span> <span class="n">interval</span><span class="o">.</span><span class="n">spline</span><span class="o">.</span><span class="n">range_bounds</span><span class="p">()</span>
+            <span class="n">scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="nb">range</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">scale</span> <span class="o">&lt;</span> <span class="n">epsilon</span><span class="p">:</span>
+                <span class="n">roots</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">interval</span><span class="o">.</span><span class="n">intercept</span><span class="p">,</span> <span class="n">interval</span><span class="o">.</span><span class="n">slope</span> <span class="o">+</span> <span class="n">interval</span><span class="o">.</span><span class="n">intercept</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">spline</span> <span class="o">=</span> <span class="n">interval</span><span class="o">.</span><span class="n">spline</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">scale</span><span class="p">)</span>
+                <span class="n">mValue</span> <span class="o">=</span> <span class="n">spline</span><span class="p">((</span><span class="mf">0.5</span><span class="p">,))</span>
+                <span class="n">derivativeRange</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">differentiate</span><span class="p">()</span><span class="o">.</span><span class="n">range_bounds</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+                    <span class="c1"># Derivative range contains zero, so consider two intervals.</span>
+                    <span class="n">leftIndex</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">mValue</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="mi">1</span>
+                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">)</span>
+                    <span class="n">domain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+                    <span class="n">test_and_add_domain</span><span class="p">()</span>
+                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+                    <span class="n">domain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">)</span>
+                    <span class="n">test_and_add_domain</span><span class="p">()</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">leftIndex</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">mValue</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="mi">1</span>
+                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">)</span>
+                    <span class="n">domain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">)</span>
+                    <span class="n">test_and_add_domain</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="n">roots</span>
 </pre></div>
 
         </details>
@@ -3693,115 +3719,6 @@ A spline with the order of the current spline plus <code>m</code> that includes 
 
 
                             </div>
-                            <div id="Spline.find_roots" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#Spline.find_roots">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">find_roots</span><span class="signature">(self, epsilon=1e-06)</span>:
-    </div>
-
-            <details>
-            <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">find_roots</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">1.0e-6</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Find the roots of a spline (nInd must match nDep).</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        epsilon : `float`</span>
-<span class="sd">            Optional tolerance for root precision. The root will be within epsilon of the actual root. </span>
-<span class="sd">            The default is 1.0e-6.</span>
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        roots : `iterable`</span>
-<span class="sd">            An ordered iterable containing the roots of the spline. If the spline is </span>
-<span class="sd">            zero over an interval, that root will appear as a tuple of the interval.</span>
-
-<span class="sd">        Notes</span>
-<span class="sd">        -----</span>
-<span class="sd">        Currently, the algorithm only works for nInd == 1. </span>
-<span class="sd">        Implements the algorithm from Grandine, Thomas A. &quot;Computing zeroes of spline functions.&quot; Computer Aided Geometric Design 6, no. 2 (1989): 129-136.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span>
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">1</span>
-        <span class="n">roots</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="c1"># Set initial spline, domain, and interval.</span>
-        <span class="n">spline</span> <span class="o">=</span> <span class="bp">self</span>
-        <span class="n">domain</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">domain</span><span class="p">()</span>
-        <span class="n">Interval</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;Interval&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;spline&#39;</span><span class="p">,</span> <span class="s1">&#39;slope&#39;</span><span class="p">,</span> <span class="s1">&#39;intercept&#39;</span><span class="p">))</span>
-        <span class="n">intervalStack</span> <span class="o">=</span> <span class="p">[</span><span class="n">Interval</span><span class="p">(</span><span class="n">spline</span><span class="o">.</span><span class="n">trim</span><span class="p">(</span><span class="n">domain</span><span class="p">)</span><span class="o">.</span><span class="n">reparametrize</span><span class="p">(((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),)),</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])]</span>
-
-        <span class="k">def</span> <span class="nf">test_and_add_domain</span><span class="p">():</span>
-            <span class="sd">&quot;&quot;&quot;Macro to perform common operations when considering a domain as a new interval.&quot;&quot;&quot;</span>
-            <span class="k">if</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mf">1.0</span> <span class="ow">and</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mf">0.0</span><span class="p">:</span>
-                <span class="n">width</span> <span class="o">=</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
-                <span class="k">if</span> <span class="n">width</span> <span class="o">&gt;=</span> <span class="mf">0.0</span><span class="p">:</span>
-                    <span class="n">slope</span> <span class="o">=</span> <span class="n">width</span> <span class="o">*</span> <span class="n">interval</span><span class="o">.</span><span class="n">slope</span>
-                    <span class="n">intercept</span> <span class="o">=</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">interval</span><span class="o">.</span><span class="n">slope</span> <span class="o">+</span> <span class="n">interval</span><span class="o">.</span><span class="n">intercept</span>
-                    <span class="k">if</span> <span class="n">slope</span> <span class="o">&lt;</span> <span class="n">epsilon</span><span class="p">:</span>
-                        <span class="c1">#if spline((domain[0, 0] + 0.5 * width,)) &lt; epsilon:</span>
-                        <span class="n">roots</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">intercept</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">slope</span><span class="p">)</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="n">intervalStack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Interval</span><span class="p">(</span><span class="n">spline</span><span class="o">.</span><span class="n">trim</span><span class="p">(</span><span class="n">domain</span><span class="p">)</span><span class="o">.</span><span class="n">reparametrize</span><span class="p">(((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),)),</span> <span class="n">slope</span><span class="p">,</span> <span class="n">intercept</span><span class="p">))</span>
-
-        <span class="c1"># Process intervals until none remain</span>
-        <span class="k">while</span> <span class="n">intervalStack</span><span class="p">:</span>
-            <span class="n">interval</span> <span class="o">=</span> <span class="n">intervalStack</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
-            <span class="nb">range</span> <span class="o">=</span> <span class="n">interval</span><span class="o">.</span><span class="n">spline</span><span class="o">.</span><span class="n">range_bounds</span><span class="p">()</span>
-            <span class="n">scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="nb">range</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">scale</span> <span class="o">&lt;</span> <span class="n">epsilon</span><span class="p">:</span>
-                <span class="n">roots</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">interval</span><span class="o">.</span><span class="n">intercept</span><span class="p">,</span> <span class="n">interval</span><span class="o">.</span><span class="n">slope</span> <span class="o">+</span> <span class="n">interval</span><span class="o">.</span><span class="n">intercept</span><span class="p">))</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">spline</span> <span class="o">=</span> <span class="n">interval</span><span class="o">.</span><span class="n">spline</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">scale</span><span class="p">)</span>
-                <span class="n">mValue</span> <span class="o">=</span> <span class="n">spline</span><span class="p">((</span><span class="mf">0.5</span><span class="p">,))</span>
-                <span class="n">derivativeRange</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">differentiate</span><span class="p">()</span><span class="o">.</span><span class="n">range_bounds</span><span class="p">()</span>
-                <span class="k">if</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.0</span><span class="p">:</span>
-                    <span class="c1"># Derivative range contains zero, so consider two intervals.</span>
-                    <span class="n">leftIndex</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">mValue</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="mi">1</span>
-                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">)</span>
-                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
-                    <span class="n">test_and_add_domain</span><span class="p">()</span>
-                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
-                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">)</span>
-                    <span class="n">test_and_add_domain</span><span class="p">()</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">leftIndex</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">mValue</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="mi">1</span>
-                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">)</span>
-                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">)</span>
-                    <span class="n">test_and_add_domain</span><span class="p">()</span>
-        
-        <span class="k">return</span> <span class="n">roots</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>Find the roots of a spline (nInd must match nDep).</p>
-
-<h6 id="parameters">Parameters</h6>
-
-<ul>
-<li><strong>epsilon</strong> (<code>float</code>):
-Optional tolerance for root precision. The root will be within epsilon of the actual root. 
-The default is 1.0e-6.</li>
-</ul>
-
-<h6 id="returns">Returns</h6>
-
-<ul>
-<li><strong>roots</strong> (<code>iterable</code>):
-An ordered iterable containing the roots of the spline. If the spline is 
-zero over an interval, that root will appear as a tuple of the interval.</li>
-</ul>
-
-<h6 id="notes">Notes</h6>
-
-<p>Currently, the algorithm only works for nInd == 1. 
-Implements the algorithm from Grandine, Thomas A. "Computing zeroes of spline functions." Computer Aided Geometric Design 6, no. 2 (1989): 129-136.</p>
-</div>
-
-
-                            </div>
                             <div id="Spline.fold" class="classattr">
                                         <div class="attr function"><a class="headerlink" href="#Spline.fold">#&nbsp;&nbsp</a>
 
@@ -4658,6 +4575,128 @@ returning the original spline.</p>
 Then spl.fold([0, 2]) should return a spline with 1 independent variable and 72 dependent variables.  It should have nCoef = [5], knots = [knots1], and its coefs array should have 
 shape (72, 5).  The other spline should have 0 dependent variables, 2 independent variables, and knots = [knots0, knots2].  How things get ordered in coefs probably doesn't matter 
 so long as unfold unscrambles things in the corresponding way.  The second spline is needed to hold the basis information that was dropped so that it can be undone.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.zeros" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#Spline.zeros">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">zeros</span><span class="signature">(self, epsilon=None)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">zeros</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find the roots of a spline (nInd must match nDep).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        epsilon : `float`</span>
+<span class="sd">            Optional tolerance for root precision. The root will be within epsilon of the actual root. </span>
+<span class="sd">            The default is the max of spline accuracy and machine epsilon.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        roots : `iterable`</span>
+<span class="sd">            An ordered iterable containing the roots of the spline. If the spline is </span>
+<span class="sd">            zero over an interval, that root will appear as a tuple of the interval.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Currently, the algorithm only works for nInd == 1. </span>
+<span class="sd">        Implements the algorithm from Grandine, Thomas A. &quot;Computing zeroes of spline functions.&quot; Computer Aided Geometric Design 6, no. 2 (1989): 129-136.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="n">machineEpsilon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">knots</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>
+        <span class="k">if</span> <span class="n">epsilon</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">epsilon</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">accuracy</span><span class="p">,</span> <span class="n">machineEpsilon</span><span class="p">)</span>
+        <span class="n">roots</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># Set initial spline, domain, and interval.</span>
+        <span class="n">spline</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="p">(</span><span class="n">domain</span><span class="p">,)</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">domain</span><span class="p">()</span>
+        <span class="n">Interval</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;Interval&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;spline&#39;</span><span class="p">,</span> <span class="s1">&#39;slope&#39;</span><span class="p">,</span> <span class="s1">&#39;intercept&#39;</span><span class="p">,</span> <span class="s1">&#39;atMachineEpsilon&#39;</span><span class="p">))</span>
+        <span class="n">intervalStack</span> <span class="o">=</span> <span class="p">[</span><span class="n">Interval</span><span class="p">(</span><span class="n">spline</span><span class="o">.</span><span class="n">trim</span><span class="p">((</span><span class="n">domain</span><span class="p">,))</span><span class="o">.</span><span class="n">reparametrize</span><span class="p">(((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),)),</span> <span class="n">domain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="kc">False</span><span class="p">)]</span>
+
+        <span class="k">def</span> <span class="nf">test_and_add_domain</span><span class="p">():</span>
+            <span class="sd">&quot;&quot;&quot;Macro to perform common operations when considering a domain as a new interval.&quot;&quot;&quot;</span>
+            <span class="k">if</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mf">1.0</span> <span class="ow">and</span> <span class="n">domain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+                <span class="n">width</span> <span class="o">=</span> <span class="n">domain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">width</span> <span class="o">&gt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+                    <span class="n">slope</span> <span class="o">=</span> <span class="n">width</span> <span class="o">*</span> <span class="n">interval</span><span class="o">.</span><span class="n">slope</span>
+                    <span class="n">intercept</span> <span class="o">=</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">interval</span><span class="o">.</span><span class="n">slope</span> <span class="o">+</span> <span class="n">interval</span><span class="o">.</span><span class="n">intercept</span>
+                    <span class="c1"># Iteration is complete if the interval actual width (slope) is either</span>
+                    <span class="c1"># one iteration past being less than sqrt(machineEpsilon) or simply less than epsilon.</span>
+                    <span class="k">if</span> <span class="n">interval</span><span class="o">.</span><span class="n">atMachineEpsilon</span> <span class="ow">or</span> <span class="n">slope</span> <span class="o">&lt;</span> <span class="n">epsilon</span><span class="p">:</span>
+                        <span class="n">root</span> <span class="o">=</span> <span class="n">intercept</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">slope</span>
+                        <span class="c1"># Double-check that we&#39;re at an actual zero (avoids boundary case).</span>
+                        <span class="k">if</span> <span class="bp">self</span><span class="p">((</span><span class="n">root</span><span class="p">,))</span> <span class="o">&lt;</span> <span class="n">epsilon</span><span class="p">:</span>
+                            <span class="c1"># Check for duplicate root. We test for a distance between roots of 2*epsilon to account for a left vs. right sided limit.</span>
+                            <span class="k">if</span> <span class="n">roots</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">root</span> <span class="o">-</span> <span class="n">roots</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">epsilon</span><span class="p">:</span>
+                                <span class="c1"># For a duplicate root, return the average value.</span>
+                                <span class="n">roots</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">roots</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">root</span><span class="p">)</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="n">roots</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">intervalStack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Interval</span><span class="p">(</span><span class="n">spline</span><span class="o">.</span><span class="n">trim</span><span class="p">((</span><span class="n">domain</span><span class="p">,))</span><span class="o">.</span><span class="n">reparametrize</span><span class="p">(((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),)),</span> <span class="n">slope</span><span class="p">,</span> <span class="n">intercept</span><span class="p">,</span> <span class="n">slope</span> <span class="o">*</span> <span class="n">slope</span> <span class="o">&lt;</span> <span class="n">machineEpsilon</span><span class="p">))</span>
+
+        <span class="c1"># Process intervals until none remain</span>
+        <span class="k">while</span> <span class="n">intervalStack</span><span class="p">:</span>
+            <span class="n">interval</span> <span class="o">=</span> <span class="n">intervalStack</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="nb">range</span> <span class="o">=</span> <span class="n">interval</span><span class="o">.</span><span class="n">spline</span><span class="o">.</span><span class="n">range_bounds</span><span class="p">()</span>
+            <span class="n">scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="nb">range</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">scale</span> <span class="o">&lt;</span> <span class="n">epsilon</span><span class="p">:</span>
+                <span class="n">roots</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">interval</span><span class="o">.</span><span class="n">intercept</span><span class="p">,</span> <span class="n">interval</span><span class="o">.</span><span class="n">slope</span> <span class="o">+</span> <span class="n">interval</span><span class="o">.</span><span class="n">intercept</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">spline</span> <span class="o">=</span> <span class="n">interval</span><span class="o">.</span><span class="n">spline</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">scale</span><span class="p">)</span>
+                <span class="n">mValue</span> <span class="o">=</span> <span class="n">spline</span><span class="p">((</span><span class="mf">0.5</span><span class="p">,))</span>
+                <span class="n">derivativeRange</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">differentiate</span><span class="p">()</span><span class="o">.</span><span class="n">range_bounds</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+                    <span class="c1"># Derivative range contains zero, so consider two intervals.</span>
+                    <span class="n">leftIndex</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">mValue</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="mi">1</span>
+                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">)</span>
+                    <span class="n">domain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+                    <span class="n">test_and_add_domain</span><span class="p">()</span>
+                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+                    <span class="n">domain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">)</span>
+                    <span class="n">test_and_add_domain</span><span class="p">()</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">leftIndex</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">mValue</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="mi">1</span>
+                    <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">)</span>
+                    <span class="n">domain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="n">mValue</span> <span class="o">/</span> <span class="n">derivativeRange</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">leftIndex</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">)</span>
+                    <span class="n">test_and_add_domain</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="n">roots</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Find the roots of a spline (nInd must match nDep).</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>epsilon</strong> (<code>float</code>):
+Optional tolerance for root precision. The root will be within epsilon of the actual root. 
+The default is the max of spline accuracy and machine epsilon.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>roots</strong> (<code>iterable</code>):
+An ordered iterable containing the roots of the spline. If the spline is 
+zero over an interval, that root will appear as a tuple of the interval.</li>
+</ul>
+
+<h6 id="notes">Notes</h6>
+
+<p>Currently, the algorithm only works for nInd == 1. 
+Implements the algorithm from Grandine, Thomas A. "Computing zeroes of spline functions." Computer Aided Geometric Design 6, no. 2 (1989): 129-136.</p>
 </div>
 
 
