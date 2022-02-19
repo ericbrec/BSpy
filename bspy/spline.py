@@ -733,76 +733,6 @@ class Spline:
         
         return type(self)(self.nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy, self.metadata)
 
-    def find_roots(self, epsilon=1.0e-6):
-        """
-        Find the roots of a spline (nInd must match nDep).
-
-        Parameters
-        ----------
-        epsilon : `float`
-            Optional tolerance for root precision. The root will be within epsilon of the actual root. 
-            The default is 1.0e-6.
-        Returns
-        -------
-        roots : `iterable`
-            An ordered iterable containing the roots of the spline. If the spline is 
-            zero over an interval, that root will appear as a tuple of the interval.
-
-        Notes
-        -----
-        Currently, the algorithm only works for nInd == 1. 
-        Implements the algorithm from Grandine, Thomas A. "Computing zeroes of spline functions." Computer Aided Geometric Design 6, no. 2 (1989): 129-136.
-        """
-        assert self.nInd == self.nDep
-        assert self.nInd == 1
-        roots = []
-        # Set initial spline, domain, and interval.
-        spline = self
-        domain = spline.domain()
-        Interval = namedtuple('Interval', ('spline', 'slope', 'intercept'))
-        intervalStack = [Interval(spline.trim(domain).reparametrize(((0.0, 1.0),)), domain[0, 1] - domain[0, 0], domain[0, 0])]
-
-        def test_and_add_domain():
-            """Macro to perform common operations when considering a domain as a new interval."""
-            if domain[0, 0] <= 1.0 and domain[0, 1] >= 0.0:
-                width = domain[0, 1] - domain[0, 0]
-                if width >= 0.0:
-                    slope = width * interval.slope
-                    intercept = domain[0, 0] * interval.slope + interval.intercept
-                    if slope < epsilon:
-                        #if spline((domain[0, 0] + 0.5 * width,)) < epsilon:
-                        roots.append(intercept + 0.5 * slope)
-                    else:
-                        intervalStack.append(Interval(spline.trim(domain).reparametrize(((0.0, 1.0),)), slope, intercept))
-
-        # Process intervals until none remain
-        while intervalStack:
-            interval = intervalStack.pop()
-            range = interval.spline.range_bounds()
-            scale = np.abs(range).max(axis=1)
-            if scale < epsilon:
-                roots.append((interval.intercept, interval.slope + interval.intercept))
-            else:
-                spline = interval.spline.scale(1.0 / scale)
-                mValue = spline((0.5,))
-                derivativeRange = spline.differentiate().range_bounds()
-                if derivativeRange[0, 0] * derivativeRange[0, 1] < 0.0:
-                    # Derivative range contains zero, so consider two intervals.
-                    leftIndex = 0 if mValue > 0.0 else 1
-                    domain[0, 0] = max(0.5 - mValue / derivativeRange[0, leftIndex], 0.0)
-                    domain[0, 1] = 1.0
-                    test_and_add_domain()
-                    domain[0, 0] = 0.0
-                    domain[0, 1] = min(0.5 - mValue / derivativeRange[0, 1 - leftIndex], 1.0)
-                    test_and_add_domain()
-                else:
-                    leftIndex = 0 if mValue > 0.0 else 1
-                    domain[0, 0] = max(0.5 - mValue / derivativeRange[0, leftIndex], 0.0)
-                    domain[0, 1] = min(0.5 - mValue / derivativeRange[0, 1 - leftIndex], 1.0)
-                    test_and_add_domain()
-        
-        return roots
-
     def fold(self, foldedInd):
         """
         Fold the coefficients of a spline's indicated independent variables into the coefficients of the remaining independent variables, retaining the 
@@ -1232,3 +1162,78 @@ class Spline:
 
         unfoldedSpline = type(self)(len(unfoldedOrder), unfoldedNDep, unfoldedOrder, unfoldedNCoef, unfoldedKnots, unfoldedCoefs, self.accuracy, self.metadata)
         return unfoldedSpline
+
+    def zeros(self, epsilon=None):
+        """
+        Find the roots of a spline (nInd must match nDep).
+
+        Parameters
+        ----------
+        epsilon : `float`
+            Optional tolerance for root precision. The root will be within epsilon of the actual root. 
+            The default is the max of spline accuracy and machine epsilon.
+
+        Returns
+        -------
+        roots : `iterable`
+            An ordered iterable containing the roots of the spline. If the spline is 
+            zero over an interval, that root will appear as a tuple of the interval.
+
+        Notes
+        -----
+        Currently, the algorithm only works for nInd == 1. 
+        Implements the algorithm from Grandine, Thomas A. "Computing zeroes of spline functions." Computer Aided Geometric Design 6, no. 2 (1989): 129-136.
+        """
+        assert self.nInd == self.nDep
+        assert self.nInd == 1
+        machineEpsilon = np.finfo(float).eps
+        if epsilon is None:
+            epsilon = max(self.accuracy, machineEpsilon)
+        roots = []
+        # Set initial spline, domain, and interval.
+        spline = self
+        (domain,) = spline.domain()
+        Interval = namedtuple('Interval', ('spline', 'slope', 'intercept', 'atMachineEpsilon'))
+        intervalStack = [Interval(spline.trim((domain,)).reparametrize(((0.0, 1.0),)), domain[1] - domain[0], domain[0], False)]
+
+        def test_and_add_domain():
+            """Macro to perform common operations when considering a domain as a new interval."""
+            if domain[0] <= 1.0 and domain[1] >= 0.0:
+                width = domain[1] - domain[0]
+                if width >= 0.0:
+                    slope = width * interval.slope
+                    intercept = domain[0] * interval.slope + interval.intercept
+                    if interval.atMachineEpsilon or slope < epsilon:
+                        root = intercept + 0.5 * slope
+                        if self((root,)) < epsilon:
+                            roots.append(root)
+                    else:
+                        intervalStack.append(Interval(spline.trim((domain,)).reparametrize(((0.0, 1.0),)), slope, intercept, slope * slope < machineEpsilon))
+
+        # Process intervals until none remain
+        while intervalStack:
+            interval = intervalStack.pop()
+            range = interval.spline.range_bounds()
+            scale = np.abs(range).max(axis=1)
+            if scale < epsilon:
+                roots.append((interval.intercept, interval.slope + interval.intercept))
+            else:
+                spline = interval.spline.scale(1.0 / scale)
+                mValue = spline((0.5,))
+                derivativeRange = spline.differentiate().range_bounds()
+                if derivativeRange[0, 0] * derivativeRange[0, 1] < 0.0:
+                    # Derivative range contains zero, so consider two intervals.
+                    leftIndex = 0 if mValue > 0.0 else 1
+                    domain[0] = max(0.5 - mValue / derivativeRange[0, leftIndex], 0.0)
+                    domain[1] = 1.0
+                    test_and_add_domain()
+                    domain[0] = 0.0
+                    domain[1] = min(0.5 - mValue / derivativeRange[0, 1 - leftIndex], 1.0)
+                    test_and_add_domain()
+                else:
+                    leftIndex = 0 if mValue > 0.0 else 1
+                    domain[0] = max(0.5 - mValue / derivativeRange[0, leftIndex], 0.0)
+                    domain[1] = min(0.5 - mValue / derivativeRange[0, 1 - leftIndex], 1.0)
+                    test_and_add_domain()
+        
+        return roots

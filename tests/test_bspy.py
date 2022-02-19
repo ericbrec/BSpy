@@ -181,44 +181,6 @@ def test_evaluate():
         maxerror = max(maxerror, np.sqrt((xTest - x) ** 2 + (yTest - y) ** 2))
     assert maxerror <= np.finfo(float).eps
 
-def test_find_roots():
-    def check_roots(expectedRoots, roots, tolerance):
-        assert len(expectedRoots) == len(roots)
-        for (expectedRoot, root) in zip(expectedRoots, roots):
-            assert abs(expectedRoot - root) < tolerance
-
-    tolerance = 1.0e-6
-
-    spline = bspy.Spline(1, 1, (4,), (4,), ((0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0),), ((1.0, -2.0, -2.0, 1.0),))
-    expectedRoots = (0.127322, 0.872678)
-    roots = spline.find_roots(tolerance)
-    check_roots(expectedRoots, roots, tolerance)
-
-    spline = bspy.Spline(1, 1, (4,), (5,), ((0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 2.0, 2.0, 2.0),), ((1.0, -2.0, -2.0, 3.0, -1.0),))
-    expectedRoots = (0.126791, 1.179700, 1.901525)
-    roots = spline.find_roots(tolerance)
-    check_roots(expectedRoots, roots, tolerance)
-
-    spline = bspy.Spline(1, 1, (4,), (10,), ((0.0, 0.0, 0.0, 0.0, 1.0, 3.0, 4.0, 7.0, 7.0, 8.0, 10.0, 10.0, 10.0, 10.0),), ((1.0, -2.0, -3.0, -4.0, 5.0, 6.0, 7.0, -8.0, -9.0, 1.0),))
-    expectedRoots = (0.124277, 3.556169, 7.866681, 9.930791)
-    roots = spline.find_roots(tolerance)
-    check_roots(expectedRoots, roots, tolerance)
-
-    spline = bspy.Spline(1, 1, (5,), (7,), ((0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 4.0, 4.0, 4.0, 4.0, 4.0),), ((1.0, -2.0, -3.0, 4.0, 5.0, -6.0, 1.0),))
-    expectedRoots = (0.094002, 1.201821, 3.019268, 3.918820)
-    roots = spline.find_roots(tolerance)
-    check_roots(expectedRoots, roots, tolerance)
-
-    spline = bspy.Spline(1, 1, (6,), (11,), ((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 2.0, 2.0, 2.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0),), ((2.0, -1.0, -1.0, -1.0, 1.0, 2.0, 2.0, -3.0, -3.0, 4.0, 1.0),))
-    expectedRoots = (0.197807, 0.959259, 2.368276, 3.336228)
-    roots = spline.find_roots(tolerance)
-    check_roots(expectedRoots, roots, tolerance)
-
-    spline = bspy.Spline(1, 1, (4,), (4,), ((0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0),), ((1.0, -13.0 / 9.0, 25.0 / 12.0, -3.0),))
-    expectedRoots = (0.400000,)
-    roots = spline.find_roots(tolerance)
-    #check_roots(expectedRoots, roots, tolerance)
-
 def test_fold_unfold():
     nInd = 3
     nDep = 3
@@ -350,3 +312,41 @@ def test_trim():
         [xTest, yTest] = trimmed.evaluate([u])
         maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
     assert maxerror <= np.finfo(float).eps
+
+def test_zeros():
+    def check_roots(expectedRoots, roots, tolerance):
+        assert len(expectedRoots) == len(roots)
+        for (expectedRoot, root) in zip(expectedRoots, roots):
+            assert abs(expectedRoot - root) < tolerance
+
+    tolerance = 1.0e-6
+
+    spline = bspy.Spline(1, 1, (4,), (4,), ((0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0),), ((1.0, -2.0, -2.0, 1.0),))
+    expectedRoots = (0.127322, 0.872678)
+    roots = spline.zeros(tolerance)
+    check_roots(expectedRoots, roots, tolerance)
+
+    spline = bspy.Spline(1, 1, (4,), (5,), ((0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 2.0, 2.0, 2.0),), ((1.0, -2.0, -2.0, 3.0, -1.0),))
+    expectedRoots = (0.126791, 1.179700, 1.901525)
+    roots = spline.zeros(tolerance)
+    check_roots(expectedRoots, roots, tolerance)
+
+    spline = bspy.Spline(1, 1, (4,), (10,), ((0.0, 0.0, 0.0, 0.0, 1.0, 3.0, 4.0, 7.0, 7.0, 8.0, 10.0, 10.0, 10.0, 10.0),), ((1.0, -2.0, -3.0, -4.0, 5.0, 6.0, 7.0, -8.0, -9.0, 1.0),))
+    expectedRoots = (0.124277, 3.556169, 7.866681, 9.930791)
+    roots = spline.zeros(tolerance)
+    check_roots(expectedRoots, roots, tolerance)
+
+    spline = bspy.Spline(1, 1, (5,), (7,), ((0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 4.0, 4.0, 4.0, 4.0, 4.0),), ((1.0, -2.0, -3.0, 4.0, 5.0, -6.0, 1.0),))
+    expectedRoots = (0.094002, 1.201821, 3.019268, 3.918820)
+    roots = spline.zeros(tolerance)
+    check_roots(expectedRoots, roots, tolerance)
+
+    spline = bspy.Spline(1, 1, (6,), (11,), ((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 2.0, 2.0, 2.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0),), ((2.0, -1.0, -1.0, -1.0, 1.0, 2.0, 2.0, -3.0, -3.0, 4.0, 1.0),))
+    expectedRoots = (0.197807, 0.959259, 2.368276, 3.336228)
+    roots = spline.zeros(tolerance)
+    check_roots(expectedRoots, roots, tolerance)
+
+    spline = bspy.Spline(1, 1, (4,), (4,), ((0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0),), ((1.0, -13.0 / 9.0, 25.0 / 12.0, -3.0),))
+    expectedRoots = (0.400000,)
+    roots = spline.zeros(tolerance)
+    #check_roots(expectedRoots, roots, tolerance)
