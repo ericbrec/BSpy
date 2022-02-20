@@ -910,7 +910,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             (-np.dot(self.horizon, self.eye), -np.dot(self.vertical, self.eye), -np.dot(self.look, self.eye), 1.0)), np.float32)
 
         for spline in self.splineDrawList:
-            spline.Draw(self, transform)
+            spline._Draw(self, transform)
 
         glFlush()
 

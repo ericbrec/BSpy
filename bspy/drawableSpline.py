@@ -110,6 +110,10 @@ class DrawableSpline(Spline):
 
     @staticmethod
     def make_drawable(spline):
+        """
+        Convert a `Spline` into a `DrawableSpline` that can be drawn in a `SplineOpenGLFrame`. Converts 
+        1D splines into 3D curves and 2D splines into surfaces (y-axis hold amplitude).
+        """
         if isinstance(spline, DrawableSpline):
             return spline
         assert isinstance(spline, Spline)
@@ -136,7 +140,7 @@ class DrawableSpline(Spline):
         
         return DrawableSpline(spline.nInd, 4, spline.order, spline.nCoef, knotList, coefs, spline.accuracy, spline.metadata)
 
-    def DrawPoints(self, frame, drawCoefficients):
+    def _DrawPoints(self, frame, drawCoefficients):
         """
         Draw spline points for an order 1 spline within a `SplineOpenGLFrame`. The frame will call this method for you.
         """
@@ -146,7 +150,7 @@ class DrawableSpline(Spline):
             glVertex4fv(point)
         glEnd()
 
-    def DrawCurve(self, frame, drawCoefficients):
+    def _DrawCurve(self, frame, drawCoefficients):
         """
         Draw a spline curve (nInd == 1) within a `SplineOpenGLFrame`. The frame will call this method for you.
         """
@@ -175,7 +179,7 @@ class DrawableSpline(Spline):
         glDisableVertexAttribArray(frame.aCurveParameters)
         glUseProgram(0)
 
-    def DrawSurface(self, frame, drawCoefficients):
+    def _DrawSurface(self, frame, drawCoefficients):
         """
         Draw a spline surface (nInd == 2) within a `SplineOpenGLFrame`. The frame will call this method for you.
         """
@@ -210,17 +214,17 @@ class DrawableSpline(Spline):
         glDisableVertexAttribArray(frame.aSurfaceParameters)
         glUseProgram(0)
 
-    def Draw(self, frame, transform):
+    def _Draw(self, frame, transform):
         """
         Draw a spline  within a `SplineOpenGLFrame`. The frame will call this method for you.
         """
         drawCoefficients = self.coefs.T @ transform
         if self.order[0] == 1:
-            self.DrawPoints(frame, drawCoefficients)
+            self._DrawPoints(frame, drawCoefficients)
         elif self.nInd == 1:
-            self.DrawCurve(frame, drawCoefficients)
+            self._DrawCurve(frame, drawCoefficients)
         elif self.nInd == 2:
-            self.DrawSurface(frame, drawCoefficients)
+            self._DrawSurface(frame, drawCoefficients)
     
     def SetFillColor(self, r, g=None, b=None, a=None):
         """

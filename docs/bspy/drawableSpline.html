@@ -64,18 +64,6 @@
                                 <a class="function" href="#DrawableSpline.make_drawable">make_drawable</a>
                         </li>
                         <li>
-                                <a class="function" href="#DrawableSpline.DrawPoints">DrawPoints</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#DrawableSpline.DrawCurve">DrawCurve</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#DrawableSpline.DrawSurface">DrawSurface</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#DrawableSpline.Draw">Draw</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#DrawableSpline.SetFillColor">SetFillColor</a>
                         </li>
                         <li>
@@ -218,6 +206,10 @@
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">make_drawable</span><span class="p">(</span><span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convert a `Spline` into a `DrawableSpline` that can be drawn in a `SplineOpenGLFrame`. Converts </span>
+<span class="sd">        1D splines into 3D curves and 2D splines into surfaces (y-axis hold amplitude).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spline</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">spline</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spline</span><span class="p">,</span> <span class="n">Spline</span><span class="p">)</span>
@@ -244,7 +236,7 @@
         
         <span class="k">return</span> <span class="n">DrawableSpline</span><span class="p">(</span><span class="n">spline</span><span class="o">.</span><span class="n">nInd</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">spline</span><span class="o">.</span><span class="n">order</span><span class="p">,</span> <span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">,</span> <span class="n">knotList</span><span class="p">,</span> <span class="n">coefs</span><span class="p">,</span> <span class="n">spline</span><span class="o">.</span><span class="n">accuracy</span><span class="p">,</span> <span class="n">spline</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">DrawPoints</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_DrawPoints</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Draw spline points for an order 1 spline within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -254,7 +246,7 @@
             <span class="n">glVertex4fv</span><span class="p">(</span><span class="n">point</span><span class="p">)</span>
         <span class="n">glEnd</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">DrawCurve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_DrawCurve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Draw a spline curve (nInd == 1) within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -283,7 +275,7 @@
         <span class="n">glDisableVertexAttribArray</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">aCurveParameters</span><span class="p">)</span>
         <span class="n">glUseProgram</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">DrawSurface</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_DrawSurface</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Draw a spline surface (nInd == 2) within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -318,17 +310,17 @@
         <span class="n">glDisableVertexAttribArray</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">aSurfaceParameters</span><span class="p">)</span>
         <span class="n">glUseProgram</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">Draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">transform</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_Draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">transform</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Draw a spline  within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">drawCoefficients</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">transform</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">DrawPoints</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_DrawPoints</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">DrawCurve</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_DrawCurve</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">DrawSurface</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_DrawSurface</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
     
     <span class="k">def</span> <span class="nf">SetFillColor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -446,6 +438,10 @@
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">make_drawable</span><span class="p">(</span><span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convert a `Spline` into a `DrawableSpline` that can be drawn in a `SplineOpenGLFrame`. Converts </span>
+<span class="sd">        1D splines into 3D curves and 2D splines into surfaces (y-axis hold amplitude).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spline</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">spline</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spline</span><span class="p">,</span> <span class="n">Spline</span><span class="p">)</span>
@@ -472,7 +468,7 @@
         
         <span class="k">return</span> <span class="n">DrawableSpline</span><span class="p">(</span><span class="n">spline</span><span class="o">.</span><span class="n">nInd</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">spline</span><span class="o">.</span><span class="n">order</span><span class="p">,</span> <span class="n">spline</span><span class="o">.</span><span class="n">nCoef</span><span class="p">,</span> <span class="n">knotList</span><span class="p">,</span> <span class="n">coefs</span><span class="p">,</span> <span class="n">spline</span><span class="o">.</span><span class="n">accuracy</span><span class="p">,</span> <span class="n">spline</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">DrawPoints</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_DrawPoints</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Draw spline points for an order 1 spline within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -482,7 +478,7 @@
             <span class="n">glVertex4fv</span><span class="p">(</span><span class="n">point</span><span class="p">)</span>
         <span class="n">glEnd</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">DrawCurve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_DrawCurve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Draw a spline curve (nInd == 1) within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -511,7 +507,7 @@
         <span class="n">glDisableVertexAttribArray</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">aCurveParameters</span><span class="p">)</span>
         <span class="n">glUseProgram</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">DrawSurface</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_DrawSurface</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Draw a spline surface (nInd == 2) within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -546,17 +542,17 @@
         <span class="n">glDisableVertexAttribArray</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">aSurfaceParameters</span><span class="p">)</span>
         <span class="n">glUseProgram</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">Draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">transform</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_Draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">transform</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Draw a spline  within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">drawCoefficients</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">transform</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">DrawPoints</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_DrawPoints</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">DrawCurve</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_DrawCurve</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">DrawSurface</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_DrawSurface</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
     
     <span class="k">def</span> <span class="nf">SetFillColor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -762,6 +758,10 @@
             <summary>View Source</summary>
             <div class="pdoc-code codehilite"><pre><span></span>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">make_drawable</span><span class="p">(</span><span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convert a `Spline` into a `DrawableSpline` that can be drawn in a `SplineOpenGLFrame`. Converts </span>
+<span class="sd">        1D splines into 3D curves and 2D splines into surfaces (y-axis hold amplitude).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spline</span><span class="p">,</span> <span class="n">DrawableSpline</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">spline</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spline</span><span class="p">,</span> <span class="n">Spline</span><span class="p">)</span>
@@ -791,163 +791,8 @@
 
         </details>
 
-    
-
-                            </div>
-                            <div id="DrawableSpline.DrawPoints" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#DrawableSpline.DrawPoints">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">DrawPoints</span><span class="signature">(self, frame, drawCoefficients)</span>:
-    </div>
-
-            <details>
-            <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">DrawPoints</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Draw spline points for an order 1 spline within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">glColor4fv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span><span class="p">)</span>
-        <span class="n">glBegin</span><span class="p">(</span><span class="n">GL_POINTS</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">drawCoefficients</span><span class="p">:</span>
-            <span class="n">glVertex4fv</span><span class="p">(</span><span class="n">point</span><span class="p">)</span>
-        <span class="n">glEnd</span><span class="p">()</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>Draw spline points for an order 1 spline within a <code>SplineOpenGLFrame</code>. The frame will call this method for you.</p>
-</div>
-
-
-                            </div>
-                            <div id="DrawableSpline.DrawCurve" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#DrawableSpline.DrawCurve">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">DrawCurve</span><span class="signature">(self, frame, drawCoefficients)</span>:
-    </div>
-
-            <details>
-            <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">DrawCurve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Draw a spline curve (nInd == 1) within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">options</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">HULL</span><span class="p">:</span>
-            <span class="n">glColor3f</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
-            <span class="n">glBegin</span><span class="p">(</span><span class="n">GL_LINE_STRIP</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">drawCoefficients</span><span class="p">:</span>
-                <span class="n">glVertex3f</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">point</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
-            <span class="n">glEnd</span><span class="p">()</span>
-
-        <span class="n">glUseProgram</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">curveProgram</span><span class="p">)</span>
-        <span class="n">glUniform4fv</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">uCurveLineColor</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span><span class="p">)</span>
-        <span class="n">glBindBuffer</span><span class="p">(</span><span class="n">GL_TEXTURE_BUFFER</span><span class="p">,</span> <span class="n">frame</span><span class="o">.</span><span class="n">splineDataBuffer</span><span class="p">)</span>
-        <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="n">size</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="mi">2</span>
-        <span class="n">glBufferSubData</span><span class="p">(</span><span class="n">GL_TEXTURE_BUFFER</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
-        <span class="n">offset</span> <span class="o">+=</span> <span class="n">size</span>
-        <span class="n">size</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">knots</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-        <span class="n">glBufferSubData</span><span class="p">(</span><span class="n">GL_TEXTURE_BUFFER</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">knots</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-        <span class="n">offset</span> <span class="o">+=</span> <span class="n">size</span>
-        <span class="n">size</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="mi">4</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">drawCoefficients</span><span class="p">)</span>
-        <span class="n">glBufferSubData</span><span class="p">(</span><span class="n">GL_TEXTURE_BUFFER</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
-        <span class="n">glEnableVertexAttribArray</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">aCurveParameters</span><span class="p">)</span>
-        <span class="n">glPatchParameteri</span><span class="p">(</span><span class="n">GL_PATCH_VERTICES</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="n">glDrawArraysInstanced</span><span class="p">(</span><span class="n">GL_PATCHES</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="n">glDisableVertexAttribArray</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">aCurveParameters</span><span class="p">)</span>
-        <span class="n">glUseProgram</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>Draw a spline curve (nInd == 1) within a <code>SplineOpenGLFrame</code>. The frame will call this method for you.</p>
-</div>
-
-
-                            </div>
-                            <div id="DrawableSpline.DrawSurface" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#DrawableSpline.DrawSurface">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">DrawSurface</span><span class="signature">(self, frame, drawCoefficients)</span>:
-    </div>
-
-            <details>
-            <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">DrawSurface</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Draw a spline surface (nInd == 2) within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">options</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">HULL</span><span class="p">:</span>
-            <span class="n">glColor3f</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">pointList</span> <span class="ow">in</span> <span class="n">drawCoefficients</span><span class="p">:</span>
-                <span class="n">glBegin</span><span class="p">(</span><span class="n">GL_LINE_STRIP</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">pointList</span><span class="p">:</span>
-                    <span class="n">glVertex3f</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">point</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
-                <span class="n">glEnd</span><span class="p">()</span>
-
-        <span class="n">glUseProgram</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">)</span>
-        <span class="n">glUniform4fv</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">uSurfaceFillColor</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fillColor</span><span class="p">)</span>
-        <span class="n">glUniform4fv</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">uSurfaceLineColor</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span><span class="p">)</span>
-        <span class="n">glUniform1i</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">uSurfaceOptions</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">)</span>
-        <span class="n">glBindBuffer</span><span class="p">(</span><span class="n">GL_TEXTURE_BUFFER</span><span class="p">,</span> <span class="n">frame</span><span class="o">.</span><span class="n">splineDataBuffer</span><span class="p">)</span>
-        <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="n">size</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="mi">4</span>
-        <span class="n">glBufferSubData</span><span class="p">(</span><span class="n">GL_TEXTURE_BUFFER</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
-        <span class="n">offset</span> <span class="o">+=</span> <span class="n">size</span>
-        <span class="n">size</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">knots</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-        <span class="n">glBufferSubData</span><span class="p">(</span><span class="n">GL_TEXTURE_BUFFER</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">knots</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-        <span class="n">offset</span> <span class="o">+=</span> <span class="n">size</span>
-        <span class="n">size</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">knots</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-        <span class="n">glBufferSubData</span><span class="p">(</span><span class="n">GL_TEXTURE_BUFFER</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">knots</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-        <span class="n">offset</span> <span class="o">+=</span> <span class="n">size</span>
-        <span class="n">size</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">glBufferSubData</span><span class="p">(</span><span class="n">GL_TEXTURE_BUFFER</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
-        <span class="n">glEnableVertexAttribArray</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">aSurfaceParameters</span><span class="p">)</span>
-        <span class="n">glPatchParameteri</span><span class="p">(</span><span class="n">GL_PATCH_VERTICES</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="n">glDrawArraysInstanced</span><span class="p">(</span><span class="n">GL_PATCHES</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
-        <span class="n">glDisableVertexAttribArray</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">aSurfaceParameters</span><span class="p">)</span>
-        <span class="n">glUseProgram</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>Draw a spline surface (nInd == 2) within a <code>SplineOpenGLFrame</code>. The frame will call this method for you.</p>
-</div>
-
-
-                            </div>
-                            <div id="DrawableSpline.Draw" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#DrawableSpline.Draw">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">Draw</span><span class="signature">(self, frame, transform)</span>:
-    </div>
-
-            <details>
-            <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">Draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">transform</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Draw a spline  within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">drawCoefficients</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">transform</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">DrawPoints</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">DrawCurve</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">DrawSurface</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>Draw a spline  within a <code>SplineOpenGLFrame</code>. The frame will call this method for you.</p>
+            <div class="docstring"><p>Convert a <code>Spline</code> into a <code><a href="#DrawableSpline">DrawableSpline</a></code> that can be drawn in a <code>SplineOpenGLFrame</code>. Converts 
+1D splines into 3D curves and 2D splines into surfaces (y-axis hold amplitude).</p>
 </div>
 
 
