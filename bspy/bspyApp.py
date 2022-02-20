@@ -62,9 +62,9 @@ class bspyApp(tk.Tk):
         controls = tk.Frame(self)
         controls.pack(side=tk.LEFT, fill=tk.Y)
 
+        tk.Button(controls, text='Adjust Splines', command=self._Adjust).pack(side=tk.BOTTOM, fill=tk.X)
         #tk.Button(controls, text='Empty Splines', command=self.empty).pack(side=tk.BOTTOM, fill=tk.X)
         tk.Button(controls, text='Erase Splines', command=self.erase_all).pack(side=tk.BOTTOM, fill=tk.X)
-        tk.Button(controls, text='Adjust Splines', command=self._Adjust).pack(side=tk.BOTTOM, fill=tk.X)
 
         self.listBox = tk.Listbox(controls, selectmode=tk.MULTIPLE)
         self.listBox.pack(side=tk.LEFT, fill=tk.Y)
