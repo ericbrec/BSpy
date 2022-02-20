@@ -1,6 +1,7 @@
 import numpy as np
 import tkinter as tk
 from tkinter.colorchooser import askcolor
+import queue, threading
 from bspy import SplineOpenGLFrame
 from bspy import DrawableSpline
 
@@ -38,15 +39,21 @@ class bspyApp(tk.Tk):
     A tkinter app (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a listbox full of 
     splines, and a set of controls to adjust and view the selected splines.
 
-    Example
-    -------
+    See Also
+    --------
+    `bspyGraphics` : A graphics engine to display splines. It launches a `bspyApp` and issues commands to the app.
+
+    Examples
+    --------
+    Creates a bspyApp, adds some splines, and launches the app (blocks on the main loop).
     >>> app = bspyApp()
     >>> app.add_spline(spline1)
     >>> app.add_spline(spline2)
     >>> app.add_spline(spline3)
     >>> app.mainloop()
     """
-    def __init__(self, *args, SplineOpenGLFrame=SplineOpenGLFrame, **kw):
+
+    def __init__(self, *args, SplineOpenGLFrame=SplineOpenGLFrame, workQueue=None, **kw):
         tk.Tk.__init__(self, *args, **kw)
         self.title('bspy')
         self.geometry('600x500')
@@ -89,27 +96,53 @@ class bspyApp(tk.Tk):
 
         self.splineList = []
         self.adjust = None
+        self.workQueue = workQueue
+        if self.workQueue is not None:
+            self.work = {
+                "add_spline" : self.add_spline,
+                "draw" : self.draw,
+                "erase_all" : self.erase_all,
+                "empty" : self.empty,
+                "set_background_color" : self.set_background_color,
+                "update" : self.update
+            }
+            self.after(1000, self._check_for_work)
+    
+    def _check_for_work(self):
+        """Check queue for calls to make."""
+        while not self.workQueue.empty():
+            try:
+                work = self.workQueue.get_nowait()
+            except queue.Empty:
+                break
+            else:
+                if work[0] in self.work:
+                    self.work[work[0]](*work[1])
+        self.after(200, self._check_for_work)
 
     def add_spline(self, spline):
         """Add a `Spline` to the listbox. Can be called before app is running."""
         self.splineList.append(spline)
         self.listBox.insert(tk.END, spline)
-
+        
     def draw(self, spline):
         """Add a `Spline` to the listbox and draw it. Can only be called after the app is running."""
         self.splineList.append(spline)
         self.listBox.insert(tk.END, spline)
         self.listBox.activate(self.listBox.size() - 1)
-        self._ListSelectionChanged(None)
+        self.listBox.select_anchor(self.listBox.size() - 1)
+        self.update()
 
     def erase_all(self):
+        """Stop drawing all splines. Splines remain in the listbox."""
         self.listBox.selection_clear(0, self.listBox.size() - 1)
-        self._ListSelectionChanged(None)
+        self.update()
 
     def empty(self):
+        """Stop drawing all splines and remove them from the listbox."""
         self.splineList = []
         self.listBox.delete(0, self.listBox.size() - 1)
-        self._ListSelectionChanged(None)
+        self.update()
 
     def set_background_color(self, r, g=None, b=None, a=None):
         """
@@ -132,8 +165,8 @@ class bspyApp(tk.Tk):
         self.frame.SetBackgroundColor(r, g, b, a)
         self.frame.Update()
 
-    def _ListSelectionChanged(self, event):
-        """Handle when the listbox selection has changed."""
+    def update(self):
+        """Update the spline draw list and refresh the frame."""
         self.frame.splineDrawList = []
         for item in self.listBox.curselection():
             self.frame.splineDrawList.append(self.splineList[item])
@@ -147,6 +180,10 @@ class bspyApp(tk.Tk):
                 button.Update()
 
         self.frame.Update()
+
+    def _ListSelectionChanged(self, event):
+        """Handle when the listbox selection has changed."""
+        self.update()
     
     def _ChangeFrameMode(self):
         """Handle when the view mode has changed."""
@@ -218,3 +255,70 @@ class bspyApp(tk.Tk):
                 for spline in self.frame.splineDrawList:
                     spline.SetLineColor(newColor[0])
                 self.frame.Update()
+    
+class bspyGraphics:
+    """
+    A graphics engine to display splines. It launches a `bspyApp` and issues commands to the app.
+
+    See Also
+    --------
+    `bspyApp` : A tkinter app (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a listbox full of 
+        splines, and a set of controls to adjust and view the selected splines.
+
+    Examples
+    --------
+    Launch a bspyApp and tell it to draw some splines.
+    >>> graphics = bspyGraphics()
+    >>> graphics.draw(spline1)
+    >>> graphics.draw(spline2)
+    >>> graphics.draw(spline3)
+    """
+
+    def __init__(self):
+        self.workQueue = queue.Queue()
+        self.appThread = threading.Thread(target=self._app_thread)
+        self.appThread.start()
+            
+    def _app_thread(self):
+        app = bspyApp(workQueue=self.workQueue)
+        app.mainloop()        
+
+    def add_spline(self, spline):
+        """Add a `Spline` to the listbox."""
+        self.workQueue.put(("add_spline", (spline,)))
+
+    def draw(self, spline):
+        """Add a `Spline` to the listbox and draw it."""
+        self.workQueue.put(("draw", (spline,)))
+
+    def erase_all(self):
+        """Stop drawing all splines. Splines remain in the listbox."""
+        self.workQueue.put(("erase_all", ()))
+
+    def empty(self):
+        """Stop drawing all splines and remove them from the listbox."""
+        self.workQueue.put(("empty", ()))
+
+    def set_background_color(self, r, g=None, b=None, a=None):
+        """
+        Set the background color.
+
+        Parameters
+        ----------
+        r : `float`, `int` or array-like of floats or ints
+            The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).
+        
+        g: `float` or `int`
+            The green value [0, 1] as a float or [0, 255] as an int.
+        
+        b: `float` or `int`
+            The blue value [0, 1] as a float or [0, 255] as an int.
+        
+        a: `float`, `int`, or None
+            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.
+        """
+        self.workQueue.put(("set_background_color", (r, g, b, a)))
+
+    def update(self):
+        """Update the spline draw list and refresh the frame."""
+        self.workQueue.put(("update", ()))

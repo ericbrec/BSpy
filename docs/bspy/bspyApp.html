@@ -51,6 +51,36 @@
                         <li>
                                 <a class="function" href="#bspyApp.set_background_color">set_background_color</a>
                         </li>
+                        <li>
+                                <a class="function" href="#bspyApp.update">update</a>
+                        </li>
+                </ul>
+
+            </li>
+            <li>
+                    <a class="class" href="#bspyGraphics">bspyGraphics</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#bspyGraphics.__init__">bspyGraphics</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#bspyGraphics.add_spline">add_spline</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#bspyGraphics.draw">draw</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#bspyGraphics.erase_all">erase_all</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#bspyGraphics.empty">empty</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#bspyGraphics.set_background_color">set_background_color</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#bspyGraphics.update">update</a>
+                        </li>
                 </ul>
 
             </li>
@@ -76,6 +106,7 @@
             <div class="pdoc-code codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">tkinter</span> <span class="k">as</span> <span class="nn">tk</span>
 <span class="kn">from</span> <span class="nn">tkinter.colorchooser</span> <span class="kn">import</span> <span class="n">askcolor</span>
+<span class="kn">import</span> <span class="nn">queue</span><span class="o">,</span> <span class="nn">threading</span>
 <span class="kn">from</span> <span class="nn">bspy</span> <span class="kn">import</span> <span class="n">SplineOpenGLFrame</span>
 <span class="kn">from</span> <span class="nn">bspy</span> <span class="kn">import</span> <span class="n">DrawableSpline</span>
 
@@ -113,15 +144,21 @@
 <span class="sd">    A tkinter app (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a listbox full of </span>
 <span class="sd">    splines, and a set of controls to adjust and view the selected splines.</span>
 
-<span class="sd">    Example</span>
-<span class="sd">    -------</span>
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    `bspyGraphics` : A graphics engine to display splines. It launches a `bspyApp` and issues commands to the app.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    Creates a bspyApp, adds some splines, and launches the app (blocks on the main loop).</span>
 <span class="sd">    &gt;&gt;&gt; app = bspyApp()</span>
 <span class="sd">    &gt;&gt;&gt; app.add_spline(spline1)</span>
 <span class="sd">    &gt;&gt;&gt; app.add_spline(spline2)</span>
 <span class="sd">    &gt;&gt;&gt; app.add_spline(spline3)</span>
 <span class="sd">    &gt;&gt;&gt; app.mainloop()</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">SplineOpenGLFrame</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">SplineOpenGLFrame</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="p">,</span> <span class="n">workQueue</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
         <span class="n">tk</span><span class="o">.</span><span class="n">Tk</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;bspy&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="p">(</span><span class="s1">&#39;600x500&#39;</span><span class="p">)</span>
@@ -164,27 +201,53 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span> <span class="o">=</span> <span class="n">workQueue</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">work</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;add_spline&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_spline</span><span class="p">,</span>
+                <span class="s2">&quot;draw&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">draw</span><span class="p">,</span>
+                <span class="s2">&quot;erase_all&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">erase_all</span><span class="p">,</span>
+                <span class="s2">&quot;empty&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">empty</span><span class="p">,</span>
+                <span class="s2">&quot;set_background_color&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_background_color</span><span class="p">,</span>
+                <span class="s2">&quot;update&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">update</span>
+            <span class="p">}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">after</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_for_work</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">_check_for_work</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check queue for calls to make.&quot;&quot;&quot;</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">work</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">get_nowait</span><span class="p">()</span>
+            <span class="k">except</span> <span class="n">queue</span><span class="o">.</span><span class="n">Empty</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">work</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">work</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">work</span><span class="p">[</span><span class="n">work</span><span class="p">[</span><span class="mi">0</span><span class="p">]](</span><span class="o">*</span><span class="n">work</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">after</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_for_work</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">add_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox. Can be called before app is running.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">,</span> <span class="n">spline</span><span class="p">)</span>
-
+        
     <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox and draw it. Can only be called after the app is running.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">,</span> <span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">activate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">select_anchor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">erase_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stop drawing all splines. Splines remain in the listbox.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">selection_clear</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">empty</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stop drawing all splines and remove them from the listbox.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">set_background_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -207,8 +270,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">SetBackgroundColor</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">_ListSelectionChanged</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Handle when the listbox selection has changed.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update the spline draw list and refresh the frame.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">curselection</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="p">[</span><span class="n">item</span><span class="p">])</span>
@@ -222,6 +285,10 @@
                 <span class="n">button</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_ListSelectionChanged</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Handle when the listbox selection has changed.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
     
     <span class="k">def</span> <span class="nf">_ChangeFrameMode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Handle when the view mode has changed.&quot;&quot;&quot;</span>
@@ -293,6 +360,73 @@
                 <span class="k">for</span> <span class="n">spline</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">:</span>
                     <span class="n">spline</span><span class="o">.</span><span class="n">SetLineColor</span><span class="p">(</span><span class="n">newColor</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
+    
+<span class="k">class</span> <span class="nc">bspyGraphics</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A graphics engine to display splines. It launches a `bspyApp` and issues commands to the app.</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    `bspyApp` : A tkinter app (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a listbox full of </span>
+<span class="sd">        splines, and a set of controls to adjust and view the selected splines.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    Launch a bspyApp and tell it to draw some splines.</span>
+<span class="sd">    &gt;&gt;&gt; graphics = bspyGraphics()</span>
+<span class="sd">    &gt;&gt;&gt; graphics.draw(spline1)</span>
+<span class="sd">    &gt;&gt;&gt; graphics.draw(spline2)</span>
+<span class="sd">    &gt;&gt;&gt; graphics.draw(spline3)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">appThread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_app_thread</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">appThread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+            
+    <span class="k">def</span> <span class="nf">_app_thread</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">app</span> <span class="o">=</span> <span class="n">bspyApp</span><span class="p">(</span><span class="n">workQueue</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="p">)</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">mainloop</span><span class="p">()</span>        
+
+    <span class="k">def</span> <span class="nf">add_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;add_spline&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">spline</span><span class="p">,)))</span>
+
+    <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox and draw it.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;draw&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">spline</span><span class="p">,)))</span>
+
+    <span class="k">def</span> <span class="nf">erase_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stop drawing all splines. Splines remain in the listbox.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;erase_all&quot;</span><span class="p">,</span> <span class="p">()))</span>
+
+    <span class="k">def</span> <span class="nf">empty</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stop drawing all splines and remove them from the listbox.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;empty&quot;</span><span class="p">,</span> <span class="p">()))</span>
+
+    <span class="k">def</span> <span class="nf">set_background_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the background color.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        r : `float`, `int` or array-like of floats or ints</span>
+<span class="sd">            The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).</span>
+<span class="sd">        </span>
+<span class="sd">        g: `float` or `int`</span>
+<span class="sd">            The green value [0, 1] as a float or [0, 255] as an int.</span>
+<span class="sd">        </span>
+<span class="sd">        b: `float` or `int`</span>
+<span class="sd">            The blue value [0, 1] as a float or [0, 255] as an int.</span>
+<span class="sd">        </span>
+<span class="sd">        a: `float`, `int`, or None</span>
+<span class="sd">            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;set_background_color&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)))</span>
+
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update the spline draw list and refresh the frame.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;update&quot;</span><span class="p">,</span> <span class="p">()))</span>
 </pre></div>
 
         </details>
@@ -314,15 +448,21 @@
 <span class="sd">    A tkinter app (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a listbox full of </span>
 <span class="sd">    splines, and a set of controls to adjust and view the selected splines.</span>
 
-<span class="sd">    Example</span>
-<span class="sd">    -------</span>
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    `bspyGraphics` : A graphics engine to display splines. It launches a `bspyApp` and issues commands to the app.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    Creates a bspyApp, adds some splines, and launches the app (blocks on the main loop).</span>
 <span class="sd">    &gt;&gt;&gt; app = bspyApp()</span>
 <span class="sd">    &gt;&gt;&gt; app.add_spline(spline1)</span>
 <span class="sd">    &gt;&gt;&gt; app.add_spline(spline2)</span>
 <span class="sd">    &gt;&gt;&gt; app.add_spline(spline3)</span>
 <span class="sd">    &gt;&gt;&gt; app.mainloop()</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">SplineOpenGLFrame</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">SplineOpenGLFrame</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="p">,</span> <span class="n">workQueue</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
         <span class="n">tk</span><span class="o">.</span><span class="n">Tk</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;bspy&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="p">(</span><span class="s1">&#39;600x500&#39;</span><span class="p">)</span>
@@ -365,27 +505,53 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span> <span class="o">=</span> <span class="n">workQueue</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">work</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;add_spline&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_spline</span><span class="p">,</span>
+                <span class="s2">&quot;draw&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">draw</span><span class="p">,</span>
+                <span class="s2">&quot;erase_all&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">erase_all</span><span class="p">,</span>
+                <span class="s2">&quot;empty&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">empty</span><span class="p">,</span>
+                <span class="s2">&quot;set_background_color&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_background_color</span><span class="p">,</span>
+                <span class="s2">&quot;update&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">update</span>
+            <span class="p">}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">after</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_for_work</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">_check_for_work</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check queue for calls to make.&quot;&quot;&quot;</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">work</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">get_nowait</span><span class="p">()</span>
+            <span class="k">except</span> <span class="n">queue</span><span class="o">.</span><span class="n">Empty</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">work</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">work</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">work</span><span class="p">[</span><span class="n">work</span><span class="p">[</span><span class="mi">0</span><span class="p">]](</span><span class="o">*</span><span class="n">work</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">after</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_for_work</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">add_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox. Can be called before app is running.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">,</span> <span class="n">spline</span><span class="p">)</span>
-
+        
     <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox and draw it. Can only be called after the app is running.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">,</span> <span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">activate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">select_anchor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">erase_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stop drawing all splines. Splines remain in the listbox.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">selection_clear</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">empty</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stop drawing all splines and remove them from the listbox.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">set_background_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -408,8 +574,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">SetBackgroundColor</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">_ListSelectionChanged</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Handle when the listbox selection has changed.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update the spline draw list and refresh the frame.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">curselection</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="p">[</span><span class="n">item</span><span class="p">])</span>
@@ -423,6 +589,10 @@
                 <span class="n">button</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_ListSelectionChanged</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Handle when the listbox selection has changed.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
     
     <span class="k">def</span> <span class="nf">_ChangeFrameMode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Handle when the view mode has changed.&quot;&quot;&quot;</span>
@@ -501,7 +671,13 @@
             <div class="docstring"><p>A tkinter app (<code>tkinter.Tk</code>) that hosts a <code>SplineOpenGLFrame</code>, a listbox full of 
 splines, and a set of controls to adjust and view the selected splines.</p>
 
-<h6 id="example">Example</h6>
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#bspyGraphics">bspyGraphics</a></code>:  A graphics engine to display splines. It launches a <code><a href="#bspyApp">bspyApp</a></code> and issues commands to the app.  </p>
+
+<h6 id="examples">Examples</h6>
+
+<p>Creates a bspyApp, adds some splines, and launches the app (blocks on the main loop).</p>
 
 <div class="pdoc-code codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">app</span> <span class="o">=</span> <span class="n">bspyApp</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">add_spline</span><span class="p">(</span><span class="n">spline1</span><span class="p">)</span>
@@ -519,13 +695,14 @@ splines, and a set of controls to adjust and view the selected splines.</p>
             <span class="name">bspyApp</span><span class="signature">(
     *args,
     SplineOpenGLFrame=&lt;class &#39;<a href="splineOpenGLFrame.html#SplineOpenGLFrame">bspy.splineOpenGLFrame.SplineOpenGLFrame</a>&#39;&gt;,
+    workQueue=None,
     **kw
 )</span>
     </div>
 
             <details>
             <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">SplineOpenGLFrame</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">SplineOpenGLFrame</span><span class="o">=</span><span class="n">SplineOpenGLFrame</span><span class="p">,</span> <span class="n">workQueue</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
         <span class="n">tk</span><span class="o">.</span><span class="n">Tk</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;bspy&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="p">(</span><span class="s1">&#39;600x500&#39;</span><span class="p">)</span>
@@ -568,6 +745,17 @@ splines, and a set of controls to adjust and view the selected splines.</p>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span> <span class="o">=</span> <span class="n">workQueue</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">work</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;add_spline&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_spline</span><span class="p">,</span>
+                <span class="s2">&quot;draw&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">draw</span><span class="p">,</span>
+                <span class="s2">&quot;erase_all&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">erase_all</span><span class="p">,</span>
+                <span class="s2">&quot;empty&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">empty</span><span class="p">,</span>
+                <span class="s2">&quot;set_background_color&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_background_color</span><span class="p">,</span>
+                <span class="s2">&quot;update&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">update</span>
+            <span class="p">}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">after</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_for_work</span><span class="p">)</span>
 </pre></div>
 
         </details>
@@ -619,7 +807,8 @@ is the name of the widget class.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">,</span> <span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">activate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">select_anchor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
 </pre></div>
 
         </details>
@@ -640,13 +829,16 @@ is the name of the widget class.</p>
             <details>
             <summary>View Source</summary>
             <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">erase_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stop drawing all splines. Splines remain in the listbox.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">selection_clear</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
 </pre></div>
 
         </details>
 
-    
+            <div class="docstring"><p>Stop drawing all splines. Splines remain in the listbox.</p>
+</div>
+
 
                             </div>
                             <div id="bspyApp.empty" class="classattr">
@@ -660,14 +852,17 @@ is the name of the widget class.</p>
             <details>
             <summary>View Source</summary>
             <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">empty</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stop drawing all splines and remove them from the listbox.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_ListSelectionChanged</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
 </pre></div>
 
         </details>
 
-    
+            <div class="docstring"><p>Stop drawing all splines and remove them from the listbox.</p>
+</div>
+
 
                             </div>
                             <div id="bspyApp.set_background_color" class="classattr">
@@ -718,6 +913,40 @@ The blue value [0, 1] as a float or [0, 255] as an int.</li>
 <li><strong>a</strong> (<code>float</code>, <code>int</code>, or None):
 The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> then alpha is set to 1.</li>
 </ul>
+</div>
+
+
+                            </div>
+                            <div id="bspyApp.update" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#bspyApp.update">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">update</span><span class="signature">(self)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update the spline draw list and refresh the frame.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">curselection</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="p">[</span><span class="n">item</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">adjust</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">:</span> 
+                <span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">splineDrawList</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">options</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bits</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">button</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkButtons</span><span class="o">.</span><span class="n">winfo_children</span><span class="p">():</span>
+                <span class="n">button</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Update the spline draw list and refresh the frame.</p>
 </div>
 
 
@@ -894,7 +1123,6 @@ The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> th
                 <dd id="bspyApp.winfo_width" class="function">winfo_width</dd>
                 <dd id="bspyApp.winfo_x" class="function">winfo_x</dd>
                 <dd id="bspyApp.winfo_y" class="function">winfo_y</dd>
-                <dd id="bspyApp.update" class="function">update</dd>
                 <dd id="bspyApp.update_idletasks" class="function">update_idletasks</dd>
                 <dd id="bspyApp.bindtags" class="function">bindtags</dd>
                 <dd id="bspyApp.bind" class="function">bind</dd>
@@ -938,6 +1166,288 @@ The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> th
 
             </div>
                                 </dl>
+                            </div>
+                </section>
+                <section id="bspyGraphics">
+                                <div class="attr class">
+        <a class="headerlink" href="#bspyGraphics">#&nbsp;&nbsp</a>
+
+        
+        <span class="def">class</span>
+        <span class="name">bspyGraphics</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span><span class="k">class</span> <span class="nc">bspyGraphics</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A graphics engine to display splines. It launches a `bspyApp` and issues commands to the app.</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    `bspyApp` : A tkinter app (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a listbox full of </span>
+<span class="sd">        splines, and a set of controls to adjust and view the selected splines.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    Launch a bspyApp and tell it to draw some splines.</span>
+<span class="sd">    &gt;&gt;&gt; graphics = bspyGraphics()</span>
+<span class="sd">    &gt;&gt;&gt; graphics.draw(spline1)</span>
+<span class="sd">    &gt;&gt;&gt; graphics.draw(spline2)</span>
+<span class="sd">    &gt;&gt;&gt; graphics.draw(spline3)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">appThread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_app_thread</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">appThread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+            
+    <span class="k">def</span> <span class="nf">_app_thread</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">app</span> <span class="o">=</span> <span class="n">bspyApp</span><span class="p">(</span><span class="n">workQueue</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="p">)</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">mainloop</span><span class="p">()</span>        
+
+    <span class="k">def</span> <span class="nf">add_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;add_spline&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">spline</span><span class="p">,)))</span>
+
+    <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox and draw it.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;draw&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">spline</span><span class="p">,)))</span>
+
+    <span class="k">def</span> <span class="nf">erase_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stop drawing all splines. Splines remain in the listbox.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;erase_all&quot;</span><span class="p">,</span> <span class="p">()))</span>
+
+    <span class="k">def</span> <span class="nf">empty</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stop drawing all splines and remove them from the listbox.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;empty&quot;</span><span class="p">,</span> <span class="p">()))</span>
+
+    <span class="k">def</span> <span class="nf">set_background_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the background color.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        r : `float`, `int` or array-like of floats or ints</span>
+<span class="sd">            The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).</span>
+<span class="sd">        </span>
+<span class="sd">        g: `float` or `int`</span>
+<span class="sd">            The green value [0, 1] as a float or [0, 255] as an int.</span>
+<span class="sd">        </span>
+<span class="sd">        b: `float` or `int`</span>
+<span class="sd">            The blue value [0, 1] as a float or [0, 255] as an int.</span>
+<span class="sd">        </span>
+<span class="sd">        a: `float`, `int`, or None</span>
+<span class="sd">            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;set_background_color&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)))</span>
+
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update the spline draw list and refresh the frame.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;update&quot;</span><span class="p">,</span> <span class="p">()))</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>A graphics engine to display splines. It launches a <code><a href="#bspyApp">bspyApp</a></code> and issues commands to the app.</p>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#bspyApp">bspyApp</a></code>:  A tkinter app (<code>tkinter.Tk</code>) that hosts a <code>SplineOpenGLFrame</code>, a listbox full of 
+splines, and a set of controls to adjust and view the selected splines.  </p>
+
+<h6 id="examples">Examples</h6>
+
+<p>Launch a bspyApp and tell it to draw some splines.</p>
+
+<div class="pdoc-code codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">graphics</span> <span class="o">=</span> <span class="n">bspyGraphics</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">graphics</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">spline1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">graphics</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">spline2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">graphics</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">spline3</span><span class="p">)</span>
+</code></pre></div>
+</div>
+
+
+                            <div id="bspyGraphics.__init__" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#bspyGraphics.__init__">#&nbsp;&nbsp</a>
+
+        
+            <span class="name">bspyGraphics</span><span class="signature">()</span>
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">appThread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_app_thread</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">appThread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</pre></div>
+
+        </details>
+
+    
+
+                            </div>
+                            <div id="bspyGraphics.add_spline" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#bspyGraphics.add_spline">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">add_spline</span><span class="signature">(self, spline)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">add_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;add_spline&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">spline</span><span class="p">,)))</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Add a <code>Spline</code> to the listbox.</p>
+</div>
+
+
+                            </div>
+                            <div id="bspyGraphics.draw" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#bspyGraphics.draw">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">draw</span><span class="signature">(self, spline)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox and draw it.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;draw&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">spline</span><span class="p">,)))</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Add a <code>Spline</code> to the listbox and draw it.</p>
+</div>
+
+
+                            </div>
+                            <div id="bspyGraphics.erase_all" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#bspyGraphics.erase_all">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">erase_all</span><span class="signature">(self)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">erase_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stop drawing all splines. Splines remain in the listbox.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;erase_all&quot;</span><span class="p">,</span> <span class="p">()))</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Stop drawing all splines. Splines remain in the listbox.</p>
+</div>
+
+
+                            </div>
+                            <div id="bspyGraphics.empty" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#bspyGraphics.empty">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">empty</span><span class="signature">(self)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">empty</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stop drawing all splines and remove them from the listbox.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;empty&quot;</span><span class="p">,</span> <span class="p">()))</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Stop drawing all splines and remove them from the listbox.</p>
+</div>
+
+
+                            </div>
+                            <div id="bspyGraphics.set_background_color" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#bspyGraphics.set_background_color">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">set_background_color</span><span class="signature">(self, r, g=None, b=None, a=None)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">set_background_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the background color.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        r : `float`, `int` or array-like of floats or ints</span>
+<span class="sd">            The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).</span>
+<span class="sd">        </span>
+<span class="sd">        g: `float` or `int`</span>
+<span class="sd">            The green value [0, 1] as a float or [0, 255] as an int.</span>
+<span class="sd">        </span>
+<span class="sd">        b: `float` or `int`</span>
+<span class="sd">            The blue value [0, 1] as a float or [0, 255] as an int.</span>
+<span class="sd">        </span>
+<span class="sd">        a: `float`, `int`, or None</span>
+<span class="sd">            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;set_background_color&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)))</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Set the background color.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>r</strong> (<code>float</code>, <code>int</code> or array-like of floats or ints):
+The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).</li>
+<li><strong>g</strong> (<code>float</code> or <code>int</code>):
+The green value [0, 1] as a float or [0, 255] as an int.</li>
+<li><strong>b</strong> (<code>float</code> or <code>int</code>):
+The blue value [0, 1] as a float or [0, 255] as an int.</li>
+<li><strong>a</strong> (<code>float</code>, <code>int</code>, or None):
+The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> then alpha is set to 1.</li>
+</ul>
+</div>
+
+
+                            </div>
+                            <div id="bspyGraphics.update" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#bspyGraphics.update">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">update</span><span class="signature">(self)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update the spline draw list and refresh the frame.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;update&quot;</span><span class="p">,</span> <span class="p">()))</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Update the spline draw list and refresh the frame.</p>
+</div>
+
+
                             </div>
                 </section>
     </main>
