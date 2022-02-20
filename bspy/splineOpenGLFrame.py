@@ -727,6 +727,8 @@ class SplineOpenGLFrame(OpenGLFrame):
             The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.
         """
         self.backgroundColor = _set_color(r, g, b, a)
+        if self.glInitialized:
+            glClearColor(self.backgroundColor[0], self.backgroundColor[1], self.backgroundColor[2], self.backgroundColor[3])
 
     def SetSplineList(self, list):
         """

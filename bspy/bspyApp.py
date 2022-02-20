@@ -129,8 +129,7 @@ class bspyApp(tk.Tk):
         """Add a `Spline` to the listbox and draw it. Can only be called after the app is running."""
         self.splineList.append(spline)
         self.listBox.insert(tk.END, spline)
-        self.listBox.activate(self.listBox.size() - 1)
-        self.listBox.select_anchor(self.listBox.size() - 1)
+        self.listBox.selection_set(self.listBox.size() - 1)
         self.update()
 
     def erase_all(self):
