@@ -356,5 +356,5 @@ if __name__=='__main__':
                 coefficients[0,i,j] = teapotVertices[patch[4*i + j + 1] - 1][0] / 3.0
                 coefficients[1,i,j] = -0.5 + 4.0 * teapotVertices[patch[4*i + j + 1] - 1][2] / 9.0
                 coefficients[2,i,j] = teapotVertices[patch[4*i + j + 1] - 1][1] / 3.0
-        app.add_spline(DrawableSpline(2, 4, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=patch[0])))
+        app.show(DrawableSpline(2, 4, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=patch[0])))
     app.mainloop()

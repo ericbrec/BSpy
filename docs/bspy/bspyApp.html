@@ -37,7 +37,7 @@
                                 <a class="function" href="#bspyApp.__init__">bspyApp</a>
                         </li>
                         <li>
-                                <a class="function" href="#bspyApp.add_spline">add_spline</a>
+                                <a class="function" href="#bspyApp.show">show</a>
                         </li>
                         <li>
                                 <a class="function" href="#bspyApp.draw">draw</a>
@@ -64,7 +64,7 @@
                                 <a class="function" href="#bspyGraphics.__init__">bspyGraphics</a>
                         </li>
                         <li>
-                                <a class="function" href="#bspyGraphics.add_spline">add_spline</a>
+                                <a class="function" href="#bspyGraphics.show">show</a>
                         </li>
                         <li>
                                 <a class="function" href="#bspyGraphics.draw">draw</a>
@@ -150,11 +150,11 @@
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    Creates a bspyApp, adds some splines, and launches the app (blocks on the main loop).</span>
+<span class="sd">    Creates a bspyApp, show some splines, and launches the app (blocks on the main loop).</span>
 <span class="sd">    &gt;&gt;&gt; app = bspyApp()</span>
-<span class="sd">    &gt;&gt;&gt; app.add_spline(spline1)</span>
-<span class="sd">    &gt;&gt;&gt; app.add_spline(spline2)</span>
-<span class="sd">    &gt;&gt;&gt; app.add_spline(spline3)</span>
+<span class="sd">    &gt;&gt;&gt; app.show(spline1)</span>
+<span class="sd">    &gt;&gt;&gt; app.show(spline2)</span>
+<span class="sd">    &gt;&gt;&gt; app.show(spline3)</span>
 <span class="sd">    &gt;&gt;&gt; app.mainloop()</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -167,9 +167,9 @@
         <span class="n">controls</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Frame</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="n">controls</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">Y</span><span class="p">)</span>
 
+        <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Adjust Splines&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_Adjust</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
         <span class="c1">#tk.Button(controls, text=&#39;Empty Splines&#39;, command=self.empty).pack(side=tk.BOTTOM, fill=tk.X)</span>
         <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Erase Splines&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">erase_all</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
-        <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Adjust Splines&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_Adjust</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Listbox</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">selectmode</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">MULTIPLE</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">Y</span><span class="p">)</span>
@@ -204,7 +204,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span> <span class="o">=</span> <span class="n">workQueue</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">work</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;add_spline&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_spline</span><span class="p">,</span>
+                <span class="s2">&quot;show&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">show</span><span class="p">,</span>
                 <span class="s2">&quot;draw&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">draw</span><span class="p">,</span>
                 <span class="s2">&quot;erase_all&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">erase_all</span><span class="p">,</span>
                 <span class="s2">&quot;empty&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">empty</span><span class="p">,</span>
@@ -225,8 +225,8 @@
                     <span class="bp">self</span><span class="o">.</span><span class="n">work</span><span class="p">[</span><span class="n">work</span><span class="p">[</span><span class="mi">0</span><span class="p">]](</span><span class="o">*</span><span class="n">work</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">after</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_for_work</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">add_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox. Can be called before app is running.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Show a `Spline` in the listbox. Can be called before app is running.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">,</span> <span class="n">spline</span><span class="p">)</span>
         
@@ -387,9 +387,9 @@
         <span class="n">app</span> <span class="o">=</span> <span class="n">bspyApp</span><span class="p">(</span><span class="n">workQueue</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="p">)</span>
         <span class="n">app</span><span class="o">.</span><span class="n">mainloop</span><span class="p">()</span>        
 
-    <span class="k">def</span> <span class="nf">add_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;add_spline&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">spline</span><span class="p">,)))</span>
+    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Show a `Spline` in the listbox.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;show&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">spline</span><span class="p">,)))</span>
 
     <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox and draw it.&quot;&quot;&quot;</span>
@@ -453,11 +453,11 @@
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    Creates a bspyApp, adds some splines, and launches the app (blocks on the main loop).</span>
+<span class="sd">    Creates a bspyApp, show some splines, and launches the app (blocks on the main loop).</span>
 <span class="sd">    &gt;&gt;&gt; app = bspyApp()</span>
-<span class="sd">    &gt;&gt;&gt; app.add_spline(spline1)</span>
-<span class="sd">    &gt;&gt;&gt; app.add_spline(spline2)</span>
-<span class="sd">    &gt;&gt;&gt; app.add_spline(spline3)</span>
+<span class="sd">    &gt;&gt;&gt; app.show(spline1)</span>
+<span class="sd">    &gt;&gt;&gt; app.show(spline2)</span>
+<span class="sd">    &gt;&gt;&gt; app.show(spline3)</span>
 <span class="sd">    &gt;&gt;&gt; app.mainloop()</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -470,9 +470,9 @@
         <span class="n">controls</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Frame</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="n">controls</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">Y</span><span class="p">)</span>
 
+        <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Adjust Splines&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_Adjust</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
         <span class="c1">#tk.Button(controls, text=&#39;Empty Splines&#39;, command=self.empty).pack(side=tk.BOTTOM, fill=tk.X)</span>
         <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Erase Splines&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">erase_all</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
-        <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Adjust Splines&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_Adjust</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Listbox</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">selectmode</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">MULTIPLE</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">Y</span><span class="p">)</span>
@@ -507,7 +507,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span> <span class="o">=</span> <span class="n">workQueue</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">work</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;add_spline&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_spline</span><span class="p">,</span>
+                <span class="s2">&quot;show&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">show</span><span class="p">,</span>
                 <span class="s2">&quot;draw&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">draw</span><span class="p">,</span>
                 <span class="s2">&quot;erase_all&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">erase_all</span><span class="p">,</span>
                 <span class="s2">&quot;empty&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">empty</span><span class="p">,</span>
@@ -528,8 +528,8 @@
                     <span class="bp">self</span><span class="o">.</span><span class="n">work</span><span class="p">[</span><span class="n">work</span><span class="p">[</span><span class="mi">0</span><span class="p">]](</span><span class="o">*</span><span class="n">work</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">after</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_for_work</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">add_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox. Can be called before app is running.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Show a `Spline` in the listbox. Can be called before app is running.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">,</span> <span class="n">spline</span><span class="p">)</span>
         
@@ -675,12 +675,12 @@ splines, and a set of controls to adjust and view the selected splines.</p>
 
 <h6 id="examples">Examples</h6>
 
-<p>Creates a bspyApp, adds some splines, and launches the app (blocks on the main loop).</p>
+<p>Creates a bspyApp, show some splines, and launches the app (blocks on the main loop).</p>
 
 <div class="pdoc-code codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">app</span> <span class="o">=</span> <span class="n">bspyApp</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">add_spline</span><span class="p">(</span><span class="n">spline1</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">add_spline</span><span class="p">(</span><span class="n">spline2</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">add_spline</span><span class="p">(</span><span class="n">spline3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">spline1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">spline2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">spline3</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">app</span><span class="o">.</span><span class="n">mainloop</span><span class="p">()</span>
 </code></pre></div>
 </div>
@@ -709,9 +709,9 @@ splines, and a set of controls to adjust and view the selected splines.</p>
         <span class="n">controls</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Frame</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="n">controls</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">Y</span><span class="p">)</span>
 
+        <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Adjust Splines&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_Adjust</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
         <span class="c1">#tk.Button(controls, text=&#39;Empty Splines&#39;, command=self.empty).pack(side=tk.BOTTOM, fill=tk.X)</span>
         <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Erase Splines&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">erase_all</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
-        <span class="n">tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Adjust Splines&#39;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_Adjust</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Listbox</span><span class="p">(</span><span class="n">controls</span><span class="p">,</span> <span class="n">selectmode</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">MULTIPLE</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">tk</span><span class="o">.</span><span class="n">Y</span><span class="p">)</span>
@@ -746,7 +746,7 @@ splines, and a set of controls to adjust and view the selected splines.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span> <span class="o">=</span> <span class="n">workQueue</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">work</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;add_spline&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_spline</span><span class="p">,</span>
+                <span class="s2">&quot;show&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">show</span><span class="p">,</span>
                 <span class="s2">&quot;draw&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">draw</span><span class="p">,</span>
                 <span class="s2">&quot;erase_all&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">erase_all</span><span class="p">,</span>
                 <span class="s2">&quot;empty&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">empty</span><span class="p">,</span>
@@ -767,25 +767,25 @@ is the name of the widget class.</p>
 
 
                             </div>
-                            <div id="bspyApp.add_spline" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#bspyApp.add_spline">#&nbsp;&nbsp</a>
+                            <div id="bspyApp.show" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#bspyApp.show">#&nbsp;&nbsp</a>
 
         
             <span class="def">def</span>
-            <span class="name">add_spline</span><span class="signature">(self, spline)</span>:
+            <span class="name">show</span><span class="signature">(self, spline)</span>:
     </div>
 
             <details>
             <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">add_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox. Can be called before app is running.&quot;&quot;&quot;</span>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Show a `Spline` in the listbox. Can be called before app is running.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">,</span> <span class="n">spline</span><span class="p">)</span>
 </pre></div>
 
         </details>
 
-            <div class="docstring"><p>Add a <code>Spline</code> to the listbox. Can be called before app is running.</p>
+            <div class="docstring"><p>Show a <code>Spline</code> in the listbox. Can be called before app is running.</p>
 </div>
 
 
@@ -1203,9 +1203,9 @@ The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> th
         <span class="n">app</span> <span class="o">=</span> <span class="n">bspyApp</span><span class="p">(</span><span class="n">workQueue</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="p">)</span>
         <span class="n">app</span><span class="o">.</span><span class="n">mainloop</span><span class="p">()</span>        
 
-    <span class="k">def</span> <span class="nf">add_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;add_spline&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">spline</span><span class="p">,)))</span>
+    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Show a `Spline` in the listbox.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;show&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">spline</span><span class="p">,)))</span>
 
     <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox and draw it.&quot;&quot;&quot;</span>
@@ -1285,24 +1285,24 @@ splines, and a set of controls to adjust and view the selected splines.  </p>
     
 
                             </div>
-                            <div id="bspyGraphics.add_spline" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#bspyGraphics.add_spline">#&nbsp;&nbsp</a>
+                            <div id="bspyGraphics.show" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#bspyGraphics.show">#&nbsp;&nbsp</a>
 
         
             <span class="def">def</span>
-            <span class="name">add_spline</span><span class="signature">(self, spline)</span>:
+            <span class="name">show</span><span class="signature">(self, spline)</span>:
     </div>
 
             <details>
             <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">add_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;add_spline&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">spline</span><span class="p">,)))</span>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Show a `Spline` in the listbox.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;show&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">spline</span><span class="p">,)))</span>
 </pre></div>
 
         </details>
 
-            <div class="docstring"><p>Add a <code>Spline</code> to the listbox.</p>
+            <div class="docstring"><p>Show a <code>Spline</code> in the listbox.</p>
 </div>
 
 

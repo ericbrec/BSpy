@@ -45,11 +45,11 @@ class bspyApp(tk.Tk):
 
     Examples
     --------
-    Creates a bspyApp, adds some splines, and launches the app (blocks on the main loop).
+    Creates a bspyApp, show some splines, and launches the app (blocks on the main loop).
     >>> app = bspyApp()
-    >>> app.add_spline(spline1)
-    >>> app.add_spline(spline2)
-    >>> app.add_spline(spline3)
+    >>> app.show(spline1)
+    >>> app.show(spline2)
+    >>> app.show(spline3)
     >>> app.mainloop()
     """
 
@@ -99,7 +99,7 @@ class bspyApp(tk.Tk):
         self.workQueue = workQueue
         if self.workQueue is not None:
             self.work = {
-                "add_spline" : self.add_spline,
+                "show" : self.show,
                 "draw" : self.draw,
                 "erase_all" : self.erase_all,
                 "empty" : self.empty,
@@ -120,8 +120,8 @@ class bspyApp(tk.Tk):
                     self.work[work[0]](*work[1])
         self.after(200, self._check_for_work)
 
-    def add_spline(self, spline):
-        """Add a `Spline` to the listbox. Can be called before app is running."""
+    def show(self, spline):
+        """Show a `Spline` in the listbox. Can be called before app is running."""
         self.splineList.append(spline)
         self.listBox.insert(tk.END, spline)
         
@@ -282,9 +282,9 @@ class bspyGraphics:
         app = bspyApp(workQueue=self.workQueue)
         app.mainloop()        
 
-    def add_spline(self, spline):
-        """Add a `Spline` to the listbox."""
-        self.workQueue.put(("add_spline", (spline,)))
+    def show(self, spline):
+        """Show a `Spline` in the listbox."""
+        self.workQueue.put(("show", (spline,)))
 
     def draw(self, spline):
         """Add a `Spline` to the listbox and draw it."""
