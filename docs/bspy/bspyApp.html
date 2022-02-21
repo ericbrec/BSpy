@@ -227,11 +227,13 @@
 
     <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Show a `Spline` in the listbox. Can be called before app is running.&quot;&quot;&quot;</span>
+        <span class="n">spline</span> <span class="o">=</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">make_drawable</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">,</span> <span class="n">spline</span><span class="p">)</span>
         
     <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox and draw it. Can only be called after the app is running.&quot;&quot;&quot;</span>
+        <span class="n">spline</span> <span class="o">=</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">make_drawable</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">,</span> <span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">selection_set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
@@ -530,11 +532,13 @@
 
     <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Show a `Spline` in the listbox. Can be called before app is running.&quot;&quot;&quot;</span>
+        <span class="n">spline</span> <span class="o">=</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">make_drawable</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">,</span> <span class="n">spline</span><span class="p">)</span>
         
     <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox and draw it. Can only be called after the app is running.&quot;&quot;&quot;</span>
+        <span class="n">spline</span> <span class="o">=</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">make_drawable</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">,</span> <span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">selection_set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
@@ -779,6 +783,7 @@ is the name of the widget class.</p>
             <summary>View Source</summary>
             <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Show a `Spline` in the listbox. Can be called before app is running.&quot;&quot;&quot;</span>
+        <span class="n">spline</span> <span class="o">=</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">make_drawable</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">,</span> <span class="n">spline</span><span class="p">)</span>
 </pre></div>
@@ -802,6 +807,7 @@ is the name of the widget class.</p>
             <summary>View Source</summary>
             <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox and draw it. Can only be called after the app is running.&quot;&quot;&quot;</span>
+        <span class="n">spline</span> <span class="o">=</span> <span class="n">DrawableSpline</span><span class="o">.</span><span class="n">make_drawable</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">splineList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">END</span><span class="p">,</span> <span class="n">spline</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">selection_set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">listBox</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
