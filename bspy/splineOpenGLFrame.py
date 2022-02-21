@@ -794,7 +794,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         glBindBuffer(GL_TEXTURE_BUFFER, self.splineDataBuffer)
         glBindTexture(GL_TEXTURE_BUFFER, self.splineTextureBuffer)
         glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, self.splineDataBuffer)
-        glBufferData(GL_TEXTURE_BUFFER, 4 * DrawableSpline.maxFloats, None, GL_STATIC_READ)
+        glBufferData(GL_TEXTURE_BUFFER, 4 * DrawableSpline._maxFloats, None, GL_STATIC_READ)
 
         self.parameterBuffer = glGenBuffers(1)
         glBindBuffer(GL_ARRAY_BUFFER, self.parameterBuffer)

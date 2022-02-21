@@ -234,7 +234,7 @@ class bspyApp(tk.Tk):
     def _ChangeOptions(self, options):
         """Handle when the spline options are changed."""
         for spline in self.frame.splineDrawList:
-            spline.SetOptions(options)
+            spline.set_options(options)
         self.frame.Update()
 
     def _FillColorChange(self):
@@ -244,7 +244,7 @@ class bspyApp(tk.Tk):
             newColor = askcolor(title="Set spline fill color", color="#%02x%02x%02x" % (int(oldColor[0]), int(oldColor[1]), int(oldColor[2])))
             if newColor[0] is not None:
                 for spline in self.frame.splineDrawList:
-                    spline.SetFillColor(newColor[0])
+                    spline.set_fill_color(newColor[0])
                 self.frame.Update()
 
     def _LineColorChange(self):
@@ -254,7 +254,7 @@ class bspyApp(tk.Tk):
             newColor = askcolor(title="Set spline line color", color="#%02x%02x%02x" % (int(oldColor[0]), int(oldColor[1]), int(oldColor[2])))
             if newColor[0] is not None:
                 for spline in self.frame.splineDrawList:
-                    spline.SetLineColor(newColor[0])
+                    spline.set_line_color(newColor[0])
                 self.frame.Update()
     
 class bspyGraphics:

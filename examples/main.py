@@ -23,6 +23,6 @@ if __name__=='__main__':
     app.show(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: x*x + y*y - 1))
     app.show(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: x*x - y*y))
     for i in range(8):
-        app.show(Spline(1, 1, (3,), (5,), (np.array([-1.0, -0.6, -0.2, 0.2, 0.6, 1.0, 1.0, 1.0]),), np.array([[0, i/8.0, 0, -i/8.0, 0]])))
+        app.show(Spline(1, 1, (3,), (5,), (np.array((-1.0, -0.6, -0.2, 0.2, 0.6, 1.0, 1.0, 1.0)),), np.array((0, i/8.0, 0, -i/8.0, 0))))
     app.show(Spline.load("C:/Users/ericb/OneDrive/Desktop/TomsNasty.npz", DrawableSpline))
     app.mainloop()
