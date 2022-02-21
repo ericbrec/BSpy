@@ -130,9 +130,9 @@ class DrawableSpline(Spline):
             xValues = np.linspace(knotList[0][spline.order[0] - 1], knotList[0][spline.nCoef[0]], spline.nCoef[0], dtype=np.float32)[:]
             zValues = np.linspace(knotList[1][spline.order[1] - 1], knotList[1][spline.nCoef[1]], spline.nCoef[1], dtype=np.float32)[:]
             xMesh, zMesh = np.meshgrid(xValues, zValues)
-            coefs[0] = xValues
+            coefs[0] = xMesh.T
             coefs[1] = spline.coefs[0]
-            coefs[2] = zValues
+            coefs[2] = zMesh.T
         elif spline.nInd == 2 and spline.nDep == 3:
             coefs[0:3] = spline.coefs
         else:

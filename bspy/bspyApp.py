@@ -122,11 +122,13 @@ class bspyApp(tk.Tk):
 
     def show(self, spline):
         """Show a `Spline` in the listbox. Can be called before app is running."""
+        spline = DrawableSpline.make_drawable(spline)
         self.splineList.append(spline)
         self.listBox.insert(tk.END, spline)
         
     def draw(self, spline):
         """Add a `Spline` to the listbox and draw it. Can only be called after the app is running."""
+        spline = DrawableSpline.make_drawable(spline)
         self.splineList.append(spline)
         self.listBox.insert(tk.END, spline)
         self.listBox.selection_set(self.listBox.size() - 1)
