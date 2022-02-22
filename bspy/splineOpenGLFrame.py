@@ -70,9 +70,14 @@ class SplineOpenGLFrame(OpenGLFrame):
             float rate = 0.0;
             float scale = uScreenScale.z > 0.0 ? -point.z : 1.0;
 
+            // Only consider points that lie within the clip bounds or whose derivative spans the clip bounds.
             if (point.z < uClipBounds[3] && point.z > uClipBounds[2] && 
-                point.y < scale * uClipBounds[1] && point.y > -scale * uClipBounds[1] &&
-                point.x < scale * uClipBounds[0] && point.x > -scale * uClipBounds[0])
+                ((point.y < scale * uClipBounds[1] && point.y > -scale * uClipBounds[1]) ||
+                (point.y >= scale * uClipBounds[1] && point.y + dPoint.y <= -scale * uClipBounds[1]) ||
+                (point.y <= -scale * uClipBounds[1] && point.y + dPoint.y >= scale * uClipBounds[1])) &&
+                ((point.x < scale * uClipBounds[0] && point.x > -scale * uClipBounds[0]) ||
+                (point.x >= scale * uClipBounds[0] && point.x + dPoint.x <= -scale * uClipBounds[0]) ||
+                (point.x <= -scale * uClipBounds[0] && point.x + dPoint.x >= scale * uClipBounds[0])))
             {
                 float zScale = -1.0 / point.z;
                 float zScale2 = zScale * zScale;
