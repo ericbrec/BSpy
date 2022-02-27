@@ -242,28 +242,17 @@ class Spline:
         See Also
         --------
         `insert_knots` : Insert new knots into a spline.
+        `trim` : Trim the domain of a spline.
         """
-        newKnots = self.nInd * [[]]
+        bounds = self.nInd * [[None, None]]
 
         for ind in left:
-            insertions = self.order[ind]
-            for i in range(len(self.knots[ind])):
-                if self.knots[ind][i] > self.knots[ind][0]:
-                    break
-                else:
-                    insertions -= 1
-            newKnots[ind] += insertions * [self.knots[ind][0]]
+            bounds[ind][0] = self.knots[ind][self.order[ind]-1]
 
         for ind in right:
-            insertions = self.order[ind]
-            for i in range(len(self.knots[ind])):
-                if self.knots[ind][-i - 1] < self.knots[ind][-1]:
-                    break
-                else:
-                    insertions -= 1
-            newKnots[ind] += insertions * [self.knots[ind][-1]]
+            bounds[ind][1] = self.knots[ind][self.nCoef[ind]]
 
-        return self.insert_knots(newKnots)
+        return self.trim(bounds)
 
     def common_basis(self, splines, indMap):
         """
@@ -308,24 +297,26 @@ class Spline:
         # Step 2: Compute knot multiplicities for each aligned independent variable.
         knots = []
         for (map, order) in zip(indMap, orders):
-            multiplicities = []
-            leftKnot = splines[0].knots[map[0]][0]
-            rightKnot = splines[0].knots[map[0]][-1]
+            multiplicities = [] # List of shared knots and their multiplicities: [[knot0, multiplicity0], [knot1, multiplicity1], ...]
+            ind = map[0]
+            leftKnot = splines[0].knots[ind][splines[0].order[ind]-1]
+            rightKnot = splines[0].knots[ind][splines[0].nCoef[ind]]
             for (spline, ind) in zip(splines, map):
-                assert spline.knots[ind][0] == leftKnot
-                assert spline.knots[ind][-1] == rightKnot
-                uniqueKnots, counts = np.unique(spline.knots[ind], return_counts=True)
-                match = 0
+                assert spline.knots[ind][spline.order[ind]-1] == leftKnot
+                assert spline.knots[ind][spline.nCoef[ind]] == rightKnot
+                uniqueKnots, counts = np.unique(spline.knots[ind][spline.order[ind]-1:spline.nCoef[ind]+1], return_counts=True)
+                match = 0 # Index of matching knot in the multiplicities list
                 for (knot, count) in zip(uniqueKnots, counts):
                     while match < len(multiplicities) and knot > multiplicities[match][0]:
                         match += 1
                     if match == len(multiplicities) or knot < multiplicities[match][0]:
+                        # No matching knot, so add the current knot to the multiplicities list.
                         # Account for elevation increase in knot count.
                         multiplicities.insert(match, [knot, count + order - spline.order[ind]])
                     else:
                         # Account for elevation increase in knot count.
                         multiplicities[match][1] = max(multiplicities[match][1], count + order - spline.order[ind])
-                        match += 1
+                    match += 1
             knots.append(multiplicities)
 
         # Step 3: Elevate and insert missing knots to each spline accordingly.
@@ -336,7 +327,7 @@ class Spline:
             for (map, order, multiplicities) in zip(indMap, orders, knots):
                 ind = map[i]
                 m[ind] = order - spline.order[ind]
-                uniqueKnots, counts = np.unique(spline.knots[ind], return_counts=True)
+                uniqueKnots, counts = np.unique(spline.knots[ind][spline.order[ind]-1:spline.nCoef[ind]+1], return_counts=True)
                 match = 0
                 for (knot, count) in zip(uniqueKnots, counts):
                     while match < len(multiplicities) and knot > multiplicities[match][0]:
@@ -827,8 +818,9 @@ class Spline:
         sliceIm1 = (self.nInd + 1) * [fullSlice]
         sliceI = (self.nInd + 1) * [fullSlice]
         for ind in range(self.nInd):
+            # We can't reference self.nCoef[ind] in this loop because we are expanding the knots and coefs arrays.
             for knot in newKnots[ind]:
-                if knot < knots[ind][0] or knot > knots[ind][-self.order[ind]]:
+                if knot < knots[ind][self.order[ind]-1] or knot > knots[ind][-self.order[ind]]:
                     raise ValueError(f"Knot insertion outside domain: {knot}")
                 if knot == knots[ind][-self.order[ind]]:
                     position = len(knots[ind]) - self.order[ind]
@@ -1048,13 +1040,13 @@ class Spline:
         Parameters
         ----------
         newDomain : array-like
-            nInd x 2 array of the new upper and lower bounds on each of the independent variables. 
-            Same form as returned from `domain`.
+            nInd x 2 array of the new upper and lower bounds on each of the independent variables (same form as 
+            returned from `domain`). If a bound is None or nan then the original bound (and knots) are left unchanged.
 
         Returns
         -------
         spline : `Spline`
-            Trimmed spline.
+            Trimmed spline. If all the knots are unchanged, the original spline is returned.
 
         See Also
         --------
@@ -1066,32 +1058,42 @@ class Spline:
         newKnotsList = []
         for (order, knots, bounds) in zip(self.order, self.knots, newDomain):
             assert len(bounds) == 2
-            assert knots[order - 1] <= bounds[0] < bounds[1] <= knots[-order]
             unique, counts = np.unique(knots, return_counts=True)
+            leftBound = False # Do we have a left bound?
+            newKnots = []
 
-            multiplicity = order
-            i = np.searchsorted(unique, bounds[0])
-            if unique[i] == bounds[0]:
-                multiplicity -= counts[i]
-            newKnots = multiplicity * [bounds[0]]
+            if bounds[0] is not None and not np.isnan(bounds[0]):
+                assert knots[order - 1] <= bounds[0] <= knots[-order]
+                leftBound = True
+                multiplicity = order
+                i = np.searchsorted(unique, bounds[0])
+                if unique[i] == bounds[0]:
+                    multiplicity -= counts[i]
+                newKnots += multiplicity * [bounds[0]]
 
-            multiplicity = order
-            i = np.searchsorted(unique, bounds[1])
-            if unique[i] == bounds[1]:
-                multiplicity -= counts[i]
-            newKnots += multiplicity * [bounds[1]]
+            if bounds[1] is not None and not np.isnan(bounds[1]):
+                assert knots[order - 1] <= bounds[1] <= knots[-order]
+                if leftBound:
+                    assert bounds[0] < bounds[1]
+                multiplicity = order
+                i = np.searchsorted(unique, bounds[1])
+                if unique[i] == bounds[1]:
+                    multiplicity -= counts[i]
+                newKnots += multiplicity * [bounds[1]]
 
             newKnotsList.append(newKnots)
         
         # Step 2: Insert the knots.
         spline = self.insert_knots(newKnotsList)
+        if spline is self:
+            return spline
 
         # Step 3: Trim the knots and coefficients.
         knotsList = []
         coefIndex = [slice(None)] # First index is for nDep
         for (order, knots, bounds) in zip(spline.order, spline.knots, newDomain):
-            leftIndex = np.searchsorted(knots, bounds[0])
-            rightIndex = np.searchsorted(knots, bounds[1])
+            leftIndex = order - 1 if bounds[0] is None or np.isnan(bounds[0]) else np.searchsorted(knots, bounds[0])
+            rightIndex = len(knots) - order if bounds[1] is None or np.isnan(bounds[1]) else np.searchsorted(knots, bounds[1])
             knotsList.append(knots[leftIndex:rightIndex + order])
             coefIndex.append(slice(leftIndex, rightIndex))
         coefs = spline.coefs[coefIndex]

@@ -555,9 +555,9 @@ truthSurface = \
 
 def test_add():
     maxerror = 0.0
-    spline1 = bspy.Spline(1, 2, (5,), (5,), [np.array([0, 0, 0, 0, 0.3, 0.5, 0.5, 1, 1, 1], float)], 
+    spline1 = bspy.Spline(1, 2, (5,), (5,), [np.array([0, 0, 0, 0, 0.2, 0.5, 0.5, 1, 1, 1], float)], 
         np.array(((260, 100), (100, 260), (260, 420), (580, 260), (420, 100)), float))
-    spline2 = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0, 0.5, 0.5, 1, 1, 1, 1], float)], 
+    spline2 = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0.2, 0.3, 0.4, 0.5, 0.5, 1, 1], float)], 
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
     
     # Add with shared independent variable.
@@ -718,9 +718,9 @@ def test_scale():
 
 def test_subtract():
     maxerror = 0.0
-    spline1 = bspy.Spline(1, 2, (5,), (5,), [np.array([0, 0, 0, 0, 0.3, 0.5, 0.5, 1, 1, 1], float)], 
+    spline1 = bspy.Spline(1, 2, (5,), (5,), [np.array([0, 0, 0, 0, 0.2, 0.5, 0.5, 1, 1, 1], float)], 
         np.array(((260, 100), (100, 260), (260, 420), (580, 260), (420, 100)), float))
-    spline2 = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0, 0.5, 0.5, 1, 1, 1, 1], float)], 
+    spline2 = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0.2, 0.3, 0.4, 0.5, 0.5, 1, 1], float)], 
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
     
     # Subtract with shared independent variable.
