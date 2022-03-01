@@ -493,63 +493,6 @@ class Spline:
             coefs += vector[i] * self.coefs[i]
         return type(self)(self.nInd, 1, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
 
-    def evaluate(self, uvw):
-        """
-        Compute the value of the spline at a given parameter value.
-
-        Parameters
-        ----------
-        uvw : `iterable`
-            An iterable of length `nInd` that specifies the values of each independent variable (the parameter value).
-
-        Returns
-        -------
-        value : `numpy.array`
-            The value of the spline at the given parameter value.
-
-        See Also
-        --------
-        `derivative` : Compute the derivative of the spline at a given parameter value.
-
-        Notes
-        -----
-        The evaluate method uses the de Boor recurrence relations for a B-spline
-        series to evaluate a spline function.  The non-zero B-splines are
-        evaluated, then the dot product of those B-splines with the vector of
-        B-spline coefficients is computed.
-        """
-        def b_spline_values(knot, knots, order, u):
-            basis = np.zeros(order, knots.dtype)
-            basis[-1] = 1.0
-            for degree in range(1, order):
-                b = order - degree
-                for i in range(knot - degree, knot):
-                    alpha = (u - knots[i]) / (knots[i + degree] - knots[i])
-                    basis[b - 1] += (1.0 - alpha) * basis[b]
-                    basis[b] *= alpha
-                    b += 1
-            return basis
-
-        # Check for evaluation point inside domain
-        dom = self.domain()
-        for ix in range(self.nInd):
-            if uvw[ix] < dom[ix][0] or uvw[ix] > dom[ix][1]:
-                raise ValueError(f"Spline evaluation outside domain: {uvw}")
-
-        # Grab all of the appropriate coefficients
-        mySection = [slice(0, self.nDep)]
-        myIndices = []
-        for iv in range(self.nInd):
-            ix = np.searchsorted(self.knots[iv], uvw[iv], 'right')
-            ix = min(ix, self.nCoef[iv])
-            myIndices.append(ix)
-            mySection.append(slice(ix - self.order[iv], ix))
-        myCoefs = self.coefs[mySection]
-        for iv in range(self.nInd - 1, -1, -1):
-            bValues = b_spline_values(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv])
-            myCoefs = myCoefs @ bValues
-        return myCoefs
-
     def elevate(self, m):
         """
         Elevate a spline, increasing its order by `m`.
@@ -724,6 +667,63 @@ class Spline:
         
         return type(self)(self.nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy, self.metadata)
 
+    def evaluate(self, uvw):
+        """
+        Compute the value of the spline at a given parameter value.
+
+        Parameters
+        ----------
+        uvw : `iterable`
+            An iterable of length `nInd` that specifies the values of each independent variable (the parameter value).
+
+        Returns
+        -------
+        value : `numpy.array`
+            The value of the spline at the given parameter value.
+
+        See Also
+        --------
+        `derivative` : Compute the derivative of the spline at a given parameter value.
+
+        Notes
+        -----
+        The evaluate method uses the de Boor recurrence relations for a B-spline
+        series to evaluate a spline function.  The non-zero B-splines are
+        evaluated, then the dot product of those B-splines with the vector of
+        B-spline coefficients is computed.
+        """
+        def b_spline_values(knot, knots, order, u):
+            basis = np.zeros(order, knots.dtype)
+            basis[-1] = 1.0
+            for degree in range(1, order):
+                b = order - degree
+                for i in range(knot - degree, knot):
+                    alpha = (u - knots[i]) / (knots[i + degree] - knots[i])
+                    basis[b - 1] += (1.0 - alpha) * basis[b]
+                    basis[b] *= alpha
+                    b += 1
+            return basis
+
+        # Check for evaluation point inside domain
+        dom = self.domain()
+        for ix in range(self.nInd):
+            if uvw[ix] < dom[ix][0] or uvw[ix] > dom[ix][1]:
+                raise ValueError(f"Spline evaluation outside domain: {uvw}")
+
+        # Grab all of the appropriate coefficients
+        mySection = [slice(0, self.nDep)]
+        myIndices = []
+        for iv in range(self.nInd):
+            ix = np.searchsorted(self.knots[iv], uvw[iv], 'right')
+            ix = min(ix, self.nCoef[iv])
+            myIndices.append(ix)
+            mySection.append(slice(ix - self.order[iv], ix))
+        myCoefs = self.coefs[mySection]
+        for iv in range(self.nInd - 1, -1, -1):
+            bValues = b_spline_values(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv])
+            myCoefs = myCoefs @ bValues
+        return myCoefs
+
     def fold(self, foldedInd):
         """
         Fold the coefficients of a spline's indicated independent variables into the coefficients of the remaining independent variables, retaining the 
@@ -841,6 +841,27 @@ class Spline:
             return self
         else: 
             return type(self)(self.nInd, self.nDep, self.order, coefs.shape[1:], knots, coefs, self.accuracy, self.metadata)
+
+    @staticmethod
+    def least_squares(dataPoints):
+        """
+        Fit a curve to a string of data points using the method of least squares.
+
+        Parameters
+        ----------
+        dataPoints : `iterable` containing the data points to fit.
+            Each of the data points is of length nDep.
+
+        Returns
+        -------
+        spline : `Spline`
+            A spline curve which approximates the data points.
+        """
+        rhsPoints = []
+        uValues = []
+        for dp in list(dataPoints):
+            uValues.append(dp[0])
+            rhsPoints.append(dp[1:])
 
     @staticmethod
     def load(fileName, splineType=None):
