@@ -978,6 +978,27 @@ class Spline:
             return type(self)(self.nInd, self.nDep, self.order, coefs.shape[1:], knots, coefs, self.accuracy, self.metadata)
 
     @staticmethod
+    def least_squares(dataPoints):
+        """
+        Fit a curve to a string of data points using the method of least squares.
+
+        Parameters
+        ----------
+        dataPoints : `iterable` containing the data points to fit.
+            Each of the data points is of length nDep.
+
+        Returns
+        -------
+        spline : `Spline`
+            A spline curve which approximates the data points.
+        """
+        rhsPoints = []
+        uValues = []
+        for dp in list(dataPoints):
+            uValues.append(dp[0])
+            rhsPoints.append(dp[1:])
+
+    @staticmethod
     def load(fileName, splineType=None):
         kw = np.load(fileName)
         order = kw["order"]
