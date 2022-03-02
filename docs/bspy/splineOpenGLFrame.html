@@ -226,9 +226,14 @@
 <span class="s2">            float rate = 0.0;</span>
 <span class="s2">            float scale = uScreenScale.z &gt; 0.0 ? -point.z : 1.0;</span>
 
+<span class="s2">            // Only consider points that lie within the clip bounds or whose derivative spans the clip bounds.</span>
 <span class="s2">            if (point.z &lt; uClipBounds[3] &amp;&amp; point.z &gt; uClipBounds[2] &amp;&amp; </span>
-<span class="s2">                point.y &lt; scale * uClipBounds[1] &amp;&amp; point.y &gt; -scale * uClipBounds[1] &amp;&amp;</span>
-<span class="s2">                point.x &lt; scale * uClipBounds[0] &amp;&amp; point.x &gt; -scale * uClipBounds[0])</span>
+<span class="s2">                ((point.y &lt; scale * uClipBounds[1] &amp;&amp; point.y &gt; -scale * uClipBounds[1]) ||</span>
+<span class="s2">                (point.y &gt;= scale * uClipBounds[1] &amp;&amp; point.y + dPoint.y &lt;= -scale * uClipBounds[1]) ||</span>
+<span class="s2">                (point.y &lt;= -scale * uClipBounds[1] &amp;&amp; point.y + dPoint.y &gt;= scale * uClipBounds[1])) &amp;&amp;</span>
+<span class="s2">                ((point.x &lt; scale * uClipBounds[0] &amp;&amp; point.x &gt; -scale * uClipBounds[0]) ||</span>
+<span class="s2">                (point.x &gt;= scale * uClipBounds[0] &amp;&amp; point.x + dPoint.x &lt;= -scale * uClipBounds[0]) ||</span>
+<span class="s2">                (point.x &lt;= -scale * uClipBounds[0] &amp;&amp; point.x + dPoint.x &gt;= scale * uClipBounds[0])))</span>
 <span class="s2">            {</span>
 <span class="s2">                float zScale = -1.0 / point.z;</span>
 <span class="s2">                float zScale2 = zScale * zScale;</span>
@@ -1238,9 +1243,14 @@
 <span class="s2">            float rate = 0.0;</span>
 <span class="s2">            float scale = uScreenScale.z &gt; 0.0 ? -point.z : 1.0;</span>
 
+<span class="s2">            // Only consider points that lie within the clip bounds or whose derivative spans the clip bounds.</span>
 <span class="s2">            if (point.z &lt; uClipBounds[3] &amp;&amp; point.z &gt; uClipBounds[2] &amp;&amp; </span>
-<span class="s2">                point.y &lt; scale * uClipBounds[1] &amp;&amp; point.y &gt; -scale * uClipBounds[1] &amp;&amp;</span>
-<span class="s2">                point.x &lt; scale * uClipBounds[0] &amp;&amp; point.x &gt; -scale * uClipBounds[0])</span>
+<span class="s2">                ((point.y &lt; scale * uClipBounds[1] &amp;&amp; point.y &gt; -scale * uClipBounds[1]) ||</span>
+<span class="s2">                (point.y &gt;= scale * uClipBounds[1] &amp;&amp; point.y + dPoint.y &lt;= -scale * uClipBounds[1]) ||</span>
+<span class="s2">                (point.y &lt;= -scale * uClipBounds[1] &amp;&amp; point.y + dPoint.y &gt;= scale * uClipBounds[1])) &amp;&amp;</span>
+<span class="s2">                ((point.x &lt; scale * uClipBounds[0] &amp;&amp; point.x &gt; -scale * uClipBounds[0]) ||</span>
+<span class="s2">                (point.x &gt;= scale * uClipBounds[0] &amp;&amp; point.x + dPoint.x &lt;= -scale * uClipBounds[0]) ||</span>
+<span class="s2">                (point.x &lt;= -scale * uClipBounds[0] &amp;&amp; point.x + dPoint.x &gt;= scale * uClipBounds[0])))</span>
 <span class="s2">            {</span>
 <span class="s2">                float zScale = -1.0 / point.z;</span>
 <span class="s2">                float zScale2 = zScale * zScale;</span>
@@ -2287,7 +2297,7 @@ highlightcolor, highlightthickness, relief, takefocus, visual, width.</p>
                             <div id="SplineOpenGLFrame.computeSampleRateCode" class="classattr">
                                             <div class="attr variable"><a class="headerlink" href="#SplineOpenGLFrame.computeSampleRateCode">#&nbsp;&nbsp</a>
 
-        <span class="name">computeSampleRateCode</span><span class="default_value"> = &#39;\n        float ComputeSampleRate(in vec4 point, in vec3 dPoint, in vec3 d2Point, in float minRate)\n        {\n            float rate = 0.0;\n            float scale = uScreenScale.z &gt; 0.0 ? -point.z : 1.0;\n\n            if (point.z &lt; uClipBounds[3] &amp;&amp; point.z &gt; uClipBounds[2] &amp;&amp; \n                point.y &lt; scale * uClipBounds[1] &amp;&amp; point.y &gt; -scale * uClipBounds[1] &amp;&amp;\n                point.x &lt; scale * uClipBounds[0] &amp;&amp; point.x &gt; -scale * uClipBounds[0])\n            {\n                float zScale = -1.0 / point.z;\n                float zScale2 = zScale * zScale;\n                float zScale3 = zScale2 * zScale;\n                vec2 projection = uScreenScale.z &gt; 0.0 ? \n                    vec2(uScreenScale.x * (d2Point.x * zScale - 2.0 * dPoint.x * dPoint.z * zScale2 +\n                        point.x * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2)),\n                        uScreenScale.y * (d2Point.y * zScale - 2.0 * dPoint.y * dPoint.z * zScale2 +\n                        point.y * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2)))\n                    : vec2(uScreenScale.x * d2Point.x, uScreenScale.y * d2Point.y);\n                rate = max(sqrt(length(projection)), minRate);\n            }\n            return rate;\n        }\n    &#39;</span>
+        <span class="name">computeSampleRateCode</span><span class="default_value"> = &#39;\n        float ComputeSampleRate(in vec4 point, in vec3 dPoint, in vec3 d2Point, in float minRate)\n        {\n            float rate = 0.0;\n            float scale = uScreenScale.z &gt; 0.0 ? -point.z : 1.0;\n\n            // Only consider points that lie within the clip bounds or whose derivative spans the clip bounds.\n            if (point.z &lt; uClipBounds[3] &amp;&amp; point.z &gt; uClipBounds[2] &amp;&amp; \n                ((point.y &lt; scale * uClipBounds[1] &amp;&amp; point.y &gt; -scale * uClipBounds[1]) ||\n                (point.y &gt;= scale * uClipBounds[1] &amp;&amp; point.y + dPoint.y &lt;= -scale * uClipBounds[1]) ||\n                (point.y &lt;= -scale * uClipBounds[1] &amp;&amp; point.y + dPoint.y &gt;= scale * uClipBounds[1])) &amp;&amp;\n                ((point.x &lt; scale * uClipBounds[0] &amp;&amp; point.x &gt; -scale * uClipBounds[0]) ||\n                (point.x &gt;= scale * uClipBounds[0] &amp;&amp; point.x + dPoint.x &lt;= -scale * uClipBounds[0]) ||\n                (point.x &lt;= -scale * uClipBounds[0] &amp;&amp; point.x + dPoint.x &gt;= scale * uClipBounds[0])))\n            {\n                float zScale = -1.0 / point.z;\n                float zScale2 = zScale * zScale;\n                float zScale3 = zScale2 * zScale;\n                vec2 projection = uScreenScale.z &gt; 0.0 ? \n                    vec2(uScreenScale.x * (d2Point.x * zScale - 2.0 * dPoint.x * dPoint.z * zScale2 +\n                        point.x * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2)),\n                        uScreenScale.y * (d2Point.y * zScale - 2.0 * dPoint.y * dPoint.z * zScale2 +\n                        point.y * (2.0 * dPoint.z * dPoint.z * zScale3 - d2Point.z * zScale2)))\n                    : vec2(uScreenScale.x * d2Point.x, uScreenScale.y * d2Point.y);\n                rate = max(sqrt(length(projection)), minRate);\n            }\n            return rate;\n        }\n    &#39;</span>
     </div>
 
     

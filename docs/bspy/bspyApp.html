@@ -366,6 +366,11 @@
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A graphics engine to display splines. It launches a `bspyApp` and issues commands to the app.</span>
 
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    variableDictionary : `dict`</span>
+<span class="sd">        A dictionary of variable names, typically `locals()`, used to assign names to splines.</span>
+
 <span class="sd">    See Also</span>
 <span class="sd">    --------</span>
 <span class="sd">    `bspyApp` : A tkinter app (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a listbox full of </span>
@@ -374,16 +379,17 @@
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
 <span class="sd">    Launch a bspyApp and tell it to draw some splines.</span>
-<span class="sd">    &gt;&gt;&gt; graphics = bspyGraphics()</span>
+<span class="sd">    &gt;&gt;&gt; graphics = bspyGraphics(locals())</span>
 <span class="sd">    &gt;&gt;&gt; graphics.draw(spline1)</span>
 <span class="sd">    &gt;&gt;&gt; graphics.draw(spline2)</span>
 <span class="sd">    &gt;&gt;&gt; graphics.draw(spline3)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">variableDictionary</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">appThread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_app_thread</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">appThread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">variableDictionary</span> <span class="o">=</span> <span class="n">variableDictionary</span>
             
     <span class="k">def</span> <span class="nf">_app_thread</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">app</span> <span class="o">=</span> <span class="n">bspyApp</span><span class="p">(</span><span class="n">workQueue</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="p">)</span>
@@ -391,10 +397,18 @@
 
     <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Show a `Spline` in the listbox.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variableDictionary</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="n">spline</span><span class="p">:</span>
+                <span class="n">spline</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;Name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
+                <span class="k">break</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;show&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">spline</span><span class="p">,)))</span>
 
     <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox and draw it.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variableDictionary</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="n">spline</span><span class="p">:</span>
+                <span class="n">spline</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;Name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
+                <span class="k">break</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;draw&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">spline</span><span class="p">,)))</span>
 
     <span class="k">def</span> <span class="nf">erase_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -1186,6 +1200,11 @@ The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> th
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A graphics engine to display splines. It launches a `bspyApp` and issues commands to the app.</span>
 
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    variableDictionary : `dict`</span>
+<span class="sd">        A dictionary of variable names, typically `locals()`, used to assign names to splines.</span>
+
 <span class="sd">    See Also</span>
 <span class="sd">    --------</span>
 <span class="sd">    `bspyApp` : A tkinter app (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a listbox full of </span>
@@ -1194,16 +1213,17 @@ The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> th
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
 <span class="sd">    Launch a bspyApp and tell it to draw some splines.</span>
-<span class="sd">    &gt;&gt;&gt; graphics = bspyGraphics()</span>
+<span class="sd">    &gt;&gt;&gt; graphics = bspyGraphics(locals())</span>
 <span class="sd">    &gt;&gt;&gt; graphics.draw(spline1)</span>
 <span class="sd">    &gt;&gt;&gt; graphics.draw(spline2)</span>
 <span class="sd">    &gt;&gt;&gt; graphics.draw(spline3)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">variableDictionary</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">appThread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_app_thread</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">appThread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">variableDictionary</span> <span class="o">=</span> <span class="n">variableDictionary</span>
             
     <span class="k">def</span> <span class="nf">_app_thread</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">app</span> <span class="o">=</span> <span class="n">bspyApp</span><span class="p">(</span><span class="n">workQueue</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="p">)</span>
@@ -1211,10 +1231,18 @@ The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> th
 
     <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Show a `Spline` in the listbox.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variableDictionary</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="n">spline</span><span class="p">:</span>
+                <span class="n">spline</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;Name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
+                <span class="k">break</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;show&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">spline</span><span class="p">,)))</span>
 
     <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox and draw it.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variableDictionary</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="n">spline</span><span class="p">:</span>
+                <span class="n">spline</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;Name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
+                <span class="k">break</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;draw&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">spline</span><span class="p">,)))</span>
 
     <span class="k">def</span> <span class="nf">erase_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -1254,6 +1282,13 @@ The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> th
 
             <div class="docstring"><p>A graphics engine to display splines. It launches a <code><a href="#bspyApp">bspyApp</a></code> and issues commands to the app.</p>
 
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>variableDictionary</strong> (<code>dict</code>):
+A dictionary of variable names, typically <code>locals()</code>, used to assign names to splines.</li>
+</ul>
+
 <h6 id="see-also">See Also</h6>
 
 <p><code><a href="#bspyApp">bspyApp</a></code>:  A tkinter app (<code>tkinter.Tk</code>) that hosts a <code>SplineOpenGLFrame</code>, a listbox full of 
@@ -1263,7 +1298,7 @@ splines, and a set of controls to adjust and view the selected splines.  </p>
 
 <p>Launch a bspyApp and tell it to draw some splines.</p>
 
-<div class="pdoc-code codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">graphics</span> <span class="o">=</span> <span class="n">bspyGraphics</span><span class="p">()</span>
+<div class="pdoc-code codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">graphics</span> <span class="o">=</span> <span class="n">bspyGraphics</span><span class="p">(</span><span class="nb">locals</span><span class="p">())</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">graphics</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">spline1</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">graphics</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">spline2</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">graphics</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">spline3</span><span class="p">)</span>
@@ -1275,15 +1310,16 @@ splines, and a set of controls to adjust and view the selected splines.  </p>
                                         <div class="attr function"><a class="headerlink" href="#bspyGraphics.__init__">#&nbsp;&nbsp</a>
 
         
-            <span class="name">bspyGraphics</span><span class="signature">()</span>
+            <span class="name">bspyGraphics</span><span class="signature">(variableDictionary)</span>
     </div>
 
             <details>
             <summary>View Source</summary>
-            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">variableDictionary</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">appThread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_app_thread</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">appThread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">variableDictionary</span> <span class="o">=</span> <span class="n">variableDictionary</span>
 </pre></div>
 
         </details>
@@ -1303,6 +1339,10 @@ splines, and a set of controls to adjust and view the selected splines.  </p>
             <summary>View Source</summary>
             <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Show a `Spline` in the listbox.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variableDictionary</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="n">spline</span><span class="p">:</span>
+                <span class="n">spline</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;Name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
+                <span class="k">break</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;show&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">spline</span><span class="p">,)))</span>
 </pre></div>
 
@@ -1325,6 +1365,10 @@ splines, and a set of controls to adjust and view the selected splines.  </p>
             <summary>View Source</summary>
             <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spline</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add a `Spline` to the listbox and draw it.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variableDictionary</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="n">spline</span><span class="p">:</span>
+                <span class="n">spline</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;Name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
+                <span class="k">break</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">workQueue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&quot;draw&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">spline</span><span class="p">,)))</span>
 </pre></div>
 

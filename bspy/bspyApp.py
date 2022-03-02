@@ -261,6 +261,11 @@ class bspyGraphics:
     """
     A graphics engine to display splines. It launches a `bspyApp` and issues commands to the app.
 
+    Parameters
+    ----------
+    variableDictionary : `dict`
+        A dictionary of variable names, typically `locals()`, used to assign names to splines.
+
     See Also
     --------
     `bspyApp` : A tkinter app (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a listbox full of 
@@ -269,16 +274,17 @@ class bspyGraphics:
     Examples
     --------
     Launch a bspyApp and tell it to draw some splines.
-    >>> graphics = bspyGraphics()
+    >>> graphics = bspyGraphics(locals())
     >>> graphics.draw(spline1)
     >>> graphics.draw(spline2)
     >>> graphics.draw(spline3)
     """
 
-    def __init__(self):
+    def __init__(self, variableDictionary):
         self.workQueue = queue.Queue()
         self.appThread = threading.Thread(target=self._app_thread)
         self.appThread.start()
+        self.variableDictionary = variableDictionary
             
     def _app_thread(self):
         app = bspyApp(workQueue=self.workQueue)
@@ -286,10 +292,18 @@ class bspyGraphics:
 
     def show(self, spline):
         """Show a `Spline` in the listbox."""
+        for name, value in self.variableDictionary.items():
+            if value is spline:
+                spline.metadata["Name"] = name
+                break
         self.workQueue.put(("show", (spline,)))
 
     def draw(self, spline):
         """Add a `Spline` to the listbox and draw it."""
+        for name, value in self.variableDictionary.items():
+            if value is spline:
+                spline.metadata["Name"] = name
+                break
         self.workQueue.put(("draw", (spline,)))
 
     def erase_all(self):

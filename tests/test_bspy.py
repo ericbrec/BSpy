@@ -636,6 +636,20 @@ def test_evaluate():
             i += 1
     assert maxerror <= 2.5 * np.finfo(float).eps
 
+def test_extrapolate():
+    maxerror = 0.0
+    spline = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0.2, 0.3, 0.4, 0.5, 0.5, 1, 1], float)], 
+        np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
+    extrapolated = spline.extrapolate([[-0.5, 1.5]], [2])
+    maxerror = 0.0
+    #for u in np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], 3):
+    for u in np.linspace(.49, spline.knots[0][spline.nCoef[0]], 2):
+        for i in range(0, 3):
+            [x, y] = spline.derivative([i],[u])
+            [xTest, yTest] = extrapolated.derivative([i],[u])
+            maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
+            assert maxerror <= np.finfo(float).eps
+
 def test_fold_unfold():
     nInd = 3
     nDep = 3
