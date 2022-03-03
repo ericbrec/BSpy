@@ -842,15 +842,24 @@ class Spline:
 
             # Extrapolate right side as needed by integrating coefficients to new exterior knots.
             if bounds[1] is not None and not np.isnan(bounds[1]):
+                # For the right bound, we first need to copy the right bound derivatives into the right (stop) position.
+                # (The left bound derivatives were already in right left (start) position.)
+                for j in range(continuity, 0, -1):
+                    sliceJm1Ip1[0] = j
+                    sliceJm1I[0] = j
+                    sliceJm1Ip1[ind + 2] = slicer.stop - 1
+                    sliceJm1I[ind + 2] = slicer.stop - 1 - j
+                    dCoefs[tuple(sliceJm1Ip1)] = dCoefs[tuple(sliceJm1I)]
+                # Now we can integrate the coefficients as usual.
                 for j in range(continuity, 0, -1):
                     sliceJm1Ip1[0] = j - 1
                     sliceJm1I[0] = j - 1
                     sliceJI[0] = j
-                    for i in range(slicer.stop - j, nCoef[ind] - j):
+                    for i in range(slicer.stop - 1, nCoef[ind] - j):
                         sliceJm1Ip1[ind + 2] = i + 1
                         sliceJm1I[ind + 2] = i
-                        sliceJI[ind + 2] = i - 1 if j < continuity else slicer.stop - continuity - 1
-                        dCoefs[tuple(sliceJm1Ip1)] = dCoefs[tuple(sliceJm1I)] + (knots[ind][i + self.order[ind]] - knots[ind][i + j]) * dCoefs[tuple(sliceJI)]
+                        sliceJI[ind + 2] = i if j < continuity else slicer.stop - 1
+                        dCoefs[tuple(sliceJm1Ip1)] = dCoefs[tuple(sliceJm1I)] + (knots[ind][i - j + self.order[ind]] - knots[ind][i]) * dCoefs[tuple(sliceJI)]
 
             # Restore slicer for current independent variable.
             sliceJI[ind + 2] = slicer
