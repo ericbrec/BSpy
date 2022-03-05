@@ -842,7 +842,7 @@ class Spline:
 
             # Extrapolate right side as needed by integrating coefficients to new exterior knots.
             if bounds[1] is not None and not np.isnan(bounds[1]):
-                # For the right bound, we first need to copy the right bound derivatives into the right (stop) position.
+                # For the right bound, we first need to copy the right bound derivatives into the right (stop-1) position.
                 # (The left bound derivatives were already in right left (start) position.)
                 for j in range(continuity, 0, -1):
                     sliceJm1Ip1[0] = j
