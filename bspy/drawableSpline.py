@@ -164,6 +164,8 @@ class DrawableSpline(Spline):
         """
         Convert a `Spline` into a `DrawableSpline` that can be drawn in a `SplineOpenGLFrame`. Converts 
         1D splines into 3D curves and 2D splines into surfaces (y-axis hold amplitude).
+
+        The drawable spline will share the original spline's metadata (metadata changes are shared).
         """
         if isinstance(spline, DrawableSpline):
             return spline
@@ -189,7 +191,15 @@ class DrawableSpline(Spline):
         else:
             raise ValueError("Can't convert to drawable spline.")
         
-        return DrawableSpline(spline.nInd, 4, spline.order, spline.nCoef, knotList, coefs, spline.accuracy, spline.metadata)
+        drawable = DrawableSpline(spline.nInd, 4, spline.order, spline.nCoef, knotList, coefs, spline.accuracy)
+        drawable.metadata = spline.metadata # Make the original spline share its metadata with its drawable spline
+        if not "fillColor" in drawable.metadata:
+            drawable.metadata["fillColor"] = np.array((0.0, 1.0, 0.0, 1.0), np.float32)
+        if not "lineColor" in drawable.metadata:
+            drawable.metadata["lineColor"] = np.array((0.0, 0.0, 0.0, 1.0) if drawable.nInd > 1 else (1.0, 1.0, 1.0, 1.0), np.float32)
+        if not "options" in drawable.metadata:
+            drawable.metadata["options"] = drawable.SHADED | drawable.BOUNDARY
+        return drawable
 
     def _DrawPoints(self, frame, drawCoefficients):
         """
