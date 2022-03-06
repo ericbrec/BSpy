@@ -228,8 +228,11 @@ class DrawableSpline(Spline):
         size = 4 * 4 * len(drawCoefficients)
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
         glEnableVertexAttribArray(frame.aCurveParameters)
-        glPatchParameteri(GL_PATCH_VERTICES, 1)
-        glDrawArraysInstanced(GL_PATCHES, 0, 1, drawCoefficients.shape[0] - self.order[0] + 1)
+        if frame.tessellationEnabled:
+            glPatchParameteri(GL_PATCH_VERTICES, 1)
+            glDrawArraysInstanced(GL_PATCHES, 0, 1, drawCoefficients.shape[0] - self.order[0] + 1)
+        else:
+            glDrawArraysInstanced(GL_POINTS, 0, 1, drawCoefficients.shape[0] - self.order[0] + 1)
         glDisableVertexAttribArray(frame.aCurveParameters)
         glUseProgram(0)
 
@@ -263,8 +266,11 @@ class DrawableSpline(Spline):
         size = 4 * 4 * drawCoefficients.shape[1] * drawCoefficients.shape[0]
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
         glEnableVertexAttribArray(frame.aSurfaceParameters)
-        glPatchParameteri(GL_PATCH_VERTICES, 1)
-        glDrawArraysInstanced(GL_PATCHES, 0, 1, (drawCoefficients.shape[1] - self.order[0] + 1) * (drawCoefficients.shape[0] - self.order[1] + 1))
+        if frame.tessellationEnabled:
+            glPatchParameteri(GL_PATCH_VERTICES, 1)
+            glDrawArraysInstanced(GL_PATCHES, 0, 1, (drawCoefficients.shape[1] - self.order[0] + 1) * (drawCoefficients.shape[0] - self.order[1] + 1))
+        else:
+            glDrawArraysInstanced(GL_POINTS, 0, 1, (drawCoefficients.shape[1] - self.order[0] + 1) * (drawCoefficients.shape[0] - self.order[1] + 1))
         glDisableVertexAttribArray(frame.aSurfaceParameters)
         glUseProgram(0)
 
