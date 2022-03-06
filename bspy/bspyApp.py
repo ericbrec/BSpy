@@ -174,7 +174,7 @@ class bspyApp(tk.Tk):
 
         if self.adjust is not None:
             if self.frame.splineDrawList: 
-                self.bits.set(self.frame.splineDrawList[0].options)
+                self.bits.set(self.frame.splineDrawList[0].get_options())
             else:
                 self.bits.set(0)
             for button in self.checkButtons.winfo_children():
@@ -202,7 +202,7 @@ class bspyApp(tk.Tk):
 
             self.bits = tk.IntVar()
             if self.frame.splineDrawList:
-                self.bits.set(self.frame.splineDrawList[0].options)
+                self.bits.set(self.frame.splineDrawList[0].get_options())
             else:
                 self.bits.set(0)
             _BitCheckbutton(self.checkButtons, DrawableSpline.SHADED, text="Shaded", anchor=tk.W, variable=self.bits, command=self._ChangeOptions).pack(side=tk.TOP, fill=tk.X)
@@ -240,7 +240,7 @@ class bspyApp(tk.Tk):
     def _FillColorChange(self):
         """Handle when the fill color changed."""
         if self.frame.splineDrawList:
-            oldColor = 255.0 * self.frame.splineDrawList[0].fillColor
+            oldColor = 255.0 * self.frame.splineDrawList[0].get_fill_color()
             newColor = askcolor(title="Set spline fill color", color="#%02x%02x%02x" % (int(oldColor[0]), int(oldColor[1]), int(oldColor[2])))
             if newColor[0] is not None:
                 for spline in self.frame.splineDrawList:
@@ -250,7 +250,7 @@ class bspyApp(tk.Tk):
     def _LineColorChange(self):
         """Handle when the line color changed."""
         if self.frame.splineDrawList:
-            oldColor = 255.0 * self.frame.splineDrawList[0].lineColor
+            oldColor = 255.0 * self.frame.splineDrawList[0].get_line_color()
             newColor = askcolor(title="Set spline line color", color="#%02x%02x%02x" % (int(oldColor[0]), int(oldColor[1]), int(oldColor[2])))
             if newColor[0] is not None:
                 for spline in self.frame.splineDrawList:

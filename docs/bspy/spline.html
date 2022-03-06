@@ -76,6 +76,9 @@
                                 <a class="function" href="#Spline.insert_knots">insert_knots</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.least_squares">least_squares</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.load">load</a>
                         </li>
                         <li>
@@ -974,15 +977,24 @@
 
             <span class="c1"># Extrapolate right side as needed by integrating coefficients to new exterior knots.</span>
             <span class="k">if</span> <span class="n">bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                <span class="c1"># For the right bound, we first need to copy the right bound derivatives into the right (stop-1) position.</span>
+                <span class="c1"># (The left bound derivatives were already in right left (start) position.)</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">continuity</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+                    <span class="n">sliceJm1Ip1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span>
+                    <span class="n">sliceJm1I</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span>
+                    <span class="n">sliceJm1Ip1</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="mi">1</span>
+                    <span class="n">sliceJm1I</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">j</span>
+                    <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJm1Ip1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJm1I</span><span class="p">)]</span>
+                <span class="c1"># Now we can integrate the coefficients as usual.</span>
                 <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">continuity</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
                     <span class="n">sliceJm1Ip1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span> <span class="o">-</span> <span class="mi">1</span>
                     <span class="n">sliceJm1I</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span> <span class="o">-</span> <span class="mi">1</span>
                     <span class="n">sliceJI</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span>
-                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">slicer</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="n">j</span><span class="p">,</span> <span class="n">nCoef</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">-</span> <span class="n">j</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">slicer</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">nCoef</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">-</span> <span class="n">j</span><span class="p">):</span>
                         <span class="n">sliceJm1Ip1</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
                         <span class="n">sliceJm1I</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
-                        <span class="n">sliceJI</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">continuity</span> <span class="k">else</span> <span class="n">slicer</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="n">continuity</span> <span class="o">-</span> <span class="mi">1</span>
-                        <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJm1Ip1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJm1I</span><span class="p">)]</span> <span class="o">+</span> <span class="p">(</span><span class="n">knots</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="n">i</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="n">ind</span><span class="p">]]</span> <span class="o">-</span> <span class="n">knots</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="n">i</span> <span class="o">+</span> <span class="n">j</span><span class="p">])</span> <span class="o">*</span> <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJI</span><span class="p">)]</span>
+                        <span class="n">sliceJI</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span> <span class="k">if</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">continuity</span> <span class="k">else</span> <span class="n">slicer</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="mi">1</span>
+                        <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJm1Ip1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJm1I</span><span class="p">)]</span> <span class="o">+</span> <span class="p">(</span><span class="n">knots</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="n">i</span> <span class="o">-</span> <span class="n">j</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="n">ind</span><span class="p">]]</span> <span class="o">-</span> <span class="n">knots</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="n">i</span><span class="p">])</span> <span class="o">*</span> <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJI</span><span class="p">)]</span>
 
             <span class="c1"># Restore slicer for current independent variable.</span>
             <span class="n">sliceJI</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">slicer</span>
@@ -1108,6 +1120,27 @@
             <span class="k">return</span> <span class="bp">self</span>
         <span class="k">else</span><span class="p">:</span> 
             <span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)(</span><span class="bp">self</span><span class="o">.</span><span class="n">nInd</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">,</span> <span class="n">coefs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">knots</span><span class="p">,</span> <span class="n">coefs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">accuracy</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">least_squares</span><span class="p">(</span><span class="n">dataPoints</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fit a curve to a string of data points using the method of least squares.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataPoints : `iterable` containing the data points to fit.</span>
+<span class="sd">            Each of the data points is of length nDep.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            A spline curve which approximates the data points.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">rhsPoints</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">uValues</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">dp</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">dataPoints</span><span class="p">):</span>
+            <span class="n">uValues</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dp</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">rhsPoints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dp</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="n">fileName</span><span class="p">,</span> <span class="n">splineType</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -2363,15 +2396,24 @@
 
             <span class="c1"># Extrapolate right side as needed by integrating coefficients to new exterior knots.</span>
             <span class="k">if</span> <span class="n">bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                <span class="c1"># For the right bound, we first need to copy the right bound derivatives into the right (stop-1) position.</span>
+                <span class="c1"># (The left bound derivatives were already in right left (start) position.)</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">continuity</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+                    <span class="n">sliceJm1Ip1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span>
+                    <span class="n">sliceJm1I</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span>
+                    <span class="n">sliceJm1Ip1</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="mi">1</span>
+                    <span class="n">sliceJm1I</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">j</span>
+                    <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJm1Ip1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJm1I</span><span class="p">)]</span>
+                <span class="c1"># Now we can integrate the coefficients as usual.</span>
                 <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">continuity</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
                     <span class="n">sliceJm1Ip1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span> <span class="o">-</span> <span class="mi">1</span>
                     <span class="n">sliceJm1I</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span> <span class="o">-</span> <span class="mi">1</span>
                     <span class="n">sliceJI</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span>
-                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">slicer</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="n">j</span><span class="p">,</span> <span class="n">nCoef</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">-</span> <span class="n">j</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">slicer</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">nCoef</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">-</span> <span class="n">j</span><span class="p">):</span>
                         <span class="n">sliceJm1Ip1</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
                         <span class="n">sliceJm1I</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
-                        <span class="n">sliceJI</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">continuity</span> <span class="k">else</span> <span class="n">slicer</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="n">continuity</span> <span class="o">-</span> <span class="mi">1</span>
-                        <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJm1Ip1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJm1I</span><span class="p">)]</span> <span class="o">+</span> <span class="p">(</span><span class="n">knots</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="n">i</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="n">ind</span><span class="p">]]</span> <span class="o">-</span> <span class="n">knots</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="n">i</span> <span class="o">+</span> <span class="n">j</span><span class="p">])</span> <span class="o">*</span> <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJI</span><span class="p">)]</span>
+                        <span class="n">sliceJI</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span> <span class="k">if</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">continuity</span> <span class="k">else</span> <span class="n">slicer</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="mi">1</span>
+                        <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJm1Ip1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJm1I</span><span class="p">)]</span> <span class="o">+</span> <span class="p">(</span><span class="n">knots</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="n">i</span> <span class="o">-</span> <span class="n">j</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="n">ind</span><span class="p">]]</span> <span class="o">-</span> <span class="n">knots</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="n">i</span><span class="p">])</span> <span class="o">*</span> <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJI</span><span class="p">)]</span>
 
             <span class="c1"># Restore slicer for current independent variable.</span>
             <span class="n">sliceJI</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">slicer</span>
@@ -2497,6 +2539,27 @@
             <span class="k">return</span> <span class="bp">self</span>
         <span class="k">else</span><span class="p">:</span> 
             <span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)(</span><span class="bp">self</span><span class="o">.</span><span class="n">nInd</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">,</span> <span class="n">coefs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">knots</span><span class="p">,</span> <span class="n">coefs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">accuracy</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">least_squares</span><span class="p">(</span><span class="n">dataPoints</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fit a curve to a string of data points using the method of least squares.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataPoints : `iterable` containing the data points to fit.</span>
+<span class="sd">            Each of the data points is of length nDep.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            A spline curve which approximates the data points.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">rhsPoints</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">uValues</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">dp</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">dataPoints</span><span class="p">):</span>
+            <span class="n">uValues</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dp</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">rhsPoints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dp</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="n">fileName</span><span class="p">,</span> <span class="n">splineType</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -4118,15 +4181,24 @@ B-spline coefficients is computed.</p>
 
             <span class="c1"># Extrapolate right side as needed by integrating coefficients to new exterior knots.</span>
             <span class="k">if</span> <span class="n">bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                <span class="c1"># For the right bound, we first need to copy the right bound derivatives into the right (stop-1) position.</span>
+                <span class="c1"># (The left bound derivatives were already in right left (start) position.)</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">continuity</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+                    <span class="n">sliceJm1Ip1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span>
+                    <span class="n">sliceJm1I</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span>
+                    <span class="n">sliceJm1Ip1</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="mi">1</span>
+                    <span class="n">sliceJm1I</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">j</span>
+                    <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJm1Ip1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJm1I</span><span class="p">)]</span>
+                <span class="c1"># Now we can integrate the coefficients as usual.</span>
                 <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">continuity</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
                     <span class="n">sliceJm1Ip1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span> <span class="o">-</span> <span class="mi">1</span>
                     <span class="n">sliceJm1I</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span> <span class="o">-</span> <span class="mi">1</span>
                     <span class="n">sliceJI</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span>
-                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">slicer</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="n">j</span><span class="p">,</span> <span class="n">nCoef</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">-</span> <span class="n">j</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">slicer</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">nCoef</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">-</span> <span class="n">j</span><span class="p">):</span>
                         <span class="n">sliceJm1Ip1</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
                         <span class="n">sliceJm1I</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
-                        <span class="n">sliceJI</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">continuity</span> <span class="k">else</span> <span class="n">slicer</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="n">continuity</span> <span class="o">-</span> <span class="mi">1</span>
-                        <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJm1Ip1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJm1I</span><span class="p">)]</span> <span class="o">+</span> <span class="p">(</span><span class="n">knots</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="n">i</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="n">ind</span><span class="p">]]</span> <span class="o">-</span> <span class="n">knots</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="n">i</span> <span class="o">+</span> <span class="n">j</span><span class="p">])</span> <span class="o">*</span> <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJI</span><span class="p">)]</span>
+                        <span class="n">sliceJI</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span> <span class="k">if</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">continuity</span> <span class="k">else</span> <span class="n">slicer</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="mi">1</span>
+                        <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJm1Ip1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJm1I</span><span class="p">)]</span> <span class="o">+</span> <span class="p">(</span><span class="n">knots</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="n">i</span> <span class="o">-</span> <span class="n">j</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="n">ind</span><span class="p">]]</span> <span class="o">-</span> <span class="n">knots</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="n">i</span><span class="p">])</span> <span class="o">*</span> <span class="n">dCoefs</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sliceJI</span><span class="p">)]</span>
 
             <span class="c1"># Restore slicer for current independent variable.</span>
             <span class="n">sliceJI</span><span class="p">[</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">slicer</span>
@@ -4372,6 +4444,60 @@ A spline with the new knots inserted. If no knots were inserted, the original sp
 <h6 id="notes">Notes</h6>
 
 <p>Implements Boehm's standard knot insertion algorithm.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.least_squares" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#Spline.least_squares">#&nbsp;&nbsp</a>
+
+                <div class="decorator">@staticmethod</div>
+
+            <span class="def">def</span>
+            <span class="name">least_squares</span><span class="signature">(dataPoints)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">least_squares</span><span class="p">(</span><span class="n">dataPoints</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fit a curve to a string of data points using the method of least squares.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataPoints : `iterable` containing the data points to fit.</span>
+<span class="sd">            Each of the data points is of length nDep.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            A spline curve which approximates the data points.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">rhsPoints</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">uValues</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">dp</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">dataPoints</span><span class="p">):</span>
+            <span class="n">uValues</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dp</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">rhsPoints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dp</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Fit a curve to a string of data points using the method of least squares.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>dataPoints</strong> (<code>iterable</code> containing the data points to fit.):
+Each of the data points is of length nDep.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+A spline curve which approximates the data points.</li>
+</ul>
 </div>
 
 

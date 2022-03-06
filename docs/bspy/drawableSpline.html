@@ -61,10 +61,19 @@
                                 <a class="function" href="#DrawableSpline.make_drawable">make_drawable</a>
                         </li>
                         <li>
+                                <a class="function" href="#DrawableSpline.get_fill_color">get_fill_color</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#DrawableSpline.set_fill_color">set_fill_color</a>
                         </li>
                         <li>
+                                <a class="function" href="#DrawableSpline.get_line_color">get_line_color</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#DrawableSpline.set_line_color">set_line_color</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#DrawableSpline.get_options">get_options</a>
                         </li>
                         <li>
                                 <a class="function" href="#DrawableSpline.set_options">set_options</a>
@@ -230,9 +239,6 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">coefs</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">accuracy</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">accuracy</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">metadata</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">fillColor</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">fillColor</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">lineColor</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">options</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">options</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">Spline</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
@@ -248,9 +254,9 @@
                 <span class="k">assert</span> <span class="n">knotArray</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span>
             <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span>
 
-            <span class="bp">self</span><span class="o">.</span><span class="n">fillColor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">options</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">SHADED</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">BOUNDARY</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;fillColor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;lineColor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;options&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">SHADED</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">BOUNDARY</span>
 
     <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Name&quot;</span><span class="p">,</span> <span class="s2">&quot;[</span><span class="si">{0}</span><span class="s2">, </span><span class="si">{1}</span><span class="s2">]&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
@@ -291,7 +297,7 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Draw spline points for an order 1 spline within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">glColor4fv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span><span class="p">)</span>
+        <span class="n">glColor4fv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_line_color</span><span class="p">())</span>
         <span class="n">glBegin</span><span class="p">(</span><span class="n">GL_POINTS</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">drawCoefficients</span><span class="p">:</span>
             <span class="n">glVertex4fv</span><span class="p">(</span><span class="n">point</span><span class="p">)</span>
@@ -301,7 +307,7 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Draw a spline curve (nInd == 1) within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">options</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">HULL</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_options</span><span class="p">()</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">HULL</span><span class="p">:</span>
             <span class="n">glColor3f</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
             <span class="n">glBegin</span><span class="p">(</span><span class="n">GL_LINE_STRIP</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">drawCoefficients</span><span class="p">:</span>
@@ -309,7 +315,7 @@
             <span class="n">glEnd</span><span class="p">()</span>
 
         <span class="n">glUseProgram</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">curveProgram</span><span class="p">)</span>
-        <span class="n">glUniform4fv</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">uCurveLineColor</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span><span class="p">)</span>
+        <span class="n">glUniform4fv</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">uCurveLineColor</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_line_color</span><span class="p">())</span>
         <span class="n">glBindBuffer</span><span class="p">(</span><span class="n">GL_TEXTURE_BUFFER</span><span class="p">,</span> <span class="n">frame</span><span class="o">.</span><span class="n">splineDataBuffer</span><span class="p">)</span>
         <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="n">size</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="mi">2</span>
@@ -321,8 +327,11 @@
         <span class="n">size</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="mi">4</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">drawCoefficients</span><span class="p">)</span>
         <span class="n">glBufferSubData</span><span class="p">(</span><span class="n">GL_TEXTURE_BUFFER</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
         <span class="n">glEnableVertexAttribArray</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">aCurveParameters</span><span class="p">)</span>
-        <span class="n">glPatchParameteri</span><span class="p">(</span><span class="n">GL_PATCH_VERTICES</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="n">glDrawArraysInstanced</span><span class="p">(</span><span class="n">GL_PATCHES</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">frame</span><span class="o">.</span><span class="n">tessellationEnabled</span><span class="p">:</span>
+            <span class="n">glPatchParameteri</span><span class="p">(</span><span class="n">GL_PATCH_VERTICES</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">glDrawArraysInstanced</span><span class="p">(</span><span class="n">GL_PATCHES</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">glDrawArraysInstanced</span><span class="p">(</span><span class="n">GL_POINTS</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
         <span class="n">glDisableVertexAttribArray</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">aCurveParameters</span><span class="p">)</span>
         <span class="n">glUseProgram</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
@@ -330,7 +339,7 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Draw a spline surface (nInd == 2) within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">options</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">HULL</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_options</span><span class="p">()</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">HULL</span><span class="p">:</span>
             <span class="n">glColor3f</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">pointList</span> <span class="ow">in</span> <span class="n">drawCoefficients</span><span class="p">:</span>
                 <span class="n">glBegin</span><span class="p">(</span><span class="n">GL_LINE_STRIP</span><span class="p">)</span>
@@ -339,9 +348,9 @@
                 <span class="n">glEnd</span><span class="p">()</span>
 
         <span class="n">glUseProgram</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">)</span>
-        <span class="n">glUniform4fv</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">uSurfaceFillColor</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fillColor</span><span class="p">)</span>
-        <span class="n">glUniform4fv</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">uSurfaceLineColor</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span><span class="p">)</span>
-        <span class="n">glUniform1i</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">uSurfaceOptions</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">)</span>
+        <span class="n">glUniform4fv</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">uSurfaceFillColor</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_fill_color</span><span class="p">())</span>
+        <span class="n">glUniform4fv</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">uSurfaceLineColor</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_line_color</span><span class="p">())</span>
+        <span class="n">glUniform1i</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">uSurfaceOptions</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_options</span><span class="p">())</span>
         <span class="n">glBindBuffer</span><span class="p">(</span><span class="n">GL_TEXTURE_BUFFER</span><span class="p">,</span> <span class="n">frame</span><span class="o">.</span><span class="n">splineDataBuffer</span><span class="p">)</span>
         <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="n">size</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="mi">4</span>
@@ -356,8 +365,11 @@
         <span class="n">size</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">glBufferSubData</span><span class="p">(</span><span class="n">GL_TEXTURE_BUFFER</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
         <span class="n">glEnableVertexAttribArray</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">aSurfaceParameters</span><span class="p">)</span>
-        <span class="n">glPatchParameteri</span><span class="p">(</span><span class="n">GL_PATCH_VERTICES</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="n">glDrawArraysInstanced</span><span class="p">(</span><span class="n">GL_PATCHES</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">frame</span><span class="o">.</span><span class="n">tessellationEnabled</span><span class="p">:</span>
+            <span class="n">glPatchParameteri</span><span class="p">(</span><span class="n">GL_PATCH_VERTICES</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">glDrawArraysInstanced</span><span class="p">(</span><span class="n">GL_PATCHES</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">glDrawArraysInstanced</span><span class="p">(</span><span class="n">GL_POINTS</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
         <span class="n">glDisableVertexAttribArray</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">aSurfaceParameters</span><span class="p">)</span>
         <span class="n">glUseProgram</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
@@ -373,6 +385,17 @@
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_DrawSurface</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
     
+    <span class="k">def</span> <span class="nf">get_fill_color</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the fill color of the spline (only useful for nInd &gt;= 2).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        fillColor : `numpy.array`</span>
+<span class="sd">            Array of four floats (r, g, b, a) in the range [0, 1].</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;fillColor&quot;</span><span class="p">]</span>
+
     <span class="k">def</span> <span class="nf">set_fill_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set the fill color of the spline (only useful for nInd &gt;= 2).</span>
@@ -391,7 +414,18 @@
 <span class="sd">        a: `float`, `int`, or None</span>
 <span class="sd">            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fillColor</span> <span class="o">=</span> <span class="n">_set_color</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;fillColor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_set_color</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">get_line_color</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the line color of the spline.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        lineColor : `numpy.array`</span>
+<span class="sd">            Array of four floats (r, g, b, a) in the range [0, 1].</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;lineColor&quot;</span><span class="p">]</span>
 
     <span class="k">def</span> <span class="nf">set_line_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -411,7 +445,21 @@
 <span class="sd">        a: `float`, `int`, or None</span>
 <span class="sd">            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span> <span class="o">=</span> <span class="n">_set_color</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;lineColor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_set_color</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">get_options</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the draw options for the spline.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        options : `int` bitwise or (`|`) of zero or more of the following values:</span>
+<span class="sd">            * `DrawableSpline.HULL` Draw the convex hull of the spline (the coefficients). Off by default.</span>
+<span class="sd">            * `DrawableSpline.SHADED` Draw the spline shaded (only useful for nInd &gt;= 2). On by default.</span>
+<span class="sd">            * `DrawableSpline.BOUNDARY` Draw the boundary of the spline in the line color (only useful for nInd &gt;= 2). On by default.</span>
+<span class="sd">            * `DrawableSpline.ISOPARMS` Draw the lines of constant knot values of the spline in the line color (only useful for nInd &gt;= 2). Off by default.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;options&quot;</span><span class="p">]</span>
 
     <span class="k">def</span> <span class="nf">set_options</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">options</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -425,7 +473,7 @@
 <span class="sd">            * `DrawableSpline.BOUNDARY` Draw the boundary of the spline in the line color (only useful for nInd &gt;= 2). On by default.</span>
 <span class="sd">            * `DrawableSpline.ISOPARMS` Draw the lines of constant knot values of the spline in the line color (only useful for nInd &gt;= 2). Off by default.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">options</span> <span class="o">=</span> <span class="n">options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;options&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">options</span>
 </pre></div>
 
         </details>
@@ -516,9 +564,6 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">coefs</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">accuracy</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">accuracy</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">metadata</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">fillColor</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">fillColor</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">lineColor</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">options</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">options</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">Spline</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
@@ -534,9 +579,9 @@
                 <span class="k">assert</span> <span class="n">knotArray</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span>
             <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span>
 
-            <span class="bp">self</span><span class="o">.</span><span class="n">fillColor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">options</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">SHADED</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">BOUNDARY</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;fillColor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;lineColor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;options&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">SHADED</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">BOUNDARY</span>
 
     <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Name&quot;</span><span class="p">,</span> <span class="s2">&quot;[</span><span class="si">{0}</span><span class="s2">, </span><span class="si">{1}</span><span class="s2">]&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
@@ -577,7 +622,7 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Draw spline points for an order 1 spline within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">glColor4fv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span><span class="p">)</span>
+        <span class="n">glColor4fv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_line_color</span><span class="p">())</span>
         <span class="n">glBegin</span><span class="p">(</span><span class="n">GL_POINTS</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">drawCoefficients</span><span class="p">:</span>
             <span class="n">glVertex4fv</span><span class="p">(</span><span class="n">point</span><span class="p">)</span>
@@ -587,7 +632,7 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Draw a spline curve (nInd == 1) within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">options</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">HULL</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_options</span><span class="p">()</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">HULL</span><span class="p">:</span>
             <span class="n">glColor3f</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
             <span class="n">glBegin</span><span class="p">(</span><span class="n">GL_LINE_STRIP</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">drawCoefficients</span><span class="p">:</span>
@@ -595,7 +640,7 @@
             <span class="n">glEnd</span><span class="p">()</span>
 
         <span class="n">glUseProgram</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">curveProgram</span><span class="p">)</span>
-        <span class="n">glUniform4fv</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">uCurveLineColor</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span><span class="p">)</span>
+        <span class="n">glUniform4fv</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">uCurveLineColor</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_line_color</span><span class="p">())</span>
         <span class="n">glBindBuffer</span><span class="p">(</span><span class="n">GL_TEXTURE_BUFFER</span><span class="p">,</span> <span class="n">frame</span><span class="o">.</span><span class="n">splineDataBuffer</span><span class="p">)</span>
         <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="n">size</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="mi">2</span>
@@ -607,8 +652,11 @@
         <span class="n">size</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="mi">4</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">drawCoefficients</span><span class="p">)</span>
         <span class="n">glBufferSubData</span><span class="p">(</span><span class="n">GL_TEXTURE_BUFFER</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
         <span class="n">glEnableVertexAttribArray</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">aCurveParameters</span><span class="p">)</span>
-        <span class="n">glPatchParameteri</span><span class="p">(</span><span class="n">GL_PATCH_VERTICES</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="n">glDrawArraysInstanced</span><span class="p">(</span><span class="n">GL_PATCHES</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">frame</span><span class="o">.</span><span class="n">tessellationEnabled</span><span class="p">:</span>
+            <span class="n">glPatchParameteri</span><span class="p">(</span><span class="n">GL_PATCH_VERTICES</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">glDrawArraysInstanced</span><span class="p">(</span><span class="n">GL_PATCHES</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">glDrawArraysInstanced</span><span class="p">(</span><span class="n">GL_POINTS</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
         <span class="n">glDisableVertexAttribArray</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">aCurveParameters</span><span class="p">)</span>
         <span class="n">glUseProgram</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
@@ -616,7 +664,7 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Draw a spline surface (nInd == 2) within a `SplineOpenGLFrame`. The frame will call this method for you.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">options</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">HULL</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_options</span><span class="p">()</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">HULL</span><span class="p">:</span>
             <span class="n">glColor3f</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">pointList</span> <span class="ow">in</span> <span class="n">drawCoefficients</span><span class="p">:</span>
                 <span class="n">glBegin</span><span class="p">(</span><span class="n">GL_LINE_STRIP</span><span class="p">)</span>
@@ -625,9 +673,9 @@
                 <span class="n">glEnd</span><span class="p">()</span>
 
         <span class="n">glUseProgram</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">)</span>
-        <span class="n">glUniform4fv</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">uSurfaceFillColor</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fillColor</span><span class="p">)</span>
-        <span class="n">glUniform4fv</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">uSurfaceLineColor</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span><span class="p">)</span>
-        <span class="n">glUniform1i</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">uSurfaceOptions</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">)</span>
+        <span class="n">glUniform4fv</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">uSurfaceFillColor</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_fill_color</span><span class="p">())</span>
+        <span class="n">glUniform4fv</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">uSurfaceLineColor</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_line_color</span><span class="p">())</span>
+        <span class="n">glUniform1i</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">uSurfaceOptions</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_options</span><span class="p">())</span>
         <span class="n">glBindBuffer</span><span class="p">(</span><span class="n">GL_TEXTURE_BUFFER</span><span class="p">,</span> <span class="n">frame</span><span class="o">.</span><span class="n">splineDataBuffer</span><span class="p">)</span>
         <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="n">size</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="mi">4</span>
@@ -642,8 +690,11 @@
         <span class="n">size</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">glBufferSubData</span><span class="p">(</span><span class="n">GL_TEXTURE_BUFFER</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
         <span class="n">glEnableVertexAttribArray</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">aSurfaceParameters</span><span class="p">)</span>
-        <span class="n">glPatchParameteri</span><span class="p">(</span><span class="n">GL_PATCH_VERTICES</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="n">glDrawArraysInstanced</span><span class="p">(</span><span class="n">GL_PATCHES</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">frame</span><span class="o">.</span><span class="n">tessellationEnabled</span><span class="p">:</span>
+            <span class="n">glPatchParameteri</span><span class="p">(</span><span class="n">GL_PATCH_VERTICES</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">glDrawArraysInstanced</span><span class="p">(</span><span class="n">GL_PATCHES</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">glDrawArraysInstanced</span><span class="p">(</span><span class="n">GL_POINTS</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">drawCoefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
         <span class="n">glDisableVertexAttribArray</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">aSurfaceParameters</span><span class="p">)</span>
         <span class="n">glUseProgram</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
@@ -659,6 +710,17 @@
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_DrawSurface</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">drawCoefficients</span><span class="p">)</span>
     
+    <span class="k">def</span> <span class="nf">get_fill_color</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the fill color of the spline (only useful for nInd &gt;= 2).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        fillColor : `numpy.array`</span>
+<span class="sd">            Array of four floats (r, g, b, a) in the range [0, 1].</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;fillColor&quot;</span><span class="p">]</span>
+
     <span class="k">def</span> <span class="nf">set_fill_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set the fill color of the spline (only useful for nInd &gt;= 2).</span>
@@ -677,7 +739,18 @@
 <span class="sd">        a: `float`, `int`, or None</span>
 <span class="sd">            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fillColor</span> <span class="o">=</span> <span class="n">_set_color</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;fillColor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_set_color</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">get_line_color</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the line color of the spline.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        lineColor : `numpy.array`</span>
+<span class="sd">            Array of four floats (r, g, b, a) in the range [0, 1].</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;lineColor&quot;</span><span class="p">]</span>
 
     <span class="k">def</span> <span class="nf">set_line_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -697,7 +770,21 @@
 <span class="sd">        a: `float`, `int`, or None</span>
 <span class="sd">            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span> <span class="o">=</span> <span class="n">_set_color</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;lineColor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_set_color</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">get_options</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the draw options for the spline.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        options : `int` bitwise or (`|`) of zero or more of the following values:</span>
+<span class="sd">            * `DrawableSpline.HULL` Draw the convex hull of the spline (the coefficients). Off by default.</span>
+<span class="sd">            * `DrawableSpline.SHADED` Draw the spline shaded (only useful for nInd &gt;= 2). On by default.</span>
+<span class="sd">            * `DrawableSpline.BOUNDARY` Draw the boundary of the spline in the line color (only useful for nInd &gt;= 2). On by default.</span>
+<span class="sd">            * `DrawableSpline.ISOPARMS` Draw the lines of constant knot values of the spline in the line color (only useful for nInd &gt;= 2). Off by default.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;options&quot;</span><span class="p">]</span>
 
     <span class="k">def</span> <span class="nf">set_options</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">options</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -711,7 +798,7 @@
 <span class="sd">            * `DrawableSpline.BOUNDARY` Draw the boundary of the spline in the line color (only useful for nInd &gt;= 2). On by default.</span>
 <span class="sd">            * `DrawableSpline.ISOPARMS` Draw the lines of constant knot values of the spline in the line color (only useful for nInd &gt;= 2). Off by default.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">options</span> <span class="o">=</span> <span class="n">options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;options&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">options</span>
 </pre></div>
 
         </details>
@@ -774,9 +861,6 @@ functions (spline functions) as linear combinations of B-splines. <br />
             <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">coefs</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">accuracy</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">accuracy</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">metadata</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">fillColor</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">fillColor</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">lineColor</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">options</span> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">options</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">Spline</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
@@ -792,9 +876,9 @@ functions (spline functions) as linear combinations of B-splines. <br />
                 <span class="k">assert</span> <span class="n">knotArray</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span>
             <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span>
 
-            <span class="bp">self</span><span class="o">.</span><span class="n">fillColor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">options</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">SHADED</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">BOUNDARY</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;fillColor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;lineColor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;options&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">SHADED</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">BOUNDARY</span>
 </pre></div>
 
         </details>
@@ -938,6 +1022,42 @@ functions (spline functions) as linear combinations of B-splines. <br />
 
 
                             </div>
+                            <div id="DrawableSpline.get_fill_color" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#DrawableSpline.get_fill_color">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">get_fill_color</span><span class="signature">(self)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">get_fill_color</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the fill color of the spline (only useful for nInd &gt;= 2).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        fillColor : `numpy.array`</span>
+<span class="sd">            Array of four floats (r, g, b, a) in the range [0, 1].</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;fillColor&quot;</span><span class="p">]</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Gets the fill color of the spline (only useful for nInd &gt;= 2).</p>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>fillColor</strong> (<code>numpy.array</code>):
+Array of four floats (r, g, b, a) in the range [0, 1].</li>
+</ul>
+</div>
+
+
+                            </div>
                             <div id="DrawableSpline.set_fill_color" class="classattr">
                                         <div class="attr function"><a class="headerlink" href="#DrawableSpline.set_fill_color">#&nbsp;&nbsp</a>
 
@@ -966,7 +1086,7 @@ functions (spline functions) as linear combinations of B-splines. <br />
 <span class="sd">        a: `float`, `int`, or None</span>
 <span class="sd">            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fillColor</span> <span class="o">=</span> <span class="n">_set_color</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;fillColor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_set_color</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
 </pre></div>
 
         </details>
@@ -984,6 +1104,42 @@ The green value [0, 1] as a float or [0, 255] as an int.</li>
 The blue value [0, 1] as a float or [0, 255] as an int.</li>
 <li><strong>a</strong> (<code>float</code>, <code>int</code>, or None):
 The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> then alpha is set to 1.</li>
+</ul>
+</div>
+
+
+                            </div>
+                            <div id="DrawableSpline.get_line_color" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#DrawableSpline.get_line_color">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">get_line_color</span><span class="signature">(self)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">get_line_color</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the line color of the spline.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        lineColor : `numpy.array`</span>
+<span class="sd">            Array of four floats (r, g, b, a) in the range [0, 1].</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;lineColor&quot;</span><span class="p">]</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Gets the line color of the spline.</p>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>lineColor</strong> (<code>numpy.array</code>):
+Array of four floats (r, g, b, a) in the range [0, 1].</li>
 </ul>
 </div>
 
@@ -1017,7 +1173,7 @@ The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> th
 <span class="sd">        a: `float`, `int`, or None</span>
 <span class="sd">            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">lineColor</span> <span class="o">=</span> <span class="n">_set_color</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;lineColor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_set_color</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
 </pre></div>
 
         </details>
@@ -1035,6 +1191,50 @@ The green value [0, 1] as a float or [0, 255] as an int.</li>
 The blue value [0, 1] as a float or [0, 255] as an int.</li>
 <li><strong>a</strong> (<code>float</code>, <code>int</code>, or None):
 The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> then alpha is set to 1.</li>
+</ul>
+</div>
+
+
+                            </div>
+                            <div id="DrawableSpline.get_options" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#DrawableSpline.get_options">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">get_options</span><span class="signature">(self)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">get_options</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the draw options for the spline.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        options : `int` bitwise or (`|`) of zero or more of the following values:</span>
+<span class="sd">            * `DrawableSpline.HULL` Draw the convex hull of the spline (the coefficients). Off by default.</span>
+<span class="sd">            * `DrawableSpline.SHADED` Draw the spline shaded (only useful for nInd &gt;= 2). On by default.</span>
+<span class="sd">            * `DrawableSpline.BOUNDARY` Draw the boundary of the spline in the line color (only useful for nInd &gt;= 2). On by default.</span>
+<span class="sd">            * `DrawableSpline.ISOPARMS` Draw the lines of constant knot values of the spline in the line color (only useful for nInd &gt;= 2). Off by default.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;options&quot;</span><span class="p">]</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Gets the draw options for the spline.</p>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>options</strong> (<code>int</code> bitwise or (<code>|</code>) of zero or more of the following values:):
+<ul>
+<li><code><a href="#DrawableSpline.HULL">DrawableSpline.HULL</a></code> Draw the convex hull of the spline (the coefficients). Off by default.</li>
+<li><code><a href="#DrawableSpline.SHADED">DrawableSpline.SHADED</a></code> Draw the spline shaded (only useful for nInd &gt;= 2). On by default.</li>
+<li><code><a href="#DrawableSpline.BOUNDARY">DrawableSpline.BOUNDARY</a></code> Draw the boundary of the spline in the line color (only useful for nInd &gt;= 2). On by default.</li>
+<li><code><a href="#DrawableSpline.ISOPARMS">DrawableSpline.ISOPARMS</a></code> Draw the lines of constant knot values of the spline in the line color (only useful for nInd &gt;= 2). Off by default.</li>
+</ul></li>
 </ul>
 </div>
 
@@ -1062,7 +1262,7 @@ The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> th
 <span class="sd">            * `DrawableSpline.BOUNDARY` Draw the boundary of the spline in the line color (only useful for nInd &gt;= 2). On by default.</span>
 <span class="sd">            * `DrawableSpline.ISOPARMS` Draw the lines of constant knot values of the spline in the line color (only useful for nInd &gt;= 2). Off by default.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">options</span> <span class="o">=</span> <span class="n">options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;options&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">options</span>
 </pre></div>
 
         </details>
@@ -1101,6 +1301,7 @@ The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> th
                 <dd id="DrawableSpline.extrapolate" class="function"><a href="spline.html#Spline.extrapolate">extrapolate</a></dd>
                 <dd id="DrawableSpline.fold" class="function"><a href="spline.html#Spline.fold">fold</a></dd>
                 <dd id="DrawableSpline.insert_knots" class="function"><a href="spline.html#Spline.insert_knots">insert_knots</a></dd>
+                <dd id="DrawableSpline.least_squares" class="function"><a href="spline.html#Spline.least_squares">least_squares</a></dd>
                 <dd id="DrawableSpline.load" class="function"><a href="spline.html#Spline.load">load</a></dd>
                 <dd id="DrawableSpline.range_bounds" class="function"><a href="spline.html#Spline.range_bounds">range_bounds</a></dd>
                 <dd id="DrawableSpline.reparametrize" class="function"><a href="spline.html#Spline.reparametrize">reparametrize</a></dd>

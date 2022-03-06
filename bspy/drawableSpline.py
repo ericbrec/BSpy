@@ -137,9 +137,6 @@ class DrawableSpline(Spline):
             self.coefs = spline.coefs
             self.accuracy = spline.accuracy
             self.metadata = spline.metadata
-            self.fillColor = spline.fillColor
-            self.lineColor = spline.lineColor
-            self.options = spline.options
         else:
             Spline.__init__(self, *args, **kwargs)
 
@@ -155,9 +152,9 @@ class DrawableSpline(Spline):
                 assert knotArray.dtype == np.float32
             assert self.coefs.dtype == np.float32
 
-            self.fillColor = np.array((0.0, 1.0, 0.0, 1.0), np.float32)
-            self.lineColor = np.array((0.0, 0.0, 0.0, 1.0) if self.nInd > 1 else (1.0, 1.0, 1.0, 1.0), np.float32)
-            self.options = self.SHADED | self.BOUNDARY
+            self.metadata["fillColor"] = np.array((0.0, 1.0, 0.0, 1.0), np.float32)
+            self.metadata["lineColor"] = np.array((0.0, 0.0, 0.0, 1.0) if self.nInd > 1 else (1.0, 1.0, 1.0, 1.0), np.float32)
+            self.metadata["options"] = self.SHADED | self.BOUNDARY
 
     def __str__(self):
         return self.metadata.get("Name", "[{0}, {1}]".format(self.coefs[0], self.coefs[1]))
@@ -198,7 +195,7 @@ class DrawableSpline(Spline):
         """
         Draw spline points for an order 1 spline within a `SplineOpenGLFrame`. The frame will call this method for you.
         """
-        glColor4fv(self.lineColor)
+        glColor4fv(self.get_line_color())
         glBegin(GL_POINTS)
         for point in drawCoefficients:
             glVertex4fv(point)
@@ -208,7 +205,7 @@ class DrawableSpline(Spline):
         """
         Draw a spline curve (nInd == 1) within a `SplineOpenGLFrame`. The frame will call this method for you.
         """
-        if self.options & self.HULL:
+        if self.get_options() & self.HULL:
             glColor3f(0.0, 0.0, 1.0)
             glBegin(GL_LINE_STRIP)
             for point in drawCoefficients:
@@ -216,7 +213,7 @@ class DrawableSpline(Spline):
             glEnd()
 
         glUseProgram(frame.curveProgram)
-        glUniform4fv(frame.uCurveLineColor, 1, self.lineColor)
+        glUniform4fv(frame.uCurveLineColor, 1, self.get_line_color())
         glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
         offset = 0
         size = 4 * 2
@@ -240,7 +237,7 @@ class DrawableSpline(Spline):
         """
         Draw a spline surface (nInd == 2) within a `SplineOpenGLFrame`. The frame will call this method for you.
         """
-        if self.options & self.HULL:
+        if self.get_options() & self.HULL:
             glColor3f(0.0, 0.0, 1.0)
             for pointList in drawCoefficients:
                 glBegin(GL_LINE_STRIP)
@@ -249,9 +246,9 @@ class DrawableSpline(Spline):
                 glEnd()
 
         glUseProgram(frame.surfaceProgram)
-        glUniform4fv(frame.uSurfaceFillColor, 1, self.fillColor)
-        glUniform4fv(frame.uSurfaceLineColor, 1, self.lineColor)
-        glUniform1i(frame.uSurfaceOptions, self.options)
+        glUniform4fv(frame.uSurfaceFillColor, 1, self.get_fill_color())
+        glUniform4fv(frame.uSurfaceLineColor, 1, self.get_line_color())
+        glUniform1i(frame.uSurfaceOptions, self.get_options())
         glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
         offset = 0
         size = 4 * 4
@@ -286,6 +283,17 @@ class DrawableSpline(Spline):
         elif self.nInd == 2:
             self._DrawSurface(frame, drawCoefficients)
     
+    def get_fill_color(self):
+        """
+        Gets the fill color of the spline (only useful for nInd >= 2).
+
+        Returns
+        -------
+        fillColor : `numpy.array`
+            Array of four floats (r, g, b, a) in the range [0, 1].
+        """
+        return self.metadata["fillColor"]
+
     def set_fill_color(self, r, g=None, b=None, a=None):
         """
         Set the fill color of the spline (only useful for nInd >= 2).
@@ -304,7 +312,18 @@ class DrawableSpline(Spline):
         a: `float`, `int`, or None
             The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.
         """
-        self.fillColor = _set_color(r, g, b, a)
+        self.metadata["fillColor"] = _set_color(r, g, b, a)
+    
+    def get_line_color(self):
+        """
+        Gets the line color of the spline.
+
+        Returns
+        -------
+        lineColor : `numpy.array`
+            Array of four floats (r, g, b, a) in the range [0, 1].
+        """
+        return self.metadata["lineColor"]
 
     def set_line_color(self, r, g=None, b=None, a=None):
         """
@@ -324,7 +343,21 @@ class DrawableSpline(Spline):
         a: `float`, `int`, or None
             The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.
         """
-        self.lineColor = _set_color(r, g, b, a)
+        self.metadata["lineColor"] = _set_color(r, g, b, a)
+    
+    def get_options(self):
+        """
+        Gets the draw options for the spline.
+
+        Returns
+        -------
+        options : `int` bitwise or (`|`) of zero or more of the following values:
+            * `DrawableSpline.HULL` Draw the convex hull of the spline (the coefficients). Off by default.
+            * `DrawableSpline.SHADED` Draw the spline shaded (only useful for nInd >= 2). On by default.
+            * `DrawableSpline.BOUNDARY` Draw the boundary of the spline in the line color (only useful for nInd >= 2). On by default.
+            * `DrawableSpline.ISOPARMS` Draw the lines of constant knot values of the spline in the line color (only useful for nInd >= 2). Off by default.
+        """
+        return self.metadata["options"]
 
     def set_options(self, options):
         """
@@ -338,4 +371,4 @@ class DrawableSpline(Spline):
             * `DrawableSpline.BOUNDARY` Draw the boundary of the spline in the line color (only useful for nInd >= 2). On by default.
             * `DrawableSpline.ISOPARMS` Draw the lines of constant knot values of the spline in the line color (only useful for nInd >= 2). Off by default.
         """
-        self.options = options
+        self.metadata["options"] = options

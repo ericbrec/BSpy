@@ -64,6 +64,9 @@
                                 <a class="variable" href="#SplineOpenGLFrame.curveTEShaderCode">curveTEShaderCode</a>
                         </li>
                         <li>
+                                <a class="variable" href="#SplineOpenGLFrame.curveGeometryShaderCode">curveGeometryShaderCode</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#SplineOpenGLFrame.curveFragmentShaderCode">curveFragmentShaderCode</a>
                         </li>
                         <li>
@@ -77,6 +80,12 @@
                         </li>
                         <li>
                                 <a class="variable" href="#SplineOpenGLFrame.surfaceTEShaderCode">surfaceTEShaderCode</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#SplineOpenGLFrame.surfaceGeometryShaderCode">surfaceGeometryShaderCode</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#SplineOpenGLFrame.surfaceSimpleFragmentShaderCode">surfaceSimpleFragmentShaderCode</a>
                         </li>
                         <li>
                                 <a class="variable" href="#SplineOpenGLFrame.surfaceFragmentShaderCode">surfaceFragmentShaderCode</a>
@@ -280,7 +289,7 @@
 <span class="s2">    &quot;&quot;&quot;</span>
 
     <span class="n">computeCurveSamplesCode</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">        void ComputeCurveSamples(out float uSamples)</span>
+<span class="s2">        void ComputeCurveSamples(in int maxSamples, out float uSamples)</span>
 <span class="s2">        {</span>
 <span class="s2">            float sampleRate = 0.0;</span>
 <span class="s2">            if (outData.uInterval &gt; 0.0)</span>
@@ -333,7 +342,7 @@
 <span class="s2">                    }</span>
 <span class="s2">                }</span>
 <span class="s2">            }</span>
-<span class="s2">            uSamples = min(floor(0.5 + outData.uInterval * sampleRate), gl_MaxTessGenLevel);</span>
+<span class="s2">            uSamples = min(floor(0.5 + outData.uInterval * sampleRate), maxSamples);</span>
 <span class="s2">        }</span>
 <span class="s2">    &quot;&quot;&quot;</span>
 
@@ -376,7 +385,7 @@
 <span class="s2">            gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;</span>
 
 <span class="s2">            float uSamples = 0.0;</span>
-<span class="s2">            ComputeCurveSamples(uSamples);</span>
+<span class="s2">            ComputeCurveSamples(gl_MaxTessGenLevel, uSamples);</span>
 <span class="s2">            gl_TessLevelOuter[0] = 1.0;</span>
 <span class="s2">            gl_TessLevelOuter[1] = uSamples;</span>
 <span class="s2">        }}</span>
@@ -423,6 +432,87 @@
 <span class="s2">            }}</span>
 
 <span class="s2">            gl_Position = uProjectionMatrix * point;</span>
+<span class="s2">        }}</span>
+<span class="s2">    &quot;&quot;&quot;</span>
+
+    <span class="n">curveGeometryShaderCode</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        #version 330 core</span>
+
+<span class="s2">        layout( points ) in;</span>
+<span class="s2">        layout( line_strip, max_vertices = 256 ) out;</span>
+
+<span class="s2">        const int header = 2;</span>
+
+<span class="s2">        in SplineInfo</span>
+<span class="s2">        {{</span>
+<span class="s2">            int uOrder;</span>
+<span class="s2">            int uN;</span>
+<span class="s2">            int uKnot;</span>
+<span class="s2">            float u;</span>
+<span class="s2">            float uInterval;</span>
+<span class="s2">        }} inData[];</span>
+
+<span class="s2">        uniform mat4 uProjectionMatrix;</span>
+<span class="s2">        uniform vec3 uScreenScale;</span>
+<span class="s2">        uniform vec4 uClipBounds;</span>
+<span class="s2">        uniform samplerBuffer uSplineData;</span>
+
+<span class="s2">        struct SplineInfo</span>
+<span class="s2">        {{</span>
+<span class="s2">            int uOrder;</span>
+<span class="s2">            int uN;</span>
+<span class="s2">            int uKnot;</span>
+<span class="s2">            float u;</span>
+<span class="s2">            float uInterval;</span>
+<span class="s2">        }} outData; // We don&#39;t output outData (too many components per vertex), but we do use it in ComputeCurveSamples.</span>
+
+<span class="s2">        </span><span class="si">{computeSampleRateCode}</span><span class="s2"></span>
+
+<span class="s2">        </span><span class="si">{computeCurveSamplesCode}</span><span class="s2"></span>
+
+<span class="s2">        </span><span class="si">{computeBSplineCode}</span><span class="s2"></span>
+
+<span class="s2">        void main()</span>
+<span class="s2">        {{</span>
+<span class="s2">            float uSamples = 0.0;</span>
+
+<span class="s2">            outData.uOrder = inData[0].uOrder;</span>
+<span class="s2">            outData.uN = inData[0].uN;</span>
+<span class="s2">            outData.uKnot = inData[0].uKnot;</span>
+<span class="s2">            outData.u = inData[0].u;</span>
+<span class="s2">            outData.uInterval = inData[0].uInterval;</span>
+<span class="s2">            ComputeCurveSamples(gl_MaxGeometryOutputVertices - 1, uSamples);</span>
+
+<span class="s2">            if (uSamples &gt; 0.0)</span>
+<span class="s2">            {{</span>
+<span class="s2">                float uBSpline[</span><span class="si">{maxOrder}</span><span class="s2">];</span>
+<span class="s2">                float duBSpline[</span><span class="si">{maxOrder}</span><span class="s2">];</span>
+<span class="s2">                float u = outData.u;</span>
+<span class="s2">                float deltaU = outData.uInterval / uSamples;</span>
+<span class="s2">                int iOffset = header + outData.uOrder + outData.uN + 4 * (outData.uKnot - outData.uOrder);</span>
+
+<span class="s2">                for (int uSample = 0; uSample &lt;= uSamples; uSample++)</span>
+<span class="s2">                {{</span>
+<span class="s2">                    ComputeBSpline(header, outData.uOrder, outData.uN, outData.uKnot,</span>
+<span class="s2">                        u, uBSpline, duBSpline);</span>
+<span class="s2">                    </span>
+<span class="s2">                    vec4 point = vec4(0.0, 0.0, 0.0, 0.0);</span>
+<span class="s2">                    int i = iOffset;</span>
+<span class="s2">                    for (int b = 0; b &lt; outData.uOrder; b++) // loop from coefficient[uKnot-order] to coefficient[uKnot]</span>
+<span class="s2">                    {{</span>
+<span class="s2">                        point.x += uBSpline[b] * texelFetch(uSplineData, i).x;</span>
+<span class="s2">                        point.y += uBSpline[b] * texelFetch(uSplineData, i+1).x;</span>
+<span class="s2">                        point.z += uBSpline[b] * texelFetch(uSplineData, i+2).x;</span>
+<span class="s2">                        point.w += uBSpline[b] * texelFetch(uSplineData, i+3).x;</span>
+<span class="s2">                        i += 4;</span>
+<span class="s2">                    }}</span>
+
+<span class="s2">                    gl_Position = uProjectionMatrix * point;</span>
+<span class="s2">                    EmitVertex();</span>
+<span class="s2">                    u += deltaU;                    </span>
+<span class="s2">                }}</span>
+<span class="s2">                EndPrimitive();</span>
+<span class="s2">            }}</span>
 <span class="s2">        }}</span>
 <span class="s2">    &quot;&quot;&quot;</span>
 
@@ -482,7 +572,7 @@
 <span class="s2">    &quot;&quot;&quot;</span>
 
     <span class="n">computeSurfaceSamplesCode</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">        void ComputeSurfaceSamples(out float uSamples[3], out float vSamples[3])</span>
+<span class="s2">        void ComputeSurfaceSamples(in int maxSamples, out float uSamples[3], out float vSamples[3])</span>
 <span class="s2">        {{</span>
 <span class="s2">            // Computes sample counts for u and v for the left side ([0]), middle ([1]), and right side ([2]).</span>
 <span class="s2">            // The left side sample count matches the right side sample count for the previous knot.</span>
@@ -560,9 +650,9 @@
 <span class="s2">                    }}</span>
 <span class="s2">                }}</span>
 <span class="s2">            }}</span>
-<span class="s2">            uSamples[0] = min(floor(0.5 + outData.uInterval * sampleRate[0]), gl_MaxTessGenLevel);</span>
-<span class="s2">            uSamples[1] = min(floor(0.5 + outData.uInterval * sampleRate[1]), gl_MaxTessGenLevel);</span>
-<span class="s2">            uSamples[2] = min(floor(0.5 + outData.uInterval * sampleRate[2]), gl_MaxTessGenLevel);</span>
+<span class="s2">            uSamples[0] = min(floor(0.5 + outData.uInterval * sampleRate[0]), maxSamples);</span>
+<span class="s2">            uSamples[1] = min(floor(0.5 + outData.uInterval * sampleRate[1]), maxSamples);</span>
+<span class="s2">            uSamples[2] = min(floor(0.5 + outData.uInterval * sampleRate[2]), maxSamples);</span>
 
 <span class="s2">            sampleRate = float[3](0.0, 0.0, 0.0);</span>
 <span class="s2">            if (outData.vInterval &gt; 0.0)</span>
@@ -637,9 +727,9 @@
 <span class="s2">                    }}</span>
 <span class="s2">                }}</span>
 <span class="s2">            }}</span>
-<span class="s2">            vSamples[0] = min(floor(0.5 + outData.vInterval * sampleRate[0]), gl_MaxTessGenLevel);</span>
-<span class="s2">            vSamples[1] = min(floor(0.5 + outData.vInterval * sampleRate[1]), gl_MaxTessGenLevel);</span>
-<span class="s2">            vSamples[2] = min(floor(0.5 + outData.vInterval * sampleRate[2]), gl_MaxTessGenLevel);</span>
+<span class="s2">            vSamples[0] = min(floor(0.5 + outData.vInterval * sampleRate[0]), maxSamples);</span>
+<span class="s2">            vSamples[1] = min(floor(0.5 + outData.vInterval * sampleRate[1]), maxSamples);</span>
+<span class="s2">            vSamples[2] = min(floor(0.5 + outData.vInterval * sampleRate[2]), maxSamples);</span>
 <span class="s2">        }}</span>
 <span class="s2">    &quot;&quot;&quot;</span>
 
@@ -687,7 +777,7 @@
 
 <span class="s2">            float uSamples[3];</span>
 <span class="s2">            float vSamples[3];</span>
-<span class="s2">            ComputeSurfaceSamples(uSamples, vSamples);</span>
+<span class="s2">            ComputeSurfaceSamples(gl_MaxTessGenLevel, uSamples, vSamples);</span>
 <span class="s2">            gl_TessLevelOuter[0] = vSamples[0] &gt; 0.0 ? vSamples[0] : vSamples[1];</span>
 <span class="s2">            gl_TessLevelOuter[1] = uSamples[0] &gt; 0.0 ? uSamples[0] : uSamples[1];</span>
 <span class="s2">            gl_TessLevelOuter[2] = vSamples[2] &gt; 0.0 ? vSamples[2] : vSamples[1];</span>
@@ -783,6 +873,185 @@
 <span class="s2">        }}</span>
 <span class="s2">    &quot;&quot;&quot;</span>
 
+    <span class="n">surfaceGeometryShaderCode</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        #version 330 core</span>
+
+<span class="s2">        layout( points ) in;</span>
+<span class="s2">        layout( triangle_strip, max_vertices = 256 ) out;</span>
+
+<span class="s2">        const int header = 4;</span>
+
+<span class="s2">        in SplineInfo</span>
+<span class="s2">        {{</span>
+<span class="s2">            int uOrder, vOrder;</span>
+<span class="s2">            int uN, vN;</span>
+<span class="s2">            int uKnot, vKnot;</span>
+<span class="s2">            float uFirst, vFirst;</span>
+<span class="s2">            float uSpan, vSpan;</span>
+<span class="s2">            float u, v;</span>
+<span class="s2">            float uInterval, vInterval;</span>
+<span class="s2">        }} inData[];</span>
+
+<span class="s2">        uniform mat4 uProjectionMatrix;</span>
+<span class="s2">        uniform vec3 uScreenScale;</span>
+<span class="s2">        uniform vec4 uClipBounds;</span>
+<span class="s2">        uniform vec4 uFillColor;</span>
+<span class="s2">        uniform vec3 uLightDirection;</span>
+<span class="s2">        uniform samplerBuffer uSplineData;</span>
+
+<span class="s2">        out vec3 splineColor; // We only output a color to reduce the number of components per vertex.</span>
+
+<span class="s2">        struct SplineInfo</span>
+<span class="s2">        {{</span>
+<span class="s2">            int uOrder, vOrder;</span>
+<span class="s2">            int uN, vN;</span>
+<span class="s2">            int uKnot, vKnot;</span>
+<span class="s2">            float uFirst, vFirst;</span>
+<span class="s2">            float uSpan, vSpan;</span>
+<span class="s2">            float u, v;</span>
+<span class="s2">            float uInterval, vInterval;</span>
+<span class="s2">        }} outData; // We don&#39;t output outData (too many components per vertex), but we do use it in ComputeSurfaceSamples.</span>
+
+<span class="s2">        </span><span class="si">{computeSampleRateCode}</span><span class="s2"></span>
+
+<span class="s2">        </span><span class="si">{computeSurfaceSamplesCode}</span><span class="s2"></span>
+
+<span class="s2">        </span><span class="si">{computeBSplineCode}</span><span class="s2"></span>
+
+<span class="s2">        void main() </span>
+<span class="s2">        {{</span>
+<span class="s2">            float uFullSamples[3];</span>
+<span class="s2">            float vFullSamples[3];</span>
+
+<span class="s2">            outData.uOrder = inData[0].uOrder;</span>
+<span class="s2">            outData.vOrder = inData[0].vOrder;</span>
+<span class="s2">            outData.uN = inData[0].uN;</span>
+<span class="s2">            outData.vN = inData[0].vN;</span>
+<span class="s2">            outData.uKnot = inData[0].uKnot;</span>
+<span class="s2">            outData.vKnot = inData[0].vKnot;</span>
+<span class="s2">            outData.u = inData[0].u;</span>
+<span class="s2">            outData.v = inData[0].v;</span>
+<span class="s2">            outData.uInterval = inData[0].uInterval;</span>
+<span class="s2">            outData.vInterval = inData[0].vInterval;</span>
+<span class="s2">            int maxVertices = gl_MaxGeometryTotalOutputComponents / 7; // The number of output components per vertex is 7 = position.xyzw + splineColor.rgb</span>
+<span class="s2">            ComputeSurfaceSamples(maxVertices, uFullSamples, vFullSamples);</span>
+
+<span class="s2">            if (uFullSamples[1] &gt; 0.0 &amp;&amp; vFullSamples[1] &gt; 0.0)</span>
+<span class="s2">            {{</span>
+<span class="s2">                float alpha = maxVertices / (2.0 * uFullSamples[1] * (vFullSamples[1] + 1.0));</span>
+<span class="s2">                if (alpha &lt; 1.0)</span>
+<span class="s2">                {{</span>
+<span class="s2">                    alpha = sqrt(alpha);</span>
+<span class="s2">                    uFullSamples[1] = alpha * uFullSamples[1];</span>
+<span class="s2">                    vFullSamples[1] = alpha * (vFullSamples[1] + 1.0) - 1.0;</span>
+<span class="s2">                }}</span>
+<span class="s2">                int uSamples = int(uFullSamples[1]);</span>
+<span class="s2">                int vSamples = int(vFullSamples[1]);</span>
+
+<span class="s2">                float uBSpline[</span><span class="si">{maxOrder}</span><span class="s2">];</span>
+<span class="s2">                float duBSpline[</span><span class="si">{maxOrder}</span><span class="s2">];</span>
+<span class="s2">                float uBSplineNext[</span><span class="si">{maxOrder}</span><span class="s2">];</span>
+<span class="s2">                float duBSplineNext[</span><span class="si">{maxOrder}</span><span class="s2">];</span>
+<span class="s2">                float vBSpline[</span><span class="si">{maxOrder}</span><span class="s2">];</span>
+<span class="s2">                float dvBSpline[</span><span class="si">{maxOrder}</span><span class="s2">];</span>
+<span class="s2">                float deltaU = outData.uInterval / uSamples;</span>
+<span class="s2">                float deltaV = outData.vInterval / vSamples;</span>
+<span class="s2">                float u = outData.u;</span>
+<span class="s2">                ComputeBSpline(header, outData.uOrder, outData.uN, outData.uKnot, u, uBSpline, duBSpline);</span>
+
+<span class="s2">                int jOffset = header + outData.uOrder+outData.uN + outData.vOrder+outData.vN + (outData.vKnot - outData.vOrder) * outData.uN * 4;</span>
+<span class="s2">                int iOffset = (outData.uKnot - outData.uOrder) * 4;</span>
+
+<span class="s2">                for (int uSample = 0; uSample &lt; uSamples; uSample++)</span>
+<span class="s2">                {{</span>
+<span class="s2">                    float uNext = u + deltaU;</span>
+<span class="s2">                    ComputeBSpline(header, outData.uOrder, outData.uN, outData.uKnot, uNext, uBSplineNext, duBSplineNext);</span>
+<span class="s2">                        </span>
+<span class="s2">                    float v = outData.v;</span>
+<span class="s2">                    for (int vSample = 0; vSample &lt;= vSamples; vSample++)</span>
+<span class="s2">                    {{</span>
+<span class="s2">                        ComputeBSpline(header + outData.uOrder+outData.uN, outData.vOrder, outData.vN, outData.vKnot, v, vBSpline, dvBSpline);</span>
+
+<span class="s2">                        vec4 point = vec4(0.0, 0.0, 0.0, 0.0);</span>
+<span class="s2">                        vec3 duPoint = vec3(0.0, 0.0, 0.0);</span>
+<span class="s2">                        vec3 dvPoint = vec3(0.0, 0.0, 0.0);</span>
+<span class="s2">                        int j = jOffset;</span>
+<span class="s2">                        for (int vB = 0; vB &lt; outData.vOrder; vB++)</span>
+<span class="s2">                        {{</span>
+<span class="s2">                            int i = j + iOffset;</span>
+<span class="s2">                            for (int uB = 0; uB &lt; outData.uOrder; uB++)</span>
+<span class="s2">                            {{</span>
+<span class="s2">                                point.x += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;</span>
+<span class="s2">                                point.y += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;</span>
+<span class="s2">                                point.z += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;</span>
+<span class="s2">                                point.w += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;</span>
+<span class="s2">                                duPoint.x += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;</span>
+<span class="s2">                                duPoint.y += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;</span>
+<span class="s2">                                duPoint.z += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;</span>
+<span class="s2">                                dvPoint.x += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i).x;</span>
+<span class="s2">                                dvPoint.y += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+1).x;</span>
+<span class="s2">                                dvPoint.z += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+2).x;</span>
+<span class="s2">                                i += 4;</span>
+<span class="s2">                            }}</span>
+<span class="s2">                            j += outData.uN * 4;</span>
+<span class="s2">                        }}</span>
+<span class="s2">                        vec3 normal = normalize(cross(duPoint, dvPoint));</span>
+<span class="s2">                        float specular = pow(abs(dot(normal, normalize(uLightDirection + point.xyz / length(point)))), 25.0);</span>
+<span class="s2">                        splineColor = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * uFillColor.rgb;</span>
+<span class="s2">                        gl_Position = uProjectionMatrix * point;</span>
+<span class="s2">                        EmitVertex();</span>
+
+<span class="s2">                        point = vec4(0.0, 0.0, 0.0, 0.0);</span>
+<span class="s2">                        duPoint = vec3(0.0, 0.0, 0.0);</span>
+<span class="s2">                        dvPoint = vec3(0.0, 0.0, 0.0);</span>
+<span class="s2">                        j = jOffset;</span>
+<span class="s2">                        for (int vB = 0; vB &lt; outData.vOrder; vB++)</span>
+<span class="s2">                        {{</span>
+<span class="s2">                            int i = j + iOffset;</span>
+<span class="s2">                            for (int uB = 0; uB &lt; outData.uOrder; uB++)</span>
+<span class="s2">                            {{</span>
+<span class="s2">                                point.x += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;</span>
+<span class="s2">                                point.y += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;</span>
+<span class="s2">                                point.z += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;</span>
+<span class="s2">                                point.w += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;</span>
+<span class="s2">                                duPoint.x += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;</span>
+<span class="s2">                                duPoint.y += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;</span>
+<span class="s2">                                duPoint.z += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;</span>
+<span class="s2">                                dvPoint.x += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uSplineData, i).x;</span>
+<span class="s2">                                dvPoint.y += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+1).x;</span>
+<span class="s2">                                dvPoint.z += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+2).x;</span>
+<span class="s2">                                i += 4;</span>
+<span class="s2">                            }}</span>
+<span class="s2">                            j += outData.uN * 4;</span>
+<span class="s2">                        }}</span>
+<span class="s2">                        normal = normalize(cross(duPoint, dvPoint));</span>
+<span class="s2">                        specular = pow(abs(dot(normal, normalize(uLightDirection + point.xyz / length(point)))), 25.0);</span>
+<span class="s2">                        splineColor = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * uFillColor.rgb;</span>
+<span class="s2">                        gl_Position = uProjectionMatrix * point;</span>
+<span class="s2">                        EmitVertex();</span>
+
+<span class="s2">                        v += deltaV;                    </span>
+<span class="s2">                    }}</span>
+<span class="s2">                    EndPrimitive();</span>
+<span class="s2">                    u = uNext;</span>
+<span class="s2">                    uBSpline = uBSplineNext;</span>
+<span class="s2">                    duBSpline = duBSplineNext;</span>
+<span class="s2">                }}</span>
+<span class="s2">            }}</span>
+<span class="s2">        }}</span>
+<span class="s2">    &quot;&quot;&quot;</span>
+
+    <span class="n">surfaceSimpleFragmentShaderCode</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        #version 330 core</span>
+<span class="s2">     </span>
+<span class="s2">        in vec3 splineColor;</span>
+<span class="s2">        out vec3 color;</span>
+<span class="s2">     </span>
+<span class="s2">        void main() {</span>
+<span class="s2">            color = splineColor;</span>
+<span class="s2">        }</span>
+<span class="s2">    &quot;&quot;&quot;</span>
+
     <span class="n">surfaceFragmentShaderCode</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">        #version 410 core</span>
 <span class="s2">     </span>
@@ -852,13 +1121,24 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">curveTEShaderCode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">curveTEShaderCode</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
             <span class="n">computeBSplineCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeBSplineCode</span><span class="p">,</span>
             <span class="n">maxOrder</span><span class="o">=</span><span class="n">DrawableSpline</span><span class="o">.</span><span class="n">maxOrder</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curveGeometryShaderCode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">curveGeometryShaderCode</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">computeSampleRateCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeSampleRateCode</span><span class="p">,</span>
+            <span class="n">computeCurveSamplesCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeCurveSamplesCode</span><span class="p">,</span>
+            <span class="n">computeBSplineCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeBSplineCode</span><span class="p">,</span>
+            <span class="n">maxOrder</span><span class="o">=</span><span class="n">DrawableSpline</span><span class="o">.</span><span class="n">maxOrder</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">surfaceTCShaderCode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">surfaceTCShaderCode</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
             <span class="n">computeSampleRateCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeSampleRateCode</span><span class="p">,</span>
             <span class="n">computeSurfaceSamplesCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeSurfaceSamplesCode</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">surfaceTEShaderCode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">surfaceTEShaderCode</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
             <span class="n">computeBSplineCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeBSplineCode</span><span class="p">,</span>
             <span class="n">maxOrder</span><span class="o">=</span><span class="n">DrawableSpline</span><span class="o">.</span><span class="n">maxOrder</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">surfaceGeometryShaderCode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">surfaceGeometryShaderCode</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">computeSampleRateCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeSampleRateCode</span><span class="p">,</span>
+            <span class="n">computeSurfaceSamplesCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeSurfaceSamplesCode</span><span class="p">,</span>
+            <span class="n">computeBSplineCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeBSplineCode</span><span class="p">,</span>
+            <span class="n">maxOrder</span><span class="o">=</span><span class="n">DrawableSpline</span><span class="o">.</span><span class="n">maxOrder</span><span class="p">)</span>
 
+        <span class="bp">self</span><span class="o">.</span><span class="n">tessellationEnabled</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">glInitialized</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="k">def</span> <span class="nf">SetInitialView</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eye</span><span class="p">,</span> <span class="n">look</span><span class="p">,</span> <span class="n">up</span><span class="p">):</span>
@@ -928,18 +1208,35 @@
         <span class="c1">#print(&quot;GL_SHADING_LANGUAGE_VERSION: &quot;, glGetString(GL_SHADING_LANGUAGE_VERSION))</span>
         <span class="c1">#print(&quot;GL_MAX_TESS_GEN_LEVEL: &quot;, glGetIntegerv(GL_MAX_TESS_GEN_LEVEL))</span>
 
+        <span class="bp">self</span><span class="o">.</span><span class="n">tessellationEnabled</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">curveProgram</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileProgram</span><span class="p">(</span>
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveVertexShaderCode</span><span class="p">,</span> <span class="n">GL_VERTEX_SHADER</span><span class="p">),</span> 
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveTCShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_CONTROL_SHADER</span><span class="p">),</span> 
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveTEShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_EVALUATION_SHADER</span><span class="p">),</span> 
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveFragmentShaderCode</span><span class="p">,</span> <span class="n">GL_FRAGMENT_SHADER</span><span class="p">))</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileProgram</span><span class="p">(</span>
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceVertexShaderCode</span><span class="p">,</span> <span class="n">GL_VERTEX_SHADER</span><span class="p">),</span> 
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceTCShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_CONTROL_SHADER</span><span class="p">),</span> 
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceTEShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_EVALUATION_SHADER</span><span class="p">),</span> 
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceFragmentShaderCode</span><span class="p">,</span> <span class="n">GL_FRAGMENT_SHADER</span><span class="p">),</span>
-                <span class="n">validate</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="c1"># Validate after assigning textures below</span>
+            <span class="n">curveTCShader</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveTCShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_CONTROL_SHADER</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">shaders</span><span class="o">.</span><span class="n">ShaderCompilationError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tessellationEnabled</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tessellationEnabled</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">curveProgram</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileProgram</span><span class="p">(</span>
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveVertexShaderCode</span><span class="p">,</span> <span class="n">GL_VERTEX_SHADER</span><span class="p">),</span> 
+                    <span class="n">curveTCShader</span><span class="p">,</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveTEShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_EVALUATION_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveFragmentShaderCode</span><span class="p">,</span> <span class="n">GL_FRAGMENT_SHADER</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileProgram</span><span class="p">(</span>
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceVertexShaderCode</span><span class="p">,</span> <span class="n">GL_VERTEX_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceTCShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_CONTROL_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceTEShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_EVALUATION_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceFragmentShaderCode</span><span class="p">,</span> <span class="n">GL_FRAGMENT_SHADER</span><span class="p">),</span>
+                    <span class="n">validate</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="c1"># Validate after assigning textures below</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">curveProgram</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileProgram</span><span class="p">(</span>
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveVertexShaderCode</span><span class="p">,</span> <span class="n">GL_VERTEX_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveGeometryShaderCode</span><span class="p">,</span> <span class="n">GL_GEOMETRY_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveFragmentShaderCode</span><span class="p">,</span> <span class="n">GL_FRAGMENT_SHADER</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileProgram</span><span class="p">(</span>
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceVertexShaderCode</span><span class="p">,</span> <span class="n">GL_VERTEX_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceGeometryShaderCode</span><span class="p">,</span> <span class="n">GL_GEOMETRY_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceSimpleFragmentShaderCode</span><span class="p">,</span> <span class="n">GL_FRAGMENT_SHADER</span><span class="p">),</span>
+                    <span class="n">validate</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="c1"># Validate after assigning textures below</span>
         <span class="k">except</span> <span class="n">shaders</span><span class="o">.</span><span class="n">ShaderCompilationError</span> <span class="k">as</span> <span class="n">exception</span><span class="p">:</span>
             <span class="n">error</span> <span class="o">=</span> <span class="n">exception</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
             <span class="n">lineNumber</span> <span class="o">=</span> <span class="n">error</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)[</span><span class="mi">3</span><span class="p">]</span>
@@ -978,7 +1275,7 @@
         <span class="n">glVertexAttribPointer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">aSurfaceParameters</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">GL_FLOAT</span><span class="p">,</span> <span class="n">GL_FALSE</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceProjectionMatrix</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">,</span> <span class="s1">&#39;uProjectionMatrix&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceScreenScale</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">,</span> <span class="s1">&#39;uScreenScale&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceClipBounds</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveProgram</span><span class="p">,</span> <span class="s1">&#39;uClipBounds&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceClipBounds</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">,</span> <span class="s1">&#39;uClipBounds&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceFillColor</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">,</span> <span class="s1">&#39;uFillColor&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceLineColor</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">,</span> <span class="s1">&#39;uLineColor&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceLightDirection</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">,</span> <span class="s1">&#39;uLightDirection&#39;</span><span class="p">)</span>
@@ -1297,7 +1594,7 @@
 <span class="s2">    &quot;&quot;&quot;</span>
 
     <span class="n">computeCurveSamplesCode</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">        void ComputeCurveSamples(out float uSamples)</span>
+<span class="s2">        void ComputeCurveSamples(in int maxSamples, out float uSamples)</span>
 <span class="s2">        {</span>
 <span class="s2">            float sampleRate = 0.0;</span>
 <span class="s2">            if (outData.uInterval &gt; 0.0)</span>
@@ -1350,7 +1647,7 @@
 <span class="s2">                    }</span>
 <span class="s2">                }</span>
 <span class="s2">            }</span>
-<span class="s2">            uSamples = min(floor(0.5 + outData.uInterval * sampleRate), gl_MaxTessGenLevel);</span>
+<span class="s2">            uSamples = min(floor(0.5 + outData.uInterval * sampleRate), maxSamples);</span>
 <span class="s2">        }</span>
 <span class="s2">    &quot;&quot;&quot;</span>
 
@@ -1393,7 +1690,7 @@
 <span class="s2">            gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;</span>
 
 <span class="s2">            float uSamples = 0.0;</span>
-<span class="s2">            ComputeCurveSamples(uSamples);</span>
+<span class="s2">            ComputeCurveSamples(gl_MaxTessGenLevel, uSamples);</span>
 <span class="s2">            gl_TessLevelOuter[0] = 1.0;</span>
 <span class="s2">            gl_TessLevelOuter[1] = uSamples;</span>
 <span class="s2">        }}</span>
@@ -1440,6 +1737,87 @@
 <span class="s2">            }}</span>
 
 <span class="s2">            gl_Position = uProjectionMatrix * point;</span>
+<span class="s2">        }}</span>
+<span class="s2">    &quot;&quot;&quot;</span>
+
+    <span class="n">curveGeometryShaderCode</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        #version 330 core</span>
+
+<span class="s2">        layout( points ) in;</span>
+<span class="s2">        layout( line_strip, max_vertices = 256 ) out;</span>
+
+<span class="s2">        const int header = 2;</span>
+
+<span class="s2">        in SplineInfo</span>
+<span class="s2">        {{</span>
+<span class="s2">            int uOrder;</span>
+<span class="s2">            int uN;</span>
+<span class="s2">            int uKnot;</span>
+<span class="s2">            float u;</span>
+<span class="s2">            float uInterval;</span>
+<span class="s2">        }} inData[];</span>
+
+<span class="s2">        uniform mat4 uProjectionMatrix;</span>
+<span class="s2">        uniform vec3 uScreenScale;</span>
+<span class="s2">        uniform vec4 uClipBounds;</span>
+<span class="s2">        uniform samplerBuffer uSplineData;</span>
+
+<span class="s2">        struct SplineInfo</span>
+<span class="s2">        {{</span>
+<span class="s2">            int uOrder;</span>
+<span class="s2">            int uN;</span>
+<span class="s2">            int uKnot;</span>
+<span class="s2">            float u;</span>
+<span class="s2">            float uInterval;</span>
+<span class="s2">        }} outData; // We don&#39;t output outData (too many components per vertex), but we do use it in ComputeCurveSamples.</span>
+
+<span class="s2">        </span><span class="si">{computeSampleRateCode}</span><span class="s2"></span>
+
+<span class="s2">        </span><span class="si">{computeCurveSamplesCode}</span><span class="s2"></span>
+
+<span class="s2">        </span><span class="si">{computeBSplineCode}</span><span class="s2"></span>
+
+<span class="s2">        void main()</span>
+<span class="s2">        {{</span>
+<span class="s2">            float uSamples = 0.0;</span>
+
+<span class="s2">            outData.uOrder = inData[0].uOrder;</span>
+<span class="s2">            outData.uN = inData[0].uN;</span>
+<span class="s2">            outData.uKnot = inData[0].uKnot;</span>
+<span class="s2">            outData.u = inData[0].u;</span>
+<span class="s2">            outData.uInterval = inData[0].uInterval;</span>
+<span class="s2">            ComputeCurveSamples(gl_MaxGeometryOutputVertices - 1, uSamples);</span>
+
+<span class="s2">            if (uSamples &gt; 0.0)</span>
+<span class="s2">            {{</span>
+<span class="s2">                float uBSpline[</span><span class="si">{maxOrder}</span><span class="s2">];</span>
+<span class="s2">                float duBSpline[</span><span class="si">{maxOrder}</span><span class="s2">];</span>
+<span class="s2">                float u = outData.u;</span>
+<span class="s2">                float deltaU = outData.uInterval / uSamples;</span>
+<span class="s2">                int iOffset = header + outData.uOrder + outData.uN + 4 * (outData.uKnot - outData.uOrder);</span>
+
+<span class="s2">                for (int uSample = 0; uSample &lt;= uSamples; uSample++)</span>
+<span class="s2">                {{</span>
+<span class="s2">                    ComputeBSpline(header, outData.uOrder, outData.uN, outData.uKnot,</span>
+<span class="s2">                        u, uBSpline, duBSpline);</span>
+<span class="s2">                    </span>
+<span class="s2">                    vec4 point = vec4(0.0, 0.0, 0.0, 0.0);</span>
+<span class="s2">                    int i = iOffset;</span>
+<span class="s2">                    for (int b = 0; b &lt; outData.uOrder; b++) // loop from coefficient[uKnot-order] to coefficient[uKnot]</span>
+<span class="s2">                    {{</span>
+<span class="s2">                        point.x += uBSpline[b] * texelFetch(uSplineData, i).x;</span>
+<span class="s2">                        point.y += uBSpline[b] * texelFetch(uSplineData, i+1).x;</span>
+<span class="s2">                        point.z += uBSpline[b] * texelFetch(uSplineData, i+2).x;</span>
+<span class="s2">                        point.w += uBSpline[b] * texelFetch(uSplineData, i+3).x;</span>
+<span class="s2">                        i += 4;</span>
+<span class="s2">                    }}</span>
+
+<span class="s2">                    gl_Position = uProjectionMatrix * point;</span>
+<span class="s2">                    EmitVertex();</span>
+<span class="s2">                    u += deltaU;                    </span>
+<span class="s2">                }}</span>
+<span class="s2">                EndPrimitive();</span>
+<span class="s2">            }}</span>
 <span class="s2">        }}</span>
 <span class="s2">    &quot;&quot;&quot;</span>
 
@@ -1499,7 +1877,7 @@
 <span class="s2">    &quot;&quot;&quot;</span>
 
     <span class="n">computeSurfaceSamplesCode</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">        void ComputeSurfaceSamples(out float uSamples[3], out float vSamples[3])</span>
+<span class="s2">        void ComputeSurfaceSamples(in int maxSamples, out float uSamples[3], out float vSamples[3])</span>
 <span class="s2">        {{</span>
 <span class="s2">            // Computes sample counts for u and v for the left side ([0]), middle ([1]), and right side ([2]).</span>
 <span class="s2">            // The left side sample count matches the right side sample count for the previous knot.</span>
@@ -1577,9 +1955,9 @@
 <span class="s2">                    }}</span>
 <span class="s2">                }}</span>
 <span class="s2">            }}</span>
-<span class="s2">            uSamples[0] = min(floor(0.5 + outData.uInterval * sampleRate[0]), gl_MaxTessGenLevel);</span>
-<span class="s2">            uSamples[1] = min(floor(0.5 + outData.uInterval * sampleRate[1]), gl_MaxTessGenLevel);</span>
-<span class="s2">            uSamples[2] = min(floor(0.5 + outData.uInterval * sampleRate[2]), gl_MaxTessGenLevel);</span>
+<span class="s2">            uSamples[0] = min(floor(0.5 + outData.uInterval * sampleRate[0]), maxSamples);</span>
+<span class="s2">            uSamples[1] = min(floor(0.5 + outData.uInterval * sampleRate[1]), maxSamples);</span>
+<span class="s2">            uSamples[2] = min(floor(0.5 + outData.uInterval * sampleRate[2]), maxSamples);</span>
 
 <span class="s2">            sampleRate = float[3](0.0, 0.0, 0.0);</span>
 <span class="s2">            if (outData.vInterval &gt; 0.0)</span>
@@ -1654,9 +2032,9 @@
 <span class="s2">                    }}</span>
 <span class="s2">                }}</span>
 <span class="s2">            }}</span>
-<span class="s2">            vSamples[0] = min(floor(0.5 + outData.vInterval * sampleRate[0]), gl_MaxTessGenLevel);</span>
-<span class="s2">            vSamples[1] = min(floor(0.5 + outData.vInterval * sampleRate[1]), gl_MaxTessGenLevel);</span>
-<span class="s2">            vSamples[2] = min(floor(0.5 + outData.vInterval * sampleRate[2]), gl_MaxTessGenLevel);</span>
+<span class="s2">            vSamples[0] = min(floor(0.5 + outData.vInterval * sampleRate[0]), maxSamples);</span>
+<span class="s2">            vSamples[1] = min(floor(0.5 + outData.vInterval * sampleRate[1]), maxSamples);</span>
+<span class="s2">            vSamples[2] = min(floor(0.5 + outData.vInterval * sampleRate[2]), maxSamples);</span>
 <span class="s2">        }}</span>
 <span class="s2">    &quot;&quot;&quot;</span>
 
@@ -1704,7 +2082,7 @@
 
 <span class="s2">            float uSamples[3];</span>
 <span class="s2">            float vSamples[3];</span>
-<span class="s2">            ComputeSurfaceSamples(uSamples, vSamples);</span>
+<span class="s2">            ComputeSurfaceSamples(gl_MaxTessGenLevel, uSamples, vSamples);</span>
 <span class="s2">            gl_TessLevelOuter[0] = vSamples[0] &gt; 0.0 ? vSamples[0] : vSamples[1];</span>
 <span class="s2">            gl_TessLevelOuter[1] = uSamples[0] &gt; 0.0 ? uSamples[0] : uSamples[1];</span>
 <span class="s2">            gl_TessLevelOuter[2] = vSamples[2] &gt; 0.0 ? vSamples[2] : vSamples[1];</span>
@@ -1800,6 +2178,185 @@
 <span class="s2">        }}</span>
 <span class="s2">    &quot;&quot;&quot;</span>
 
+    <span class="n">surfaceGeometryShaderCode</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        #version 330 core</span>
+
+<span class="s2">        layout( points ) in;</span>
+<span class="s2">        layout( triangle_strip, max_vertices = 256 ) out;</span>
+
+<span class="s2">        const int header = 4;</span>
+
+<span class="s2">        in SplineInfo</span>
+<span class="s2">        {{</span>
+<span class="s2">            int uOrder, vOrder;</span>
+<span class="s2">            int uN, vN;</span>
+<span class="s2">            int uKnot, vKnot;</span>
+<span class="s2">            float uFirst, vFirst;</span>
+<span class="s2">            float uSpan, vSpan;</span>
+<span class="s2">            float u, v;</span>
+<span class="s2">            float uInterval, vInterval;</span>
+<span class="s2">        }} inData[];</span>
+
+<span class="s2">        uniform mat4 uProjectionMatrix;</span>
+<span class="s2">        uniform vec3 uScreenScale;</span>
+<span class="s2">        uniform vec4 uClipBounds;</span>
+<span class="s2">        uniform vec4 uFillColor;</span>
+<span class="s2">        uniform vec3 uLightDirection;</span>
+<span class="s2">        uniform samplerBuffer uSplineData;</span>
+
+<span class="s2">        out vec3 splineColor; // We only output a color to reduce the number of components per vertex.</span>
+
+<span class="s2">        struct SplineInfo</span>
+<span class="s2">        {{</span>
+<span class="s2">            int uOrder, vOrder;</span>
+<span class="s2">            int uN, vN;</span>
+<span class="s2">            int uKnot, vKnot;</span>
+<span class="s2">            float uFirst, vFirst;</span>
+<span class="s2">            float uSpan, vSpan;</span>
+<span class="s2">            float u, v;</span>
+<span class="s2">            float uInterval, vInterval;</span>
+<span class="s2">        }} outData; // We don&#39;t output outData (too many components per vertex), but we do use it in ComputeSurfaceSamples.</span>
+
+<span class="s2">        </span><span class="si">{computeSampleRateCode}</span><span class="s2"></span>
+
+<span class="s2">        </span><span class="si">{computeSurfaceSamplesCode}</span><span class="s2"></span>
+
+<span class="s2">        </span><span class="si">{computeBSplineCode}</span><span class="s2"></span>
+
+<span class="s2">        void main() </span>
+<span class="s2">        {{</span>
+<span class="s2">            float uFullSamples[3];</span>
+<span class="s2">            float vFullSamples[3];</span>
+
+<span class="s2">            outData.uOrder = inData[0].uOrder;</span>
+<span class="s2">            outData.vOrder = inData[0].vOrder;</span>
+<span class="s2">            outData.uN = inData[0].uN;</span>
+<span class="s2">            outData.vN = inData[0].vN;</span>
+<span class="s2">            outData.uKnot = inData[0].uKnot;</span>
+<span class="s2">            outData.vKnot = inData[0].vKnot;</span>
+<span class="s2">            outData.u = inData[0].u;</span>
+<span class="s2">            outData.v = inData[0].v;</span>
+<span class="s2">            outData.uInterval = inData[0].uInterval;</span>
+<span class="s2">            outData.vInterval = inData[0].vInterval;</span>
+<span class="s2">            int maxVertices = gl_MaxGeometryTotalOutputComponents / 7; // The number of output components per vertex is 7 = position.xyzw + splineColor.rgb</span>
+<span class="s2">            ComputeSurfaceSamples(maxVertices, uFullSamples, vFullSamples);</span>
+
+<span class="s2">            if (uFullSamples[1] &gt; 0.0 &amp;&amp; vFullSamples[1] &gt; 0.0)</span>
+<span class="s2">            {{</span>
+<span class="s2">                float alpha = maxVertices / (2.0 * uFullSamples[1] * (vFullSamples[1] + 1.0));</span>
+<span class="s2">                if (alpha &lt; 1.0)</span>
+<span class="s2">                {{</span>
+<span class="s2">                    alpha = sqrt(alpha);</span>
+<span class="s2">                    uFullSamples[1] = alpha * uFullSamples[1];</span>
+<span class="s2">                    vFullSamples[1] = alpha * (vFullSamples[1] + 1.0) - 1.0;</span>
+<span class="s2">                }}</span>
+<span class="s2">                int uSamples = int(uFullSamples[1]);</span>
+<span class="s2">                int vSamples = int(vFullSamples[1]);</span>
+
+<span class="s2">                float uBSpline[</span><span class="si">{maxOrder}</span><span class="s2">];</span>
+<span class="s2">                float duBSpline[</span><span class="si">{maxOrder}</span><span class="s2">];</span>
+<span class="s2">                float uBSplineNext[</span><span class="si">{maxOrder}</span><span class="s2">];</span>
+<span class="s2">                float duBSplineNext[</span><span class="si">{maxOrder}</span><span class="s2">];</span>
+<span class="s2">                float vBSpline[</span><span class="si">{maxOrder}</span><span class="s2">];</span>
+<span class="s2">                float dvBSpline[</span><span class="si">{maxOrder}</span><span class="s2">];</span>
+<span class="s2">                float deltaU = outData.uInterval / uSamples;</span>
+<span class="s2">                float deltaV = outData.vInterval / vSamples;</span>
+<span class="s2">                float u = outData.u;</span>
+<span class="s2">                ComputeBSpline(header, outData.uOrder, outData.uN, outData.uKnot, u, uBSpline, duBSpline);</span>
+
+<span class="s2">                int jOffset = header + outData.uOrder+outData.uN + outData.vOrder+outData.vN + (outData.vKnot - outData.vOrder) * outData.uN * 4;</span>
+<span class="s2">                int iOffset = (outData.uKnot - outData.uOrder) * 4;</span>
+
+<span class="s2">                for (int uSample = 0; uSample &lt; uSamples; uSample++)</span>
+<span class="s2">                {{</span>
+<span class="s2">                    float uNext = u + deltaU;</span>
+<span class="s2">                    ComputeBSpline(header, outData.uOrder, outData.uN, outData.uKnot, uNext, uBSplineNext, duBSplineNext);</span>
+<span class="s2">                        </span>
+<span class="s2">                    float v = outData.v;</span>
+<span class="s2">                    for (int vSample = 0; vSample &lt;= vSamples; vSample++)</span>
+<span class="s2">                    {{</span>
+<span class="s2">                        ComputeBSpline(header + outData.uOrder+outData.uN, outData.vOrder, outData.vN, outData.vKnot, v, vBSpline, dvBSpline);</span>
+
+<span class="s2">                        vec4 point = vec4(0.0, 0.0, 0.0, 0.0);</span>
+<span class="s2">                        vec3 duPoint = vec3(0.0, 0.0, 0.0);</span>
+<span class="s2">                        vec3 dvPoint = vec3(0.0, 0.0, 0.0);</span>
+<span class="s2">                        int j = jOffset;</span>
+<span class="s2">                        for (int vB = 0; vB &lt; outData.vOrder; vB++)</span>
+<span class="s2">                        {{</span>
+<span class="s2">                            int i = j + iOffset;</span>
+<span class="s2">                            for (int uB = 0; uB &lt; outData.uOrder; uB++)</span>
+<span class="s2">                            {{</span>
+<span class="s2">                                point.x += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;</span>
+<span class="s2">                                point.y += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;</span>
+<span class="s2">                                point.z += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;</span>
+<span class="s2">                                point.w += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;</span>
+<span class="s2">                                duPoint.x += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;</span>
+<span class="s2">                                duPoint.y += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;</span>
+<span class="s2">                                duPoint.z += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;</span>
+<span class="s2">                                dvPoint.x += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i).x;</span>
+<span class="s2">                                dvPoint.y += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+1).x;</span>
+<span class="s2">                                dvPoint.z += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+2).x;</span>
+<span class="s2">                                i += 4;</span>
+<span class="s2">                            }}</span>
+<span class="s2">                            j += outData.uN * 4;</span>
+<span class="s2">                        }}</span>
+<span class="s2">                        vec3 normal = normalize(cross(duPoint, dvPoint));</span>
+<span class="s2">                        float specular = pow(abs(dot(normal, normalize(uLightDirection + point.xyz / length(point)))), 25.0);</span>
+<span class="s2">                        splineColor = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * uFillColor.rgb;</span>
+<span class="s2">                        gl_Position = uProjectionMatrix * point;</span>
+<span class="s2">                        EmitVertex();</span>
+
+<span class="s2">                        point = vec4(0.0, 0.0, 0.0, 0.0);</span>
+<span class="s2">                        duPoint = vec3(0.0, 0.0, 0.0);</span>
+<span class="s2">                        dvPoint = vec3(0.0, 0.0, 0.0);</span>
+<span class="s2">                        j = jOffset;</span>
+<span class="s2">                        for (int vB = 0; vB &lt; outData.vOrder; vB++)</span>
+<span class="s2">                        {{</span>
+<span class="s2">                            int i = j + iOffset;</span>
+<span class="s2">                            for (int uB = 0; uB &lt; outData.uOrder; uB++)</span>
+<span class="s2">                            {{</span>
+<span class="s2">                                point.x += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;</span>
+<span class="s2">                                point.y += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;</span>
+<span class="s2">                                point.z += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;</span>
+<span class="s2">                                point.w += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;</span>
+<span class="s2">                                duPoint.x += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;</span>
+<span class="s2">                                duPoint.y += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;</span>
+<span class="s2">                                duPoint.z += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;</span>
+<span class="s2">                                dvPoint.x += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uSplineData, i).x;</span>
+<span class="s2">                                dvPoint.y += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+1).x;</span>
+<span class="s2">                                dvPoint.z += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+2).x;</span>
+<span class="s2">                                i += 4;</span>
+<span class="s2">                            }}</span>
+<span class="s2">                            j += outData.uN * 4;</span>
+<span class="s2">                        }}</span>
+<span class="s2">                        normal = normalize(cross(duPoint, dvPoint));</span>
+<span class="s2">                        specular = pow(abs(dot(normal, normalize(uLightDirection + point.xyz / length(point)))), 25.0);</span>
+<span class="s2">                        splineColor = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * uFillColor.rgb;</span>
+<span class="s2">                        gl_Position = uProjectionMatrix * point;</span>
+<span class="s2">                        EmitVertex();</span>
+
+<span class="s2">                        v += deltaV;                    </span>
+<span class="s2">                    }}</span>
+<span class="s2">                    EndPrimitive();</span>
+<span class="s2">                    u = uNext;</span>
+<span class="s2">                    uBSpline = uBSplineNext;</span>
+<span class="s2">                    duBSpline = duBSplineNext;</span>
+<span class="s2">                }}</span>
+<span class="s2">            }}</span>
+<span class="s2">        }}</span>
+<span class="s2">    &quot;&quot;&quot;</span>
+
+    <span class="n">surfaceSimpleFragmentShaderCode</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        #version 330 core</span>
+<span class="s2">     </span>
+<span class="s2">        in vec3 splineColor;</span>
+<span class="s2">        out vec3 color;</span>
+<span class="s2">     </span>
+<span class="s2">        void main() {</span>
+<span class="s2">            color = splineColor;</span>
+<span class="s2">        }</span>
+<span class="s2">    &quot;&quot;&quot;</span>
+
     <span class="n">surfaceFragmentShaderCode</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">        #version 410 core</span>
 <span class="s2">     </span>
@@ -1869,13 +2426,24 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">curveTEShaderCode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">curveTEShaderCode</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
             <span class="n">computeBSplineCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeBSplineCode</span><span class="p">,</span>
             <span class="n">maxOrder</span><span class="o">=</span><span class="n">DrawableSpline</span><span class="o">.</span><span class="n">maxOrder</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curveGeometryShaderCode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">curveGeometryShaderCode</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">computeSampleRateCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeSampleRateCode</span><span class="p">,</span>
+            <span class="n">computeCurveSamplesCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeCurveSamplesCode</span><span class="p">,</span>
+            <span class="n">computeBSplineCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeBSplineCode</span><span class="p">,</span>
+            <span class="n">maxOrder</span><span class="o">=</span><span class="n">DrawableSpline</span><span class="o">.</span><span class="n">maxOrder</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">surfaceTCShaderCode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">surfaceTCShaderCode</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
             <span class="n">computeSampleRateCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeSampleRateCode</span><span class="p">,</span>
             <span class="n">computeSurfaceSamplesCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeSurfaceSamplesCode</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">surfaceTEShaderCode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">surfaceTEShaderCode</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
             <span class="n">computeBSplineCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeBSplineCode</span><span class="p">,</span>
             <span class="n">maxOrder</span><span class="o">=</span><span class="n">DrawableSpline</span><span class="o">.</span><span class="n">maxOrder</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">surfaceGeometryShaderCode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">surfaceGeometryShaderCode</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">computeSampleRateCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeSampleRateCode</span><span class="p">,</span>
+            <span class="n">computeSurfaceSamplesCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeSurfaceSamplesCode</span><span class="p">,</span>
+            <span class="n">computeBSplineCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeBSplineCode</span><span class="p">,</span>
+            <span class="n">maxOrder</span><span class="o">=</span><span class="n">DrawableSpline</span><span class="o">.</span><span class="n">maxOrder</span><span class="p">)</span>
 
+        <span class="bp">self</span><span class="o">.</span><span class="n">tessellationEnabled</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">glInitialized</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="k">def</span> <span class="nf">SetInitialView</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eye</span><span class="p">,</span> <span class="n">look</span><span class="p">,</span> <span class="n">up</span><span class="p">):</span>
@@ -1945,18 +2513,35 @@
         <span class="c1">#print(&quot;GL_SHADING_LANGUAGE_VERSION: &quot;, glGetString(GL_SHADING_LANGUAGE_VERSION))</span>
         <span class="c1">#print(&quot;GL_MAX_TESS_GEN_LEVEL: &quot;, glGetIntegerv(GL_MAX_TESS_GEN_LEVEL))</span>
 
+        <span class="bp">self</span><span class="o">.</span><span class="n">tessellationEnabled</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">curveProgram</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileProgram</span><span class="p">(</span>
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveVertexShaderCode</span><span class="p">,</span> <span class="n">GL_VERTEX_SHADER</span><span class="p">),</span> 
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveTCShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_CONTROL_SHADER</span><span class="p">),</span> 
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveTEShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_EVALUATION_SHADER</span><span class="p">),</span> 
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveFragmentShaderCode</span><span class="p">,</span> <span class="n">GL_FRAGMENT_SHADER</span><span class="p">))</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileProgram</span><span class="p">(</span>
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceVertexShaderCode</span><span class="p">,</span> <span class="n">GL_VERTEX_SHADER</span><span class="p">),</span> 
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceTCShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_CONTROL_SHADER</span><span class="p">),</span> 
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceTEShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_EVALUATION_SHADER</span><span class="p">),</span> 
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceFragmentShaderCode</span><span class="p">,</span> <span class="n">GL_FRAGMENT_SHADER</span><span class="p">),</span>
-                <span class="n">validate</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="c1"># Validate after assigning textures below</span>
+            <span class="n">curveTCShader</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveTCShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_CONTROL_SHADER</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">shaders</span><span class="o">.</span><span class="n">ShaderCompilationError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tessellationEnabled</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tessellationEnabled</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">curveProgram</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileProgram</span><span class="p">(</span>
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveVertexShaderCode</span><span class="p">,</span> <span class="n">GL_VERTEX_SHADER</span><span class="p">),</span> 
+                    <span class="n">curveTCShader</span><span class="p">,</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveTEShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_EVALUATION_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveFragmentShaderCode</span><span class="p">,</span> <span class="n">GL_FRAGMENT_SHADER</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileProgram</span><span class="p">(</span>
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceVertexShaderCode</span><span class="p">,</span> <span class="n">GL_VERTEX_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceTCShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_CONTROL_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceTEShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_EVALUATION_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceFragmentShaderCode</span><span class="p">,</span> <span class="n">GL_FRAGMENT_SHADER</span><span class="p">),</span>
+                    <span class="n">validate</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="c1"># Validate after assigning textures below</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">curveProgram</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileProgram</span><span class="p">(</span>
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveVertexShaderCode</span><span class="p">,</span> <span class="n">GL_VERTEX_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveGeometryShaderCode</span><span class="p">,</span> <span class="n">GL_GEOMETRY_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveFragmentShaderCode</span><span class="p">,</span> <span class="n">GL_FRAGMENT_SHADER</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileProgram</span><span class="p">(</span>
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceVertexShaderCode</span><span class="p">,</span> <span class="n">GL_VERTEX_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceGeometryShaderCode</span><span class="p">,</span> <span class="n">GL_GEOMETRY_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceSimpleFragmentShaderCode</span><span class="p">,</span> <span class="n">GL_FRAGMENT_SHADER</span><span class="p">),</span>
+                    <span class="n">validate</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="c1"># Validate after assigning textures below</span>
         <span class="k">except</span> <span class="n">shaders</span><span class="o">.</span><span class="n">ShaderCompilationError</span> <span class="k">as</span> <span class="n">exception</span><span class="p">:</span>
             <span class="n">error</span> <span class="o">=</span> <span class="n">exception</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
             <span class="n">lineNumber</span> <span class="o">=</span> <span class="n">error</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)[</span><span class="mi">3</span><span class="p">]</span>
@@ -1995,7 +2580,7 @@
         <span class="n">glVertexAttribPointer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">aSurfaceParameters</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">GL_FLOAT</span><span class="p">,</span> <span class="n">GL_FALSE</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceProjectionMatrix</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">,</span> <span class="s1">&#39;uProjectionMatrix&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceScreenScale</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">,</span> <span class="s1">&#39;uScreenScale&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceClipBounds</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveProgram</span><span class="p">,</span> <span class="s1">&#39;uClipBounds&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceClipBounds</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">,</span> <span class="s1">&#39;uClipBounds&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceFillColor</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">,</span> <span class="s1">&#39;uFillColor&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceLineColor</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">,</span> <span class="s1">&#39;uLineColor&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceLightDirection</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">,</span> <span class="s1">&#39;uLightDirection&#39;</span><span class="p">)</span>
@@ -2227,13 +2812,24 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">curveTEShaderCode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">curveTEShaderCode</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
             <span class="n">computeBSplineCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeBSplineCode</span><span class="p">,</span>
             <span class="n">maxOrder</span><span class="o">=</span><span class="n">DrawableSpline</span><span class="o">.</span><span class="n">maxOrder</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curveGeometryShaderCode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">curveGeometryShaderCode</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">computeSampleRateCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeSampleRateCode</span><span class="p">,</span>
+            <span class="n">computeCurveSamplesCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeCurveSamplesCode</span><span class="p">,</span>
+            <span class="n">computeBSplineCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeBSplineCode</span><span class="p">,</span>
+            <span class="n">maxOrder</span><span class="o">=</span><span class="n">DrawableSpline</span><span class="o">.</span><span class="n">maxOrder</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">surfaceTCShaderCode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">surfaceTCShaderCode</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
             <span class="n">computeSampleRateCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeSampleRateCode</span><span class="p">,</span>
             <span class="n">computeSurfaceSamplesCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeSurfaceSamplesCode</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">surfaceTEShaderCode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">surfaceTEShaderCode</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
             <span class="n">computeBSplineCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeBSplineCode</span><span class="p">,</span>
             <span class="n">maxOrder</span><span class="o">=</span><span class="n">DrawableSpline</span><span class="o">.</span><span class="n">maxOrder</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">surfaceGeometryShaderCode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">surfaceGeometryShaderCode</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">computeSampleRateCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeSampleRateCode</span><span class="p">,</span>
+            <span class="n">computeSurfaceSamplesCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeSurfaceSamplesCode</span><span class="p">,</span>
+            <span class="n">computeBSplineCode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">computeBSplineCode</span><span class="p">,</span>
+            <span class="n">maxOrder</span><span class="o">=</span><span class="n">DrawableSpline</span><span class="o">.</span><span class="n">maxOrder</span><span class="p">)</span>
 
+        <span class="bp">self</span><span class="o">.</span><span class="n">tessellationEnabled</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">glInitialized</span> <span class="o">=</span> <span class="kc">False</span>
 </pre></div>
 
@@ -2317,7 +2913,7 @@ highlightcolor, highlightthickness, relief, takefocus, visual, width.</p>
                             <div id="SplineOpenGLFrame.computeCurveSamplesCode" class="classattr">
                                             <div class="attr variable"><a class="headerlink" href="#SplineOpenGLFrame.computeCurveSamplesCode">#&nbsp;&nbsp</a>
 
-        <span class="name">computeCurveSamplesCode</span><span class="default_value"> = &#34;\n        void ComputeCurveSamples(out float uSamples)\n        {\n            float sampleRate = 0.0;\n            if (outData.uInterval &gt; 0.0)\n            {\n                float minRate = 1.0 / outData.uInterval;\n                if (outData.uOrder &lt; 3)\n                {\n                    // It&#39;s a line or point, so just do the minimum sample.\n                    sampleRate = minRate;\n                }\n                else\n                {\n                    int i = outData.uKnot - outData.uOrder;\n                    int coefficientOffset = header + outData.uOrder + outData.uN + 4 * i;\n                    vec4 coefficient0 = vec4(\n                        texelFetch(uSplineData, coefficientOffset+0).x, \n                        texelFetch(uSplineData, coefficientOffset+1).x,\n                        texelFetch(uSplineData, coefficientOffset+2).x,\n                        texelFetch(uSplineData, coefficientOffset+3).x);\n                    coefficientOffset += 4;\n                    vec4 coefficient1 = vec4(\n                        texelFetch(uSplineData, coefficientOffset+0).x, \n                        texelFetch(uSplineData, coefficientOffset+1).x,\n                        texelFetch(uSplineData, coefficientOffset+2).x,\n                        texelFetch(uSplineData, coefficientOffset+3).x);\n                    float gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]\n                    vec3 dPoint0 = ((outData.uOrder - 1) / gap) * (coefficient1.xyz - coefficient0.xyz);\n                    while (i &lt; outData.uKnot-2)\n                    {\n                        coefficientOffset += 4;\n                        vec4 coefficient2 = vec4(\n                            texelFetch(uSplineData, coefficientOffset+0).x, \n                            texelFetch(uSplineData, coefficientOffset+1).x,\n                            texelFetch(uSplineData, coefficientOffset+2).x,\n                            texelFetch(uSplineData, coefficientOffset+3).x);\n                        gap = texelFetch(uSplineData, header + i+1+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]\n                        vec3 dPoint1 = ((outData.uOrder - 1) / gap) * (coefficient2.xyz - coefficient1.xyz);\n                        gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+uOrder] - uKnots[i+2]\n                        vec3 d2Point = ((outData.uOrder - 2) / gap) * (dPoint1 - dPoint0);\n\n                        sampleRate = max(sampleRate, ComputeSampleRate(coefficient0, dPoint0, d2Point, minRate));\n                        sampleRate = max(sampleRate, ComputeSampleRate(coefficient1, dPoint0, d2Point, minRate));\n                        sampleRate = max(sampleRate, ComputeSampleRate(coefficient1, dPoint1, d2Point, minRate));\n                        sampleRate = max(sampleRate, ComputeSampleRate(coefficient2, dPoint1, d2Point, minRate));\n\n                        coefficient0 = coefficient1;\n                        coefficient1 = coefficient2;\n                        dPoint0 = dPoint1;\n                        i++;\n                    }\n                }\n            }\n            uSamples = min(floor(0.5 + outData.uInterval * sampleRate), gl_MaxTessGenLevel);\n        }\n    &#34;</span>
+        <span class="name">computeCurveSamplesCode</span><span class="default_value"> = &#34;\n        void ComputeCurveSamples(in int maxSamples, out float uSamples)\n        {\n            float sampleRate = 0.0;\n            if (outData.uInterval &gt; 0.0)\n            {\n                float minRate = 1.0 / outData.uInterval;\n                if (outData.uOrder &lt; 3)\n                {\n                    // It&#39;s a line or point, so just do the minimum sample.\n                    sampleRate = minRate;\n                }\n                else\n                {\n                    int i = outData.uKnot - outData.uOrder;\n                    int coefficientOffset = header + outData.uOrder + outData.uN + 4 * i;\n                    vec4 coefficient0 = vec4(\n                        texelFetch(uSplineData, coefficientOffset+0).x, \n                        texelFetch(uSplineData, coefficientOffset+1).x,\n                        texelFetch(uSplineData, coefficientOffset+2).x,\n                        texelFetch(uSplineData, coefficientOffset+3).x);\n                    coefficientOffset += 4;\n                    vec4 coefficient1 = vec4(\n                        texelFetch(uSplineData, coefficientOffset+0).x, \n                        texelFetch(uSplineData, coefficientOffset+1).x,\n                        texelFetch(uSplineData, coefficientOffset+2).x,\n                        texelFetch(uSplineData, coefficientOffset+3).x);\n                    float gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]\n                    vec3 dPoint0 = ((outData.uOrder - 1) / gap) * (coefficient1.xyz - coefficient0.xyz);\n                    while (i &lt; outData.uKnot-2)\n                    {\n                        coefficientOffset += 4;\n                        vec4 coefficient2 = vec4(\n                            texelFetch(uSplineData, coefficientOffset+0).x, \n                            texelFetch(uSplineData, coefficientOffset+1).x,\n                            texelFetch(uSplineData, coefficientOffset+2).x,\n                            texelFetch(uSplineData, coefficientOffset+3).x);\n                        gap = texelFetch(uSplineData, header + i+1+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]\n                        vec3 dPoint1 = ((outData.uOrder - 1) / gap) * (coefficient2.xyz - coefficient1.xyz);\n                        gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+uOrder] - uKnots[i+2]\n                        vec3 d2Point = ((outData.uOrder - 2) / gap) * (dPoint1 - dPoint0);\n\n                        sampleRate = max(sampleRate, ComputeSampleRate(coefficient0, dPoint0, d2Point, minRate));\n                        sampleRate = max(sampleRate, ComputeSampleRate(coefficient1, dPoint0, d2Point, minRate));\n                        sampleRate = max(sampleRate, ComputeSampleRate(coefficient1, dPoint1, d2Point, minRate));\n                        sampleRate = max(sampleRate, ComputeSampleRate(coefficient2, dPoint1, d2Point, minRate));\n\n                        coefficient0 = coefficient1;\n                        coefficient1 = coefficient2;\n                        dPoint0 = dPoint1;\n                        i++;\n                    }\n                }\n            }\n            uSamples = min(floor(0.5 + outData.uInterval * sampleRate), maxSamples);\n        }\n    &#34;</span>
     </div>
 
     
@@ -2327,7 +2923,7 @@ highlightcolor, highlightthickness, relief, takefocus, visual, width.</p>
                             <div id="SplineOpenGLFrame.curveTCShaderCode" class="classattr">
                                             <div class="attr variable"><a class="headerlink" href="#SplineOpenGLFrame.curveTCShaderCode">#&nbsp;&nbsp</a>
 
-        <span class="name">curveTCShaderCode</span><span class="default_value"> = &#39;\n        #version 410 core\n\n        layout (vertices = 1) out;\n\n        const int header = 2;\n\n        in SplineInfo\n        {{\n            int uOrder;\n            int uN;\n            int uKnot;\n            float u;\n            float uInterval;\n        }} inData[];\n\n        uniform vec3 uScreenScale;\n        uniform vec4 uClipBounds;\n        uniform samplerBuffer uSplineData;\n\n        patch out SplineInfo\n        {{\n            int uOrder;\n            int uN;\n            int uKnot;\n            float u;\n            float uInterval;\n        }} outData;\n\n        {computeSampleRateCode}\n\n        {computeCurveSamplesCode}\n\n        void main()\n        {{\n            outData = inData[gl_InvocationID];\n            gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;\n\n            float uSamples = 0.0;\n            ComputeCurveSamples(uSamples);\n            gl_TessLevelOuter[0] = 1.0;\n            gl_TessLevelOuter[1] = uSamples;\n        }}\n    &#39;</span>
+        <span class="name">curveTCShaderCode</span><span class="default_value"> = &#39;\n        #version 410 core\n\n        layout (vertices = 1) out;\n\n        const int header = 2;\n\n        in SplineInfo\n        {{\n            int uOrder;\n            int uN;\n            int uKnot;\n            float u;\n            float uInterval;\n        }} inData[];\n\n        uniform vec3 uScreenScale;\n        uniform vec4 uClipBounds;\n        uniform samplerBuffer uSplineData;\n\n        patch out SplineInfo\n        {{\n            int uOrder;\n            int uN;\n            int uKnot;\n            float u;\n            float uInterval;\n        }} outData;\n\n        {computeSampleRateCode}\n\n        {computeCurveSamplesCode}\n\n        void main()\n        {{\n            outData = inData[gl_InvocationID];\n            gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;\n\n            float uSamples = 0.0;\n            ComputeCurveSamples(gl_MaxTessGenLevel, uSamples);\n            gl_TessLevelOuter[0] = 1.0;\n            gl_TessLevelOuter[1] = uSamples;\n        }}\n    &#39;</span>
     </div>
 
     
@@ -2338,6 +2934,16 @@ highlightcolor, highlightthickness, relief, takefocus, visual, width.</p>
                                             <div class="attr variable"><a class="headerlink" href="#SplineOpenGLFrame.curveTEShaderCode">#&nbsp;&nbsp</a>
 
         <span class="name">curveTEShaderCode</span><span class="default_value"> = &#39;\n        #version 410 core\n\n        layout (isolines) in;\n\n        const int header = 2;\n\n        patch in SplineInfo\n        {{\n            int uOrder;\n            int uN;\n            int uKnot;\n            float u;\n            float uInterval;\n        }} inData;\n\n        uniform mat4 uProjectionMatrix;\n        uniform samplerBuffer uSplineData;\n\n        {computeBSplineCode}\n\n        void main()\n        {{\n            float uBSpline[{maxOrder}];\n            float duBSpline[{maxOrder}];\n            ComputeBSpline(header, inData.uOrder, inData.uN, inData.uKnot,\n                inData.u + gl_TessCoord.x * inData.uInterval, \n                uBSpline, duBSpline);\n            \n            vec4 point = vec4(0.0, 0.0, 0.0, 0.0);\n            int i = header + inData.uOrder + inData.uN + 4 * (inData.uKnot - inData.uOrder);\n            for (int b = 0; b &lt; inData.uOrder; b++) // loop from coefficient[uKnot-order] to coefficient[uKnot]\n            {{\n                point.x += uBSpline[b] * texelFetch(uSplineData, i).x;\n                point.y += uBSpline[b] * texelFetch(uSplineData, i+1).x;\n                point.z += uBSpline[b] * texelFetch(uSplineData, i+2).x;\n                point.w += uBSpline[b] * texelFetch(uSplineData, i+3).x;\n                i += 4;\n            }}\n\n            gl_Position = uProjectionMatrix * point;\n        }}\n    &#39;</span>
+    </div>
+
+    
+    
+
+                            </div>
+                            <div id="SplineOpenGLFrame.curveGeometryShaderCode" class="classattr">
+                                            <div class="attr variable"><a class="headerlink" href="#SplineOpenGLFrame.curveGeometryShaderCode">#&nbsp;&nbsp</a>
+
+        <span class="name">curveGeometryShaderCode</span><span class="default_value"> = &#34;\n        #version 330 core\n\n        layout( points ) in;\n        layout( line_strip, max_vertices = 256 ) out;\n\n        const int header = 2;\n\n        in SplineInfo\n        {{\n            int uOrder;\n            int uN;\n            int uKnot;\n            float u;\n            float uInterval;\n        }} inData[];\n\n        uniform mat4 uProjectionMatrix;\n        uniform vec3 uScreenScale;\n        uniform vec4 uClipBounds;\n        uniform samplerBuffer uSplineData;\n\n        struct SplineInfo\n        {{\n            int uOrder;\n            int uN;\n            int uKnot;\n            float u;\n            float uInterval;\n        }} outData; // We don&#39;t output outData (too many components per vertex), but we do use it in ComputeCurveSamples.\n\n        {computeSampleRateCode}\n\n        {computeCurveSamplesCode}\n\n        {computeBSplineCode}\n\n        void main()\n        {{\n            float uSamples = 0.0;\n\n            outData.uOrder = inData[0].uOrder;\n            outData.uN = inData[0].uN;\n            outData.uKnot = inData[0].uKnot;\n            outData.u = inData[0].u;\n            outData.uInterval = inData[0].uInterval;\n            ComputeCurveSamples(gl_MaxGeometryOutputVertices - 1, uSamples);\n\n            if (uSamples &gt; 0.0)\n            {{\n                float uBSpline[{maxOrder}];\n                float duBSpline[{maxOrder}];\n                float u = outData.u;\n                float deltaU = outData.uInterval / uSamples;\n                int iOffset = header + outData.uOrder + outData.uN + 4 * (outData.uKnot - outData.uOrder);\n\n                for (int uSample = 0; uSample &lt;= uSamples; uSample++)\n                {{\n                    ComputeBSpline(header, outData.uOrder, outData.uN, outData.uKnot,\n                        u, uBSpline, duBSpline);\n                    \n                    vec4 point = vec4(0.0, 0.0, 0.0, 0.0);\n                    int i = iOffset;\n                    for (int b = 0; b &lt; outData.uOrder; b++) // loop from coefficient[uKnot-order] to coefficient[uKnot]\n                    {{\n                        point.x += uBSpline[b] * texelFetch(uSplineData, i).x;\n                        point.y += uBSpline[b] * texelFetch(uSplineData, i+1).x;\n                        point.z += uBSpline[b] * texelFetch(uSplineData, i+2).x;\n                        point.w += uBSpline[b] * texelFetch(uSplineData, i+3).x;\n                        i += 4;\n                    }}\n\n                    gl_Position = uProjectionMatrix * point;\n                    EmitVertex();\n                    u += deltaU;                    \n                }}\n                EndPrimitive();\n            }}\n        }}\n    &#34;</span>
     </div>
 
     
@@ -2367,7 +2973,7 @@ highlightcolor, highlightthickness, relief, takefocus, visual, width.</p>
                             <div id="SplineOpenGLFrame.computeSurfaceSamplesCode" class="classattr">
                                             <div class="attr variable"><a class="headerlink" href="#SplineOpenGLFrame.computeSurfaceSamplesCode">#&nbsp;&nbsp</a>
 
-        <span class="name">computeSurfaceSamplesCode</span><span class="default_value"> = &#34;\n        void ComputeSurfaceSamples(out float uSamples[3], out float vSamples[3])\n        {{\n            // Computes sample counts for u and v for the left side ([0]), middle ([1]), and right side ([2]).\n            // The left side sample count matches the right side sample count for the previous knot.\n            // The middle sample count is the number of samples between knots (same as ComputeCurveSamples).\n            float sampleRate[3] = float[3](0.0, 0.0, 0.0);\n            if (outData.uInterval &gt; 0.0)\n            {{\n                float minRate = 1.0 / outData.uInterval;\n                if (outData.uOrder &lt; 3)\n                {{\n                    // It&#39;s a plane or point, so just do the minimum sample.\n                    sampleRate = float[3](minRate, minRate, minRate);\n                }}\n                else\n                {{\n                    float sampleRateLeft[{maxOrder}];\n                    float sampleRateRight[{maxOrder}];\n\n                    for (int k = 0; k &lt; outData.uOrder; k++)\n                    {{\n                        sampleRateLeft[k] = 0.0;\n                        sampleRateRight[k] = 0.0;\n                    }}\n                    for (int j = outData.vKnot-outData.vOrder; j &lt; outData.vKnot; j++)\n                    {{\n                        int i = max(outData.uKnot - 1 - outData.uOrder, 0);\n                        int iLimit = min(outData.uKnot - 1, outData.uN - 2);\n                        int coefficientOffset = header + outData.uOrder+outData.uN + outData.vOrder+outData.vN + 4*outData.uN*j + 4*i;\n                        vec4 coefficient0 = vec4(\n                            texelFetch(uSplineData, coefficientOffset+0).x, \n                            texelFetch(uSplineData, coefficientOffset+1).x,\n                            texelFetch(uSplineData, coefficientOffset+2).x,\n                            texelFetch(uSplineData, coefficientOffset+3).x);\n                        coefficientOffset += 4;\n                        vec4 coefficient1 = vec4(\n                            texelFetch(uSplineData, coefficientOffset+0).x, \n                            texelFetch(uSplineData, coefficientOffset+1).x,\n                            texelFetch(uSplineData, coefficientOffset+2).x,\n                            texelFetch(uSplineData, coefficientOffset+3).x);\n                        float gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]\n                        vec3 dPoint0 = ((outData.uOrder - 1) / gap) * (coefficient1.xyz - coefficient0.xyz);\n                        while (i &lt; iLimit)\n                        {{\n                            coefficientOffset += 4;\n                            vec4 coefficient2 = vec4(\n                                texelFetch(uSplineData, coefficientOffset+0).x, \n                                texelFetch(uSplineData, coefficientOffset+1).x,\n                                texelFetch(uSplineData, coefficientOffset+2).x,\n                                texelFetch(uSplineData, coefficientOffset+3).x);\n                            gap = texelFetch(uSplineData, header + i+1+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]\n                            vec3 dPoint1 = ((outData.uOrder - 1) / gap) * (coefficient2.xyz - coefficient1.xyz);\n                            gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+uOrder] - uKnots[i+2]\n                            vec3 d2Point = ((outData.uOrder - 2) / gap) * (dPoint1 - dPoint0);\n\n                            int k = i - outData.uKnot + 1 + outData.uOrder;\n                            sampleRateLeft[k] = max(sampleRateLeft[k], ComputeSampleRate(coefficient0, dPoint0, d2Point, minRate));\n                            sampleRateLeft[k] = max(sampleRateLeft[k], ComputeSampleRate(coefficient1, dPoint0, d2Point, minRate));\n                            sampleRateRight[k] = max(sampleRateRight[k], ComputeSampleRate(coefficient1, dPoint1, d2Point, minRate));\n                            sampleRateRight[k] = max(sampleRateRight[k], ComputeSampleRate(coefficient2, dPoint1, d2Point, minRate));\n\n                            coefficient0 = coefficient1;\n                            coefficient1 = coefficient2;\n                            dPoint0 = dPoint1;\n                            i++;\n                        }}\n                    }}\n                    for (int k = 1; k &lt; outData.uOrder - 1; k++)\n                    {{\n                        sampleRate[0] = max(sampleRate[0], sampleRateRight[k-1]);\n                        sampleRate[0] = max(sampleRate[0], sampleRateLeft[k]);\n                        sampleRate[1] = max(sampleRate[1], sampleRateLeft[k]);\n                        sampleRate[1] = max(sampleRate[1], sampleRateRight[k]);\n                        sampleRate[2] = max(sampleRate[2], sampleRateRight[k]);\n                        sampleRate[2] = max(sampleRate[2], sampleRateLeft[k+1]);\n                    }}\n                }}\n            }}\n            uSamples[0] = min(floor(0.5 + outData.uInterval * sampleRate[0]), gl_MaxTessGenLevel);\n            uSamples[1] = min(floor(0.5 + outData.uInterval * sampleRate[1]), gl_MaxTessGenLevel);\n            uSamples[2] = min(floor(0.5 + outData.uInterval * sampleRate[2]), gl_MaxTessGenLevel);\n\n            sampleRate = float[3](0.0, 0.0, 0.0);\n            if (outData.vInterval &gt; 0.0)\n            {{\n                float minRate = 1.0 / outData.vInterval;\n                if (outData.vOrder &lt; 3)\n                {{\n                    // It&#39;s a plane or point, so just do the minimum sample.\n                    sampleRate = float[3](minRate, minRate, minRate);\n                }}\n                else\n                {{\n                    float sampleRateLeft[{maxOrder}];\n                    float sampleRateRight[{maxOrder}];\n\n                    for (int k = 0; k &lt; outData.vOrder; k++)\n                    {{\n                        sampleRateLeft[k] = 0.0;\n                        sampleRateRight[k] = 0.0;\n                    }}\n                    for (int i = outData.uKnot-outData.uOrder; i &lt; outData.uKnot; i++)\n                    {{\n                        int j = max(outData.vKnot - 1 - outData.vOrder, 0);\n                        int jLimit = min(outData.vKnot - 1, outData.vN - 2);\n                        int coefficientOffset = header + outData.uOrder+outData.uN + outData.vOrder+outData.vN + 4*outData.uN*j + 4*i;\n                        vec4 coefficient0 = vec4(\n                            texelFetch(uSplineData, coefficientOffset+0).x, \n                            texelFetch(uSplineData, coefficientOffset+1).x,\n                            texelFetch(uSplineData, coefficientOffset+2).x,\n                            texelFetch(uSplineData, coefficientOffset+3).x);\n                        coefficientOffset += 4*outData.uN;\n                        vec4 coefficient1 = vec4(\n                            texelFetch(uSplineData, coefficientOffset+0).x, \n                            texelFetch(uSplineData, coefficientOffset+1).x,\n                            texelFetch(uSplineData, coefficientOffset+2).x,\n                            texelFetch(uSplineData, coefficientOffset+3).x);\n                        float gap = texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+outData.vOrder).x - texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+1).x; // vKnots[j+vOrder] - vKnots[j+1]\n                        vec3 dPoint0 = ((outData.vOrder - 1) / gap) * (coefficient1.xyz - coefficient0.xyz);\n                        while (j &lt; jLimit)\n                        {{\n                            coefficientOffset += 4*outData.uN;\n                            vec4 coefficient2 = vec4(\n                                texelFetch(uSplineData, coefficientOffset+0).x, \n                                texelFetch(uSplineData, coefficientOffset+1).x,\n                                texelFetch(uSplineData, coefficientOffset+2).x,\n                                texelFetch(uSplineData, coefficientOffset+3).x);\n                            gap = texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+1+outData.vOrder).x - texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+2).x; // vKnots[j+1+vOrder] - vKnots[j+2]\n                            vec3 dPoint1 = ((outData.vOrder - 1) / gap) * (coefficient2.xyz - coefficient1.xyz);\n                            gap = texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+outData.vOrder).x - texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+2).x; // vKnots[j+vOrder] - vKnots[j+2]\n                            vec3 d2Point = ((outData.vOrder - 2) / gap) * (dPoint1 - dPoint0);\n\n                            int k = j - outData.vKnot + 1 + outData.vOrder;\n                            sampleRateLeft[k] = max(sampleRateLeft[k], ComputeSampleRate(coefficient0, dPoint0, d2Point, minRate));\n                            sampleRateLeft[k] = max(sampleRateLeft[k], ComputeSampleRate(coefficient1, dPoint0, d2Point, minRate));\n                            sampleRateRight[k] = max(sampleRateRight[k], ComputeSampleRate(coefficient1, dPoint1, d2Point, minRate));\n                            sampleRateRight[k] = max(sampleRateRight[k], ComputeSampleRate(coefficient2, dPoint1, d2Point, minRate));\n\n                            coefficient0 = coefficient1;\n                            coefficient1 = coefficient2;\n                            dPoint0 = dPoint1;\n                            j++;\n                        }}\n                    }}\n                    for (int k = 1; k &lt; outData.vOrder - 1; k++)\n                    {{\n                        sampleRate[0] = max(sampleRate[0], sampleRateRight[k-1]);\n                        sampleRate[0] = max(sampleRate[0], sampleRateLeft[k]);\n                        sampleRate[1] = max(sampleRate[1], sampleRateLeft[k]);\n                        sampleRate[1] = max(sampleRate[1], sampleRateRight[k]);\n                        sampleRate[2] = max(sampleRate[2], sampleRateRight[k]);\n                        sampleRate[2] = max(sampleRate[2], sampleRateLeft[k+1]);\n                    }}\n                }}\n            }}\n            vSamples[0] = min(floor(0.5 + outData.vInterval * sampleRate[0]), gl_MaxTessGenLevel);\n            vSamples[1] = min(floor(0.5 + outData.vInterval * sampleRate[1]), gl_MaxTessGenLevel);\n            vSamples[2] = min(floor(0.5 + outData.vInterval * sampleRate[2]), gl_MaxTessGenLevel);\n        }}\n    &#34;</span>
+        <span class="name">computeSurfaceSamplesCode</span><span class="default_value"> = &#34;\n        void ComputeSurfaceSamples(in int maxSamples, out float uSamples[3], out float vSamples[3])\n        {{\n            // Computes sample counts for u and v for the left side ([0]), middle ([1]), and right side ([2]).\n            // The left side sample count matches the right side sample count for the previous knot.\n            // The middle sample count is the number of samples between knots (same as ComputeCurveSamples).\n            float sampleRate[3] = float[3](0.0, 0.0, 0.0);\n            if (outData.uInterval &gt; 0.0)\n            {{\n                float minRate = 1.0 / outData.uInterval;\n                if (outData.uOrder &lt; 3)\n                {{\n                    // It&#39;s a plane or point, so just do the minimum sample.\n                    sampleRate = float[3](minRate, minRate, minRate);\n                }}\n                else\n                {{\n                    float sampleRateLeft[{maxOrder}];\n                    float sampleRateRight[{maxOrder}];\n\n                    for (int k = 0; k &lt; outData.uOrder; k++)\n                    {{\n                        sampleRateLeft[k] = 0.0;\n                        sampleRateRight[k] = 0.0;\n                    }}\n                    for (int j = outData.vKnot-outData.vOrder; j &lt; outData.vKnot; j++)\n                    {{\n                        int i = max(outData.uKnot - 1 - outData.uOrder, 0);\n                        int iLimit = min(outData.uKnot - 1, outData.uN - 2);\n                        int coefficientOffset = header + outData.uOrder+outData.uN + outData.vOrder+outData.vN + 4*outData.uN*j + 4*i;\n                        vec4 coefficient0 = vec4(\n                            texelFetch(uSplineData, coefficientOffset+0).x, \n                            texelFetch(uSplineData, coefficientOffset+1).x,\n                            texelFetch(uSplineData, coefficientOffset+2).x,\n                            texelFetch(uSplineData, coefficientOffset+3).x);\n                        coefficientOffset += 4;\n                        vec4 coefficient1 = vec4(\n                            texelFetch(uSplineData, coefficientOffset+0).x, \n                            texelFetch(uSplineData, coefficientOffset+1).x,\n                            texelFetch(uSplineData, coefficientOffset+2).x,\n                            texelFetch(uSplineData, coefficientOffset+3).x);\n                        float gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]\n                        vec3 dPoint0 = ((outData.uOrder - 1) / gap) * (coefficient1.xyz - coefficient0.xyz);\n                        while (i &lt; iLimit)\n                        {{\n                            coefficientOffset += 4;\n                            vec4 coefficient2 = vec4(\n                                texelFetch(uSplineData, coefficientOffset+0).x, \n                                texelFetch(uSplineData, coefficientOffset+1).x,\n                                texelFetch(uSplineData, coefficientOffset+2).x,\n                                texelFetch(uSplineData, coefficientOffset+3).x);\n                            gap = texelFetch(uSplineData, header + i+1+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]\n                            vec3 dPoint1 = ((outData.uOrder - 1) / gap) * (coefficient2.xyz - coefficient1.xyz);\n                            gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+uOrder] - uKnots[i+2]\n                            vec3 d2Point = ((outData.uOrder - 2) / gap) * (dPoint1 - dPoint0);\n\n                            int k = i - outData.uKnot + 1 + outData.uOrder;\n                            sampleRateLeft[k] = max(sampleRateLeft[k], ComputeSampleRate(coefficient0, dPoint0, d2Point, minRate));\n                            sampleRateLeft[k] = max(sampleRateLeft[k], ComputeSampleRate(coefficient1, dPoint0, d2Point, minRate));\n                            sampleRateRight[k] = max(sampleRateRight[k], ComputeSampleRate(coefficient1, dPoint1, d2Point, minRate));\n                            sampleRateRight[k] = max(sampleRateRight[k], ComputeSampleRate(coefficient2, dPoint1, d2Point, minRate));\n\n                            coefficient0 = coefficient1;\n                            coefficient1 = coefficient2;\n                            dPoint0 = dPoint1;\n                            i++;\n                        }}\n                    }}\n                    for (int k = 1; k &lt; outData.uOrder - 1; k++)\n                    {{\n                        sampleRate[0] = max(sampleRate[0], sampleRateRight[k-1]);\n                        sampleRate[0] = max(sampleRate[0], sampleRateLeft[k]);\n                        sampleRate[1] = max(sampleRate[1], sampleRateLeft[k]);\n                        sampleRate[1] = max(sampleRate[1], sampleRateRight[k]);\n                        sampleRate[2] = max(sampleRate[2], sampleRateRight[k]);\n                        sampleRate[2] = max(sampleRate[2], sampleRateLeft[k+1]);\n                    }}\n                }}\n            }}\n            uSamples[0] = min(floor(0.5 + outData.uInterval * sampleRate[0]), maxSamples);\n            uSamples[1] = min(floor(0.5 + outData.uInterval * sampleRate[1]), maxSamples);\n            uSamples[2] = min(floor(0.5 + outData.uInterval * sampleRate[2]), maxSamples);\n\n            sampleRate = float[3](0.0, 0.0, 0.0);\n            if (outData.vInterval &gt; 0.0)\n            {{\n                float minRate = 1.0 / outData.vInterval;\n                if (outData.vOrder &lt; 3)\n                {{\n                    // It&#39;s a plane or point, so just do the minimum sample.\n                    sampleRate = float[3](minRate, minRate, minRate);\n                }}\n                else\n                {{\n                    float sampleRateLeft[{maxOrder}];\n                    float sampleRateRight[{maxOrder}];\n\n                    for (int k = 0; k &lt; outData.vOrder; k++)\n                    {{\n                        sampleRateLeft[k] = 0.0;\n                        sampleRateRight[k] = 0.0;\n                    }}\n                    for (int i = outData.uKnot-outData.uOrder; i &lt; outData.uKnot; i++)\n                    {{\n                        int j = max(outData.vKnot - 1 - outData.vOrder, 0);\n                        int jLimit = min(outData.vKnot - 1, outData.vN - 2);\n                        int coefficientOffset = header + outData.uOrder+outData.uN + outData.vOrder+outData.vN + 4*outData.uN*j + 4*i;\n                        vec4 coefficient0 = vec4(\n                            texelFetch(uSplineData, coefficientOffset+0).x, \n                            texelFetch(uSplineData, coefficientOffset+1).x,\n                            texelFetch(uSplineData, coefficientOffset+2).x,\n                            texelFetch(uSplineData, coefficientOffset+3).x);\n                        coefficientOffset += 4*outData.uN;\n                        vec4 coefficient1 = vec4(\n                            texelFetch(uSplineData, coefficientOffset+0).x, \n                            texelFetch(uSplineData, coefficientOffset+1).x,\n                            texelFetch(uSplineData, coefficientOffset+2).x,\n                            texelFetch(uSplineData, coefficientOffset+3).x);\n                        float gap = texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+outData.vOrder).x - texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+1).x; // vKnots[j+vOrder] - vKnots[j+1]\n                        vec3 dPoint0 = ((outData.vOrder - 1) / gap) * (coefficient1.xyz - coefficient0.xyz);\n                        while (j &lt; jLimit)\n                        {{\n                            coefficientOffset += 4*outData.uN;\n                            vec4 coefficient2 = vec4(\n                                texelFetch(uSplineData, coefficientOffset+0).x, \n                                texelFetch(uSplineData, coefficientOffset+1).x,\n                                texelFetch(uSplineData, coefficientOffset+2).x,\n                                texelFetch(uSplineData, coefficientOffset+3).x);\n                            gap = texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+1+outData.vOrder).x - texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+2).x; // vKnots[j+1+vOrder] - vKnots[j+2]\n                            vec3 dPoint1 = ((outData.vOrder - 1) / gap) * (coefficient2.xyz - coefficient1.xyz);\n                            gap = texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+outData.vOrder).x - texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+2).x; // vKnots[j+vOrder] - vKnots[j+2]\n                            vec3 d2Point = ((outData.vOrder - 2) / gap) * (dPoint1 - dPoint0);\n\n                            int k = j - outData.vKnot + 1 + outData.vOrder;\n                            sampleRateLeft[k] = max(sampleRateLeft[k], ComputeSampleRate(coefficient0, dPoint0, d2Point, minRate));\n                            sampleRateLeft[k] = max(sampleRateLeft[k], ComputeSampleRate(coefficient1, dPoint0, d2Point, minRate));\n                            sampleRateRight[k] = max(sampleRateRight[k], ComputeSampleRate(coefficient1, dPoint1, d2Point, minRate));\n                            sampleRateRight[k] = max(sampleRateRight[k], ComputeSampleRate(coefficient2, dPoint1, d2Point, minRate));\n\n                            coefficient0 = coefficient1;\n                            coefficient1 = coefficient2;\n                            dPoint0 = dPoint1;\n                            j++;\n                        }}\n                    }}\n                    for (int k = 1; k &lt; outData.vOrder - 1; k++)\n                    {{\n                        sampleRate[0] = max(sampleRate[0], sampleRateRight[k-1]);\n                        sampleRate[0] = max(sampleRate[0], sampleRateLeft[k]);\n                        sampleRate[1] = max(sampleRate[1], sampleRateLeft[k]);\n                        sampleRate[1] = max(sampleRate[1], sampleRateRight[k]);\n                        sampleRate[2] = max(sampleRate[2], sampleRateRight[k]);\n                        sampleRate[2] = max(sampleRate[2], sampleRateLeft[k+1]);\n                    }}\n                }}\n            }}\n            vSamples[0] = min(floor(0.5 + outData.vInterval * sampleRate[0]), maxSamples);\n            vSamples[1] = min(floor(0.5 + outData.vInterval * sampleRate[1]), maxSamples);\n            vSamples[2] = min(floor(0.5 + outData.vInterval * sampleRate[2]), maxSamples);\n        }}\n    &#34;</span>
     </div>
 
     
@@ -2377,7 +2983,7 @@ highlightcolor, highlightthickness, relief, takefocus, visual, width.</p>
                             <div id="SplineOpenGLFrame.surfaceTCShaderCode" class="classattr">
                                             <div class="attr variable"><a class="headerlink" href="#SplineOpenGLFrame.surfaceTCShaderCode">#&nbsp;&nbsp</a>
 
-        <span class="name">surfaceTCShaderCode</span><span class="default_value"> = &#39;\n        #version 410 core\n\n        layout (vertices = 1) out;\n\n        const int header = 4;\n\n        in SplineInfo\n        {{\n            int uOrder, vOrder;\n            int uN, vN;\n            int uKnot, vKnot;\n            float uFirst, vFirst;\n            float uSpan, vSpan;\n            float u, v;\n            float uInterval, vInterval;\n        }} inData[];\n\n        uniform vec3 uScreenScale;\n        uniform vec4 uClipBounds;\n        uniform samplerBuffer uSplineData;\n\n        patch out SplineInfo\n        {{\n            int uOrder, vOrder;\n            int uN, vN;\n            int uKnot, vKnot;\n            float uFirst, vFirst;\n            float uSpan, vSpan;\n            float u, v;\n            float uInterval, vInterval;\n        }} outData;\n\n        {computeSampleRateCode}\n\n        {computeSurfaceSamplesCode}\n\n        void main()\n        {{\n            outData = inData[gl_InvocationID];\n            gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;\n\n            float uSamples[3];\n            float vSamples[3];\n            ComputeSurfaceSamples(uSamples, vSamples);\n            gl_TessLevelOuter[0] = vSamples[0] &gt; 0.0 ? vSamples[0] : vSamples[1];\n            gl_TessLevelOuter[1] = uSamples[0] &gt; 0.0 ? uSamples[0] : uSamples[1];\n            gl_TessLevelOuter[2] = vSamples[2] &gt; 0.0 ? vSamples[2] : vSamples[1];\n            gl_TessLevelOuter[3] = uSamples[2] &gt; 0.0 ? uSamples[2] : uSamples[1];\n            gl_TessLevelInner[0] = uSamples[1];\n            gl_TessLevelInner[1] = vSamples[1];\n        }}\n    &#39;</span>
+        <span class="name">surfaceTCShaderCode</span><span class="default_value"> = &#39;\n        #version 410 core\n\n        layout (vertices = 1) out;\n\n        const int header = 4;\n\n        in SplineInfo\n        {{\n            int uOrder, vOrder;\n            int uN, vN;\n            int uKnot, vKnot;\n            float uFirst, vFirst;\n            float uSpan, vSpan;\n            float u, v;\n            float uInterval, vInterval;\n        }} inData[];\n\n        uniform vec3 uScreenScale;\n        uniform vec4 uClipBounds;\n        uniform samplerBuffer uSplineData;\n\n        patch out SplineInfo\n        {{\n            int uOrder, vOrder;\n            int uN, vN;\n            int uKnot, vKnot;\n            float uFirst, vFirst;\n            float uSpan, vSpan;\n            float u, v;\n            float uInterval, vInterval;\n        }} outData;\n\n        {computeSampleRateCode}\n\n        {computeSurfaceSamplesCode}\n\n        void main()\n        {{\n            outData = inData[gl_InvocationID];\n            gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;\n\n            float uSamples[3];\n            float vSamples[3];\n            ComputeSurfaceSamples(gl_MaxTessGenLevel, uSamples, vSamples);\n            gl_TessLevelOuter[0] = vSamples[0] &gt; 0.0 ? vSamples[0] : vSamples[1];\n            gl_TessLevelOuter[1] = uSamples[0] &gt; 0.0 ? uSamples[0] : uSamples[1];\n            gl_TessLevelOuter[2] = vSamples[2] &gt; 0.0 ? vSamples[2] : vSamples[1];\n            gl_TessLevelOuter[3] = uSamples[2] &gt; 0.0 ? uSamples[2] : uSamples[1];\n            gl_TessLevelInner[0] = uSamples[1];\n            gl_TessLevelInner[1] = vSamples[1];\n        }}\n    &#39;</span>
     </div>
 
     
@@ -2388,6 +2994,26 @@ highlightcolor, highlightthickness, relief, takefocus, visual, width.</p>
                                             <div class="attr variable"><a class="headerlink" href="#SplineOpenGLFrame.surfaceTEShaderCode">#&nbsp;&nbsp</a>
 
         <span class="name">surfaceTEShaderCode</span><span class="default_value"> = &#39;\n        #version 410 core\n\n        layout (quads) in;\n\n        const int header = 4;\n\n        patch in SplineInfo\n        {{\n            int uOrder, vOrder;\n            int uN, vN;\n            int uKnot, vKnot;\n            float uFirst, vFirst;\n            float uSpan, vSpan;\n            float u, v;\n            float uInterval, vInterval;\n        }} inData;\n\n        uniform mat4 uProjectionMatrix;\n        uniform vec3 uScreenScale;\n        uniform samplerBuffer uSplineData;\n\n        flat out SplineInfo\n        {{\n            int uOrder, vOrder;\n            int uN, vN;\n            int uKnot, vKnot;\n            float uFirst, vFirst;\n            float uSpan, vSpan;\n            float u, v;\n            float uInterval, vInterval;\n        }} outData;\n        out vec4 worldPosition;\n        out vec3 normal;\n        out vec2 parameters;\n        out vec2 pixelPer;\n\n        {computeBSplineCode}\n\n        void main()\n        {{\n            float uBSpline[{maxOrder}];\n            float duBSpline[{maxOrder}];\n            parameters.x = inData.u + gl_TessCoord.x * inData.uInterval;\n            ComputeBSpline(header, inData.uOrder, inData.uN, inData.uKnot, parameters.x, uBSpline, duBSpline);\n\n            float vBSpline[{maxOrder}];\n            float dvBSpline[{maxOrder}];\n            parameters.y = inData.v + gl_TessCoord.y * inData.vInterval;\n            ComputeBSpline(header + inData.uOrder+inData.uN, inData.vOrder, inData.vN, inData.vKnot, parameters.y, vBSpline, dvBSpline);\n            \n            vec4 point = vec4(0.0, 0.0, 0.0, 0.0);\n            vec3 duPoint = vec3(0.0, 0.0, 0.0);\n            vec3 dvPoint = vec3(0.0, 0.0, 0.0);\n            int j = header + inData.uOrder+inData.uN + inData.vOrder+inData.vN + (inData.vKnot - inData.vOrder) * inData.uN * 4;\n            for (int vB = 0; vB &lt; inData.vOrder; vB++)\n            {{\n                int i = j + (inData.uKnot - inData.uOrder) * 4;\n                for (int uB = 0; uB &lt; inData.uOrder; uB++)\n                {{\n                    point.x += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;\n                    point.y += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;\n                    point.z += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;\n                    point.w += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;\n                    duPoint.x += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;\n                    duPoint.y += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;\n                    duPoint.z += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;\n                    dvPoint.x += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i).x;\n                    dvPoint.y += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+1).x;\n                    dvPoint.z += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+2).x;\n                    i += 4;\n                }}\n                j += inData.uN * 4;\n            }}\n\n            outData = inData;\n\n            worldPosition = point;\n            normal = normalize(cross(duPoint, dvPoint));\n            float zScale = 1.0 / (point.z * point.z);\n            pixelPer.x = zScale * max(uScreenScale.x * abs(point.x * duPoint.z - duPoint.x * point.z), uScreenScale.y * abs(point.y * duPoint.z - duPoint.y * point.z));\n            pixelPer.y = zScale * max(uScreenScale.x * abs(point.x * dvPoint.z - dvPoint.x * point.z), uScreenScale.y * abs(point.y * dvPoint.z - dvPoint.y * point.z));\n            gl_Position = uProjectionMatrix * point;\n        }}\n    &#39;</span>
+    </div>
+
+    
+    
+
+                            </div>
+                            <div id="SplineOpenGLFrame.surfaceGeometryShaderCode" class="classattr">
+                                            <div class="attr variable"><a class="headerlink" href="#SplineOpenGLFrame.surfaceGeometryShaderCode">#&nbsp;&nbsp</a>
+
+        <span class="name">surfaceGeometryShaderCode</span><span class="default_value"> = &#34;\n        #version 330 core\n\n        layout( points ) in;\n        layout( triangle_strip, max_vertices = 256 ) out;\n\n        const int header = 4;\n\n        in SplineInfo\n        {{\n            int uOrder, vOrder;\n            int uN, vN;\n            int uKnot, vKnot;\n            float uFirst, vFirst;\n            float uSpan, vSpan;\n            float u, v;\n            float uInterval, vInterval;\n        }} inData[];\n\n        uniform mat4 uProjectionMatrix;\n        uniform vec3 uScreenScale;\n        uniform vec4 uClipBounds;\n        uniform vec4 uFillColor;\n        uniform vec3 uLightDirection;\n        uniform samplerBuffer uSplineData;\n\n        out vec3 splineColor; // We only output a color to reduce the number of components per vertex.\n\n        struct SplineInfo\n        {{\n            int uOrder, vOrder;\n            int uN, vN;\n            int uKnot, vKnot;\n            float uFirst, vFirst;\n            float uSpan, vSpan;\n            float u, v;\n            float uInterval, vInterval;\n        }} outData; // We don&#39;t output outData (too many components per vertex), but we do use it in ComputeSurfaceSamples.\n\n        {computeSampleRateCode}\n\n        {computeSurfaceSamplesCode}\n\n        {computeBSplineCode}\n\n        void main() \n        {{\n            float uFullSamples[3];\n            float vFullSamples[3];\n\n            outData.uOrder = inData[0].uOrder;\n            outData.vOrder = inData[0].vOrder;\n            outData.uN = inData[0].uN;\n            outData.vN = inData[0].vN;\n            outData.uKnot = inData[0].uKnot;\n            outData.vKnot = inData[0].vKnot;\n            outData.u = inData[0].u;\n            outData.v = inData[0].v;\n            outData.uInterval = inData[0].uInterval;\n            outData.vInterval = inData[0].vInterval;\n            int maxVertices = gl_MaxGeometryTotalOutputComponents / 7; // The number of output components per vertex is 7 = position.xyzw + splineColor.rgb\n            ComputeSurfaceSamples(maxVertices, uFullSamples, vFullSamples);\n\n            if (uFullSamples[1] &gt; 0.0 &amp;&amp; vFullSamples[1] &gt; 0.0)\n            {{\n                float alpha = maxVertices / (2.0 * uFullSamples[1] * (vFullSamples[1] + 1.0));\n                if (alpha &lt; 1.0)\n                {{\n                    alpha = sqrt(alpha);\n                    uFullSamples[1] = alpha * uFullSamples[1];\n                    vFullSamples[1] = alpha * (vFullSamples[1] + 1.0) - 1.0;\n                }}\n                int uSamples = int(uFullSamples[1]);\n                int vSamples = int(vFullSamples[1]);\n\n                float uBSpline[{maxOrder}];\n                float duBSpline[{maxOrder}];\n                float uBSplineNext[{maxOrder}];\n                float duBSplineNext[{maxOrder}];\n                float vBSpline[{maxOrder}];\n                float dvBSpline[{maxOrder}];\n                float deltaU = outData.uInterval / uSamples;\n                float deltaV = outData.vInterval / vSamples;\n                float u = outData.u;\n                ComputeBSpline(header, outData.uOrder, outData.uN, outData.uKnot, u, uBSpline, duBSpline);\n\n                int jOffset = header + outData.uOrder+outData.uN + outData.vOrder+outData.vN + (outData.vKnot - outData.vOrder) * outData.uN * 4;\n                int iOffset = (outData.uKnot - outData.uOrder) * 4;\n\n                for (int uSample = 0; uSample &lt; uSamples; uSample++)\n                {{\n                    float uNext = u + deltaU;\n                    ComputeBSpline(header, outData.uOrder, outData.uN, outData.uKnot, uNext, uBSplineNext, duBSplineNext);\n                        \n                    float v = outData.v;\n                    for (int vSample = 0; vSample &lt;= vSamples; vSample++)\n                    {{\n                        ComputeBSpline(header + outData.uOrder+outData.uN, outData.vOrder, outData.vN, outData.vKnot, v, vBSpline, dvBSpline);\n\n                        vec4 point = vec4(0.0, 0.0, 0.0, 0.0);\n                        vec3 duPoint = vec3(0.0, 0.0, 0.0);\n                        vec3 dvPoint = vec3(0.0, 0.0, 0.0);\n                        int j = jOffset;\n                        for (int vB = 0; vB &lt; outData.vOrder; vB++)\n                        {{\n                            int i = j + iOffset;\n                            for (int uB = 0; uB &lt; outData.uOrder; uB++)\n                            {{\n                                point.x += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;\n                                point.y += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;\n                                point.z += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;\n                                point.w += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;\n                                duPoint.x += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;\n                                duPoint.y += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;\n                                duPoint.z += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;\n                                dvPoint.x += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i).x;\n                                dvPoint.y += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+1).x;\n                                dvPoint.z += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+2).x;\n                                i += 4;\n                            }}\n                            j += outData.uN * 4;\n                        }}\n                        vec3 normal = normalize(cross(duPoint, dvPoint));\n                        float specular = pow(abs(dot(normal, normalize(uLightDirection + point.xyz / length(point)))), 25.0);\n                        splineColor = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * uFillColor.rgb;\n                        gl_Position = uProjectionMatrix * point;\n                        EmitVertex();\n\n                        point = vec4(0.0, 0.0, 0.0, 0.0);\n                        duPoint = vec3(0.0, 0.0, 0.0);\n                        dvPoint = vec3(0.0, 0.0, 0.0);\n                        j = jOffset;\n                        for (int vB = 0; vB &lt; outData.vOrder; vB++)\n                        {{\n                            int i = j + iOffset;\n                            for (int uB = 0; uB &lt; outData.uOrder; uB++)\n                            {{\n                                point.x += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;\n                                point.y += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;\n                                point.z += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;\n                                point.w += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;\n                                duPoint.x += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;\n                                duPoint.y += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;\n                                duPoint.z += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;\n                                dvPoint.x += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uSplineData, i).x;\n                                dvPoint.y += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+1).x;\n                                dvPoint.z += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+2).x;\n                                i += 4;\n                            }}\n                            j += outData.uN * 4;\n                        }}\n                        normal = normalize(cross(duPoint, dvPoint));\n                        specular = pow(abs(dot(normal, normalize(uLightDirection + point.xyz / length(point)))), 25.0);\n                        splineColor = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * uFillColor.rgb;\n                        gl_Position = uProjectionMatrix * point;\n                        EmitVertex();\n\n                        v += deltaV;                    \n                    }}\n                    EndPrimitive();\n                    u = uNext;\n                    uBSpline = uBSplineNext;\n                    duBSpline = duBSplineNext;\n                }}\n            }}\n        }}\n    &#34;</span>
+    </div>
+
+    
+    
+
+                            </div>
+                            <div id="SplineOpenGLFrame.surfaceSimpleFragmentShaderCode" class="classattr">
+                                            <div class="attr variable"><a class="headerlink" href="#SplineOpenGLFrame.surfaceSimpleFragmentShaderCode">#&nbsp;&nbsp</a>
+
+        <span class="name">surfaceSimpleFragmentShaderCode</span><span class="default_value"> = &#39;\n        #version 330 core\n     \n        in vec3 splineColor;\n        out vec3 color;\n     \n        void main() {\n            color = splineColor;\n        }\n    &#39;</span>
     </div>
 
     
@@ -2584,18 +3210,35 @@ The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> th
         <span class="c1">#print(&quot;GL_SHADING_LANGUAGE_VERSION: &quot;, glGetString(GL_SHADING_LANGUAGE_VERSION))</span>
         <span class="c1">#print(&quot;GL_MAX_TESS_GEN_LEVEL: &quot;, glGetIntegerv(GL_MAX_TESS_GEN_LEVEL))</span>
 
+        <span class="bp">self</span><span class="o">.</span><span class="n">tessellationEnabled</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">curveProgram</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileProgram</span><span class="p">(</span>
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveVertexShaderCode</span><span class="p">,</span> <span class="n">GL_VERTEX_SHADER</span><span class="p">),</span> 
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveTCShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_CONTROL_SHADER</span><span class="p">),</span> 
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveTEShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_EVALUATION_SHADER</span><span class="p">),</span> 
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveFragmentShaderCode</span><span class="p">,</span> <span class="n">GL_FRAGMENT_SHADER</span><span class="p">))</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileProgram</span><span class="p">(</span>
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceVertexShaderCode</span><span class="p">,</span> <span class="n">GL_VERTEX_SHADER</span><span class="p">),</span> 
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceTCShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_CONTROL_SHADER</span><span class="p">),</span> 
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceTEShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_EVALUATION_SHADER</span><span class="p">),</span> 
-                <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceFragmentShaderCode</span><span class="p">,</span> <span class="n">GL_FRAGMENT_SHADER</span><span class="p">),</span>
-                <span class="n">validate</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="c1"># Validate after assigning textures below</span>
+            <span class="n">curveTCShader</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveTCShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_CONTROL_SHADER</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">shaders</span><span class="o">.</span><span class="n">ShaderCompilationError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tessellationEnabled</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tessellationEnabled</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">curveProgram</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileProgram</span><span class="p">(</span>
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveVertexShaderCode</span><span class="p">,</span> <span class="n">GL_VERTEX_SHADER</span><span class="p">),</span> 
+                    <span class="n">curveTCShader</span><span class="p">,</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveTEShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_EVALUATION_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveFragmentShaderCode</span><span class="p">,</span> <span class="n">GL_FRAGMENT_SHADER</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileProgram</span><span class="p">(</span>
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceVertexShaderCode</span><span class="p">,</span> <span class="n">GL_VERTEX_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceTCShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_CONTROL_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceTEShaderCode</span><span class="p">,</span> <span class="n">GL_TESS_EVALUATION_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceFragmentShaderCode</span><span class="p">,</span> <span class="n">GL_FRAGMENT_SHADER</span><span class="p">),</span>
+                    <span class="n">validate</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="c1"># Validate after assigning textures below</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">curveProgram</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileProgram</span><span class="p">(</span>
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveVertexShaderCode</span><span class="p">,</span> <span class="n">GL_VERTEX_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveGeometryShaderCode</span><span class="p">,</span> <span class="n">GL_GEOMETRY_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveFragmentShaderCode</span><span class="p">,</span> <span class="n">GL_FRAGMENT_SHADER</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span> <span class="o">=</span> <span class="n">shaders</span><span class="o">.</span><span class="n">compileProgram</span><span class="p">(</span>
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceVertexShaderCode</span><span class="p">,</span> <span class="n">GL_VERTEX_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceGeometryShaderCode</span><span class="p">,</span> <span class="n">GL_GEOMETRY_SHADER</span><span class="p">),</span> 
+                    <span class="n">shaders</span><span class="o">.</span><span class="n">compileShader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceSimpleFragmentShaderCode</span><span class="p">,</span> <span class="n">GL_FRAGMENT_SHADER</span><span class="p">),</span>
+                    <span class="n">validate</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="c1"># Validate after assigning textures below</span>
         <span class="k">except</span> <span class="n">shaders</span><span class="o">.</span><span class="n">ShaderCompilationError</span> <span class="k">as</span> <span class="n">exception</span><span class="p">:</span>
             <span class="n">error</span> <span class="o">=</span> <span class="n">exception</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
             <span class="n">lineNumber</span> <span class="o">=</span> <span class="n">error</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)[</span><span class="mi">3</span><span class="p">]</span>
@@ -2634,7 +3277,7 @@ The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> th
         <span class="n">glVertexAttribPointer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">aSurfaceParameters</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">GL_FLOAT</span><span class="p">,</span> <span class="n">GL_FALSE</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceProjectionMatrix</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">,</span> <span class="s1">&#39;uProjectionMatrix&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceScreenScale</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">,</span> <span class="s1">&#39;uScreenScale&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceClipBounds</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curveProgram</span><span class="p">,</span> <span class="s1">&#39;uClipBounds&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceClipBounds</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">,</span> <span class="s1">&#39;uClipBounds&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceFillColor</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">,</span> <span class="s1">&#39;uFillColor&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceLineColor</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">,</span> <span class="s1">&#39;uLineColor&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uSurfaceLightDirection</span> <span class="o">=</span> <span class="n">glGetUniformLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surfaceProgram</span><span class="p">,</span> <span class="s1">&#39;uLightDirection&#39;</span><span class="p">)</span>
