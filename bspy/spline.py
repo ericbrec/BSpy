@@ -442,7 +442,7 @@ class Spline:
         nCoef[with_respect_to] -= 1
 
         dKnots = self.knots[with_respect_to][1:-1]
-        knots = [self.knots]
+        knots = list(self.knots)
         knots[with_respect_to] = dKnots
 
         coefs = np.delete(self.coefs, 0, axis=with_respect_to + 1) # first axis is the dependent variable
