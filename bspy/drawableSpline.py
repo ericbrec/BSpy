@@ -240,6 +240,7 @@ class DrawableSpline(Spline):
             glDrawArraysInstanced(GL_PATCHES, 0, 1, drawCoefficients.shape[0] - self.order[0] + 1)
         else:
             glDrawArraysInstanced(GL_POINTS, 0, 1, drawCoefficients.shape[0] - self.order[0] + 1)
+            glFlush() # Old graphics card
         glDisableVertexAttribArray(frame.aCurveParameters)
         glUseProgram(0)
 
@@ -278,6 +279,7 @@ class DrawableSpline(Spline):
             glDrawArraysInstanced(GL_PATCHES, 0, 1, (drawCoefficients.shape[1] - self.order[0] + 1) * (drawCoefficients.shape[0] - self.order[1] + 1))
         else:
             glDrawArraysInstanced(GL_POINTS, 0, 1, (drawCoefficients.shape[1] - self.order[0] + 1) * (drawCoefficients.shape[0] - self.order[1] + 1))
+            glFlush() # Old graphics card
         glDisableVertexAttribArray(frame.aSurfaceParameters)
         glUseProgram(0)
 
