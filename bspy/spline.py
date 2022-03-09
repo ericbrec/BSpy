@@ -445,14 +445,14 @@ class Spline:
         knots = list(self.knots)
         knots[with_respect_to] = dKnots
 
-        coefs = np.delete(self.coefs, 0, axis=with_respect_to + 1) # first axis is the dependent variable
-        sliceI = (self.nInd + 1) * [slice(None)]
+        # Swap dependent variable axis with specified independent variable and remove first row.
+        oldCoefs = self.coefs.swapaxes(0, with_respect_to + 1)
+        newCoefs = np.delete(oldCoefs, 0, axis=0) 
         for i in range(nCoef[with_respect_to]):
-            sliceI[with_respect_to + 1] = i
             alpha =  degree / (dKnots[i+degree] - dKnots[i])
-            coefs[tuple(sliceI)] = alpha * (coefs[tuple(sliceI)] - self.coefs[tuple(sliceI)])
+            newCoefs[i] = alpha * (newCoefs[i] - oldCoefs[i])
         
-        return type(self)(self.nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy, self.metadata)
+        return type(self)(self.nInd, self.nDep, order, nCoef, knots, newCoefs.swapaxes(0, with_respect_to + 1), self.accuracy, self.metadata)
 
     def domain(self):
         """
@@ -565,15 +565,11 @@ class Spline:
         # Ensure the spline is clamped on the left side.
         self = self.clamp(impactedInd, [])
 
-        # Initialize new order, nCoef, knots, coefs, and working slices and indices.
+        # Initialize new order, nCoef, knots, coefs, and indices.
         order = [*self.order]
         nCoef = [*self.nCoef]
         knots = list(self.knots)
         coefs = self.coefs
-        fullSlice = slice(None)
-        sliceJI = (self.nInd + 2) * [fullSlice]
-        sliceJm1Ip1 = (self.nInd + 2) * [fullSlice]
-        sliceJm1I = (self.nInd + 2) * [fullSlice]
         index = (self.nInd + 2) * [0]
         for ind in range(self.nInd):
             if m[ind] + len(newKnots[ind]) == 0:
@@ -583,24 +579,17 @@ class Spline:
 
             # Step 1.1: Set zeroth derivative to original coefficients.
             k = order[ind] # Use k for the original order to better match the paper's algorithm
-            sliceJI[0] = 0
-            sliceJI[ind + 2] = fullSlice
+            coefs = coefs.swapaxes(0, ind + 1) # Swap the dependent variable with the independent variable (swap back later)
             dCoefs = np.full((k, *coefs.shape), np.nan, coefs.dtype)
-            dCoefs[tuple(sliceJI)] = coefs[tuple(sliceJI[1:])]
+            dCoefs[0] = coefs
 
             # Step 1.2: Compute original derivative coefficients, adjusted for elevated spline.
             for j in range(1, k):
-                sliceJI[0] = j
-                sliceJm1Ip1[0] = j - 1
-                sliceJm1I[0] = j - 1
                 derivativeAdjustment = (k - j) / (k + m[ind] - j)
                 for i in range(0, nCoef[ind] - j):
-                    sliceJI[ind + 2] = i
-                    sliceJm1Ip1[ind + 2] = i + 1
-                    sliceJm1I[ind + 2] = i
                     gap = knots[ind][i + k] - knots[ind][i + j]
                     alpha = derivativeAdjustment / gap if gap > 0.0 else 0.0
-                    dCoefs[tuple(sliceJI)] = alpha * (dCoefs[tuple(sliceJm1Ip1)] - dCoefs[tuple(sliceJm1I)])
+                    dCoefs[j, i] = alpha * (dCoefs[j - 1, i + 1] - dCoefs[j - 1, i])
  
             # Step 2: Construct elevated order, nCoef, knots, and coefs.
             u, z = np.unique(knots[ind], return_counts=True)
@@ -615,7 +604,7 @@ class Spline:
             assert zBar[0] == order[ind]
             knots[ind] = np.repeat(uBar, zBar)
             nCoef[ind] = knots[ind].shape[0] - order[ind]
-            coefs = np.full((k, self.nDep, *nCoef), np.nan, coefs.dtype)
+            coefs = np.full((k, self.nDep, *nCoef), np.nan, coefs.dtype).swapaxes(1, ind + 2)
             
             # Step 3: Initialize known elevated coefficients at beta values.
             beta = -k
@@ -627,46 +616,27 @@ class Spline:
                 if u[i] == uBar[iBar]:
                     beta += z[i]
                     betaBarL += z[i] + m[ind]
-                    # Reusing sliceJI to mean sliceJBeta, forgive me.
-                    sliceJI[0] = slice(k - z[i], k)
-                    sliceJI[ind + 2] = beta
-                    # Reusing sliceJm1I to mean sliceJBetaBarL, forgive me.
-                    sliceJm1I[0] = sliceJI[0]
-                    sliceJm1I[ind + 2] = betaBarL
-                    coefs[tuple(sliceJm1I)] = dCoefs[tuple(sliceJI)]
+                    slicer = slice(k - z[i], k)
+                    coefs[slicer, betaBarL] = dCoefs[slicer, beta]
                     i += 1
                 betaBarL = betaBar
             # Spread known <k-1>th derivatives across coefficients, since kth derivatives are zero.
-            sliceJm1I[0] = k - 1
-            sliceJm1Ip1[0] = k - 1
             index[0] = k - 1
             for i in range(0, nCoef[ind] - k):
-                index[ind + 2] = i + 1
+                index[1] = i + 1
                 if np.isnan(coefs[tuple(index)]):
-                    sliceJm1I[ind + 2] = i
-                    sliceJm1Ip1[ind + 2] = i + 1
-                    coefs[tuple(sliceJm1Ip1)] = coefs[tuple(sliceJm1I)]
+                    coefs[k - 1, i + 1] = coefs[k - 1, i]
 
             # Step 4: Compute remaining derivative coefficients at elevated and new knots.
             for j in range(k - 1, 0, -1):
-                sliceJI[0] = j
-                sliceJm1Ip1[0] = j - 1
-                sliceJm1I[0] = j - 1
                 index[0] = j - 1
                 for i in range(0, nCoef[ind] - j):
-                    index[ind + 2] = i + 1
+                    index[1] = i + 1
                     if np.isnan(coefs[tuple(index)]):
-                        sliceJI[ind + 2] = i
-                        sliceJm1Ip1[ind + 2] = i + 1
-                        sliceJm1I[ind + 2] = i
-                        coefs[tuple(sliceJm1Ip1)] = coefs[tuple(sliceJm1I)] + (knots[ind][i + order[ind]] - knots[ind][i + j]) * coefs[tuple(sliceJI)]
+                        coefs[j - 1, i + 1] = coefs[j - 1, i] + (knots[ind][i + order[ind]] - knots[ind][i + j]) * coefs[j, i]
             
-            # Set new coefs to the elevated zeroth derivative coefficients and reset slices.
-            coefs = coefs[0]
-            sliceJI[ind + 2] = fullSlice
-            sliceJm1Ip1[ind + 2] = fullSlice
-            sliceJm1I[ind + 2] = fullSlice
-            index[ind + 2] = 0
+            # Set new coefs to the elevated zeroth derivative coefficients with variables swapped back.
+            coefs = coefs[0].swapaxes(0, ind + 1)
         
         return type(self)(self.nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy, self.metadata)
 
@@ -958,9 +928,6 @@ class Spline:
         assert len(newKnots) == self.nInd
         knots = list(self.knots)
         coefs = self.coefs
-        fullSlice = slice(None)
-        sliceIm1 = (self.nInd + 1) * [fullSlice]
-        sliceI = (self.nInd + 1) * [fullSlice]
         for ind in range(self.nInd):
             # We can't reference self.nCoef[ind] in this loop because we are expanding the knots and coefs arrays.
             for knot in newKnots[ind]:
@@ -970,16 +937,13 @@ class Spline:
                     position = len(knots[ind]) - self.order[ind]
                 else:
                     position = np.searchsorted(knots[ind], knot, 'right')
-                newCoefs = np.insert(coefs, position - 1, 0.0, axis=ind + 1)
+                coefs = coefs.swapaxes(0, ind + 1) # Swap dependend and independent variable (swap back later)
+                newCoefs = np.insert(coefs, position - 1, 0.0, axis=0)
                 for i in range(position - self.order[ind] + 1, position):
                     alpha = (knot - knots[ind][i]) / (knots[ind][i + self.order[ind] - 1] - knots[ind][i])
-                    sliceIm1[ind + 1] = i - 1
-                    sliceI[ind + 1] = i
-                    newCoefs[tuple(sliceI)] = (1.0 - alpha) * coefs[tuple(sliceIm1)] + alpha * coefs[tuple(sliceI)]
+                    newCoefs[i] = (1.0 - alpha) * coefs[i - 1] + alpha * coefs[i]
                 knots[ind] = np.insert(knots[ind], position, knot)
-                coefs = newCoefs
-            sliceIm1[ind + 1] = fullSlice
-            sliceI[ind + 1] = fullSlice
+                coefs = newCoefs.swapaxes(0, ind + 1)
 
         if self.coefs is coefs:
             return self
@@ -1075,7 +1039,7 @@ class Spline:
         assert len(oldKnots) == self.nInd
         nCoef = [*self.nCoef]
         knotList = list(self.knots)
-        coefs = self.coefs
+        coefs = self.coefs.copy()
         temp = np.empty_like(coefs)
         totalRemoved = 0
         maxResidualError = 0.0
