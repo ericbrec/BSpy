@@ -708,6 +708,15 @@ def test_insert_knots():
         maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
     assert maxerror <= np.finfo(float).eps
 
+def test_remove_knots():
+    maxerror = 0.0
+    slimmed, removed, error = myCurve.remove_knots()
+    assert removed == 1
+    for [u, x, y] in truthCurve:
+        [xTest, yTest] = slimmed.evaluate([u])
+        maxerror = max(maxerror, np.sqrt((xTest - x) ** 2 + (yTest - y) ** 2))
+    assert maxerror <= error
+
 def test_reparametrize():
     maxerror = 0.0
     reparametrized = myCurve.reparametrize([[1.5, 2.0]])

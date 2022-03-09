@@ -1031,6 +1031,199 @@ class Spline:
         bounds = [[coefficient.min(), coefficient.max()] for coefficient in self.coefs]
         return np.array(bounds, self.coefs.dtype)
 
+    def remove_knots(self, oldKnots=((),), maxRemovalsPerKnot=0, tolerance=None):
+        """
+        Remove interior knots from a spline.
+
+        Parameters
+        ----------
+        oldKnots : `iterable` of length `nInd`, optional
+            An iterable that specifies the knots that can be removed from each independent variable's interior knots. 
+            len(newKnots[ind]) == 0 if all interior knots can be removed for the `ind` independent variable (the default). 
+            Knots that don't appear in the independent variable's interior knots are ignored.
+        
+        maxRemovalsPerKnot : `int`, optional
+            A non-zero count of the largest number of times a knot can be removed. For example, one means that 
+            only one instance of each knot can be removed. (Zero means each knot can be removed completely, 
+            which is the default.)
+        
+        tolerance : `float` or `None`, optional
+            The maximum residual error permitted after removing a knot. Knots will not be removed if the 
+            resulting residual error is above this threshold. Default is `None`, meaning all specified knots 
+            will be removed up to `maxRemovalsPerKnot`.
+
+        Returns
+        -------
+        spline : `Spline`
+            A spline with the knots removed.
+        
+        totalRemoved : `int`
+            The total number of knots removed.
+        
+        residualError : `float`
+            The residual error relative to the old spline. (The returned spline's accuracy is also adjusted accordinly.)
+
+        See Also
+        --------
+        `insert_knots` : Insert new knots into a spline.
+        `trim` : Trim the domain of a spline.
+
+        Notes
+        -----
+        Implements a variation of the algorithms from Tiller, Wayne. "Knot-removal algorithms for NURBS curves and surfaces." Computer-Aided Design 24, no. 8 (1992): 445-453.
+        """
+        assert len(oldKnots) == self.nInd
+        nCoef = [*self.nCoef]
+        knotList = list(self.knots)
+        coefs = self.coefs
+        temp = np.empty_like(coefs)
+        totalRemoved = 0
+        maxResidualError = 0.0
+        for ind in range(self.nInd):
+            order = self.order[ind]
+            highSpan = nCoef[ind] - 1
+            if highSpan < order:
+                continue # no interior knots
+
+            removeAll = len(oldKnots[ind]) == 0
+            degree = order - 1
+            knots = knotList[ind].copy()
+            highU = knots[highSpan]
+            gap = 0 # size of the gap
+            u = knots[order]
+            knotIndex = order
+            while u == knots[knotIndex + 1]:
+                knotIndex += 1
+            multiplicity = knotIndex - degree
+            firstCoefOut = (2 * knotIndex - degree - multiplicity) // 2 # first control point out
+            last = knotIndex - multiplicity
+            first = multiplicity
+            beforeGap = knotIndex # control-point index before gap
+            afterGap = beforeGap + 1 # control-point index after gap
+            # Move the independent variable to the front of coefs and temp. We'll move it back at later.
+            coefs = coefs.swapaxes(0, ind + 1)
+            temp = temp.swapaxes(0, ind + 1)
+
+            # Loop thru knots, stop after we process highU.
+            while True: 
+                # Compute how many times to remove knot.
+                removed = 0
+                if removeAll or u in oldKnots[ind]:
+                    if maxRemovalsPerKnot > 0:
+                        maxRemovals = min(multiplicity, maxRemovalsPerKnot)
+                    else:
+                        maxRemovals = multiplicity
+                else:
+                    maxRemovals = 0
+
+                while removed < maxRemovals:
+                    offset = first - 1  # diff in index of temp and coefs
+                    temp[0] = coefs[offset]
+                    temp[last + 1 - offset] = coefs[last + 1]
+                    i = first
+                    j = last
+                    ii = first - offset
+                    jj = last - offset
+
+                    # Compute new coefficients for 1 removal step.
+                    while j - i > removed:
+                        alphaI = (u - knots[i]) / (knots[i + order + gap + removed] - knots[i])
+                        alphaJ = (u - knots[j - removed]) / (knots[j + order + gap] - knots[j - removed])
+                        temp[ii] = (coefs[i] - (1.0 - alphaI) * temp[ii - 1]) / alphaI
+                        temp[jj] = (coefs[j] - alphaJ * temp[jj + 1])/ (1.0 - alphaJ)
+                        i += 1
+                        ii += 1
+                        j -= 1
+                        j -= 1
+
+                    # Compute residual error.
+                    if j - i < removed:
+                        residualError = np.linalg.norm(temp[ii - 1] - temp[jj + 1], axis=ind).max()
+                    else:
+                        alphaI = (u - knots[i]) / (knots[i + order + gap + removed] - knots[i])
+                        residualError = np.linalg.norm(alphaI * temp[ii + removed + 1] + (1.0 - alphaI) * temp[ii - 1] - coefs[i], axis=ind).max()
+
+                    # Check if knot is removable.
+                    if tolerance is None or residualError <= tolerance:
+                        # Successful removal. Save new coefficients.
+                        maxResidualError = max(residualError, maxResidualError)
+                        i = first
+                        j = last
+                        while j - i > removed:
+                            coefs[i] = temp[i - offset]
+                            coefs[j] = temp[j - offset]
+                            i += 1
+                            j -= 1
+                    else:
+                        break # Get out of removed < maxRemovals while-loop
+                    
+                    first -= 1
+                    last += 1
+                    removed += 1
+                    # End of removed < maxRemovals while-loop.
+                
+                if removed > 0:
+                    # Knots removed. Shift coefficients down.
+                    j = firstCoefOut
+                    i = j
+                    # Pj thru Pi will be overwritten.
+                    for k in range(1, removed):
+                        if k % 2 == 1:
+                            i += 1
+                        else:
+                            j -= 1
+                    for k in range(i + 1, beforeGap):
+                        coefs[j] = coefs[k] # shift
+                        j += 1
+                else:
+                    j = beforeGap + 1
+
+                if u >= highU:
+                    gap += removed # No more knots, get out of endless while-loop
+                    break
+                else:
+                    # Go to next knot, shift knots and coefficients down, and reset gaps.
+                    k1 = knotIndex - removed + 1
+                    k = knotIndex + gap + 1
+                    i = k1
+                    u = knots[k]
+                    while u == knots[k]:
+                        knots[i] = knots[k]
+                        i += 1
+                        k += 1
+                    multiplicity = i - k1
+                    knotIndex = i - 1
+                    gap += removed
+                    for k in range(0, multiplicity):
+                        coefs[j] = coefs[afterGap]
+                        j += 1
+                        afterGap += 1
+                    beforeGap = j - 1
+                    firstCoefOut = (2 * knotIndex - degree - multiplicity) // 2
+                    last = knotIndex - multiplicity
+                    first = knotIndex - degree
+                # End of endless while-loop
+
+            # Shift remaining knots.
+            i = highSpan + 1
+            k = i - gap
+            for j in range(1, order + 1):
+                knots[k] = knots[i] 
+                k += 1
+                i += 1
+            
+            # Update totalRemoved, nCoef, knots, and coefs.
+            totalRemoved += gap
+            nCoef[ind] -= gap
+            knotList[ind] = knots[:order + nCoef[ind]]
+            coefs = coefs[:nCoef[ind]]
+            coefs = coefs.swapaxes(0, ind + 1)
+            temp = temp.swapaxes(0, ind + 1)
+            # End of ind loop
+        
+        spline = type(self)(self.nInd, self.nDep, self.order, nCoef, knotList, coefs, self.accuracy + maxResidualError, self.metadata)   
+        return spline, totalRemoved, maxResidualError
+
     def reparametrize(self, newDomain):
         """
         Reparametrize a spline to match new domain bounds. The spline's number of knots and its coefficients remain unchanged.
