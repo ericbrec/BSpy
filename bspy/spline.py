@@ -38,18 +38,16 @@ class Spline:
     coefs : array-like
         A list of the B-spline coefficients of the spline.
     
-    accuracy : `float`
+    accuracy : `float`, optional
         Each spline function is presumed to be an approximation of something else. 
         The `accuracy` stores the infinity norm error of the difference between 
-        the given spline function and that something else.
+        the given spline function and that something else. Default is zero.
 
-    metadata : `dict`
-        A dictionary of ancillary data to store with the spline 
+    metadata : `dict`, optional
+        A dictionary of ancillary data to store with the spline. Default is {}.
     """
     
-    def __init__(self, nInd = 1, nDep = 1, order = [4], nCoef = [4],
-                 knots = [[0, 0, 0, 0, 1, 1, 1, 1]],
-                 coefs = [[0, 0, 0 ,1]], accuracy = 0.0, metadata = {}):
+    def __init__(self, nInd, nDep, order, nCoef, knots, coefs, accuracy = 0.0, metadata = {}):
         assert nInd >= 0, "nInd < 0"
         self.nInd = int(nInd)
         assert nDep >= 0, "nDep < 0"
@@ -153,7 +151,7 @@ class Spline:
         other : `Spline`
             The spline to add to self. The number of dependent variables must match self.
 
-        indMap : `iterable` or `None` (default)
+        indMap : `iterable` or `None`, optional
             An iterable of pairs of indices. 
             Each pair (n, m) maps the mth independent variable of other to the nth independent variable of self. 
             The domains of the nth and mth independent variables must match. 
@@ -419,8 +417,8 @@ class Spline:
 
         Parameters
         ----------
-        with_respect_to : integer
-            The number of the independent variable to differentiate.
+        with_respect_to : integer, optional
+            The number of the independent variable to differentiate. Default is zero.
 
         Returns
         -------
@@ -1276,7 +1274,7 @@ class Spline:
         other : `Spline`
             The spline to subtract from self. The number of dependent variables must match self.
 
-        indMap : `iterable` or `None` (default)
+        indMap : `iterable` or `None`, optional
             An iterable of pairs of indices. 
             Each pair (n, m) maps the mth independent variable of other to the nth independent variable of self. 
             The domains of the nth and mth independent variables must match. 
@@ -1308,7 +1306,7 @@ class Spline:
         matrix : array-like
             An array of size `newNDep`x`nDep` that specifies the transform matrix.
 
-        maxSingularValue : `float`
+        maxSingularValue : `float`, optional
             The largest singular value of `matrix`, used to update the accuracy of the spline. 
             If no value is provided (default), the largest singular value is computed.
 
@@ -1494,8 +1492,8 @@ class Spline:
 
         Parameters
         ----------
-        epsilon : `float`
-            Optional tolerance for root precision. The root will be within epsilon of the actual root. 
+        epsilon : `float`, optional
+            Tolerance for root precision. The root will be within epsilon of the actual root. 
             The default is the max of spline accuracy and machine epsilon.
 
         Returns
