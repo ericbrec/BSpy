@@ -405,7 +405,7 @@ class Spline:
             ix = min(ix, self.nCoef[iv])
             myIndices.append(ix)
             mySection.append(slice(ix - self.order[iv], ix))
-        myCoefs = self.coefs[mySection]
+        myCoefs = self.coefs[tuple(mySection)]
         for iv in range(self.nInd - 1, -1, -1):
             bValues = b_spline_values(myIndices[iv], self.knots[iv], self.order[iv], with_respect_to[iv], uvw[iv])
             myCoefs = myCoefs @ bValues
@@ -689,7 +689,7 @@ class Spline:
             ix = min(ix, self.nCoef[iv])
             myIndices.append(ix)
             mySection.append(slice(ix - self.order[iv], ix))
-        myCoefs = self.coefs[mySection]
+        myCoefs = self.coefs[tuple(mySection)]
         for iv in range(self.nInd - 1, -1, -1):
             bValues = b_spline_values(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv])
             myCoefs = myCoefs @ bValues
@@ -783,7 +783,7 @@ class Spline:
             # Store slicer for current independent variable to restore later.
             slicer = sliceJI[ind + 2]
 
-            # Compute derivatives of coefficients at interior knots.
+            # Compute adjusted derivatives of coefficients at interior knots (see similar code for elevate_and_insert_knots).
             for j in range(1, continuity + 1):
                 sliceJI[0] = j
                 sliceJm1Ip1[0] = j - 1
@@ -793,10 +793,10 @@ class Spline:
                     sliceJm1Ip1[ind + 2] = i + 1
                     sliceJm1I[ind + 2] = i
                     gap = knots[ind][i + self.order[ind]] - knots[ind][i + j]
-                    alpha = (self.order[ind] - j) / gap if gap > 0.0 else 0.0
+                    alpha = 1.0 / gap if gap > 0.0 else 0.0
                     dCoefs[tuple(sliceJI)] = alpha * (dCoefs[tuple(sliceJm1Ip1)] - dCoefs[tuple(sliceJm1I)])
             
-            # Extrapolate left side as needed by integrating coefficients to new exterior knots.
+            # Extrapolate left side as needed by integrating coefficients to new exterior knots (see similar code for elevate_and_insert_knots).
             if bounds[0] is not None and not np.isnan(bounds[0]):
                 for j in range(continuity, 0, -1):
                     sliceJm1Ip1[0] = j - 1
@@ -818,7 +818,7 @@ class Spline:
                     sliceJm1Ip1[ind + 2] = slicer.stop - 1
                     sliceJm1I[ind + 2] = slicer.stop - 1 - j
                     dCoefs[tuple(sliceJm1Ip1)] = dCoefs[tuple(sliceJm1I)]
-                # Now we can integrate the coefficients as usual.
+                # Now we can integrate the coefficients as usual (see similar code for elevate_and_insert_knots).
                 for j in range(continuity, 0, -1):
                     sliceJm1Ip1[0] = j - 1
                     sliceJm1I[0] = j - 1

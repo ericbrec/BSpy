@@ -636,12 +636,12 @@ def test_evaluate():
             i += 1
     assert maxerror <= 2.5 * np.finfo(float).eps
 
-def _test_extrapolate():
+def test_extrapolate():
     maxerror = 0.0
-    #spline = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0.2, 0.3, 0.4, 0.5, 0.5, 1, 1], float)], 
-    #    np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
-    spline = bspy.Spline(1, 2, (4,), (5,), [np.array([0, 0, 0.2, 0.2, 0.5, 0.8, 0.8, 1, 1], float)], 
-        np.array(((260, 100), (100, 260), (300, 300), (100, 260), (260, 100)), float))
+    spline = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0.2, 0.3, 0.4, 0.5, 0.5, 1, 1], float)], 
+        np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float)).clamp((0,), (0,))
+    #spline = bspy.Spline(1, 2, (4,), (5,), [np.array([0, 0, 0.2, 0.2, 0.5, 0.8, 0.8, 1, 1], float)], 
+    #    np.array(((260, 100), (100, 260), (300, 300), (100, 260), (260, 100)), float))
     extrapolated = spline.extrapolate([[-0.5, 1.5]], [2])
     maxerror = 0.0
     for u in np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], 3):
