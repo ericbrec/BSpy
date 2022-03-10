@@ -705,10 +705,10 @@ class Spline:
             nInd x 2 array of the new upper and lower bounds on each of the independent variables (same form as 
             returned from `domain`). If a bound is None or nan then the original bound (and knots) are left unchanged.
 
-        continuityOrder : `iterable`
-            An iterable of length nInd that specifies the order of continuity of the extrapolation (the number of derivatives 
-            that match at the endpoints). A continuity order of zero means the extrapolation just matches the spline value at the endpoints. 
-            The continuity order must be less than the degree of the spline.
+        continuityOrder : `int`
+            The order of continuity of the extrapolation (the number of derivatives that match at the endpoints). 
+            A continuity order of zero means the extrapolation just matches the spline value at the endpoints. 
+            The continuity order must be less than the lowest degree of the spline.
 
         Returns
         -------
@@ -721,27 +721,28 @@ class Spline:
         `trim` : Trim the domain of a spline.
         """
         assert len(newDomain) == self.nInd
-        assert len(continuityOrder) == self.nInd
+        assert continuityOrder >= 0
 
         # Check if any extrapolation is needed. If none, return self unchanged.
-        # Also compute the new nCoef, new knots, and working slices.
+        # Also compute the new nCoef, new knots, working slices, oldKnots, and left/right clamp variables.
         nCoef = [*self.nCoef]
         knots = list(self.knots)
         slicer = slice(None)
         sliceJI = [0, slicer]
         sliceJm1Ip1 = [0, slicer]
         sliceJm1I = [0, slicer]
+        oldKnots = []
         leftInd = []
         rightInd = []
-        maxContinuity = 0
-        for ind, bounds, continuity in zip(range(self.nInd), newDomain, continuityOrder):
+        for ind, bounds in zip(range(self.nInd), newDomain):
             degree = self.order[ind] - 1
             assert len(bounds) == 2
-            assert 0 <= continuity < degree
-            maxContinuity = max(maxContinuity, continuity)
+            assert continuityOrder < degree
+            oldBounds = []
             # Add new knots to end first, so indexing isn't messed up at the beginning.
             if bounds[1] is not None and not np.isnan(bounds[1]):
                 oldBound = self.knots[ind][self.nCoef[ind]]
+                oldBounds.append(oldBound)
                 assert bounds[1] > oldBound
                 nCoef[ind] += degree
                 knots[ind] = np.append(knots[ind], degree * [bounds[1]])
@@ -753,6 +754,7 @@ class Spline:
             if bounds[0] is not None and not np.isnan(bounds[0]):
                 slicer = slice(degree, degree + self.nCoef[ind])
                 oldBound = self.knots[ind][degree]
+                oldBounds.append(oldBound)
                 assert bounds[0] < oldBound
                 nCoef[ind] += degree
                 knots[ind] = np.insert(knots[ind], 0, degree * [bounds[0]])
@@ -765,6 +767,7 @@ class Spline:
             sliceJI.append(slicer)
             sliceJm1Ip1.append(slicer)
             sliceJm1I.append(slicer)
+            oldKnots.append(oldBounds)
 
         if len(leftInd) + len(rightInd) == 0:
             return self
@@ -773,10 +776,10 @@ class Spline:
         self = self.clamp(leftInd, rightInd)
 
         # Initialize dCoefs working array.
-        dCoefs = np.full((maxContinuity + 1, self.nDep, *nCoef), np.nan, self.coefs.dtype)
+        dCoefs = np.full((continuityOrder + 1, self.nDep, *nCoef), np.nan, self.coefs.dtype)
         dCoefs[tuple(sliceJI)] = self.coefs
 
-        for ind, bounds, continuity in zip(range(self.nInd), newDomain, continuityOrder):
+        for ind, bounds in zip(range(self.nInd), newDomain):
             if (bounds[0] is None or np.isnan(bounds[0])) and (bounds[1] is None or np.isnan(bounds[1])):
                 continue
 
@@ -784,7 +787,7 @@ class Spline:
             slicer = sliceJI[ind + 2]
 
             # Compute adjusted derivatives of coefficients at interior knots (see similar code for elevate_and_insert_knots).
-            for j in range(1, continuity + 1):
+            for j in range(1, continuityOrder + 1):
                 sliceJI[0] = j
                 sliceJm1Ip1[0] = j - 1
                 sliceJm1I[0] = j - 1
@@ -798,35 +801,35 @@ class Spline:
             
             # Extrapolate left side as needed by integrating coefficients to new exterior knots (see similar code for elevate_and_insert_knots).
             if bounds[0] is not None and not np.isnan(bounds[0]):
-                for j in range(continuity, 0, -1):
+                for j in range(continuityOrder, 0, -1):
                     sliceJm1Ip1[0] = j - 1
                     sliceJm1I[0] = j - 1
                     sliceJI[0] = j
                     for i in range(slicer.start, j - 1, -1):
                         sliceJm1Ip1[ind + 2] = i - 1
                         sliceJm1I[ind + 2] = i
-                        sliceJI[ind + 2] = i if j < continuity else slicer.start
+                        sliceJI[ind + 2] = i if j < continuityOrder else slicer.start
                         dCoefs[tuple(sliceJm1Ip1)] = dCoefs[tuple(sliceJm1I)] - (knots[ind][i + self.order[ind]] - knots[ind][i + j]) * dCoefs[tuple(sliceJI)]
 
             # Extrapolate right side as needed by integrating coefficients to new exterior knots.
             if bounds[1] is not None and not np.isnan(bounds[1]):
                 # For the right bound, we first need to copy the right bound derivatives into the right (stop-1) position.
                 # (The left bound derivatives were already in right left (start) position.)
-                for j in range(continuity, 0, -1):
+                for j in range(continuityOrder, 0, -1):
                     sliceJm1Ip1[0] = j
                     sliceJm1I[0] = j
                     sliceJm1Ip1[ind + 2] = slicer.stop - 1
                     sliceJm1I[ind + 2] = slicer.stop - 1 - j
                     dCoefs[tuple(sliceJm1Ip1)] = dCoefs[tuple(sliceJm1I)]
                 # Now we can integrate the coefficients as usual (see similar code for elevate_and_insert_knots).
-                for j in range(continuity, 0, -1):
+                for j in range(continuityOrder, 0, -1):
                     sliceJm1Ip1[0] = j - 1
                     sliceJm1I[0] = j - 1
                     sliceJI[0] = j
                     for i in range(slicer.stop - 1, nCoef[ind] - j):
                         sliceJm1Ip1[ind + 2] = i + 1
                         sliceJm1I[ind + 2] = i
-                        sliceJI[ind + 2] = i if j < continuity else slicer.stop - 1
+                        sliceJI[ind + 2] = i if j < continuityOrder else slicer.stop - 1
                         dCoefs[tuple(sliceJm1Ip1)] = dCoefs[tuple(sliceJm1I)] + (knots[ind][i - j + self.order[ind]] - knots[ind][i]) * dCoefs[tuple(sliceJI)]
 
             # Restore slicer for current independent variable.
@@ -834,7 +837,9 @@ class Spline:
             sliceJm1Ip1[ind + 2] = slicer
             sliceJm1I[ind + 2] = slicer
 
-        return type(self)(self.nInd, self.nDep, self.order, nCoef, knots, dCoefs[0], self.accuracy, self.metadata)
+        extrapolated = type(self)(self.nInd, self.nDep, self.order, nCoef, knots, dCoefs[0], self.accuracy, self.metadata)
+        extrapolated, removed, error = extrapolated.remove_knots(oldKnots, maxRemovalsPerKnot=continuityOrder)
+        return extrapolated
 
     def fold(self, foldedInd):
         """
