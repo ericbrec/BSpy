@@ -636,7 +636,7 @@ def test_evaluate():
             i += 1
     assert maxerror <= 2.5 * np.finfo(float).eps
 
-def _test_extrapolate():
+def test_extrapolate():
     maxerror = 0.0
     spline = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0.2, 0.3, 0.4, 0.5, 0.5, 1, 1], float)], 
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
