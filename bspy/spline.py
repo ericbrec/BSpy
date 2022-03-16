@@ -727,11 +727,11 @@ class Spline:
         # Also compute the new nCoef, new knots, working slices, oldKnots, and left/right clamp variables.
         nCoef = [*self.nCoef]
         knots = list(self.knots)
-        slicer = slice(None)
-        lowerLeft = [0, slicer]
-        lowerRight = [0, slicer]
-        upperLeft = [0, slicer]
-        upperRight = [0, slicer]
+        fullSlice = slice(None)
+        lowerLeft = [0, fullSlice]
+        lowerRight = [0, fullSlice]
+        upperLeft = [0, fullSlice]
+        upperRight = [0, fullSlice]
         leftInd = []
         rightInd = []
         for ind, bounds in zip(range(self.nInd), newDomain):
@@ -777,7 +777,6 @@ class Spline:
 
         for ind, bounds in zip(range(self.nInd), newDomain):
             order = self.order[ind]
-            # Store slicer for current independent variable to restore later.
             slicer = lowerLeft[ind + 2]
             
             if bounds[0] is not None and not np.isnan(bounds[0]):
@@ -860,11 +859,11 @@ class Spline:
                         lowerRight[ind + 2] = i if j < continuityOrder else nCoef[ind] - 1
                         dCoefs[tuple(upperLeft)] = dCoefs[tuple(upperRight)] - ((knots[ind][i + order - j] - knots[ind][i]) / (order - j)) * dCoefs[tuple(lowerRight)]
 
-            # Restore slicer for current independent variable.
-            lowerLeft[ind + 2] = slicer
-            lowerRight[ind + 2] = slicer
-            upperLeft[ind + 2] = slicer
-            upperRight[ind + 2] = slicer
+            # Switch to full slice for current independent variable.
+            lowerLeft[ind + 2] = fullSlice
+            lowerRight[ind + 2] = fullSlice
+            upperLeft[ind + 2] = fullSlice
+            upperRight[ind + 2] = fullSlice
 
         return type(self)(self.nInd, self.nDep, self.order, nCoef, knots, dCoefs[0], self.accuracy, self.metadata)
 
