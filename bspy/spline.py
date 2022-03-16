@@ -708,7 +708,7 @@ class Spline:
         continuityOrder : `int`
             The order of continuity of the extrapolation (the number of derivatives that match at the endpoints). 
             A continuity order of zero means the extrapolation just matches the spline value at the endpoints. 
-            The continuity order must be less than the lowest degree of the spline.
+            The continuity order is automatically limited to one less than the degree of the spline.
 
         Returns
         -------
@@ -738,24 +738,23 @@ class Spline:
             order = self.order[ind]
             degree = order - 1
             assert len(bounds) == 2
-            assert continuityOrder < degree
             # Add new knots to end first, so indexing isn't messed up at the beginning.
             if bounds[1] is not None and not np.isnan(bounds[1]):
                 oldBound = self.knots[ind][self.nCoef[ind]]
                 assert bounds[1] > oldBound
-                for i in range(self.nCoef[ind] + 1, self.nCoef[ind] + order):
-                    knots[ind][i] = oldBound # Reflect upcoming clamp
                 knots[ind] = np.append(knots[ind], degree * [bounds[1]])
                 nCoef[ind] += degree
+                for i in range(self.nCoef[ind] + 1, self.nCoef[ind] + order):
+                    knots[ind][i] = oldBound # Reflect upcoming clamp
                 rightInd.append(ind)
             # Next, add knots to the beginning and set coefficient slicer.
             if bounds[0] is not None and not np.isnan(bounds[0]):
                 oldBound = self.knots[ind][degree]
                 assert bounds[0] < oldBound
-                for i in range(0, degree):
-                    knots[ind][i] = oldBound # Reflect upcoming clamp
                 knots[ind] = np.insert(knots[ind], 0, degree * [bounds[0]])
                 nCoef[ind] += degree
+                for i in range(degree, 2 * degree):
+                    knots[ind][i] = oldBound # Reflect upcoming clamp
                 leftInd.append(ind)
                 slicer = slice(degree, degree + self.nCoef[ind])
             else:
@@ -778,14 +777,15 @@ class Spline:
         for ind, bounds in zip(range(self.nInd), newDomain):
             order = self.order[ind]
             slicer = lowerLeft[ind + 2]
+            continuity = min(continuityOrder, order - 2)
             
             if bounds[0] is not None and not np.isnan(bounds[0]):
                 # Compute derivatives of coefficients at interior knots.
-                for j in range(1, continuityOrder + 1):
+                for j in range(1, continuity + 1):
                     upperLeft[0] = j - 1
                     upperRight[0] = j - 1
                     lowerLeft[0] = j
-                    for i in range(slicer.start, slicer.start + continuityOrder - j + 1):
+                    for i in range(slicer.start, slicer.start + continuity - j + 1):
                         upperLeft[ind + 2] = i
                         upperRight[ind + 2] = i + 1
                         lowerLeft[ind + 2] = i
@@ -797,11 +797,11 @@ class Spline:
                 lowerLeft[ind + 2] = 0
                 lowerRight[ind + 2] = slicer.start
                 gap = knots[ind][0] - knots[ind][slicer.start]
-                for j in range(continuityOrder, -1, -1):
+                for j in range(continuity, -1, -1):
                     lowerLeft[0] = j
-                    lowerRight[0] = continuityOrder
+                    lowerRight[0] = continuity
                     dCoefs[tuple(lowerLeft)] = dCoefs[tuple(lowerRight)]
-                    for i in range(continuityOrder - 1, j - 1, -1):
+                    for i in range(continuity - 1, j - 1, -1):
                         lowerRight[0] = i
                         dCoefs[tuple(lowerLeft)] = dCoefs[tuple(lowerRight)] + (gap / (i + 1 - j)) * dCoefs[tuple(lowerLeft)]
 
@@ -809,23 +809,23 @@ class Spline:
                 knots[ind][degree] = knots[ind][0]
 
                 # Backfill coefficients by integrating out from extrapolated spline values.
-                for j in range(continuityOrder, 0, -1):
+                for j in range(continuity, 0, -1):
                     upperRight[0] = j - 1
                     upperLeft[0] = j - 1
                     lowerLeft[0] = j
                     for i in range(0, degree - j):
                         upperRight[ind + 2] = i + 1
                         upperLeft[ind + 2] = i
-                        lowerLeft[ind + 2] = i if j < continuityOrder else 0
+                        lowerLeft[ind + 2] = i if j < continuity else 0
                         dCoefs[tuple(upperRight)] = dCoefs[tuple(upperLeft)] + ((knots[ind][i + order] - knots[ind][i + j]) / (order - j)) * dCoefs[tuple(lowerLeft)]
 
             if bounds[1] is not None and not np.isnan(bounds[1]):
                 # Compute derivatives of coefficients at interior knots.
-                for j in range(1, continuityOrder + 1):
+                for j in range(1, continuity + 1):
                     upperLeft[0] = j - 1
                     upperRight[0] = j - 1
                     lowerRight[0] = j
-                    for i in range(slicer.stop + j - continuityOrder - 1, slicer.stop):
+                    for i in range(slicer.stop + j - continuity - 1, slicer.stop):
                         upperLeft[ind + 2] = i - 1
                         upperRight[ind + 2] = i
                         lowerRight[ind + 2] = i
@@ -837,11 +837,11 @@ class Spline:
                 lowerLeft[ind + 2] = slicer.stop - 1
                 lowerRight[ind + 2] = nCoef[ind] - 1
                 gap = knots[ind][slicer.stop + order] - knots[ind][slicer.stop]
-                for j in range(continuityOrder, -1, -1):
+                for j in range(continuity, -1, -1):
                     lowerRight[0] = j
-                    lowerLeft[0] = continuityOrder
+                    lowerLeft[0] = continuity
                     dCoefs[tuple(lowerRight)] = dCoefs[tuple(lowerLeft)]
-                    for i in range(continuityOrder - 1, j - 1, -1):
+                    for i in range(continuity - 1, j - 1, -1):
                         lowerLeft[0] = i
                         dCoefs[tuple(lowerRight)] = dCoefs[tuple(lowerLeft)] + (gap / (i + 1 - j)) * dCoefs[tuple(lowerRight)]
 
@@ -849,14 +849,14 @@ class Spline:
                 knots[ind][slicer.stop + degree] = knots[ind][slicer.stop + order]
 
                 # Backfill coefficients by integrating out from extrapolated spline values.
-                for j in range(continuityOrder, 0, -1):
+                for j in range(continuity, 0, -1):
                     upperLeft[0] = j - 1
                     upperRight[0] = j - 1
                     lowerRight[0] = j
                     for i in range(nCoef[ind] - 1, slicer.stop - 1 + j, -1):
                         upperLeft[ind + 2] = i - 1
                         upperRight[ind + 2] = i
-                        lowerRight[ind + 2] = i if j < continuityOrder else nCoef[ind] - 1
+                        lowerRight[ind + 2] = i if j < continuity else nCoef[ind] - 1
                         dCoefs[tuple(upperLeft)] = dCoefs[tuple(upperRight)] - ((knots[ind][i + order - j] - knots[ind][i]) / (order - j)) * dCoefs[tuple(lowerRight)]
 
             # Switch to full slice for current independent variable.
