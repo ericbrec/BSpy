@@ -219,6 +219,61 @@ class Spline:
         
         return type(self)(nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy + other.accuracy, self.metadata)
 
+    def blossom(self, uvw):
+        """
+        Compute the blossom of the spline at a given parameter values.
+
+        Parameters
+        ----------
+        uvwValues : `iterable`
+            An iterable of length `nInd` that specifies the degree-sized vectors of blossom parameters for each independent variable.
+
+        Returns
+        -------
+        value : `numpy.array`
+            The value of the spline's blossom at the given blossom parameters.
+
+        See Also
+        --------
+        `evaluate` : Compute the value of the spline at a given parameter value.
+
+        Notes
+        -----
+        Evaluates the blossom based on blossoming algorithm 1 found in Goldman, Ronald N. "Blossoming and knot insertion algorithms for B-spline curves." 
+        Computer Aided Geometric Design 7, no. 1-4 (1990): 69-81.
+        """
+        def blossom_values(knot, knots, order, u):
+            basis = np.zeros(order, knots.dtype)
+            basis[-1] = 1.0
+            for degree in range(1, order):
+                b = order - degree
+                for i in range(knot - degree, knot):
+                    alpha = (u[degree - 1] - knots[i]) / (knots[i + degree] - knots[i])
+                    basis[b - 1] += (1.0 - alpha) * basis[b]
+                    basis[b] *= alpha
+                    b += 1
+            return basis
+
+        # Check for evaluation point inside domain
+        dom = self.domain()
+        for ix in range(self.nInd):
+            if uvw[ix][0] < dom[ix][0] or uvw[ix][self.order[ix]-2] > dom[ix][1]:
+                raise ValueError(f"Spline evaluation outside domain: {uvw}")
+
+        # Grab all of the appropriate coefficients
+        mySection = [slice(0, self.nDep)]
+        myIndices = []
+        for iv in range(self.nInd):
+            ix = np.searchsorted(self.knots[iv], uvw[iv][0], 'right')
+            ix = min(ix, self.nCoef[iv])
+            myIndices.append(ix)
+            mySection.append(slice(ix - self.order[iv], ix))
+        myCoefs = self.coefs[tuple(mySection)]
+        for iv in range(self.nInd - 1, -1, -1):
+            bValues = blossom_values(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv])
+            myCoefs = myCoefs @ bValues
+        return myCoefs
+
     def clamp(self, left, right):
         """
         Ensure the leftmost/rightmost knot has a full order multiplicity, clamping the spline's 
@@ -724,7 +779,7 @@ class Spline:
         assert continuityOrder >= 0
 
         # Check if any extrapolation is needed. If none, return self unchanged.
-        # Also compute the new nCoef, new knots, working slices, oldKnots, and left/right clamp variables.
+        # Also compute the new nCoef, new knots, coefficient slices, and left/right clamp variables.
         nCoef = [*self.nCoef]
         knots = list(self.knots)
         coefSlices = [0, slice(None)]
