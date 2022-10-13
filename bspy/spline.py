@@ -981,7 +981,7 @@ class Spline:
                     position = len(knots[ind]) - self.order[ind]
                 else:
                     position = np.searchsorted(knots[ind], knot, 'right')
-                coefs = coefs.swapaxes(0, ind + 1) # Swap dependend and independent variable (swap back later)
+                coefs = coefs.swapaxes(0, ind + 1) # Swap dependent and independent variable (swap back later)
                 newCoefs = np.insert(coefs, position - 1, 0.0, axis=0)
                 for i in range(position - self.order[ind] + 1, position):
                     alpha = (knot - knots[ind][i]) / (knots[ind][i + self.order[ind] - 1] - knots[ind][i])
@@ -1147,7 +1147,7 @@ class Spline:
             The total number of knots removed.
         
         residualError : `float`
-            The residual error relative to the old spline. (The returned spline's accuracy is also adjusted accordinly.)
+            The residual error relative to the old spline. (The returned spline's accuracy is also adjusted accordingly.)
 
         See Also
         --------
