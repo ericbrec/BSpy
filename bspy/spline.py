@@ -166,6 +166,7 @@ class Spline:
         See Also
         --------
         `subtract` : Subtract two splines.
+        `multiply` : Multiply two splines.
         `common_basis : Align a collection of splines to a common basis, elevating the order and adding knots as needed.
 
         Notes
@@ -1029,6 +1030,84 @@ class Spline:
         spline = splineType(nInd, coefficients.shape[0], order, coefficients.shape[1:], knots, coefficients, metadata=dict(Path=path, Name=path.splitext(path.split(fileName)[1])[0]))
         return spline
 
+    def multiply(self, other, indMap = None):
+        """
+        Multiply two splines.
+
+        Parameters
+        ----------
+        other : `Spline`
+            The spline to multiply by self. The number of dependent variables must match self.
+
+        indMap : `iterable` or `None`, optional
+            An iterable of pairs of indices. 
+            Each pair (n, m) maps the mth independent variable of other to the nth independent variable of self. 
+            The domains of the nth and mth independent variables must match. 
+            An independent variable can map to no more than one other independent variable.
+            Unmapped independent variables remain independent (the default).
+
+        Returns
+        -------
+        spline : `Spline`
+            The result of adding other to self.
+
+        See Also
+        --------
+        `add` : Add two splines.
+        `subtract` : Subtract two splines.
+        `common_basis : Align a collection of splines to a common basis, elevating the order and adding knots as needed.
+
+        Notes
+        -----
+        Uses `common_basis` to ensure mapped variables share the same order and knots. 
+        """
+        assert self.nDep == other.nDep
+        selfMapped = []
+        otherMapped = []
+        otherToSelf = {}
+        if indMap is not None:
+            (self, other) = self.common_basis((other,), indMap)
+            for map in indMap:
+                selfMapped.append(map[0])
+                otherMapped.append(map[1])
+                otherToSelf[map[1]] = map[0]
+
+        # Construct new spline parameters.
+        # We index backwards because we're adding transposed coefficients (see below). 
+        nInd = self.nInd
+        order = [*self.order]
+        nCoef = [*self.nCoef]
+        knots = list(self.knots)
+        permutation = [] # Used to transpose coefs to match other.coefs.T.
+        for i in range(self.nInd - 1, -1, -1):
+            if i not in selfMapped:
+                permutation.append(i + 1) # Add 1 to account for dependent variables.
+        for i in range(other.nInd - 1, -1, -1):
+            if i not in otherMapped:
+                order.append(other.order[i])
+                nCoef.append(other.nCoef[i])
+                knots.append(other.knots[i])
+                permutation.append(nInd + 1) # Add 1 to account for dependent variables.
+                nInd += 1
+            else:
+                permutation.append(otherToSelf[i] + 1) # Add 1 to account for dependent variables.
+        permutation.append(0) # Account for dependent variables.
+        permutation = np.array(permutation)
+        coefs = np.zeros((self.nDep, *nCoef), self.coefs.dtype)
+
+        # Build coefs array by transposing the changing coefficients to the end, including the dependent variables.
+        # First, add in self.coefs.
+        coefs = coefs.T
+        coefs += self.coefs.T
+        # Permutation for other.coefs.T accounts for coefs being transposed by subtracting permutation from ndim - 1.
+        coefs = coefs.transpose((coefs.ndim - 1) - permutation)
+        # Add in other.coefs. 
+        coefs += other.coefs.T
+        # Reverse the permutation.
+        coefs = coefs.transpose(np.argsort(permutation)) 
+        
+        return type(self)(nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy + other.accuracy, self.metadata)
+
     def range_bounds(self):
         """
         Return the range of a spline as upper and lower bounds on each of the
@@ -1334,6 +1413,7 @@ class Spline:
         See Also
         --------
         `add` : Add two splines.
+        `multiply` : Multiply two splines.
         `common_basis : Align a collection of splines to a common basis, elevating the order and adding knots as needed.
 
         Notes
