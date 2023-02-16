@@ -568,7 +568,7 @@ class Spline:
         Returns
         -------
         spline : `Spline`
-            The result of adding other to self.
+            The result of multiplying other to self.
 
         See Also
         --------
