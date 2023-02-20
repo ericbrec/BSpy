@@ -556,7 +556,7 @@ truthSurface = \
 def test_add():
     maxerror = 0.0
     spline1 = bspy.Spline(1, 2, (5,), (5,), [np.array([0, 0, 0, 0, 0.2, 0.5, 0.5, 1, 1, 1], float)], 
-        np.array(((260, 100), (100, 260), (260, 420), (580, 260), (420, 100)), float))
+        np.array(((100, 260), (260, 100), (580, 260), (260, 420), (420, 100)), float))
     spline2 = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0.2, 0.3, 0.4, 0.5, 0.5, 1, 1], float)], 
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
     
@@ -717,6 +717,32 @@ def test_insert_knots():
     for [u, x, y] in truthCurve:
         [xTest, yTest] = newCurve.evaluate([u])
         maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxerror <= np.finfo(float).eps
+
+def test_multiply():
+    maxerror = 0.0
+    spline1 = bspy.Spline(1, 2, (5,), (5,), [np.array([0, 0, 0, 0, 0.2, 0.5, 0.5, 1, 1, 1], float)], 
+        np.array(((100, 260), (260, 100), (580, 260), (260, 420), (420, 100)), float))
+    spline2 = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0.2, 0.3, 0.4, 0.5, 0.5, 1, 1], float)], 
+        np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
+    
+    # Add with shared independent variable.
+    #multiplied = spline1.add(spline2, [[0, 0]])
+    #maxerror = 0.0
+    #for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
+    #    [x, y] = spline1.evaluate([u]) + spline2.evaluate([u])
+    #    [xTest, yTest] = multiplied.evaluate([u])
+    #    maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
+    #assert maxerror <= np.finfo(float).eps
+
+    # Multiply with completely independent variables.
+    multiplied = spline1.multiply(spline2, None, 'D')
+    maxerror = 0.0
+    for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
+        for v in np.linspace(spline2.knots[0][spline2.order[0]-1], spline2.knots[0][spline2.nCoef[0]], 100):
+            x = np.dot(spline1.evaluate([u]), spline2.evaluate([v]))
+            xTest = multiplied.evaluate([u,v])
+            maxerror = max(maxerror, (xTest - x) ** 2)
     assert maxerror <= np.finfo(float).eps
 
 def test_remove_knots():

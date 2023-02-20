@@ -549,7 +549,7 @@ class Spline:
         spline = splineType(nInd, coefficients.shape[0], order, coefficients.shape[1:], knots, coefficients, metadata=dict(Path=path, Name=path.splitext(path.split(fileName)[1])[0]))
         return spline
 
-    def multiply(self, other, indMap = None):
+    def multiply(self, other, indMap = None, productType = 'S'):
         """
         Multiply two splines.
 
@@ -565,6 +565,12 @@ class Spline:
             An independent variable can map to no more than one other independent variable.
             Unmapped independent variables remain independent (the default).
 
+        productType : {'C', 'D', 'S'}, optional
+            The type of product to perform on the dependent variables (default is 'S').
+                'C' is for a cross product (nDep must be 3).
+                'D' is for a dot product (nDep must match).
+                'S' is for a scalar product (nDep must be 1 for one of the splines).
+        
         Returns
         -------
         spline : `Spline`
@@ -580,7 +586,7 @@ class Spline:
         -----
         Uses `common_basis` to ensure mapped variables share the same order and knots. 
         """
-        return bspy._spline_operations.multiply(self, other, indMap)
+        return bspy._spline_operations.multiply(self, other, indMap, type)
 
     def range_bounds(self):
         """
