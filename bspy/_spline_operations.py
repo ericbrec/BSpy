@@ -80,7 +80,7 @@ def multiply(self, other, indMap = None, productType = 'S'):
     assert productType != 'C' or (self.nDep == 3 and other.nDep == 3), "Mismatched dimensions"
     assert productType != 'S' or self.nDep == 1 or other.nDep == 1, "Mismatched dimensions"
 
-    # Swap self and other if other is a scalar and self isn't (simplifies array processing).
+    # Ensure scalar spline (if any) comes first (simplifies array processing).
     if other.nDep == 1 and self.nDep > 1:
         temp = self
         self = other
@@ -88,6 +88,7 @@ def multiply(self, other, indMap = None, productType = 'S'):
 
     # Construct new spline parameters.
     nInd = self.nInd + other.nInd
+    nDep = other.nDep
     order = [*self.order, *other.order]
     nCoef = [*self.nCoef, *other.nCoef]
     knots = [*self.knots, *other.knots]
@@ -103,7 +104,6 @@ def multiply(self, other, indMap = None, productType = 'S'):
         coefs[0] = outer[1,2] - outer[2,1]
         coefs[1] = outer[2,0] - outer[0,2]
         coefs[2] = outer[0,1] - outer[1,0]
-        nDep = 3
     elif productType == 'D': # Dot product
         coefs = outer[0,0]
         for i in range(1, self.nDep):
@@ -112,7 +112,6 @@ def multiply(self, other, indMap = None, productType = 'S'):
         nDep = 1
     else: # Scalar product, where self is the scalar
         coefs = outer[0]
-        nDep = other.nDep
 
     return type(self)(nInd, nDep, order, nCoef, knots, coefs, max(self.accuracy, other.accuracy), self.metadata)
 

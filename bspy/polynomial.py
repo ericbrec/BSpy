@@ -114,11 +114,10 @@ class Polynomial:
         a[:self.order] = self.c
         for j in range(m):
             for i in range(min(self.order, m - j)):
-                a[i] = (1 - i/(m - j)) * a[i] + \
-                    ((i + 1)/(m - j)) * (v[m - j] - self.x0) * a[i + 1]
+                a[i] = (1 - i/(m - j)) * a[i] + ((i + 1)/(m - j)) * (v[m - j - 1] - self.x0) * a[i + 1]
         for j in range(rho - 1):
             for i in range(min(self.order + j, rho - 1), j, -1):
-                a[i] = a[i - 1] + (v[m+j+1] - v[i]) * a[i]
+                a[i] = a[i - 1] + (v[m+j] - v[i - 1]) * a[i]
         return a[:rho]
 
     def shift(self, x0 = 0):
