@@ -74,6 +74,52 @@ def derivative(self, with_respect_to, uvw):
         myCoefs = myCoefs @ bValues
     return myCoefs
 
+def derivatives(self, with_respect_to, uvw, taylorCoefs = False):
+    def b_spline_values(knot, knots, splineOrder, derivativeOrder, u, taylorCoefs = False):
+        basis = np.zeros(splineOrder, knots.dtype)
+        basis[-1] = 1.0
+        for degree in range(1, splineOrder - derivativeOrder):
+            b = splineOrder - degree
+            for i in range(knot - degree, knot):
+                alpha = (u - knots[i]) / (knots[i + degree] - knots[i])
+                basis[b - 1] += (1.0 - alpha) * basis[b]
+                basis[b] *= alpha
+                b += 1
+        for degree in range(splineOrder - derivativeOrder, splineOrder):
+            b = splineOrder - degree
+            for i in range(knot - degree, knot):
+                alpha = degree / ((splineOrder - degree if taylorCoefs else 1.0) * (knots[i + degree] - knots[i]))
+                basis[b - 1] += -alpha * basis[b]
+                basis[b] *= alpha
+                b += 1
+        return basis
+
+    # Check for evaluation point inside domain.
+    # Always count down uvw from the right (because we multiply bValues on the right).
+    dom = self.domain()
+    for ix in range(-1, -len(uvw)-1, -1):
+        if uvw[ix] < dom[ix][0] or uvw[ix] > dom[ix][1]:
+            raise ValueError(f"Spline evaluation outside domain: {uvw}")
+
+    # Grab all of the appropriate coefficients
+    mySection = [slice(0, self.nDep)]
+    myIndices = []
+    for iv in range(-1, -len(uvw)-1, -1):
+        ix = np.searchsorted(self.knots[iv], uvw[iv], 'right')
+        ix = min(ix, self.nCoef[iv])
+        myIndices.insert(1, ix)
+        mySection.insert(1, slice(ix - self.order[iv], ix))
+    myCoefs = self.coefs[tuple(mySection)]
+
+    # Multiply by the bValues
+    for iv in range(-1, -len(uvw)-1, -1):
+        bValues = np.empty((self.order[iv], with_respect_to[iv] + 1), self.knots[iv].dtype)
+        for deriv in range(with_respect_to[iv] + 1):
+            bValues[:,deriv] = b_spline_values(myIndices[iv], self.knots[iv], self.order[iv], deriv, uvw[iv], taylorCoefs)
+        myCoefs = myCoefs @ bValues
+        myCoefs = np.moveaxis(myCoefs, -1, 0)
+    return myCoefs
+
 def domain(self):
     dom = [[self.knots[i][self.order[i] - 1],
             self.knots[i][self.nCoef[i]]] for i in range(self.nInd)]
