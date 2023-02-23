@@ -625,7 +625,7 @@ class Spline:
         -----
         Uses `common_basis` to ensure mapped variables share the same order and knots. 
         """
-        return bspy._spline_operations.multiply(self, other, indMap, type)
+        return bspy._spline_operations.multiply(self, other, indMap, productType)
 
     def range_bounds(self):
         """
