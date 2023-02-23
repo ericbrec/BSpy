@@ -102,13 +102,15 @@ def derivatives(self, with_respect_to, uvw, taylorCoefs = False):
             raise ValueError(f"Spline evaluation outside domain: {uvw}")
 
     # Grab all of the appropriate coefficients
-    mySection = [slice(0, self.nDep)]
+    mySection = []
     myIndices = []
     for iv in range(-1, -len(uvw)-1, -1):
         ix = np.searchsorted(self.knots[iv], uvw[iv], 'right')
         ix = min(ix, self.nCoef[iv])
-        myIndices.insert(1, ix)
-        mySection.insert(1, slice(ix - self.order[iv], ix))
+        myIndices.insert(0, ix)
+        mySection.insert(0, slice(ix - self.order[iv], ix))
+    for iv in range(self.nInd + 1 - len(uvw)):
+        mySection.insert(0, slice(None))
     myCoefs = self.coefs[tuple(mySection)]
 
     # Multiply by the bValues

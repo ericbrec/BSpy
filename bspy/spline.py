@@ -315,7 +315,7 @@ class Spline:
         Returns
         -------
         value : `numpy.array`
-            The value of the derivative of the spline at the given parameter values.
+            The values of the derivatives of the spline at the given parameter values.
 
         See Also
         --------
@@ -623,7 +623,8 @@ class Spline:
 
         Notes
         -----
-        Uses `common_basis` to ensure mapped variables share the same order and knots. 
+        Taken in part from Lee, E. T. Y. "Computing a chain of blossoms, with application to products of splines." 
+        Computer Aided Geometric Design 11, no. 6 (1994): 597-620.
         """
         return bspy._spline_operations.multiply(self, other, indMap, productType)
 
