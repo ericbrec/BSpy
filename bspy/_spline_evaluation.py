@@ -34,26 +34,27 @@ def blossom(self, uvw):
         myCoefs = myCoefs @ bValues
     return myCoefs
 
-def derivative(self, with_respect_to, uvw):
-    def b_spline_values(knot, knots, splineOrder, derivativeOrder, u):
-        basis = np.zeros(splineOrder, knots.dtype)
-        basis[-1] = 1.0
-        for degree in range(1, splineOrder - derivativeOrder):
-            b = splineOrder - degree
-            for i in range(knot - degree, knot):
-                alpha = (u - knots[i]) / (knots[i + degree] - knots[i])
-                basis[b - 1] += (1.0 - alpha) * basis[b]
-                basis[b] *= alpha
-                b += 1
-        for degree in range(splineOrder - derivativeOrder, splineOrder):
-            b = splineOrder - degree
-            for i in range(knot - degree, knot):
-                alpha = degree / (knots[i + degree] - knots[i])
-                basis[b - 1] += -alpha * basis[b]
-                basis[b] *= alpha
-                b += 1
-        return basis
+def bsplineValues(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs = False):
+    basis = np.zeros(splineOrder, knots.dtype)
+    basis[-1] = 1.0
+    for degree in range(1, splineOrder - derivativeOrder):
+        b = splineOrder - degree
+        for i in range(knot - degree, knot):
+            alpha = (u - knots[i]) / (knots[i + degree] - knots[i])
+            basis[b - 1] += (1.0 - alpha) * basis[b]
+            basis[b] *= alpha
+            b += 1
+    for degree in range(splineOrder - derivativeOrder, splineOrder):
+        b = splineOrder - degree
+        derivativeAdjustment = degree / (splineOrder - degree if taylorCoefs else 1.0)
+        for i in range(knot - degree, knot):
+            alpha = derivativeAdjustment / (knots[i + degree] - knots[i])
+            basis[b - 1] += -alpha * basis[b]
+            basis[b] *= alpha
+            b += 1
+    return basis
 
+def derivative(self, with_respect_to, uvw):
     # Check for evaluation point inside domain
     dom = self.domain()
     for ix in range(self.nInd):
@@ -70,30 +71,11 @@ def derivative(self, with_respect_to, uvw):
         mySection.append(slice(ix - self.order[iv], ix))
     myCoefs = self.coefs[tuple(mySection)]
     for iv in range(self.nInd - 1, -1, -1):
-        bValues = b_spline_values(myIndices[iv], self.knots[iv], self.order[iv], with_respect_to[iv], uvw[iv])
+        bValues = bsplineValues(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv], with_respect_to[iv])
         myCoefs = myCoefs @ bValues
     return myCoefs
 
 def derivatives(self, with_respect_to, uvw, taylorCoefs = False):
-    def b_spline_values(knot, knots, splineOrder, derivativeOrder, u, taylorCoefs = False):
-        basis = np.zeros(splineOrder, knots.dtype)
-        basis[-1] = 1.0
-        for degree in range(1, splineOrder - derivativeOrder):
-            b = splineOrder - degree
-            for i in range(knot - degree, knot):
-                alpha = (u - knots[i]) / (knots[i + degree] - knots[i])
-                basis[b - 1] += (1.0 - alpha) * basis[b]
-                basis[b] *= alpha
-                b += 1
-        for degree in range(splineOrder - derivativeOrder, splineOrder):
-            b = splineOrder - degree
-            for i in range(knot - degree, knot):
-                alpha = degree / ((splineOrder - degree if taylorCoefs else 1.0) * (knots[i + degree] - knots[i]))
-                basis[b - 1] += -alpha * basis[b]
-                basis[b] *= alpha
-                b += 1
-        return basis
-
     # Check for evaluation point inside domain.
     # Always count down uvw from the right (because we multiply bValues on the right).
     dom = self.domain()
@@ -117,7 +99,7 @@ def derivatives(self, with_respect_to, uvw, taylorCoefs = False):
     for iv in range(-1, -len(uvw)-1, -1):
         bValues = np.empty((self.order[iv], with_respect_to[iv] + 1), self.knots[iv].dtype)
         for deriv in range(with_respect_to[iv] + 1):
-            bValues[:,deriv] = b_spline_values(myIndices[iv], self.knots[iv], self.order[iv], deriv, uvw[iv], taylorCoefs)
+            bValues[:,deriv] = bsplineValues(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv], deriv, taylorCoefs)
         myCoefs = myCoefs @ bValues
         myCoefs = np.moveaxis(myCoefs, -1, 0)
     return myCoefs
@@ -136,18 +118,6 @@ def dot(self, vector):
     return type(self)(self.nInd, 1, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
 
 def evaluate(self, uvw):
-    def b_spline_values(knot, knots, order, u):
-        basis = np.zeros(order, knots.dtype)
-        basis[-1] = 1.0
-        for degree in range(1, order):
-            b = order - degree
-            for i in range(knot - degree, knot):
-                alpha = (u - knots[i]) / (knots[i + degree] - knots[i])
-                basis[b - 1] += (1.0 - alpha) * basis[b]
-                basis[b] *= alpha
-                b += 1
-        return basis
-
     # Check for evaluation point inside domain
     dom = self.domain()
     for ix in range(self.nInd):
@@ -164,7 +134,7 @@ def evaluate(self, uvw):
         mySection.append(slice(ix - self.order[iv], ix))
     myCoefs = self.coefs[tuple(mySection)]
     for iv in range(self.nInd - 1, -1, -1):
-        bValues = b_spline_values(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv])
+        bValues = bsplineValues(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv])
         myCoefs = myCoefs @ bValues
     return myCoefs
 

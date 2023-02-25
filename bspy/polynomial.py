@@ -141,3 +141,18 @@ class Polynomial:
                 for i in range(self.order - 1, j, -1):
                     self.c[i - 1] += delta * self.c[i]
             self.x0 = x0
+
+order = 4
+poly = Polynomial(order, [1.0 * i for i in range(1,order+1)], 0.0)
+knots = [0.0]*order + [1.0]*order
+coefs = poly.raceme(order-1, order, knots[1:])
+print(coefs)
+spline = Spline(1, 1, (order,), (order,), [knots], coefs)
+for i in range(order):
+    print(spline.blossom([knots[i+1:i+order]]))
+for x in np.linspace(0, 1, 5):
+    print(poly.evaluate(x), spline.evaluate([x]))
+
+# Compute Taylor coefficients.
+dCoefs = spline.derivatives([order-1], [knots[order-1]], True)
+print(dCoefs)

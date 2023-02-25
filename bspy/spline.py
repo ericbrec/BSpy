@@ -204,6 +204,49 @@ class Spline:
         """
         return bspy._spline_evaluation.blossom(self, uvw)
 
+    @staticmethod
+    def bsplineValues(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs = False):
+        """
+        Compute bspline values or their derivatives for a 1D bspline segment given the rightmost knot of the segment and a parameter value within that segment.
+
+        Parameters
+        ----------
+        knot : `int`
+            The rightmost knot in the bspline segment.
+
+        knots : array-like
+            The array of knots for the bspline.
+        
+        splineOrder : `int`
+            The order of the bspline.
+
+        u : `float`
+            The parameter value within the segment at which to evaluate it.
+        
+        derivativeOrder : `int`, optional
+            The order of the derivative. A zero-order derivative (default) just evaluates the bspline normally.
+        
+        taylorCoefs : `boolean`, optional
+            A boolean flag that if true returns the derivatives divided by their degree factorial, that is 
+            the taylor coefficients at the given parameter values. Default is false.
+
+        Returns
+        -------
+        value : `numpy.array`
+            The value of the bspline or its derivative at the given parameter.
+
+        See Also
+        --------
+        `evaluate` : Compute the value of the spline at given parameter values.
+        `derivative` : Compute the derivative of the spline at given parameter values.
+
+        Notes
+        -----
+        This method does not check parameter values. It is used by other evaluation methods. It uses the de Boor recurrence relations for a B-spline.
+        """
+        return bspy._spline_evaluation.bSplineValues(knot, knots, splineOrder, u, derivativeOrder, taylorCoefs)
+
+
     def clamp(self, left, right):
         """
         Ensure the leftmost/rightmost knot has a full order multiplicity, clamping the spline's 

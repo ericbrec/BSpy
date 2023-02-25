@@ -95,6 +95,7 @@ def multiply(self, other, indMap = None, productType = 'S'):
 
     # Multiply the coefs arrays as if the independent variables from both splines are unrelated.
     outer = np.outer(self.coefs, other.coefs).reshape((*self.coefs.shape, *other.coefs.shape))
+
     # Move the other spline's dependent variable next to this spline's. 
     outer = np.moveaxis(outer, self.nInd + 1, 1)
 
@@ -113,7 +114,61 @@ def multiply(self, other, indMap = None, productType = 'S'):
     else: # Scalar product, where self is the scalar
         coefs = outer[0]
 
-    return type(self)(nInd, nDep, order, nCoef, knots, coefs, max(self.accuracy, other.accuracy), self.metadata)
+    # Construct the new spline (= self * other).
+    spline = type(self)(nInd, nDep, order, nCoef, knots, coefs, max(self.accuracy, other.accuracy), self.metadata)
+
+    if indMap is not None:
+        # Now we need to combine like terms for matching independent variables (variables mapped to each other).
+        # We can't do this directly with b-spline coefficients, but we can indirectly with the following steps:
+        #   1) Use the combined knots from matching independent variables to divide the spline into segments.
+        #   2) Convert each spline segment into a polynomial (Taylor series).
+        #   3) Sum coefficients of matching polynomial degree (the coefficients have already been multiplied together).
+        #   4) Use blossoms to compute the coefficients from the resulting polynomial (uses the raceme function from E.T.Y. Lee).
+
+        for (ind1, ind2) in indMap:
+            # 1) Use the combined knots from matching independent variables to divide the spline into segments.
+            # First, get multiplicities of the knots for each independent variable.
+            order1 = self.order[ind1]
+            knots1, counts1 = np.unique(self.knots[ind1][order1-1:self.nCoef[ind1]+1], return_counts=True)
+            counts1[0] = counts1[-1] = order1
+            order2 = other.order[ind2]
+            knots2, counts2 = np.unique(other.knots[ind2][order2-1:other.nCoef[ind2]+1], return_counts=True)
+            counts2[0] = counts2[-1] = order2
+            assert knots1[0] == knots2[0] and knots1[-1] == knots2[-1], f"self[{ind1}] domain doesn't match other[{ind2}]"
+
+            # Move the two independent variables to the right side of the coefficients array in prep for computing Taylor coefficients.
+            coefs = np.moveaxis(coefs, (ind1+1, self.nInd+1 + ind2+1), (-2, -1))
+
+            # Compute the new order of the combined spline and its new knots
+            newOrder = order1 + order2 - 1
+            newKnots = []
+            i1 = i2 = 0
+            while i1 < len(knots1) and i2 < len(knots2):
+                if knots1[i1] < knots2[i2]:
+                    knot = knots1[i1]
+                    count = counts1[i1] + order2 - 1
+                    i1 += 1
+                elif knots[i1] > knots2[i2]:
+                    knot = knots2[i2]
+                    count = counts2[i2] + order1 - 1
+                    i2 += 1
+                else:
+                    knot = knots1[i1]
+                    count = max(counts1[i1] + order2 - 1, counts2[i2] + order1 - 1)
+                    i1 += 1
+                    i2 += 1
+                newKnots += [knot] * count
+
+                # 2) Convert each spline segment into a polynomial (Taylor series).
+                taylorCoefs = spline.derivatives((order1 - 1, order2 - 1),(knot, knot), taylorCoefs = True)
+
+
+            
+            # 3) Sum coefficients of matching polynomial degree (the coefficients have already been multiplied together).
+            # 4) Use blossoms to compute the coefficients from the resulting polynomial (uses the raceme function from E.T.Y. Lee).
+
+
+    return spline
 
 def scale(self, multiplier):
     assert np.isscalar(multiplier) or len(multiplier) == self.nDep
