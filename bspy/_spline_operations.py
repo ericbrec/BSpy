@@ -119,7 +119,7 @@ def multiply(self, other, indMap = None, productType = 'S'):
         #   1) Use the combined knots from matching independent variables to divide the spline into segments.
         #   2) Convert each spline segment into a polynomial (Taylor series).
         #   3) Sum coefficients of matching polynomial degree (the coefficients have already been multiplied together).
-        #   4) Use blossoms to compute the coefficients from the resulting polynomial (uses the raceme function from E.T.Y. Lee).
+        #   4) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
 
         for (ind1, ind2) in indMap:
             # 1) Use the combined knots from matching independent variables to divide the spline into segments.
@@ -168,7 +168,7 @@ def multiply(self, other, indMap = None, productType = 'S'):
                 ix2 = min(ix2, other.nCoef[ind2])
                 taylorCoefs = (coefs[ix1 - order1:ix1][ix2 - order2:ix2]).T # Transpose so we multiply on the left (due to matmul rules)
 
-                # Compute taylor coefficients
+                # Compute taylor coefficients for the segment
                 bValues = np.empty((order1, order1), knots1.dtype)
                 for derivativeOrder in range(order1):
                     bValues[:,derivativeOrder] = bspy.Spline.bsplineValues(ix1, self.knots[ind1], order1, knot, derivativeOrder, True)
@@ -185,7 +185,7 @@ def multiply(self, other, indMap = None, productType = 'S'):
                     for i1 in range(order1):
                         newCoefs[ix + i1 + i2] += taylorCoefs[i1][i2]
 
-                # 4) Use blossoms to compute the coefficients from the resulting polynomial (the raceme function from E.T.Y. Lee).
+                # 4) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
                 a = newCoefs[ix:ix + newOrder]
                 m = newOrder - 1
                 rho = newOrder if segment + 1 < segments else len(newKnots) - segments * newOrder
@@ -196,7 +196,8 @@ def multiply(self, other, indMap = None, productType = 'S'):
                     for i in range(min(newOrder + j, rho - 1), j, -1):
                         a[i] = a[i - 1] + (newKnots[ix + m + j + 1] - newKnots[ix + i]) * a[i]
 
-            # Move combined independent variable back to original axis
+            # All the segment coefficients are computed.
+            # Now move combined independent variable back to its original axis.
             coefs = np.moveaxis(newCoefs[:len(newKnots) - newOrder], 0, ind1 + 1)
 
             # Update nInd, order, nCoef, and knots
