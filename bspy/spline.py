@@ -244,7 +244,7 @@ class Spline:
         -----
         This method does not check parameter values. It is used by other evaluation methods. It uses the de Boor recurrence relations for a B-spline.
         """
-        return bspy._spline_evaluation.bSplineValues(knot, knots, splineOrder, u, derivativeOrder, taylorCoefs)
+        return bspy._spline_evaluation.bsplineValues(knot, knots, splineOrder, u, derivativeOrder, taylorCoefs)
 
 
     def clamp(self, left, right):

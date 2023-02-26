@@ -75,8 +75,8 @@ class Polynomial:
         c = np.zeros(shape, self.c.dtype)
         other.shift(self.x0) # Force both polynomials to have the same center.
         for j in range(other.order):
-            for i in range(j, self.order + j):
-                c[i] += self.c[i - j] * other.c[j]
+            for i in range(self.order):
+                c[i+j] += self.c[i] * other.c[j]
         return Polynomial(order, c, self.x0)
 
     def raceme(self, m, rho, v):
@@ -114,10 +114,10 @@ class Polynomial:
         a[:self.order] = self.c
         for j in range(m):
             for i in range(min(self.order, m - j)):
-                a[i] = (1 - i/(m - j)) * a[i] + ((i + 1)/(m - j)) * (v[m - j - 1] - self.x0) * a[i + 1]
+                a[i] = (1 - i/(m - j)) * a[i] + ((i + 1)/(m - j)) * (v[m - j] - self.x0) * a[i + 1]
         for j in range(rho - 1):
             for i in range(min(self.order + j, rho - 1), j, -1):
-                a[i] = a[i - 1] + (v[m+j] - v[i - 1]) * a[i]
+                a[i] = a[i - 1] + (v[m+j+1] - v[i]) * a[i]
         return a[:rho]
 
     def shift(self, x0 = 0):
@@ -142,16 +142,15 @@ class Polynomial:
                     self.c[i - 1] += delta * self.c[i]
             self.x0 = x0
 
-order = 4
+order = 3
 poly = Polynomial(order, [1.0 * i for i in range(1,order+1)], 0.0)
 knots = [0.0]*order + [1.0]*order
-coefs = poly.raceme(order-1, order, knots[1:])
+coefs = poly.raceme(order-1, order, knots)
 print(coefs)
 spline = Spline(1, 1, (order,), (order,), [knots], coefs)
-for i in range(order):
-    print(spline.blossom([knots[i+1:i+order]]))
-for x in np.linspace(0, 1, 5):
-    print(poly.evaluate(x), spline.evaluate([x]))
+multiplied = spline.multiply(spline, [[0,0]])
+print(multiplied)
+print(multiplied.derivatives([multiplied.order[0] - 1],[0.0],True))
 
 # Compute Taylor coefficients.
 dCoefs = spline.derivatives([order-1], [knots[order-1]], True)
