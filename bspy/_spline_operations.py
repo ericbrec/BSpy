@@ -136,37 +136,63 @@ def multiply(self, other, indMap = None, productType = 'S'):
             # Compute the new order of the combined spline and its new knots array.
             newOrder = order1 + order2 - 1
             newKnots = [knots1[0]] * newOrder
+            newMultiplicities = [newOrder]
             i1 = i2 = 0
             while i1 + 1 < len(knots1) and i2 + 1 < len(knots2):
                 if knots1[i1 + 1] < knots2[i2 + 1]:
                     i1 += 1
-                    newKnots += [knots1[i1]] * (multiplicities1[i1] + order2 - 1)
+                    knot = knots1[i1]
+                    multiplicity = multiplicities1[i1] + order2 - 1
                 elif knots1[i1 + 1] > knots2[i2 + 1]:
                     i2 += 1
-                    newKnots += [knots2[i2]] * (multiplicities2[i2] + order1 - 1)
+                    knot = knots2[i2]
+                    multiplicity = multiplicities2[i2] + order1 - 1
                 else:
                     i1 += 1
                     i2 += 1
-                    newKnots += [knots1[i1]] * max(multiplicities1[i1] + order2 - 1, multiplicities2[i2] + order1 - 1)
+                    knot = knots1[i1]
+                    multiplicity = max(multiplicities1[i1] + order2 - 1, multiplicities2[i2] + order1 - 1)
+                newKnots += [knot] * multiplicity
+                newMultiplicities.append(multiplicity)
+
+            # Update nInd, order, nCoef, and overall knots
+            nInd -= 1
+            del order[self.nInd + ind2]
+            order[ind1] = newOrder
+            del nCoef[self.nInd + ind2]
+            nCoef[ind1] = len(newKnots) - newOrder
+            del knots[self.nInd + ind2]
+            knots[ind1] = np.array(newKnots, knots1.dtype)
+
+            # Compute segments (uses the III algorithm from E.T.Y. Lee)
+            i = 0
+            segments = [i]
+            j = 0
+            sigma = newMultiplicities[j]
+            while i < nCoef[ind1]:
+                while sigma <= segments[-1] + newOrder:
+                    j += 1
+                    i = sigma
+                    sigma += newMultiplicities[j]
+                segments.append(i)
 
             # Move the two independent variables to the left side of the coefficients array in prep for computing Taylor coefficients,
             #   and initialize new coefficients array.
             coefs = np.moveaxis(coefs, (ind1+1, self.nInd+1 + ind2), (0, 1))
-            segments = (len(newKnots) - 1) // newOrder # The number of sets of newOrder coefficients, i.e. (len(newKnots) + newOrder)/newOrder rounded up.
-            newCoefs = np.zeros((segments * newOrder, *coefs.shape[2:]), coefs.dtype)
+            newCoefs = np.empty(((len(segments) - 1) * newOrder, *coefs.shape[2:]), coefs.dtype)
 
             # Loop through the segments
-            for segment in range(segments):
+            segmentStart = segments[0]
+            for segmentEnd in segments[1:]:
                 # 2) Convert each spline segment into a polynomial (Taylor series).
 
                 # Isolate the appropriate segment coefficients
-                ix = segment * newOrder
-                knot = newKnots[ix + 1]
+                knot = newKnots[segmentStart + 1]
                 ix1 = np.searchsorted(self.knots[ind1], knot, 'right')
                 ix1 = min(ix1, self.nCoef[ind1])
                 ix2 = np.searchsorted(other.knots[ind2], knot, 'right')
                 ix2 = min(ix2, other.nCoef[ind2])
-                taylorCoefs = (coefs[ix1 - order1:ix1][ix2 - order2:ix2]).T # Transpose so we multiply on the left (due to matmul rules)
+                taylorCoefs = (coefs[ix1 - order1:ix1, ix2 - order2:ix2]).T # Transpose so we multiply on the left (due to matmul rules)
 
                 # Compute taylor coefficients for the segment
                 bValues = np.empty((order1, order1), knots1.dtype)
@@ -181,33 +207,28 @@ def multiply(self, other, indMap = None, productType = 'S'):
                 taylorCoefs = (np.moveaxis(taylorCoefs, 0, -1)).T # Move ind1's taylor coefficients back to the right side, and re-transpose
 
                 # 3) Sum coefficients of matching polynomial degree (the coefficients have already been multiplied together by the outer product).
+                a = newCoefs[segmentStart:segmentStart + newOrder]
+                a.fill(0.0)
                 for i2 in range(order2):
                     for i1 in range(order1):
-                        newCoefs[ix + i1 + i2] += taylorCoefs[i1][i2]
+                        a[i1 + i2] += taylorCoefs[i1, i2]
 
                 # 4) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
-                a = newCoefs[ix:ix + newOrder]
                 m = newOrder - 1
-                rho = newOrder if segment + 1 < segments else len(newKnots) - segments * newOrder
+                rho = segmentEnd - segmentStart
                 for j in range(m):
                     for i in range(min(newOrder, m - j)):
-                        a[i] = (1 - i/(m - j)) * a[i] + ((i + 1)/(m - j)) * (newKnots[ix + m - j] - knot) * a[i + 1]
+                        a[i] = (1 - i/(m - j)) * a[i] + ((i + 1)/(m - j)) * (newKnots[segmentStart + m - j] - knot) * a[i + 1]
                 for j in range(rho - 1):
                     for i in range(min(newOrder + j, rho - 1), j, -1):
-                        a[i] = a[i - 1] + (newKnots[ix + m + j + 1] - newKnots[ix + i]) * a[i]
+                        a[i] = a[i - 1] + (newKnots[segmentStart + m + j + 1] - newKnots[segmentStart + i]) * a[i]
+                
+                # Move to next segment
+                segmentStart = segmentEnd
 
             # All the segment coefficients are computed.
             # Now move combined independent variable back to its original axis.
-            coefs = np.moveaxis(newCoefs[:len(newKnots) - newOrder], 0, ind1 + 1)
-
-            # Update nInd, order, nCoef, and knots
-            nInd -= 1
-            del order[self.nInd + ind2]
-            order[ind1] = newOrder
-            del nCoef[self.nInd + ind2]
-            nCoef[ind1] = len(newKnots) - newOrder
-            del knots[self.nInd + ind2]
-            knots[ind1] = np.array(newKnots, knots1.dtype)
+            coefs = np.moveaxis(newCoefs[:nCoef[ind1]], 0, ind1 + 1)
 
     return type(self)(nInd, nDep, order, nCoef, knots, coefs, max(self.accuracy, other.accuracy), self.metadata)
 
