@@ -61,7 +61,7 @@ def cross(self, vector):
         assert self.nDep == 3
         assert len(vector) == self.nDep
 
-        coefs = np.empty(self.coefs.shape, coefs.dtype)
+        coefs = np.empty(self.coefs.shape, self.coefs.dtype)
         coefs[0] = vector[2] * self.coefs[1] - vector[1] * self.coefs[2]
         coefs[1] = vector[0] * self.coefs[2] - vector[2] * self.coefs[0]
         coefs[2] = vector[1] * self.coefs[0] - vector[0] * self.coefs[1]

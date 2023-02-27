@@ -590,6 +590,30 @@ def test_blossom():
         maxerror = max(maxerror, np.linalg.norm(myCurve.coefs[:,i] - coef))
     assert maxerror <= np.finfo(float).eps
 
+def test_cross():
+    # Test with constant vector
+    maxerror = 0.0
+    vector = np.array([1.0, 2.0, 3.0])
+    crossSurface = mySurface.cross(vector)
+    for v in np.linspace(0, 1, 21):
+        for u in np.linspace(0, 1, 21):
+            xyz1 = np.cross(mySurface([u, v]), vector) 
+            xyz = xyz1 - crossSurface([u , v])
+            maxerror = max(maxerror, np.sqrt(xyz @ xyz))
+    assert maxerror <= np.sqrt(np.finfo(float).eps)
+
+    # Test with spline
+    maxerror = 0.0
+    crossSurface = mySurface.cross(mySurface)
+    for v in np.linspace(0, 1, 5):
+        for u in np.linspace(0, 1, 5):
+            for t in np.linspace(0, 1, 5):
+                for s in np.linspace(0, 1, 5):
+                    xyz1 = np.cross(mySurface([u, v]), mySurface([s, t])) 
+                    xyz = xyz1 - crossSurface([u , v, s, t])
+                    maxerror = max(maxerror, np.sqrt(xyz @ xyz))
+    assert maxerror <= np.sqrt(np.finfo(float).eps)
+
 def test_derivative():
     maxerror = 0.0
     myDerivative = myCurve.differentiate()
