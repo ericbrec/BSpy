@@ -75,35 +75,6 @@ def derivative(self, with_respect_to, uvw):
         myCoefs = myCoefs @ bValues
     return myCoefs
 
-def derivatives(self, with_respect_to, uvw, taylorCoefs = False):
-    # Check for evaluation point inside domain.
-    # Always count down uvw from the right (because we multiply bValues on the right).
-    dom = self.domain()
-    for ix in range(-1, -len(uvw)-1, -1):
-        if uvw[ix] < dom[ix][0] or uvw[ix] > dom[ix][1]:
-            raise ValueError(f"Spline evaluation outside domain: {uvw}")
-
-    # Grab all of the appropriate coefficients
-    mySection = []
-    myIndices = []
-    for iv in range(-1, -len(uvw)-1, -1):
-        ix = np.searchsorted(self.knots[iv], uvw[iv], 'right')
-        ix = min(ix, self.nCoef[iv])
-        myIndices.insert(0, ix)
-        mySection.insert(0, slice(ix - self.order[iv], ix))
-    for iv in range(self.nInd + 1 - len(uvw)):
-        mySection.insert(0, slice(None))
-    myCoefs = self.coefs[tuple(mySection)]
-
-    # Multiply by the bValues
-    for iv in range(-1, -len(uvw)-1, -1):
-        bValues = np.empty((self.order[iv], with_respect_to[iv] + 1), self.knots[iv].dtype)
-        for deriv in range(with_respect_to[iv] + 1):
-            bValues[:,deriv] = bsplineValues(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv], deriv, taylorCoefs)
-        myCoefs = myCoefs @ bValues
-        myCoefs = np.moveaxis(myCoefs, -1, 0)
-    return myCoefs
-
 def domain(self):
     dom = [[self.knots[i][self.order[i] - 1],
             self.knots[i][self.nCoef[i]]] for i in range(self.nInd)]

@@ -325,7 +325,6 @@ class Spline:
         See Also
         --------
         `evaluate` : Compute the value of the spline at a given parameter value.
-        `derivatives` : Compute the derivatives of the spline at given parameter values.
         `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.
 
         Notes
@@ -336,44 +335,6 @@ class Spline:
         B-spline coefficients is computed.
         """
         return bspy._spline_evaluation.derivative(self, with_respect_to, uvw)
-
-    def derivatives(self, with_respect_to, uvw, taylorCoefs = False):
-        """
-        Compute the derivatives of the spline at given parameter values.
-
-        Parameters
-        ----------
-        with_respect_to : `iterable`
-            An iterable of max length `nInd` that specifies the integer order of derivative for each independent variable.
-            A zero-order derivative just evaluates the spline normally.
-        
-        uvw : `iterable`
-            An iterable of max length `nInd` that specifies the values of each independent variable (the parameter values).
-            If the length of `uvw` is less than `nInd`, the values specify the rightmost parameters.
-        
-        taylorCoefs : `boolean`, optional
-            A boolean flag that if true returns the derivatives divided by their degree factorial, that is 
-            the taylor coefficients at the given parameter values. Default is false.
-
-        Returns
-        -------
-        value : `numpy.array`
-            The values of the derivatives of the spline at the given parameter values.
-
-        See Also
-        --------
-        `derivative` : Compute the derivative of the spline at given parameter values.
-        `evaluate` : Compute the value of the spline at given parameter values.
-        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.
-
-        Notes
-        -----
-        The derivative method uses the de Boor recurrence relations for a B-spline
-        series to evaluate a spline function.  The non-zero B-splines are
-        evaluated, then the dot product of those B-splines with the vector of
-        B-spline coefficients is computed.
-        """
-        return bspy._spline_evaluation.derivatives(self, with_respect_to, uvw, taylorCoefs)
 
     def differentiate(self, with_respect_to = 0):
         """

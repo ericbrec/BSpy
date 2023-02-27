@@ -599,15 +599,6 @@ def test_derivative():
         maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
     assert maxerror <= np.finfo(float).eps
 
-def test_derivatives():
-    maxerror = 0.0
-    for [u, x, y] in truthCurve:
-        test = myCurve.derivatives([myCurve.order[0]-1], [u])
-        for i in range(myCurve.order[0]):
-            [xTest, yTest] = myCurve.derivative([i], [u])
-            maxerror = max(maxerror, (xTest - test[i][0]) ** 2 + (yTest - test[i][1]) ** 2)
-    assert maxerror <= np.finfo(float).eps
-
 def test_dot():
     maxerror = 0.0
     dottedCurve = myCurve.dot([2.0, 3.0])
