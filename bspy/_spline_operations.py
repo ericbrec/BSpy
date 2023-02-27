@@ -233,17 +233,20 @@ def multiply(self, other, indMap = None, productType = 'S'):
     return type(self)(nInd, nDep, order, nCoef, knots, coefs, max(self.accuracy, other.accuracy), self.metadata)
 
 def scale(self, multiplier):
-    assert np.isscalar(multiplier) or len(multiplier) == self.nDep
-
-    if np.isscalar(multiplier):
-        accuracy = multiplier * self.accuracy
-        coefs = multiplier * self.coefs
+    if isinstance(multiplier, bspy.spline.Spline):
+        return self.multiply(multiplier, None, 'S')
     else:
-        accuracy = np.linalg.norm(multiplier) * self.accuracy
-        coefs = np.array(self.coefs)
-        for i in range(self.nDep):
-            coefs[i] *= multiplier[i]
-    return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, coefs, accuracy, self.metadata)
+        assert np.isscalar(multiplier) or len(multiplier) == self.nDep
+
+        if np.isscalar(multiplier):
+            accuracy = multiplier * self.accuracy
+            coefs = multiplier * self.coefs
+        else:
+            accuracy = np.linalg.norm(multiplier) * self.accuracy
+            coefs = np.array(self.coefs)
+            for i in range(self.nDep):
+                coefs[i] *= multiplier[i]
+        return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, coefs, accuracy, self.metadata)
 
 def transform(self, matrix, maxSingularValue=None):
     assert matrix.ndim == 2 and matrix.shape[1] == self.nDep

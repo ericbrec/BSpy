@@ -736,7 +736,7 @@ def test_multiply():
     assert maxerror <= np.finfo(float).eps
 
     # Multiply with completely independent variables.
-    multiplied = spline1.multiply(spline2, None, 'D')
+    multiplied = spline1 * spline2
     maxerror = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
         for v in np.linspace(spline2.knots[0][spline2.order[0]-1], spline2.knots[0][spline2.nCoef[0]], 100):

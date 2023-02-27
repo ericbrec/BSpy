@@ -118,13 +118,24 @@ class Spline:
             return NotImplemented
 
     def __mul__(self, other):
-        if np.isscalar(other) or _isIterable(other):
+        if isinstance(other, Spline):
+            if self.nDep == 1 or other.nDep == 1:
+                return self.multiply(other, None, 'S')
+            else:
+                return self.multiply(other, None, 'D')
+        elif np.isscalar(other) or _isIterable(other):
             return self.scale(other)
         else:
             return NotImplemented
 
     def __rmul__(self, other):
-        if np.isscalar(other) or _isIterable(other):
+        if isinstance(other, Spline):
+            if self.nDep == 1 or other.nDep == 1:
+                return other.multiply(self, None, 'S')
+            else:
+                return other.multiply(self, None, 'D')
+            return other.multiply(self)
+        elif np.isscalar(other) or _isIterable(other):
             return self.scale(other)
         else:
             return NotImplemented
@@ -304,6 +315,22 @@ class Spline:
         """
         return bspy._spline_domain.common_basis(self, splines, indMap)
 
+    def cross(self, vector):
+        """
+        Cross product a spline with `nDep` of 3 by the given vector.
+
+        Parameters
+        ----------
+        vector : array-like or `Spline`
+            An array of length 3 or spline with `nDep` of 3 that specifies the vector.
+
+        Returns
+        -------
+        spline : `Spline`
+            The crossed spline, self x vector.
+        """
+        return bspy._spline_evaluation.cross(self, vector)
+
     def derivative(self, with_respect_to, uvw):
         """
         Compute the derivative of the spline at given parameter values.
@@ -378,8 +405,8 @@ class Spline:
 
         Parameters
         ----------
-        vector : array-like
-            An array of length `nDep` that specifies the vector.
+        vector : array-like or `Spline`
+            An array of length `nDep` or spline with matching `nDep` that specifies the vector.
 
         Returns
         -------
@@ -610,7 +637,7 @@ class Spline:
 
         productType : {'C', 'D', 'S'}, optional
             The type of product to perform on the dependent variables (default is 'S').
-                'C' is for a cross product (nDep must be 3).
+                'C' is for a cross product, self x other (nDep must be 3).
                 'D' is for a dot product (nDep must match).
                 'S' is for a scalar product (nDep must be 1 for one of the splines).
         
@@ -717,8 +744,8 @@ class Spline:
 
         Parameters
         ----------
-        multiplier : scalar or array-like
-            A scalar or an array of length `nDep` that specifies the multiplier.
+        multiplier : scalar, array-like, or `Spline`
+            A scalar, an array of length `nDep`, or spline that specifies the multiplier.
 
         Returns
         -------
