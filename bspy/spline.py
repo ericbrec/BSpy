@@ -328,6 +328,10 @@ class Spline:
         -------
         spline : `Spline`
             The crossed spline, self x vector.
+
+        See Also
+        --------
+        `multiply` : Multiply two splines (cross, dot, or scalar product).
         """
         return bspy._spline_operations.cross(self, vector)
 
@@ -412,6 +416,10 @@ class Spline:
         -------
         spline : `Spline`
             The dotted spline.
+
+        See Also
+        --------
+        `multiply` : Multiply two splines (cross, dot, or scalar product).
         """
         return bspy._spline_operations.dot(self, vector)
 
@@ -621,7 +629,7 @@ class Spline:
 
     def multiply(self, other, indMap = None, productType = 'S'):
         """
-        Multiply two splines.
+        Multiply two splines (cross, dot, or scalar product).
 
         Parameters
         ----------
@@ -754,6 +762,7 @@ class Spline:
 
         See Also
         --------
+        `multiply` : Multiply two splines (cross, dot, or scalar product).
         `transform` : Transform a spline by the given matrix.
         `translate` : Translate a spline by the given translation vector.
         """

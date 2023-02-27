@@ -478,6 +478,10 @@
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
 <span class="sd">            The crossed spline, self x vector.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `multiply` : Multiply two splines (cross, dot, or scalar product).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">)</span>
 
@@ -562,6 +566,10 @@
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
 <span class="sd">            The dotted spline.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `multiply` : Multiply two splines (cross, dot, or scalar product).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">)</span>
 
@@ -771,7 +779,7 @@
 
     <span class="k">def</span> <span class="nf">multiply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">productType</span> <span class="o">=</span> <span class="s1">&#39;S&#39;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Multiply two splines.</span>
+<span class="sd">        Multiply two splines (cross, dot, or scalar product).</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -904,6 +912,7 @@
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
+<span class="sd">        `multiply` : Multiply two splines (cross, dot, or scalar product).</span>
 <span class="sd">        `transform` : Transform a spline by the given matrix.</span>
 <span class="sd">        `translate` : Translate a spline by the given translation vector.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1399,6 +1408,10 @@
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
 <span class="sd">            The crossed spline, self x vector.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `multiply` : Multiply two splines (cross, dot, or scalar product).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">)</span>
 
@@ -1483,6 +1496,10 @@
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
 <span class="sd">            The dotted spline.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `multiply` : Multiply two splines (cross, dot, or scalar product).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">)</span>
 
@@ -1692,7 +1709,7 @@
 
     <span class="k">def</span> <span class="nf">multiply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">productType</span> <span class="o">=</span> <span class="s1">&#39;S&#39;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Multiply two splines.</span>
+<span class="sd">        Multiply two splines (cross, dot, or scalar product).</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1825,6 +1842,7 @@
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
+<span class="sd">        `multiply` : Multiply two splines (cross, dot, or scalar product).</span>
 <span class="sd">        `transform` : Transform a spline by the given matrix.</span>
 <span class="sd">        `translate` : Translate a spline by the given translation vector.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -2482,6 +2500,10 @@ The aligned collection of N splines.</li>
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
 <span class="sd">            The crossed spline, self x vector.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `multiply` : Multiply two splines (cross, dot, or scalar product).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">)</span>
 </pre></div>
@@ -2503,6 +2525,10 @@ An array of length 3 or spline with <code>nDep</code> of 3 that specifies the ve
 <li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
 The crossed spline, self x vector.</li>
 </ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.multiply">multiply</a></code>:  Multiply two splines (cross, dot, or scalar product).  </p>
 </div>
 
 
@@ -2711,6 +2737,10 @@ nInd x 2 array of the upper and lower bounds on each of the independent variable
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
 <span class="sd">            The dotted spline.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `multiply` : Multiply two splines (cross, dot, or scalar product).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">)</span>
 </pre></div>
@@ -2732,6 +2762,10 @@ An array of length <code>nDep</code> or spline with matching <code>nDep</code> t
 <li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
 The dotted spline.</li>
 </ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.multiply">multiply</a></code>:  Multiply two splines (cross, dot, or scalar product).  </p>
 </div>
 
 
@@ -3268,7 +3302,7 @@ A spline curve which approximates the data points.</li>
             <summary>View Source</summary>
             <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">multiply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">productType</span> <span class="o">=</span> <span class="s1">&#39;S&#39;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Multiply two splines.</span>
+<span class="sd">        Multiply two splines (cross, dot, or scalar product).</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -3309,7 +3343,7 @@ A spline curve which approximates the data points.</li>
 
         </details>
 
-            <div class="docstring"><p>Multiply two splines.</p>
+            <div class="docstring"><p>Multiply two splines (cross, dot, or scalar product).</p>
 
 <h6 id="parameters">Parameters</h6>
 
@@ -3582,6 +3616,7 @@ Reparametrized spline.</li>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
+<span class="sd">        `multiply` : Multiply two splines (cross, dot, or scalar product).</span>
 <span class="sd">        `transform` : Transform a spline by the given matrix.</span>
 <span class="sd">        `translate` : Translate a spline by the given translation vector.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -3608,7 +3643,8 @@ The scaled spline.</li>
 
 <h6 id="see-also">See Also</h6>
 
-<p><code><a href="#Spline.transform">transform</a></code>:  Transform a spline by the given matrix. <br />
+<p><code><a href="#Spline.multiply">multiply</a></code>:  Multiply two splines (cross, dot, or scalar product). <br />
+<code><a href="#Spline.transform">transform</a></code>:  Transform a spline by the given matrix. <br />
 <code><a href="#Spline.translate">translate</a></code>:  Translate a spline by the given translation vector.  </p>
 </div>
 
