@@ -254,7 +254,7 @@ def multiply(self, other, indMap = None, productType = 'S'):
             # Now move combined independent variable back to its original axis.
             coefs = np.moveaxis(newCoefs[:nCoef[ind1]], 0, ind1 + 1)
 
-    return type(self)(nInd, nDep, order, nCoef, knots, coefs, max(self.accuracy, other.accuracy), self.metadata)
+    return type(self)(nInd, nDep, order, nCoef, knots, coefs, self.accuracy + other.accuracy, self.metadata)
 
 def scale(self, multiplier):
     if isinstance(multiplier, bspy.spline.Spline):
