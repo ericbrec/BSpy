@@ -73,6 +73,30 @@ def differentiate(self, with_respect_to = 0):
     
     return type(self)(self.nInd, self.nDep, order, nCoef, knots, newCoefs.swapaxes(0, with_respect_to + 1), self.accuracy, self.metadata)
 
+def cross(self, vector):
+    if isinstance(vector, bspy.spline.Spline):
+        return self.multiply(vector, None, 'C')
+    else:
+        assert self.nDep == 3
+        assert len(vector) == self.nDep
+
+        coefs = np.empty(self.coefs.shape, self.coefs.dtype)
+        coefs[0] = vector[2] * self.coefs[1] - vector[1] * self.coefs[2]
+        coefs[1] = vector[0] * self.coefs[2] - vector[2] * self.coefs[0]
+        coefs[2] = vector[1] * self.coefs[0] - vector[0] * self.coefs[1]
+        return type(self)(self.nInd, 3, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
+
+def dot(self, vector):
+    if isinstance(vector, bspy.spline.Spline):
+        return self.multiply(vector, None, 'D')
+    else:
+        assert len(vector) == self.nDep
+
+        coefs = vector[0] * self.coefs[0]
+        for i in range(1, self.nDep):
+            coefs += vector[i] * self.coefs[i]
+        return type(self)(self.nInd, 1, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
+
 def multiply(self, other, indMap = None, productType = 'S'):
     assert productType == 'C' or productType == 'D' or productType == 'S', "productType must be 'C', 'D' or 'S'"
 

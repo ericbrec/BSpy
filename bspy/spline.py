@@ -329,7 +329,7 @@ class Spline:
         spline : `Spline`
             The crossed spline, self x vector.
         """
-        return bspy._spline_evaluation.cross(self, vector)
+        return bspy._spline_operations.cross(self, vector)
 
     def derivative(self, with_respect_to, uvw):
         """
@@ -413,7 +413,7 @@ class Spline:
         spline : `Spline`
             The dotted spline.
         """
-        return bspy._spline_evaluation.dot(self, vector)
+        return bspy._spline_operations.dot(self, vector)
 
     def elevate(self, m):
         """

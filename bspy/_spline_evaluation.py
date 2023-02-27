@@ -54,19 +54,6 @@ def bsplineValues(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs 
             b += 1
     return basis
 
-def cross(self, vector):
-    if isinstance(vector, bspy.spline.Spline):
-        return self.multiply(vector, None, 'C')
-    else:
-        assert self.nDep == 3
-        assert len(vector) == self.nDep
-
-        coefs = np.empty(self.coefs.shape, self.coefs.dtype)
-        coefs[0] = vector[2] * self.coefs[1] - vector[1] * self.coefs[2]
-        coefs[1] = vector[0] * self.coefs[2] - vector[2] * self.coefs[0]
-        coefs[2] = vector[1] * self.coefs[0] - vector[0] * self.coefs[1]
-        return type(self)(self.nInd, 3, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
-
 def derivative(self, with_respect_to, uvw):
     # Check for evaluation point inside domain
     dom = self.domain()
@@ -92,17 +79,6 @@ def domain(self):
     dom = [[self.knots[i][self.order[i] - 1],
             self.knots[i][self.nCoef[i]]] for i in range(self.nInd)]
     return np.array(dom)
-
-def dot(self, vector):
-    if isinstance(vector, bspy.spline.Spline):
-        return self.multiply(vector, None, 'D')
-    else:
-        assert len(vector) == self.nDep
-
-        coefs = vector[0] * self.coefs[0]
-        for i in range(1, self.nDep):
-            coefs += vector[i] * self.coefs[i]
-        return type(self)(self.nInd, 1, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
 
 def evaluate(self, uvw):
     # Check for evaluation point inside domain
