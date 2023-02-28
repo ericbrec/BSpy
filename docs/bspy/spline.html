@@ -467,17 +467,17 @@
 
     <span class="k">def</span> <span class="nf">cross</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Cross product a spline with `nDep` of 3 by the given vector.</span>
+<span class="sd">        Cross product a spline with `nDep` of 2 or 3 by the given vector.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        vector : array-like or `Spline`</span>
-<span class="sd">            An array of length 3 or spline with `nDep` of 3 that specifies the vector.</span>
+<span class="sd">            An array of length 2 or 3 or spline with `nDep` of 2 or 3 that specifies the vector.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
-<span class="sd">            The crossed spline, self x vector.</span>
+<span class="sd">            The crossed spline: self x vector.</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
@@ -795,7 +795,7 @@
 
 <span class="sd">        productType : {&#39;C&#39;, &#39;D&#39;, &#39;S&#39;}, optional</span>
 <span class="sd">            The type of product to perform on the dependent variables (default is &#39;S&#39;).</span>
-<span class="sd">                &#39;C&#39; is for a cross product, self x other (nDep must be 3).</span>
+<span class="sd">                &#39;C&#39; is for a cross product, self x other (nDep must be 2 or 3).</span>
 <span class="sd">                &#39;D&#39; is for a dot product (nDep must match).</span>
 <span class="sd">                &#39;S&#39; is for a scalar product (nDep must be 1 for one of the splines).</span>
 <span class="sd">        </span>
@@ -1397,17 +1397,17 @@
 
     <span class="k">def</span> <span class="nf">cross</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Cross product a spline with `nDep` of 3 by the given vector.</span>
+<span class="sd">        Cross product a spline with `nDep` of 2 or 3 by the given vector.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        vector : array-like or `Spline`</span>
-<span class="sd">            An array of length 3 or spline with `nDep` of 3 that specifies the vector.</span>
+<span class="sd">            An array of length 2 or 3 or spline with `nDep` of 2 or 3 that specifies the vector.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
-<span class="sd">            The crossed spline, self x vector.</span>
+<span class="sd">            The crossed spline: self x vector.</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
@@ -1725,7 +1725,7 @@
 
 <span class="sd">        productType : {&#39;C&#39;, &#39;D&#39;, &#39;S&#39;}, optional</span>
 <span class="sd">            The type of product to perform on the dependent variables (default is &#39;S&#39;).</span>
-<span class="sd">                &#39;C&#39; is for a cross product, self x other (nDep must be 3).</span>
+<span class="sd">                &#39;C&#39; is for a cross product, self x other (nDep must be 2 or 3).</span>
 <span class="sd">                &#39;D&#39; is for a dot product (nDep must match).</span>
 <span class="sd">                &#39;S&#39; is for a scalar product (nDep must be 1 for one of the splines).</span>
 <span class="sd">        </span>
@@ -2489,17 +2489,17 @@ The aligned collection of N splines.</li>
             <summary>View Source</summary>
             <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">cross</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Cross product a spline with `nDep` of 3 by the given vector.</span>
+<span class="sd">        Cross product a spline with `nDep` of 2 or 3 by the given vector.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        vector : array-like or `Spline`</span>
-<span class="sd">            An array of length 3 or spline with `nDep` of 3 that specifies the vector.</span>
+<span class="sd">            An array of length 2 or 3 or spline with `nDep` of 2 or 3 that specifies the vector.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
-<span class="sd">            The crossed spline, self x vector.</span>
+<span class="sd">            The crossed spline: self x vector.</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
@@ -2510,20 +2510,20 @@ The aligned collection of N splines.</li>
 
         </details>
 
-            <div class="docstring"><p>Cross product a spline with <code>nDep</code> of 3 by the given vector.</p>
+            <div class="docstring"><p>Cross product a spline with <code>nDep</code> of 2 or 3 by the given vector.</p>
 
 <h6 id="parameters">Parameters</h6>
 
 <ul>
 <li><strong>vector</strong> (array-like or <code><a href="#Spline">Spline</a></code>):
-An array of length 3 or spline with <code>nDep</code> of 3 that specifies the vector.</li>
+An array of length 2 or 3 or spline with <code>nDep</code> of 2 or 3 that specifies the vector.</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
 
 <ul>
 <li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
-The crossed spline, self x vector.</li>
+The crossed spline: self x vector.</li>
 </ul>
 
 <h6 id="see-also">See Also</h6>
@@ -3318,7 +3318,7 @@ A spline curve which approximates the data points.</li>
 
 <span class="sd">        productType : {&#39;C&#39;, &#39;D&#39;, &#39;S&#39;}, optional</span>
 <span class="sd">            The type of product to perform on the dependent variables (default is &#39;S&#39;).</span>
-<span class="sd">                &#39;C&#39; is for a cross product, self x other (nDep must be 3).</span>
+<span class="sd">                &#39;C&#39; is for a cross product, self x other (nDep must be 2 or 3).</span>
 <span class="sd">                &#39;D&#39; is for a dot product (nDep must match).</span>
 <span class="sd">                &#39;S&#39; is for a scalar product (nDep must be 1 for one of the splines).</span>
 <span class="sd">        </span>
@@ -3358,7 +3358,7 @@ An independent variable can map to no more than one other independent variable.
 Unmapped independent variables remain independent (the default).</li>
 <li><strong>productType</strong> ({'C', 'D', 'S'}, optional):
 The type of product to perform on the dependent variables (default is 'S').
-   'C' is for a cross product, self x other (nDep must be 3).
+   'C' is for a cross product, self x other (nDep must be 2 or 3).
    'D' is for a dot product (nDep must match).
    'S' is for a scalar product (nDep must be 1 for one of the splines).</li>
 </ul>

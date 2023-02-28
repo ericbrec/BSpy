@@ -317,17 +317,17 @@ class Spline:
 
     def cross(self, vector):
         """
-        Cross product a spline with `nDep` of 3 by the given vector.
+        Cross product a spline with `nDep` of 2 or 3 by the given vector.
 
         Parameters
         ----------
         vector : array-like or `Spline`
-            An array of length 3 or spline with `nDep` of 3 that specifies the vector.
+            An array of length 2 or 3 or spline with `nDep` of 2 or 3 that specifies the vector.
 
         Returns
         -------
         spline : `Spline`
-            The crossed spline, self x vector.
+            The crossed spline: self x vector.
 
         See Also
         --------
@@ -645,7 +645,7 @@ class Spline:
 
         productType : {'C', 'D', 'S'}, optional
             The type of product to perform on the dependent variables (default is 'S').
-                'C' is for a cross product, self x other (nDep must be 3).
+                'C' is for a cross product, self x other (nDep must be 2 or 3).
                 'D' is for a dot product (nDep must match).
                 'S' is for a scalar product (nDep must be 1 for one of the splines).
         

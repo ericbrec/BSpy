@@ -76,14 +76,20 @@ def differentiate(self, with_respect_to = 0):
 def cross(self, vector):
     if isinstance(vector, bspy.spline.Spline):
         return self.multiply(vector, None, 'C')
-    else:
-        assert self.nDep == 3
+    elif self.nDep == 3:
         assert len(vector) == self.nDep
 
         coefs = np.empty(self.coefs.shape, self.coefs.dtype)
         coefs[0] = vector[2] * self.coefs[1] - vector[1] * self.coefs[2]
         coefs[1] = vector[0] * self.coefs[2] - vector[2] * self.coefs[0]
         coefs[2] = vector[1] * self.coefs[0] - vector[0] * self.coefs[1]
+        return type(self)(self.nInd, 3, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
+    else:
+        assert self.nDep == 2
+        assert len(vector) == self.nDep
+
+        coefs = np.empty((1, *self.coefs.shape[1:]), self.coefs.dtype)
+        coefs[0] = vector[1] * self.coefs[0] - vector[0] * self.coefs[1]
         return type(self)(self.nInd, 3, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
 
 def dot(self, vector):
@@ -101,7 +107,7 @@ def multiply(self, other, indMap = None, productType = 'S'):
     assert productType == 'C' or productType == 'D' or productType == 'S', "productType must be 'C', 'D' or 'S'"
 
     assert productType != 'D' or self.nDep == other.nDep, "Mismatched dimensions"
-    assert productType != 'C' or (self.nDep == 3 and other.nDep == 3), "Mismatched dimensions"
+    assert productType != 'C' or (self.nDep == other.nDep and 2 <= self.nDep <= 3), "Mismatched dimensions"
     assert productType != 'S' or self.nDep == 1 or other.nDep == 1, "Mismatched dimensions"
 
     # Ensure scalar spline (if any) comes first (simplifies array processing).
@@ -124,10 +130,14 @@ def multiply(self, other, indMap = None, productType = 'S'):
 
     # Combine dependent variables based on type of product.
     if productType == 'C': # Cross product
-        coefs = np.empty(outer[0].shape, outer.dtype)
-        coefs[0] = outer[1,2] - outer[2,1]
-        coefs[1] = outer[2,0] - outer[0,2]
-        coefs[2] = outer[0,1] - outer[1,0]
+        if self.nDep == 3:
+            coefs = np.empty(outer[0].shape, outer.dtype)
+            coefs[0] = outer[1,2] - outer[2,1]
+            coefs[1] = outer[2,0] - outer[0,2]
+            coefs[2] = outer[0,1] - outer[1,0]
+        else: # self.nDep == 2
+            coefs = np.empty((1, *outer.shape[2:]), outer.dtype)
+            coefs[0] = outer[0,1] - outer[1,0]
     elif productType == 'D': # Dot product
         coefs = outer[0,0]
         for i in range(1, self.nDep):
