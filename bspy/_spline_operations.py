@@ -49,6 +49,25 @@ def add(self, other, indMap = None):
     
     return type(self)(nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy + other.accuracy, self.metadata)
 
+def cross(self, vector):
+    if isinstance(vector, bspy.spline.Spline):
+        return self.multiply(vector, None, 'C')
+    elif self.nDep == 3:
+        assert len(vector) == self.nDep
+
+        coefs = np.empty(self.coefs.shape, self.coefs.dtype)
+        coefs[0] = vector[2] * self.coefs[1] - vector[1] * self.coefs[2]
+        coefs[1] = vector[0] * self.coefs[2] - vector[2] * self.coefs[0]
+        coefs[2] = vector[1] * self.coefs[0] - vector[0] * self.coefs[1]
+        return type(self)(self.nInd, 3, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
+    else:
+        assert self.nDep == 2
+        assert len(vector) == self.nDep
+
+        coefs = np.empty((1, *self.coefs.shape[1:]), self.coefs.dtype)
+        coefs[0] = vector[1] * self.coefs[0] - vector[0] * self.coefs[1]
+        return type(self)(self.nInd, 3, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
+
 def differentiate(self, with_respect_to = 0):
     assert 0 <= with_respect_to < self.nInd
     assert self.order[with_respect_to] > 1
@@ -72,25 +91,6 @@ def differentiate(self, with_respect_to = 0):
         newCoefs[i] = alpha * (newCoefs[i] - oldCoefs[i])
     
     return type(self)(self.nInd, self.nDep, order, nCoef, knots, newCoefs.swapaxes(0, with_respect_to + 1), self.accuracy, self.metadata)
-
-def cross(self, vector):
-    if isinstance(vector, bspy.spline.Spline):
-        return self.multiply(vector, None, 'C')
-    elif self.nDep == 3:
-        assert len(vector) == self.nDep
-
-        coefs = np.empty(self.coefs.shape, self.coefs.dtype)
-        coefs[0] = vector[2] * self.coefs[1] - vector[1] * self.coefs[2]
-        coefs[1] = vector[0] * self.coefs[2] - vector[2] * self.coefs[0]
-        coefs[2] = vector[1] * self.coefs[0] - vector[0] * self.coefs[1]
-        return type(self)(self.nInd, 3, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
-    else:
-        assert self.nDep == 2
-        assert len(vector) == self.nDep
-
-        coefs = np.empty((1, *self.coefs.shape[1:]), self.coefs.dtype)
-        coefs[0] = vector[1] * self.coefs[0] - vector[0] * self.coefs[1]
-        return type(self)(self.nInd, 3, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
 
 def dot(self, vector):
     if isinstance(vector, bspy.spline.Spline):
