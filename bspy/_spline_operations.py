@@ -155,7 +155,9 @@ def multiply(self, other, indMap = None, productType = 'S'):
         #   3) Sum coefficients of matching polynomial degree (the coefficients have already been multiplied together).
         #   4) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
 
-        for (ind1, ind2) in indMap:
+        indMap = indMap.copy() # Make a copy, since we change the list as we combine independent variables
+        while indMap:
+            (ind1, ind2) = indMap.pop()
             # 1) Use the combined knots from matching independent variables to divide the spline into segments.
 
             # First, get multiplicities of the knots for each independent variable.
@@ -189,7 +191,7 @@ def multiply(self, other, indMap = None, productType = 'S'):
                 newKnots += [knot] * multiplicity
                 newMultiplicities.append(multiplicity)
 
-            # Update nInd, order, nCoef, and overall knots
+            # Update nInd, order, nCoef, overall knots, and indMap
             nInd -= 1
             del order[self.nInd + ind2]
             order[ind1] = newOrder
@@ -197,6 +199,11 @@ def multiply(self, other, indMap = None, productType = 'S'):
             nCoef[ind1] = len(newKnots) - newOrder
             del knots[self.nInd + ind2]
             knots[ind1] = np.array(newKnots, knots1.dtype)
+            for i in range(len(indMap)):
+                i2 = indMap[i][1]
+                assert i2 != ind2, "You can't map the same independent variable to multiple others."
+                if i2 > ind2:
+                    indMap[i] = (indMap[i][0], i2 - 1)
 
             # Compute segments (uses the III algorithm from E.T.Y. Lee)
             i = 0
