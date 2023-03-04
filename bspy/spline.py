@@ -599,6 +599,49 @@ class Spline:
         """
         return bspy._spline_domain.insert_knots(self, newKnots)
 
+    def integral(self, with_respect_to, uvw1, uvw2, returnSpline = False):
+        """
+        Compute the derivative of the spline at given parameter values.
+
+        Parameters
+        ----------
+        with_respect_to : `iterable`
+            An iterable of length `nInd` that specifies the integer order of integral for each independent variable.
+            A zero-order integral just evaluates the spline normally.
+        
+        uvw1 : `iterable`
+            An iterable of length `nInd` that specifies the lower limit of each independent variable (the parameter values).
+        
+        uvw2 : `iterable`
+            An iterable of length `nInd` that specifies the upper limit of each independent variable (the parameter values).
+
+        returnSpline : `boolean`, optional
+            A boolean flag that if true returns the integrated spline along with the value of its integral. Default is false.
+ 
+        Returns
+        -------
+        value : `numpy.array`
+            The value of the integral of the spline at the given parameter limits.
+
+        spline : `Spline`
+            The integrated spline, which is only returned if `returnSpline` is `True`.
+
+        See Also
+        --------
+        `integrate` : Integrate a spline with respect to one of its independent variables, returning the resulting spline.
+        `evaluate` : Compute the value of the spline at a given parameter value.
+        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.
+        `derivative` : Compute the derivative of the spline at a given parameter value.
+
+        Notes
+        -----
+        The integral method uses the integrate method to integrate the spline `with_respect_to` times for each independent variable.
+        Then the method returns that integrated spline's value at `uw2` minus its values at `uw1` (optionally along with the spline).
+        The method doesn't calculate the integral directly because the number of operations required is nearly the same as constructing
+        the integrated spline.
+        """
+        return bspy._spline_evaluation.integral(self, with_respect_to, uvw1, uvw2, returnSpline)
+
     def integrate(self, with_respect_to = 0):
         """
         Integrate a spline with respect to one of its independent variables, returning the resulting spline.

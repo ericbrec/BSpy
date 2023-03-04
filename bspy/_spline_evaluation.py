@@ -101,6 +101,27 @@ def evaluate(self, uvw):
         myCoefs = myCoefs @ bValues
     return myCoefs
 
+def integral(self, with_respect_to, uvw1, uvw2, returnSpline = False):
+    # Check for evaluation point inside domain
+    dom = self.domain()
+    for ix in range(self.nInd):
+        if uvw1[ix] < dom[ix][0] or uvw1[ix] > dom[ix][1]:
+            raise ValueError(f"Spline evaluation outside domain: {uvw1}")
+        if uvw2[ix] < dom[ix][0] or uvw2[ix] > dom[ix][1]:
+            raise ValueError(f"Spline evaluation outside domain: {uvw2}")
+
+    # Repeatedly integrate self
+    spline = self
+    for i in range(self.nInd):
+        for j in range(with_respect_to[i]):
+            spline = spline.integrate(i)
+
+    value = spline(uvw2) - spline(uvw1)
+    if returnSpline:
+        return value, spline
+    else:
+        return value
+
 def range_bounds(self):
     # Assumes self.nDep is the first value in self.coefs.shape
     bounds = [[coefficient.min(), coefficient.max()] for coefficient in self.coefs]

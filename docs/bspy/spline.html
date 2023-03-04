@@ -85,6 +85,12 @@
                                 <a class="function" href="#Spline.insert_knots">insert_knots</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.integral">integral</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.integrate">integrate</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.least_squares">least_squares</a>
                         </li>
                         <li>
@@ -507,6 +513,8 @@
 <span class="sd">        --------</span>
 <span class="sd">        `evaluate` : Compute the value of the spline at a given parameter value.</span>
 <span class="sd">        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+<span class="sd">        `integral` : Compute the integral of the spline at a given parameter value.</span>
+<span class="sd">        `integrate` : Integrate a spline with respect to one of its independent variables, returning the resulting spline.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -534,6 +542,8 @@
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
 <span class="sd">        `derivative` : Compute the derivative of the spline at a given parameter value.</span>
+<span class="sd">        `integral` : Compute the integral of the spline at a given parameter value.</span>
+<span class="sd">        `integrate` : Integrate a spline with respect to one of its independent variables, returning the resulting spline.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">differentiate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span><span class="p">)</span>
 
@@ -744,6 +754,71 @@
 <span class="sd">        Implements Boehm&#39;s standard knot insertion algorithm.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_domain</span><span class="o">.</span><span class="n">insert_knots</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">newKnots</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">integral</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span><span class="p">,</span> <span class="n">uvw1</span><span class="p">,</span> <span class="n">uvw2</span><span class="p">,</span> <span class="n">returnSpline</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the derivative of the spline at given parameter values.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        with_respect_to : `iterable`</span>
+<span class="sd">            An iterable of length `nInd` that specifies the integer order of integral for each independent variable.</span>
+<span class="sd">            A zero-order integral just evaluates the spline normally.</span>
+<span class="sd">        </span>
+<span class="sd">        uvw1 : `iterable`</span>
+<span class="sd">            An iterable of length `nInd` that specifies the lower limit of each independent variable (the parameter values).</span>
+<span class="sd">        </span>
+<span class="sd">        uvw2 : `iterable`</span>
+<span class="sd">            An iterable of length `nInd` that specifies the upper limit of each independent variable (the parameter values).</span>
+
+<span class="sd">        returnSpline : `boolean`, optional</span>
+<span class="sd">            A boolean flag that if true returns the integrated spline along with the value of its integral. Default is false.</span>
+<span class="sd"> </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        value : `numpy.array`</span>
+<span class="sd">            The value of the integral of the spline at the given parameter limits.</span>
+
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The integrated spline, which is only returned if `returnSpline` is `True`.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `integrate` : Integrate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+<span class="sd">        `evaluate` : Compute the value of the spline at a given parameter value.</span>
+<span class="sd">        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+<span class="sd">        `derivative` : Compute the derivative of the spline at a given parameter value.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The integral method uses the integrate method to integrate the spline `with_respect_to` times for each independent variable.</span>
+<span class="sd">        Then the method returns that integrated spline&#39;s value at `uw2` minus its values at `uw1` (optionally along with the spline).</span>
+<span class="sd">        The method doesn&#39;t calculate the integral directly because the number of operations required is nearly the same as constructing</span>
+<span class="sd">        the integrated spline.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_evaluation</span><span class="o">.</span><span class="n">integral</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span><span class="p">,</span> <span class="n">uvw1</span><span class="p">,</span> <span class="n">uvw2</span><span class="p">,</span> <span class="n">returnSpline</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">integrate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Integrate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        with_respect_to : integer, optional</span>
+<span class="sd">            The number of the independent variable to integrate. Default is zero.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The spline that results from integrating the original spline with respect to the given independent variable.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+<span class="sd">        `derivative` : Compute the derivative of the spline at a given parameter value.</span>
+<span class="sd">        `integral` : Compute the integral of the spline at a given parameter value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">least_squares</span><span class="p">(</span><span class="n">dataPoints</span><span class="p">):</span>
@@ -1437,6 +1512,8 @@
 <span class="sd">        --------</span>
 <span class="sd">        `evaluate` : Compute the value of the spline at a given parameter value.</span>
 <span class="sd">        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+<span class="sd">        `integral` : Compute the integral of the spline at a given parameter value.</span>
+<span class="sd">        `integrate` : Integrate a spline with respect to one of its independent variables, returning the resulting spline.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -1464,6 +1541,8 @@
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
 <span class="sd">        `derivative` : Compute the derivative of the spline at a given parameter value.</span>
+<span class="sd">        `integral` : Compute the integral of the spline at a given parameter value.</span>
+<span class="sd">        `integrate` : Integrate a spline with respect to one of its independent variables, returning the resulting spline.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">differentiate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span><span class="p">)</span>
 
@@ -1674,6 +1753,71 @@
 <span class="sd">        Implements Boehm&#39;s standard knot insertion algorithm.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_domain</span><span class="o">.</span><span class="n">insert_knots</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">newKnots</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">integral</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span><span class="p">,</span> <span class="n">uvw1</span><span class="p">,</span> <span class="n">uvw2</span><span class="p">,</span> <span class="n">returnSpline</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the derivative of the spline at given parameter values.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        with_respect_to : `iterable`</span>
+<span class="sd">            An iterable of length `nInd` that specifies the integer order of integral for each independent variable.</span>
+<span class="sd">            A zero-order integral just evaluates the spline normally.</span>
+<span class="sd">        </span>
+<span class="sd">        uvw1 : `iterable`</span>
+<span class="sd">            An iterable of length `nInd` that specifies the lower limit of each independent variable (the parameter values).</span>
+<span class="sd">        </span>
+<span class="sd">        uvw2 : `iterable`</span>
+<span class="sd">            An iterable of length `nInd` that specifies the upper limit of each independent variable (the parameter values).</span>
+
+<span class="sd">        returnSpline : `boolean`, optional</span>
+<span class="sd">            A boolean flag that if true returns the integrated spline along with the value of its integral. Default is false.</span>
+<span class="sd"> </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        value : `numpy.array`</span>
+<span class="sd">            The value of the integral of the spline at the given parameter limits.</span>
+
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The integrated spline, which is only returned if `returnSpline` is `True`.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `integrate` : Integrate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+<span class="sd">        `evaluate` : Compute the value of the spline at a given parameter value.</span>
+<span class="sd">        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+<span class="sd">        `derivative` : Compute the derivative of the spline at a given parameter value.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The integral method uses the integrate method to integrate the spline `with_respect_to` times for each independent variable.</span>
+<span class="sd">        Then the method returns that integrated spline&#39;s value at `uw2` minus its values at `uw1` (optionally along with the spline).</span>
+<span class="sd">        The method doesn&#39;t calculate the integral directly because the number of operations required is nearly the same as constructing</span>
+<span class="sd">        the integrated spline.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_evaluation</span><span class="o">.</span><span class="n">integral</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span><span class="p">,</span> <span class="n">uvw1</span><span class="p">,</span> <span class="n">uvw2</span><span class="p">,</span> <span class="n">returnSpline</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">integrate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Integrate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        with_respect_to : integer, optional</span>
+<span class="sd">            The number of the independent variable to integrate. Default is zero.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The spline that results from integrating the original spline with respect to the given independent variable.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+<span class="sd">        `derivative` : Compute the derivative of the spline at a given parameter value.</span>
+<span class="sd">        `integral` : Compute the integral of the spline at a given parameter value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">least_squares</span><span class="p">(</span><span class="n">dataPoints</span><span class="p">):</span>
@@ -2565,6 +2709,8 @@ The crossed spline: self x vector.</li>
 <span class="sd">        --------</span>
 <span class="sd">        `evaluate` : Compute the value of the spline at a given parameter value.</span>
 <span class="sd">        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+<span class="sd">        `integral` : Compute the integral of the spline at a given parameter value.</span>
+<span class="sd">        `integrate` : Integrate a spline with respect to one of its independent variables, returning the resulting spline.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -2600,7 +2746,9 @@ The value of the derivative of the spline at the given parameter values.</li>
 <h6 id="see-also">See Also</h6>
 
 <p><code><a href="#Spline.evaluate">evaluate</a></code>:  Compute the value of the spline at a given parameter value. <br />
-<code><a href="#Spline.differentiate">differentiate</a></code>:  Differentiate a spline with respect to one of its independent variables, returning the resulting spline.  </p>
+<code><a href="#Spline.differentiate">differentiate</a></code>:  Differentiate a spline with respect to one of its independent variables, returning the resulting spline. <br />
+<code><a href="#Spline.integral">integral</a></code>:  Compute the integral of the spline at a given parameter value. <br />
+<code><a href="#Spline.integrate">integrate</a></code>:  Integrate a spline with respect to one of its independent variables, returning the resulting spline.  </p>
 
 <h6 id="notes">Notes</h6>
 
@@ -2639,6 +2787,8 @@ B-spline coefficients is computed.</p>
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
 <span class="sd">        `derivative` : Compute the derivative of the spline at a given parameter value.</span>
+<span class="sd">        `integral` : Compute the integral of the spline at a given parameter value.</span>
+<span class="sd">        `integrate` : Integrate a spline with respect to one of its independent variables, returning the resulting spline.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">differentiate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span><span class="p">)</span>
 </pre></div>
@@ -2663,7 +2813,9 @@ The spline that results from differentiating the original spline with respect to
 
 <h6 id="see-also">See Also</h6>
 
-<p><code><a href="#Spline.derivative">derivative</a></code>:  Compute the derivative of the spline at a given parameter value.  </p>
+<p><code><a href="#Spline.derivative">derivative</a></code>:  Compute the derivative of the spline at a given parameter value. <br />
+<code><a href="#Spline.integral">integral</a></code>:  Compute the integral of the spline at a given parameter value. <br />
+<code><a href="#Spline.integrate">integrate</a></code>:  Integrate a spline with respect to one of its independent variables, returning the resulting spline.  </p>
 </div>
 
 
@@ -3204,6 +3356,164 @@ A spline with the new knots inserted. If no knots were inserted, the original sp
 <h6 id="notes">Notes</h6>
 
 <p>Implements Boehm's standard knot insertion algorithm.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.integral" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#Spline.integral">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">integral</span><span class="signature">(self, with_respect_to, uvw1, uvw2, returnSpline=False)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">integral</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span><span class="p">,</span> <span class="n">uvw1</span><span class="p">,</span> <span class="n">uvw2</span><span class="p">,</span> <span class="n">returnSpline</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the derivative of the spline at given parameter values.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        with_respect_to : `iterable`</span>
+<span class="sd">            An iterable of length `nInd` that specifies the integer order of integral for each independent variable.</span>
+<span class="sd">            A zero-order integral just evaluates the spline normally.</span>
+<span class="sd">        </span>
+<span class="sd">        uvw1 : `iterable`</span>
+<span class="sd">            An iterable of length `nInd` that specifies the lower limit of each independent variable (the parameter values).</span>
+<span class="sd">        </span>
+<span class="sd">        uvw2 : `iterable`</span>
+<span class="sd">            An iterable of length `nInd` that specifies the upper limit of each independent variable (the parameter values).</span>
+
+<span class="sd">        returnSpline : `boolean`, optional</span>
+<span class="sd">            A boolean flag that if true returns the integrated spline along with the value of its integral. Default is false.</span>
+<span class="sd"> </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        value : `numpy.array`</span>
+<span class="sd">            The value of the integral of the spline at the given parameter limits.</span>
+
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The integrated spline, which is only returned if `returnSpline` is `True`.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `integrate` : Integrate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+<span class="sd">        `evaluate` : Compute the value of the spline at a given parameter value.</span>
+<span class="sd">        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+<span class="sd">        `derivative` : Compute the derivative of the spline at a given parameter value.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The integral method uses the integrate method to integrate the spline `with_respect_to` times for each independent variable.</span>
+<span class="sd">        Then the method returns that integrated spline&#39;s value at `uw2` minus its values at `uw1` (optionally along with the spline).</span>
+<span class="sd">        The method doesn&#39;t calculate the integral directly because the number of operations required is nearly the same as constructing</span>
+<span class="sd">        the integrated spline.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_evaluation</span><span class="o">.</span><span class="n">integral</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span><span class="p">,</span> <span class="n">uvw1</span><span class="p">,</span> <span class="n">uvw2</span><span class="p">,</span> <span class="n">returnSpline</span><span class="p">)</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Compute the derivative of the spline at given parameter values.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>with_respect_to</strong> (<code>iterable</code>):
+An iterable of length <code>nInd</code> that specifies the integer order of integral for each independent variable.
+A zero-order integral just evaluates the spline normally.</li>
+<li><strong>uvw1</strong> (<code>iterable</code>):
+An iterable of length <code>nInd</code> that specifies the lower limit of each independent variable (the parameter values).</li>
+<li><strong>uvw2</strong> (<code>iterable</code>):
+An iterable of length <code>nInd</code> that specifies the upper limit of each independent variable (the parameter values).</li>
+<li><strong>returnSpline</strong> (<code>boolean</code>, optional):
+A boolean flag that if true returns the integrated spline along with the value of its integral. Default is false.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>value</strong> (<code>numpy.array</code>):
+The value of the integral of the spline at the given parameter limits.</li>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+The integrated spline, which is only returned if <code>returnSpline</code> is <code>True</code>.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.integrate">integrate</a></code>:  Integrate a spline with respect to one of its independent variables, returning the resulting spline. <br />
+<code><a href="#Spline.evaluate">evaluate</a></code>:  Compute the value of the spline at a given parameter value. <br />
+<code><a href="#Spline.differentiate">differentiate</a></code>:  Differentiate a spline with respect to one of its independent variables, returning the resulting spline. <br />
+<code><a href="#Spline.derivative">derivative</a></code>:  Compute the derivative of the spline at a given parameter value.  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>The integral method uses the integrate method to integrate the spline <code>with_respect_to</code> times for each independent variable.
+Then the method returns that integrated spline's value at <code>uw2</code> minus its values at <code>uw1</code> (optionally along with the spline).
+The method doesn't calculate the integral directly because the number of operations required is nearly the same as constructing
+the integrated spline.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.integrate" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#Spline.integrate">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">integrate</span><span class="signature">(self, with_respect_to=0)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">integrate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Integrate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        with_respect_to : integer, optional</span>
+<span class="sd">            The number of the independent variable to integrate. Default is zero.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The spline that results from integrating the original spline with respect to the given independent variable.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+<span class="sd">        `derivative` : Compute the derivative of the spline at a given parameter value.</span>
+<span class="sd">        `integral` : Compute the integral of the spline at a given parameter value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span><span class="p">)</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Integrate a spline with respect to one of its independent variables, returning the resulting spline.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>with_respect_to</strong> (integer, optional):
+The number of the independent variable to integrate. Default is zero.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+The spline that results from integrating the original spline with respect to the given independent variable.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.differentiate">differentiate</a></code>:  Differentiate a spline with respect to one of its independent variables, returning the resulting spline. <br />
+<code><a href="#Spline.derivative">derivative</a></code>:  Compute the derivative of the spline at a given parameter value. <br />
+<code><a href="#Spline.integral">integral</a></code>:  Compute the integral of the spline at a given parameter value.  </p>
 </div>
 
 

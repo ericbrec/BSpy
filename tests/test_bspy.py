@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.integrate
 import pytest
 import bspy
 
@@ -751,6 +752,13 @@ def test_integral():
         [xTest, yTest] = myCurve([u])
         [x, y] = myDerivative.evaluate([u])
         maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxerror <= np.finfo(float).eps
+
+    limits = myCurve.domain()
+    for u in np.linspace(limits[0][0], limits[0][1], 11):
+        x = scipy.integrate.quad(lambda s: myCurve([s])[0], limits[0][0], u)[0]
+        xTest = myCurve.integral([1], [limits[0][0]], [u])[0]
+        maxerror = max(maxerror, (xTest - x) ** 2)
     assert maxerror <= np.finfo(float).eps
 
 def test_multiply():
