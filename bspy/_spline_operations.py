@@ -103,6 +103,34 @@ def dot(self, vector):
             coefs += vector[i] * self.coefs[i]
         return type(self)(self.nInd, 1, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
 
+def integrate(self, with_respect_to = 0):
+    assert 0 <= with_respect_to < self.nInd
+
+    order = [*self.order]
+    degree = order[with_respect_to]
+    order[with_respect_to] += 1
+
+    nCoef = [*self.nCoef]
+    nCoef[with_respect_to] += 1
+
+    iKnots = np.empty(len(self.knots[with_respect_to]) + 2, self.knots[with_respect_to].dtype)
+    iKnots[1:-1] = self.knots[with_respect_to]
+    iKnots[0] = iKnots[1]
+    iKnots[-1] = iKnots[-2]
+    knots = list(self.knots)
+    knots[with_respect_to] = iKnots
+
+    # Swap dependent variable axis with specified independent variable.
+    oldCoefs = self.coefs.swapaxes(0, with_respect_to + 1)
+    newCoefs = np.empty((self.nDep, *nCoef), self.coefs.dtype).swapaxes(0, with_respect_to + 1)
+
+    # Compute new coefficients.
+    newCoefs[0] = 0.0
+    for i in range(1, nCoef[with_respect_to]):
+        newCoefs[i] = newCoefs[i - 1] + ((iKnots[degree + i] - iKnots[i]) / degree) * oldCoefs[i - 1]
+
+    return type(self)(self.nInd, self.nDep, order, nCoef, knots, newCoefs.swapaxes(0, with_respect_to + 1), self.accuracy, self.metadata)
+
 def multiply(self, other, indMap = None, productType = 'S'):
     assert productType == 'C' or productType == 'D' or productType == 'S', "productType must be 'C', 'D' or 'S'"
 

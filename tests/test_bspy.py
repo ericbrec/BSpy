@@ -743,6 +743,16 @@ def test_insert_knots():
         maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
     assert maxerror <= np.finfo(float).eps
 
+def test_integral():
+    maxerror = 0.0
+    myIntegral = myCurve.integrate()
+    myDerivative = myIntegral.differentiate()
+    for [u, x, y] in truthCurve:
+        [xTest, yTest] = myCurve([u])
+        [x, y] = myDerivative.evaluate([u])
+        maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxerror <= np.finfo(float).eps
+
 def test_multiply():
     maxerror = 0.0
     spline1 = bspy.Spline(1, 2, (5,), (5,), [np.array([0, 0, 0, 0, 0.2, 0.5, 0.5, 1, 1, 1], float)], 

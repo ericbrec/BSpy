@@ -357,6 +357,8 @@ class Spline:
         --------
         `evaluate` : Compute the value of the spline at a given parameter value.
         `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.
+        `integral` : Compute the integral of the spline at a given parameter value.
+        `integrate` : Integrate a spline with respect to one of its independent variables, returning the resulting spline.
 
         Notes
         -----
@@ -384,6 +386,8 @@ class Spline:
         See Also
         --------
         `derivative` : Compute the derivative of the spline at a given parameter value.
+        `integral` : Compute the integral of the spline at a given parameter value.
+        `integrate` : Integrate a spline with respect to one of its independent variables, returning the resulting spline.
         """
         return bspy._spline_operations.differentiate(self, with_respect_to)
 
@@ -594,6 +598,28 @@ class Spline:
         Implements Boehm's standard knot insertion algorithm.
         """
         return bspy._spline_domain.insert_knots(self, newKnots)
+
+    def integrate(self, with_respect_to = 0):
+        """
+        Integrate a spline with respect to one of its independent variables, returning the resulting spline.
+
+        Parameters
+        ----------
+        with_respect_to : integer, optional
+            The number of the independent variable to integrate. Default is zero.
+
+        Returns
+        -------
+        spline : `Spline`
+            The spline that results from integrating the original spline with respect to the given independent variable.
+
+        See Also
+        --------
+        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.
+        `derivative` : Compute the derivative of the spline at a given parameter value.
+        `integral` : Compute the integral of the spline at a given parameter value.
+        """
+        return bspy._spline_operations.integrate(self, with_respect_to)
 
     @staticmethod
     def least_squares(dataPoints):
