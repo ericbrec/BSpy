@@ -50,7 +50,7 @@ def add(self, other, indMap = None):
     return type(self)(nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy + other.accuracy, self.metadata)
 
 def cross(self, vector):
-    if isinstance(vector, bspy.spline.Spline):
+    if isinstance(vector, bspy.Spline):
         return self.multiply(vector, None, 'C')
     elif self.nDep == 3:
         assert len(vector) == self.nDep
@@ -67,6 +67,43 @@ def cross(self, vector):
         coefs = np.empty((1, *self.coefs.shape[1:]), self.coefs.dtype)
         coefs[0] = vector[1] * self.coefs[0] - vector[0] * self.coefs[1]
         return type(self)(self.nInd, 3, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
+
+def contract(self, uvw):
+    nInd = self.nInd
+    order = [*self.order]
+    nCoef = [*self.nCoef]
+    knots = [*self.knots]
+    domain = self.domain()
+    section = [slice(None)]
+    indices = []
+    for iv in range(self.nInd):
+        if uvw[iv] is not None:
+            if uvw[iv] < domain[iv][0] or uvw[iv] > domain[iv][1]:
+                raise ValueError(f"Spline evaluation outside domain: {uvw}")
+
+            # Grab all of the appropriate coefficients
+            ix = np.searchsorted(self.knots[iv], uvw[iv], 'right')
+            ix = min(ix, self.nCoef[iv])
+            indices.append(ix)
+            section.append(slice(ix - self.order[iv], ix))
+        else:
+            section.append(slice(None))
+
+    coefs = self.coefs[tuple(section)]
+    ix = 0
+    for iv in range(self.nInd):
+        if uvw[iv] is not None:
+            nInd -= 1
+            del order[ix]
+            del nCoef[ix]
+            del knots[ix]
+            bValues = bspy.Spline.bspline_values(indices.pop(0), self.knots[iv], self.order[iv], uvw[iv])
+            coefs = np.moveaxis(coefs, ix + 1, -1)
+            coefs = coefs @ bValues
+        else:
+            ix += 1
+    
+    return type(self)(nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy, self.metadata)
 
 def differentiate(self, with_respect_to = 0):
     assert 0 <= with_respect_to < self.nInd
@@ -93,7 +130,7 @@ def differentiate(self, with_respect_to = 0):
     return type(self)(self.nInd, self.nDep, order, nCoef, knots, newCoefs.swapaxes(0, with_respect_to + 1), self.accuracy, self.metadata)
 
 def dot(self, vector):
-    if isinstance(vector, bspy.spline.Spline):
+    if isinstance(vector, bspy.Spline):
         return self.multiply(vector, None, 'D')
     else:
         assert len(vector) == self.nDep
@@ -266,12 +303,12 @@ def multiply(self, other, indMap = None, productType = 'S'):
                 # Compute taylor coefficients for the segment
                 bValues = np.empty((order1, order1), knots1.dtype)
                 for derivativeOrder in range(order1):
-                    bValues[:,derivativeOrder] = bspy.Spline.bsplineValues(ix1, self.knots[ind1], order1, knot, derivativeOrder, True)
+                    bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix1, self.knots[ind1], order1, knot, derivativeOrder, True)
                 taylorCoefs = taylorCoefs @ bValues
                 taylorCoefs = np.moveaxis(taylorCoefs, -1, 0) # Move ind1's taylor coefficients to the left side so we can compute ind2's
                 bValues = np.empty((order2, order2), knots2.dtype)
                 for derivativeOrder in range(order2):
-                    bValues[:,derivativeOrder] = bspy.Spline.bsplineValues(ix2, other.knots[ind2], order2, knot, derivativeOrder, True)
+                    bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix2, other.knots[ind2], order2, knot, derivativeOrder, True)
                 taylorCoefs = taylorCoefs @ bValues
                 taylorCoefs = (np.moveaxis(taylorCoefs, 0, -1)).T # Move ind1's taylor coefficients back to the right side, and re-transpose
 
@@ -302,7 +339,7 @@ def multiply(self, other, indMap = None, productType = 'S'):
     return type(self)(nInd, nDep, order, nCoef, knots, coefs, self.accuracy + other.accuracy, self.metadata)
 
 def scale(self, multiplier):
-    if isinstance(multiplier, bspy.spline.Spline):
+    if isinstance(multiplier, bspy.Spline):
         return self.multiply(multiplier, None, 'S')
     else:
         assert np.isscalar(multiplier) or len(multiplier) == self.nDep

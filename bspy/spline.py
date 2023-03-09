@@ -216,7 +216,7 @@ class Spline:
         return bspy._spline_evaluation.blossom(self, uvw)
 
     @staticmethod
-    def bsplineValues(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs = False):
+    def bspline_values(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs = False):
         """
         Compute bspline values or their derivatives for a 1D bspline segment given the rightmost knot of the segment and a parameter value within that segment.
 
@@ -255,7 +255,7 @@ class Spline:
         -----
         This method does not check parameter values. It is used by other evaluation methods. It uses the de Boor recurrence relations for a B-spline.
         """
-        return bspy._spline_evaluation.bsplineValues(knot, knots, splineOrder, u, derivativeOrder, taylorCoefs)
+        return bspy._spline_evaluation.bspline_values(knot, knots, splineOrder, u, derivativeOrder, taylorCoefs)
 
 
     def clamp(self, left, right):
@@ -314,6 +314,27 @@ class Spline:
         Uses `elevate_and_insert_knots` to ensure mapped variables share the same order and knots. 
         """
         return bspy._spline_domain.common_basis(self, splines, indMap)
+
+    def contract(self, uvw):
+        """
+        Contract a spline by assigning a fixed value to one or more of its independent variables.
+
+        Parameters
+        ----------
+        uvw : `iterable`
+            An iterable of length `nInd` that specifies the values of each independent variable to contract.
+            A value of `None` for an independent variables indicates that variable should remain unchanged.
+
+        Returns
+        -------
+        spline : `Spline`
+            The contracted spline.
+
+        See Also
+        --------
+        `evaluate` : Compute the value of the spline at given parameter values.
+        """
+        return bspy._spline_operations.contract(self, uvw)
 
     def cross(self, vector):
         """
@@ -636,7 +657,7 @@ class Spline:
         Notes
         -----
         The integral method uses the integrate method to integrate the spline `with_respect_to` times for each independent variable.
-        Then the method returns that integrated spline's value at `uw2` minus its values at `uw1` (optionally along with the spline).
+        Then the method returns that integrated spline's value at `uw2` minus its value at `uw1` (optionally along with the spline).
         The method doesn't calculate the integral directly because the number of operations required is nearly the same as constructing
         the integrated spline.
         """
@@ -727,7 +748,7 @@ class Spline:
         --------
         `add` : Add two splines.
         `subtract` : Subtract two splines.
-        `common_basis : Align a collection of splines to a common basis, elevating the order and adding knots as needed.
+        `common_basis` : Align a collection of splines to a common basis, elevating the order and adding knots as needed.
 
         Notes
         -----

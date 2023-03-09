@@ -591,6 +591,21 @@ def test_blossom():
         maxerror = max(maxerror, np.linalg.norm(myCurve.coefs[:,i] - coef))
     assert maxerror <= np.finfo(float).eps
 
+def test_contract():
+    maxerror = 0.0
+    contracted = mySurface.contract([.25, None])
+    for u in np.linspace(0, 1, 21):
+        xyz = mySurface([.25, u]) - contracted([u])
+        maxerror = max(maxerror, np.sqrt(xyz @ xyz))
+    assert maxerror <= 2.5 * np.finfo(float).eps
+
+    maxerror = 0.0
+    contracted = mySurface.contract([None, .75])
+    for u in np.linspace(0, 1, 21):
+        xyz = mySurface([u, .75]) - contracted([u])
+        maxerror = max(maxerror, np.sqrt(xyz @ xyz))
+    assert maxerror <= 2.5 * np.finfo(float).eps
+    
 def test_cross():
     # Test with constant vector
     maxerror = 0.0

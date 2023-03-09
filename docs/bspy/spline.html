@@ -43,13 +43,16 @@
                                 <a class="function" href="#Spline.blossom">blossom</a>
                         </li>
                         <li>
-                                <a class="function" href="#Spline.bsplineValues">bsplineValues</a>
+                                <a class="function" href="#Spline.bspline_values">bspline_values</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.clamp">clamp</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.common_basis">common_basis</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.contract">contract</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.cross">cross</a>
@@ -372,7 +375,7 @@
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_evaluation</span><span class="o">.</span><span class="n">blossom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">bsplineValues</span><span class="p">(</span><span class="n">knot</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">splineOrder</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">derivativeOrder</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">taylorCoefs</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">bspline_values</span><span class="p">(</span><span class="n">knot</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">splineOrder</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">derivativeOrder</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">taylorCoefs</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Compute bspline values or their derivatives for a 1D bspline segment given the rightmost knot of the segment and a parameter value within that segment.</span>
 
@@ -411,7 +414,7 @@
 <span class="sd">        -----</span>
 <span class="sd">        This method does not check parameter values. It is used by other evaluation methods. It uses the de Boor recurrence relations for a B-spline.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_evaluation</span><span class="o">.</span><span class="n">bsplineValues</span><span class="p">(</span><span class="n">knot</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">splineOrder</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">derivativeOrder</span><span class="p">,</span> <span class="n">taylorCoefs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_evaluation</span><span class="o">.</span><span class="n">bspline_values</span><span class="p">(</span><span class="n">knot</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">splineOrder</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">derivativeOrder</span><span class="p">,</span> <span class="n">taylorCoefs</span><span class="p">)</span>
 
 
     <span class="k">def</span> <span class="nf">clamp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">):</span>
@@ -470,6 +473,27 @@
 <span class="sd">        Uses `elevate_and_insert_knots` to ensure mapped variables share the same order and knots. </span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_domain</span><span class="o">.</span><span class="n">common_basis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">splines</span><span class="p">,</span> <span class="n">indMap</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Contract a spline by assigning a fixed value to one or more of its independent variables.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        uvw : `iterable`</span>
+<span class="sd">            An iterable of length `nInd` that specifies the values of each independent variable to contract.</span>
+<span class="sd">            A value of `None` for an independent variables indicates that variable should remain unchanged.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The contracted spline.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `evaluate` : Compute the value of the spline at given parameter values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">cross</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -792,7 +816,7 @@
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
 <span class="sd">        The integral method uses the integrate method to integrate the spline `with_respect_to` times for each independent variable.</span>
-<span class="sd">        Then the method returns that integrated spline&#39;s value at `uw2` minus its values at `uw1` (optionally along with the spline).</span>
+<span class="sd">        Then the method returns that integrated spline&#39;s value at `uw2` minus its value at `uw1` (optionally along with the spline).</span>
 <span class="sd">        The method doesn&#39;t calculate the integral directly because the number of operations required is nearly the same as constructing</span>
 <span class="sd">        the integrated spline.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -883,7 +907,7 @@
 <span class="sd">        --------</span>
 <span class="sd">        `add` : Add two splines.</span>
 <span class="sd">        `subtract` : Subtract two splines.</span>
-<span class="sd">        `common_basis : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
+<span class="sd">        `common_basis` : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -1371,7 +1395,7 @@
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_evaluation</span><span class="o">.</span><span class="n">blossom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">bsplineValues</span><span class="p">(</span><span class="n">knot</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">splineOrder</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">derivativeOrder</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">taylorCoefs</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">bspline_values</span><span class="p">(</span><span class="n">knot</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">splineOrder</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">derivativeOrder</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">taylorCoefs</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Compute bspline values or their derivatives for a 1D bspline segment given the rightmost knot of the segment and a parameter value within that segment.</span>
 
@@ -1410,7 +1434,7 @@
 <span class="sd">        -----</span>
 <span class="sd">        This method does not check parameter values. It is used by other evaluation methods. It uses the de Boor recurrence relations for a B-spline.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_evaluation</span><span class="o">.</span><span class="n">bsplineValues</span><span class="p">(</span><span class="n">knot</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">splineOrder</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">derivativeOrder</span><span class="p">,</span> <span class="n">taylorCoefs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_evaluation</span><span class="o">.</span><span class="n">bspline_values</span><span class="p">(</span><span class="n">knot</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">splineOrder</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">derivativeOrder</span><span class="p">,</span> <span class="n">taylorCoefs</span><span class="p">)</span>
 
 
     <span class="k">def</span> <span class="nf">clamp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">):</span>
@@ -1469,6 +1493,27 @@
 <span class="sd">        Uses `elevate_and_insert_knots` to ensure mapped variables share the same order and knots. </span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_domain</span><span class="o">.</span><span class="n">common_basis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">splines</span><span class="p">,</span> <span class="n">indMap</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Contract a spline by assigning a fixed value to one or more of its independent variables.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        uvw : `iterable`</span>
+<span class="sd">            An iterable of length `nInd` that specifies the values of each independent variable to contract.</span>
+<span class="sd">            A value of `None` for an independent variables indicates that variable should remain unchanged.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The contracted spline.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `evaluate` : Compute the value of the spline at given parameter values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">cross</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -1791,7 +1836,7 @@
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
 <span class="sd">        The integral method uses the integrate method to integrate the spline `with_respect_to` times for each independent variable.</span>
-<span class="sd">        Then the method returns that integrated spline&#39;s value at `uw2` minus its values at `uw1` (optionally along with the spline).</span>
+<span class="sd">        Then the method returns that integrated spline&#39;s value at `uw2` minus its value at `uw1` (optionally along with the spline).</span>
 <span class="sd">        The method doesn&#39;t calculate the integral directly because the number of operations required is nearly the same as constructing</span>
 <span class="sd">        the integrated spline.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1882,7 +1927,7 @@
 <span class="sd">        --------</span>
 <span class="sd">        `add` : Add two splines.</span>
 <span class="sd">        `subtract` : Subtract two splines.</span>
-<span class="sd">        `common_basis : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
+<span class="sd">        `common_basis` : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -2382,19 +2427,19 @@ Computer Aided Geometric Design 7, no. 1-4 (1990): 69-81.</p>
 
 
                             </div>
-                            <div id="Spline.bsplineValues" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#Spline.bsplineValues">#&nbsp;&nbsp</a>
+                            <div id="Spline.bspline_values" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#Spline.bspline_values">#&nbsp;&nbsp</a>
 
                 <div class="decorator">@staticmethod</div>
 
             <span class="def">def</span>
-            <span class="name">bsplineValues</span><span class="signature">(knot, knots, splineOrder, u, derivativeOrder=0, taylorCoefs=False)</span>:
+            <span class="name">bspline_values</span><span class="signature">(knot, knots, splineOrder, u, derivativeOrder=0, taylorCoefs=False)</span>:
     </div>
 
             <details>
             <summary>View Source</summary>
             <div class="pdoc-code codehilite"><pre><span></span>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">bsplineValues</span><span class="p">(</span><span class="n">knot</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">splineOrder</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">derivativeOrder</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">taylorCoefs</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">bspline_values</span><span class="p">(</span><span class="n">knot</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">splineOrder</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">derivativeOrder</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">taylorCoefs</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Compute bspline values or their derivatives for a 1D bspline segment given the rightmost knot of the segment and a parameter value within that segment.</span>
 
@@ -2433,7 +2478,7 @@ Computer Aided Geometric Design 7, no. 1-4 (1990): 69-81.</p>
 <span class="sd">        -----</span>
 <span class="sd">        This method does not check parameter values. It is used by other evaluation methods. It uses the de Boor recurrence relations for a B-spline.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_evaluation</span><span class="o">.</span><span class="n">bsplineValues</span><span class="p">(</span><span class="n">knot</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">splineOrder</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">derivativeOrder</span><span class="p">,</span> <span class="n">taylorCoefs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_evaluation</span><span class="o">.</span><span class="n">bspline_values</span><span class="p">(</span><span class="n">knot</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">splineOrder</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">derivativeOrder</span><span class="p">,</span> <span class="n">taylorCoefs</span><span class="p">)</span>
 </pre></div>
 
         </details>
@@ -2617,6 +2662,64 @@ The aligned collection of N splines.</li>
 <h6 id="notes">Notes</h6>
 
 <p>Uses <code><a href="#Spline.elevate_and_insert_knots">elevate_and_insert_knots</a></code> to ensure mapped variables share the same order and knots.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.contract" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#Spline.contract">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">contract</span><span class="signature">(self, uvw)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Contract a spline by assigning a fixed value to one or more of its independent variables.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        uvw : `iterable`</span>
+<span class="sd">            An iterable of length `nInd` that specifies the values of each independent variable to contract.</span>
+<span class="sd">            A value of `None` for an independent variables indicates that variable should remain unchanged.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The contracted spline.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `evaluate` : Compute the value of the spline at given parameter values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">)</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Contract a spline by assigning a fixed value to one or more of its independent variables.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>uvw</strong> (<code>iterable</code>):
+An iterable of length <code>nInd</code> that specifies the values of each independent variable to contract.
+A value of <code>None</code> for an independent variables indicates that variable should remain unchanged.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+The contracted spline.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.evaluate">evaluate</a></code>:  Compute the value of the spline at given parameter values.  </p>
 </div>
 
 
@@ -3407,7 +3510,7 @@ A spline with the new knots inserted. If no knots were inserted, the original sp
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
 <span class="sd">        The integral method uses the integrate method to integrate the spline `with_respect_to` times for each independent variable.</span>
-<span class="sd">        Then the method returns that integrated spline&#39;s value at `uw2` minus its values at `uw1` (optionally along with the spline).</span>
+<span class="sd">        Then the method returns that integrated spline&#39;s value at `uw2` minus its value at `uw1` (optionally along with the spline).</span>
 <span class="sd">        The method doesn&#39;t calculate the integral directly because the number of operations required is nearly the same as constructing</span>
 <span class="sd">        the integrated spline.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -3451,7 +3554,7 @@ The integrated spline, which is only returned if <code>returnSpline</code> is <c
 <h6 id="notes">Notes</h6>
 
 <p>The integral method uses the integrate method to integrate the spline <code>with_respect_to</code> times for each independent variable.
-Then the method returns that integrated spline's value at <code>uw2</code> minus its values at <code>uw1</code> (optionally along with the spline).
+Then the method returns that integrated spline's value at <code>uw2</code> minus its value at <code>uw1</code> (optionally along with the spline).
 The method doesn't calculate the integral directly because the number of operations required is nearly the same as constructing
 the integrated spline.</p>
 </div>
@@ -3641,7 +3744,7 @@ A spline curve which approximates the data points.</li>
 <span class="sd">        --------</span>
 <span class="sd">        `add` : Add two splines.</span>
 <span class="sd">        `subtract` : Subtract two splines.</span>
-<span class="sd">        `common_basis : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
+<span class="sd">        `common_basis` : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -3684,7 +3787,7 @@ The result of multiplying other to self.</li>
 
 <p><code><a href="#Spline.add">add</a></code>:  Add two splines. <br />
 <code><a href="#Spline.subtract">subtract</a></code>:  Subtract two splines. <br />
-`<code><a href="#Spline.common_basis">common_basis</a></code>:  Align a collection of splines to a common basis, elevating the order and adding knots as needed.  </p>
+<code><a href="#Spline.common_basis">common_basis</a></code>:  Align a collection of splines to a common basis, elevating the order and adding knots as needed.  </p>
 
 <h6 id="notes">Notes</h6>
 

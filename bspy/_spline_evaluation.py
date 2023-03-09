@@ -34,7 +34,7 @@ def blossom(self, uvw):
         myCoefs = myCoefs @ bValues
     return myCoefs
 
-def bsplineValues(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs = False):
+def bspline_values(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs = False):
     basis = np.zeros(splineOrder, knots.dtype)
     basis[-1] = 1.0
     for degree in range(1, splineOrder - derivativeOrder):
@@ -71,7 +71,7 @@ def derivative(self, with_respect_to, uvw):
         mySection.append(slice(ix - self.order[iv], ix))
     myCoefs = self.coefs[tuple(mySection)]
     for iv in range(self.nInd - 1, -1, -1):
-        bValues = bsplineValues(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv], with_respect_to[iv])
+        bValues = bspline_values(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv], with_respect_to[iv])
         myCoefs = myCoefs @ bValues
     return myCoefs
 
@@ -97,7 +97,7 @@ def evaluate(self, uvw):
         mySection.append(slice(ix - self.order[iv], ix))
     myCoefs = self.coefs[tuple(mySection)]
     for iv in range(self.nInd - 1, -1, -1):
-        bValues = bsplineValues(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv])
+        bValues = bspline_values(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv])
         myCoefs = myCoefs @ bValues
     return myCoefs
 
