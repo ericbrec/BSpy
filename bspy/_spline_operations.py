@@ -1,5 +1,6 @@
 import numpy as np
 import bspy.spline
+from collections import namedtuple
 
 def add(self, other, indMap = None):
     assert self.nDep == other.nDep
@@ -271,16 +272,17 @@ def multiply(self, other, indMap = None, productType = 'S'):
                     indMap[i] = (indMap[i][0], i2 - 1)
 
             # Compute segments (uses the III algorithm from E.T.Y. Lee)
-            i = 0
-            segments = [i]
-            j = 0
+            i = 0 # knot index into full knot list
+            j = 0 # knot index into unique knot list
+            Segment = namedtuple('Segment', ('knot','unique'))
+            segments = [Segment(i, j)]
             sigma = newMultiplicities[j]
             while i < nCoef[ind1]:
-                while sigma <= segments[-1] + newOrder:
+                while sigma <= segments[-1].knot + newOrder:
                     j += 1
                     i = sigma
                     sigma += newMultiplicities[j]
-                segments.append(i)
+                segments.append(Segment(i, j))
 
             # Move the two independent variables to the left side of the coefficients array in prep for computing Taylor coefficients,
             #   and initialize new coefficients array.
@@ -293,7 +295,7 @@ def multiply(self, other, indMap = None, productType = 'S'):
                 # 2) Convert each spline segment into a polynomial (Taylor series).
 
                 # Isolate the appropriate segment coefficients
-                knot = newKnots[segmentStart + 1]
+                knot = newKnots[segmentStart.knot + 1]
                 ix1 = np.searchsorted(self.knots[ind1], knot, 'right')
                 ix1 = min(ix1, self.nCoef[ind1])
                 ix2 = np.searchsorted(other.knots[ind2], knot, 'right')
@@ -313,7 +315,7 @@ def multiply(self, other, indMap = None, productType = 'S'):
                 taylorCoefs = (np.moveaxis(taylorCoefs, 0, -1)).T # Move ind1's taylor coefficients back to the right side, and re-transpose
 
                 # 3) Sum coefficients of matching polynomial degree (the coefficients have already been multiplied together by the outer product).
-                a = newCoefs[segmentStart:segmentStart + newOrder]
+                a = newCoefs[segmentStart.knot:segmentStart.knot + newOrder]
                 a.fill(0.0)
                 for i2 in range(order2):
                     for i1 in range(order1):
@@ -321,13 +323,13 @@ def multiply(self, other, indMap = None, productType = 'S'):
 
                 # 4) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
                 m = newOrder - 1
-                rho = segmentEnd - segmentStart
+                rho = segmentEnd.knot - segmentStart.knot
                 for j in range(m):
                     for i in range(min(newOrder, m - j)):
-                        a[i] = (1 - i/(m - j)) * a[i] + ((i + 1)/(m - j)) * (newKnots[segmentStart + m - j] - knot) * a[i + 1]
+                        a[i] = (1 - i/(m - j)) * a[i] + ((i + 1)/(m - j)) * (newKnots[segmentStart.knot + m - j] - knot) * a[i + 1]
                 for j in range(rho - 1):
                     for i in range(min(newOrder + j, rho - 1), j, -1):
-                        a[i] = a[i - 1] + (newKnots[segmentStart + m + j + 1] - newKnots[segmentStart + i]) * a[i]
+                        a[i] = a[i - 1] + (newKnots[segmentStart.knot + m + j + 1] - newKnots[segmentStart.knot + i]) * a[i]
                 
                 # Move to next segment
                 segmentStart = segmentEnd
