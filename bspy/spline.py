@@ -336,6 +336,44 @@ class Spline:
         """
         return bspy._spline_operations.contract(self, uvw)
 
+    def convolve(self, other, indMap = None, productType = 'S'):
+        """
+        Convolve two splines (cross, dot, or scalar product).
+
+        Parameters
+        ----------
+        other : `Spline`
+            The spline to convolve with self.
+
+        indMap : `iterable` or `None`, optional
+            An iterable of pairs of indices. 
+            Each pair (n, m) maps the mth independent variable of other to the nth independent variable of self. 
+            An independent variable can map to no more than one other independent variable.
+            Unmapped independent variables remain independent (the default).
+
+        productType : {'C', 'D', 'S'}, optional
+            The type of product to perform on the dependent variables (default is 'S').
+                'C' is for a cross product, self x other (nDep must be 2 or 3).
+                'D' is for a dot product (nDep must match).
+                'S' is for a scalar product (nDep must be 1 for one of the splines).
+        
+        Returns
+        -------
+        spline : `Spline`
+            The result of convolving other with self.
+
+        See Also
+        --------
+        `multiply` : Multiply two splines (cross, dot, or scalar product).
+        `integrate` : Integrate a spline with respect to one of its independent variables, returning the resulting spline.
+
+        Notes
+        -----
+        Taken in part from Lee, E. T. Y. "Computing a chain of blossoms, with application to products of splines." 
+        Computer Aided Geometric Design 11, no. 6 (1994): 597-620.
+        """
+        return bspy._spline_operations.convolve(self, other, indMap, productType)
+
     def cross(self, vector):
         """
         Cross product a spline with `nDep` of 2 or 3 by the given vector.
@@ -724,7 +762,7 @@ class Spline:
         Parameters
         ----------
         other : `Spline`
-            The spline to multiply by self. The number of dependent variables must match self.
+            The spline to multiply by self.
 
         indMap : `iterable` or `None`, optional
             An iterable of pairs of indices. 
@@ -748,7 +786,7 @@ class Spline:
         --------
         `add` : Add two splines.
         `subtract` : Subtract two splines.
-        `common_basis` : Align a collection of splines to a common basis, elevating the order and adding knots as needed.
+        `convolve` : Convolve two splines (cross, dot, or scalar product).
 
         Notes
         -----

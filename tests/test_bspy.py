@@ -605,6 +605,22 @@ def test_contract():
         xyz = mySurface([u, .75]) - contracted([u])
         maxerror = max(maxerror, np.sqrt(xyz @ xyz))
     assert maxerror <= 2.5 * np.finfo(float).eps
+
+def test_convolve():
+    maxerror = 0.0
+    spline1 = bspy.Spline(1, 1, (2,), (3,), ((-1.0, -1.0, 0.0, 1.0, 1.0),), (1.0, 0.0, 1.0))
+    spline2 = bspy.Spline(1, 1, (4,), (7,), ((-1.0, -1.0, -1.0, -1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0),), (0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0))
+    
+    # Convolve with shared independent variable.
+    convolution = spline1.convolve(spline2, [[0, 0]])
+    maxerror = 0.0
+    for u in np.linspace(convolution.knots[0][convolution.order[0]-1], convolution.knots[0][convolution.nCoef[0]], 21):
+        x = scipy.integrate.quad(lambda s: spline1([u - s])[0] * spline2([s]), \
+            max(u - spline1.knots[0][spline1.nCoef[0]], spline2.knots[0][spline2.order[0]-1]), 
+            min(u - spline1.knots[0][spline1.order[0]-1], spline2.knots[0][spline2.nCoef[0]]))[0]
+        xTest = convolution.evaluate([u])
+        maxerror = max(maxerror, (xTest - x) ** 2)
+    assert maxerror <= np.finfo(float).eps
     
 def test_cross():
     # Test with constant vector

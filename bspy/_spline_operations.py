@@ -50,25 +50,6 @@ def add(self, other, indMap = None):
     
     return type(self)(nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy + other.accuracy, self.metadata)
 
-def cross(self, vector):
-    if isinstance(vector, bspy.Spline):
-        return self.multiply(vector, None, 'C')
-    elif self.nDep == 3:
-        assert len(vector) == self.nDep
-
-        coefs = np.empty(self.coefs.shape, self.coefs.dtype)
-        coefs[0] = vector[2] * self.coefs[1] - vector[1] * self.coefs[2]
-        coefs[1] = vector[0] * self.coefs[2] - vector[2] * self.coefs[0]
-        coefs[2] = vector[1] * self.coefs[0] - vector[0] * self.coefs[1]
-        return type(self)(self.nInd, 3, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
-    else:
-        assert self.nDep == 2
-        assert len(vector) == self.nDep
-
-        coefs = np.empty((1, *self.coefs.shape[1:]), self.coefs.dtype)
-        coefs[0] = vector[1] * self.coefs[0] - vector[0] * self.coefs[1]
-        return type(self)(self.nInd, 3, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
-
 def contract(self, uvw):
     nInd = self.nInd
     order = [*self.order]
@@ -105,6 +86,221 @@ def contract(self, uvw):
             ix += 1
     
     return type(self)(nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy, self.metadata)
+
+def convolve(self, other, indMap = None, productType = 'S'):
+    assert productType == 'C' or productType == 'D' or productType == 'S', "productType must be 'C', 'D' or 'S'"
+
+    assert productType != 'D' or self.nDep == other.nDep, "Mismatched dimensions"
+    assert productType != 'C' or (self.nDep == other.nDep and 2 <= self.nDep <= 3), "Mismatched dimensions"
+    assert productType != 'S' or self.nDep == 1 or other.nDep == 1, "Mismatched dimensions"
+
+    # Ensure scalar spline (if any) comes first (simplifies array processing).
+    if other.nDep == 1 and self.nDep > 1:
+        temp = self
+        self = other
+        other = temp
+
+    # Construct new spline parameters.
+    nInd = self.nInd + other.nInd
+    nDep = other.nDep
+    order = [*self.order, *other.order]
+    nCoef = [*self.nCoef, *other.nCoef]
+    knots = [*self.knots, *other.knots]
+
+    # Multiply the coefs arrays as if the independent variables from both splines are unrelated.
+    outer = np.outer(self.coefs, other.coefs).reshape((*self.coefs.shape, *other.coefs.shape))
+    # Move the other spline's dependent variable next to this spline's. 
+    outer = np.moveaxis(outer, self.nInd + 1, 1)
+
+    # Combine dependent variables based on type of product.
+    if productType == 'C': # Cross product
+        if self.nDep == 3:
+            coefs = np.empty(outer[0].shape, outer.dtype)
+            coefs[0] = outer[1,2] - outer[2,1]
+            coefs[1] = outer[2,0] - outer[0,2]
+            coefs[2] = outer[0,1] - outer[1,0]
+        else: # self.nDep == 2
+            coefs = np.empty((1, *outer.shape[2:]), outer.dtype)
+            coefs[0] = outer[0,1] - outer[1,0]
+    elif productType == 'D': # Dot product
+        coefs = outer[0,0]
+        for i in range(1, self.nDep):
+            coefs += outer[i,i]
+        coefs = np.expand_dims(coefs, axis=0)
+        nDep = 1
+    else: # Scalar product, where self is the scalar
+        coefs = outer[0]
+
+    if indMap is not None:
+        # Now we need to convolve matching independent variables (variables mapped to each other).
+        # We can't do this directly with b-spline coefficients, but we can indirectly with the following steps:
+        #   1) Determine the knots of the convolved spline, by Use the combined knots from matching independent variables to divide the convolved spline into segments.
+        #   2) For each segment, integrate over the intervals add the integrals of convolve
+        #   2) Convert each spline segment into a polynomial (Taylor series).
+        #   3) Sum coefficients of matching polynomial degree (the coefficients have already been multiplied together).
+        #   4) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
+
+        indMap = indMap.copy() # Make a copy, since we change the list as we combine independent variables
+        while indMap:
+            (ind1, ind2) = indMap.pop()
+            # 1) Use the combined knots from matching independent variables to divide the spline into segments.
+
+            # First, get multiplicities of the knots for each independent variable.
+            order1 = self.order[ind1]
+            knots1, multiplicities1 = np.unique(self.knots[ind1][order1-1:self.nCoef[ind1]+1], return_counts=True)
+            multiplicities1[0] = multiplicities1[-1] = order1
+            order2 = other.order[ind2]
+            knots2, multiplicities2 = np.unique(other.knots[ind2][order2-1:other.nCoef[ind2]+1], return_counts=True)
+            multiplicities2[0] = multiplicities2[-1] = order2
+
+            # Create a list of all the knot intervals.
+            IntervalInfo = namedtuple('IntervalInfo', ('isStart', 'knot', 'index1', 'index2'))
+            intervalInfoList = []
+            for knotNumber1 in range(len(knots1)):
+                knot1 = knots1[knotNumber1]
+                for knotNumber2 in range(len(knots2)):
+                    knot2 = knots2[knotNumber2]
+                    if knotNumber1 < len(knots1) - 1 and knotNumber2 < len(knots2) - 1:
+                        intervalInfoList.append(IntervalInfo(True, knot1 + knot2, knotNumber1, knotNumber2)) # Start an interval
+                    if knotNumber1 > 0 and knotNumber2 > 0:
+                        intervalInfoList.append(IntervalInfo(False, knot1 + knot2, knotNumber1 - 1, knotNumber2 - 1)) # End a previous interval
+
+            # Sort the list of intervals.
+            intervalInfoList.sort(key=lambda intervalInfo: intervalInfo.knot)
+
+            # Create a list of unique knots and their associated intervals.
+            KnotInfo = namedtuple('KnotInfo', ('knot', 'intervals'))
+            intervals = []
+            knotInfoList = []
+            knotInfo = None
+            for intervalInfo in intervalInfoList:
+                if intervalInfo.isStart:
+                    intervals.append((intervalInfo.index1, intervalInfo.index2))
+                else:
+                    intervals.remove((intervalInfo.index1, intervalInfo.index2))
+                intervals.sort()
+                # Update an existing knot or add a new knot
+                if knotInfo and np.isclose(knotInfo.knot, intervalInfo.knot):
+                    knotInfoList[-1] = KnotInfo(knotInfo.knot, list(intervals))
+                else:
+                    knotInfo = KnotInfo(intervalInfo.knot, list(intervals))
+                    knotInfoList.append(knotInfo)
+
+            # Compute the new order of the combined spline and its new knots array.
+            newOrder = order1 + order2
+            newKnots = [knotInfoList[0].knot] * newOrder
+            newMultiplicities = [newOrder]
+            for knotInfo in knotInfoList[1:-1]:
+                multiplicity = 0
+                for interval in knotInfo.intervals:
+                    if np.isclose(knotInfo.knot, knots1[interval[0]] + knots2[interval[1]]):
+                        multiplicity = max(multiplicity, multiplicities1[interval[0]] + order2 - 1, multiplicities2[interval[1]] + order1 - 1)
+                newKnots += [knotInfo.knot] * multiplicity
+                newMultiplicities.append(multiplicity)
+            newKnots += [knotInfoList[-1].knot] * newOrder
+            newMultiplicities.append(newOrder)
+
+            # Update nInd, order, nCoef, overall knots, and indMap
+            nInd -= 1
+            del order[self.nInd + ind2]
+            order[ind1] = newOrder
+            del nCoef[self.nInd + ind2]
+            nCoef[ind1] = len(newKnots) - newOrder
+            del knots[self.nInd + ind2]
+            knots[ind1] = np.array(newKnots, knots1.dtype)
+            for i in range(len(indMap)):
+                i2 = indMap[i][1]
+                assert i2 != ind2, "You can't map the same independent variable to multiple others."
+                if i2 > ind2:
+                    indMap[i] = (indMap[i][0], i2 - 1)
+
+            # Compute segments (uses the III algorithm from E.T.Y. Lee)
+            i = 0 # knot index into full knot list
+            j = 0 # knot index into unique knot list
+            Segment = namedtuple('Segment', ('knot','unique'))
+            segments = [Segment(i, j)]
+            sigma = newMultiplicities[j]
+            while i < nCoef[ind1]:
+                while sigma <= segments[-1].knot + newOrder:
+                    j += 1
+                    i = sigma
+                    sigma += newMultiplicities[j]
+                segments.append(Segment(i, j))
+
+            # Move the two independent variables to the left side of the coefficients array in prep for computing Taylor coefficients,
+            #   and initialize new coefficients array.
+            coefs = np.moveaxis(coefs, (ind1+1, self.nInd+1 + ind2), (0, 1))
+            newCoefs = np.empty(((len(segments) - 1) * newOrder, *coefs.shape[2:]), coefs.dtype)
+
+            # Loop through the segments
+            segmentStart = segments[0]
+            for segmentEnd in segments[1:]:
+                # 2) Convert each spline segment into a polynomial (Taylor series).
+
+                # Isolate the appropriate segment coefficients
+                knot = newKnots[segmentStart.knot + 1]
+                ix1 = np.searchsorted(self.knots[ind1], knot, 'right')
+                ix1 = min(ix1, self.nCoef[ind1])
+                ix2 = np.searchsorted(other.knots[ind2], knot, 'right')
+                ix2 = min(ix2, other.nCoef[ind2])
+                taylorCoefs = (coefs[ix1 - order1:ix1, ix2 - order2:ix2]).T # Transpose so we multiply on the left (due to matmul rules)
+
+                # Compute taylor coefficients for the segment
+                bValues = np.empty((order1, order1), knots1.dtype)
+                for derivativeOrder in range(order1):
+                    bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix1, self.knots[ind1], order1, knot, derivativeOrder, True)
+                taylorCoefs = taylorCoefs @ bValues
+                taylorCoefs = np.moveaxis(taylorCoefs, -1, 0) # Move ind1's taylor coefficients to the left side so we can compute ind2's
+                bValues = np.empty((order2, order2), knots2.dtype)
+                for derivativeOrder in range(order2):
+                    bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix2, other.knots[ind2], order2, knot, derivativeOrder, True)
+                taylorCoefs = taylorCoefs @ bValues
+                taylorCoefs = (np.moveaxis(taylorCoefs, 0, -1)).T # Move ind1's taylor coefficients back to the right side, and re-transpose
+
+                # 3) Sum coefficients of matching polynomial degree (the coefficients have already been multiplied together by the outer product).
+                a = newCoefs[segmentStart.knot:segmentStart.knot + newOrder]
+                a.fill(0.0)
+                for i2 in range(order2):
+                    for i1 in range(order1):
+                        a[i1 + i2] += taylorCoefs[i1, i2]
+
+                # 4) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
+                m = newOrder - 1
+                rho = segmentEnd.knot - segmentStart.knot
+                for j in range(m):
+                    for i in range(min(newOrder, m - j)):
+                        a[i] = (1 - i/(m - j)) * a[i] + ((i + 1)/(m - j)) * (newKnots[segmentStart.knot + m - j] - knot) * a[i + 1]
+                for j in range(rho - 1):
+                    for i in range(min(newOrder + j, rho - 1), j, -1):
+                        a[i] = a[i - 1] + (newKnots[segmentStart.knot + m + j + 1] - newKnots[segmentStart.knot + i]) * a[i]
+                
+                # Move to next segment
+                segmentStart = segmentEnd
+
+            # All the segment coefficients are computed.
+            # Now move combined independent variable back to its original axis.
+            coefs = np.moveaxis(newCoefs[:nCoef[ind1]], 0, ind1 + 1)
+
+    return type(self)(nInd, nDep, order, nCoef, knots, coefs, self.accuracy + other.accuracy, self.metadata)
+
+def cross(self, vector):
+    if isinstance(vector, bspy.Spline):
+        return self.multiply(vector, None, 'C')
+    elif self.nDep == 3:
+        assert len(vector) == self.nDep
+
+        coefs = np.empty(self.coefs.shape, self.coefs.dtype)
+        coefs[0] = vector[2] * self.coefs[1] - vector[1] * self.coefs[2]
+        coefs[1] = vector[0] * self.coefs[2] - vector[2] * self.coefs[0]
+        coefs[2] = vector[1] * self.coefs[0] - vector[0] * self.coefs[1]
+        return type(self)(self.nInd, 3, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
+    else:
+        assert self.nDep == 2
+        assert len(vector) == self.nDep
+
+        coefs = np.empty((1, *self.coefs.shape[1:]), self.coefs.dtype)
+        coefs[0] = vector[1] * self.coefs[0] - vector[0] * self.coefs[1]
+        return type(self)(self.nInd, 3, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
 
 def differentiate(self, with_respect_to = 0):
     assert 0 <= with_respect_to < self.nInd
