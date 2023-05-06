@@ -154,22 +154,22 @@ def convolve(self, other, indMap = None, productType = 'S'):
             multiplicities2[0] = multiplicities2[-1] = order2
 
             # Create a list of all the knot intervals.
-            IntervalInfo = namedtuple('IntervalInfo', ('isStart', 'knot', 'index1', 'index2'))
+            IntervalInfo = namedtuple('IntervalInfo', ('isStart', 'knot', 'multiplicity', 'index1', 'index2'))
             intervalInfoList = []
             for knotNumber1 in range(len(knots1)):
-                knot1 = knots1[knotNumber1]
                 for knotNumber2 in range(len(knots2)):
-                    knot2 = knots2[knotNumber2]
+                    knot = knots1[knotNumber1] + knots2[knotNumber2]
+                    multiplicity = max(multiplicities1[knotNumber1] + order2 - 1, multiplicities2[knotNumber2] + order1 - 1)
                     if knotNumber1 < len(knots1) - 1 and knotNumber2 < len(knots2) - 1:
-                        intervalInfoList.append(IntervalInfo(True, knot1 + knot2, knotNumber1, knotNumber2)) # Start an interval
+                        intervalInfoList.append(IntervalInfo(True, knot, multiplicity, knotNumber1, knotNumber2)) # Start an interval
                     if knotNumber1 > 0 and knotNumber2 > 0:
-                        intervalInfoList.append(IntervalInfo(False, knot1 + knot2, knotNumber1 - 1, knotNumber2 - 1)) # End a previous interval
+                        intervalInfoList.append(IntervalInfo(False, knot, multiplicity, knotNumber1 - 1, knotNumber2 - 1)) # End a previous interval
 
             # Sort the list of intervals.
             intervalInfoList.sort(key=lambda intervalInfo: intervalInfo.knot)
 
             # Create a list of unique knots and their associated intervals.
-            KnotInfo = namedtuple('KnotInfo', ('knot', 'intervals'))
+            KnotInfo = namedtuple('KnotInfo', ('knot', 'multiplicity', 'intervals'))
             intervals = []
             knotInfoList = []
             knotInfo = None
@@ -179,11 +179,11 @@ def convolve(self, other, indMap = None, productType = 'S'):
                 else:
                     intervals.remove((intervalInfo.index1, intervalInfo.index2))
                 intervals.sort()
-                # Update an existing knot or add a new knot
+                # Update previous knot or add a new knot
                 if knotInfo and np.isclose(knotInfo.knot, intervalInfo.knot):
-                    knotInfoList[-1] = KnotInfo(knotInfo.knot, list(intervals))
+                    knotInfoList[-1] = KnotInfo(knotInfo.knot, max(knotInfo.multiplicity, intervalInfo.multiplicity), list(intervals))
                 else:
-                    knotInfo = KnotInfo(intervalInfo.knot, list(intervals))
+                    knotInfo = KnotInfo(intervalInfo.knot, intervalInfo.multiplicity, list(intervals))
                     knotInfoList.append(knotInfo)
 
             # Compute the new order of the combined spline and its new knots array.
@@ -191,12 +191,8 @@ def convolve(self, other, indMap = None, productType = 'S'):
             newKnots = [knotInfoList[0].knot] * newOrder
             newMultiplicities = [newOrder]
             for knotInfo in knotInfoList[1:-1]:
-                multiplicity = 0
-                for interval in knotInfo.intervals:
-                    if np.isclose(knotInfo.knot, knots1[interval[0]] + knots2[interval[1]]):
-                        multiplicity = max(multiplicity, multiplicities1[interval[0]] + order2 - 1, multiplicities2[interval[1]] + order1 - 1)
-                newKnots += [knotInfo.knot] * multiplicity
-                newMultiplicities.append(multiplicity)
+                newKnots += [knotInfo.knot] * knotInfo.multiplicity
+                newMultiplicities.append(knotInfo.multiplicity)
             newKnots += [knotInfoList[-1].knot] * newOrder
             newMultiplicities.append(newOrder)
 
