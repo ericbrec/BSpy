@@ -1,6 +1,7 @@
 import numpy as np
 import bspy.spline
 from collections import namedtuple
+from enum import Enum
 
 def add(self, other, indMap = None):
     assert self.nDep == other.nDep
@@ -154,6 +155,7 @@ def convolve(self, other, indMap = None, productType = 'S'):
             multiplicities2[0] = multiplicities2[-1] = order2
 
             # Create a list of all the knot intervals.
+            IntervalKind = Enum('IntervalKind', ('Start', 'End', 'EndPoint'))
             IntervalInfo = namedtuple('IntervalInfo', ('isStart', 'knot', 'multiplicity', 'index1', 'index2'))
             intervalInfoList = []
             for knotNumber1 in range(len(knots1)):
@@ -161,26 +163,29 @@ def convolve(self, other, indMap = None, productType = 'S'):
                     knot = knots1[knotNumber1] + knots2[knotNumber2]
                     multiplicity = max(multiplicities1[knotNumber1] + order2 - 1, multiplicities2[knotNumber2] + order1 - 1)
                     if knotNumber1 < len(knots1) - 1 and knotNumber2 < len(knots2) - 1:
-                        intervalInfoList.append(IntervalInfo(True, knot, multiplicity, knotNumber1, knotNumber2)) # Start an interval
+                        intervalInfoList.append(IntervalInfo(IntervalKind.Start, knot, multiplicity, knotNumber1, knotNumber2)) # Start an interval
                     if knotNumber1 > 0 and knotNumber2 > 0:
-                        intervalInfoList.append(IntervalInfo(False, knot, multiplicity, knotNumber1 - 1, knotNumber2 - 1)) # End a previous interval
+                        intervalInfoList.append(IntervalInfo(IntervalKind.End, knot, multiplicity, knotNumber1 - 1, knotNumber2 - 1)) # End a previous interval
+                    if (knotNumber1 == 0 and knotNumber2 == len(knots2) - 1) or (knotNumber1 == len(knots1) - 1 and knotNumber2 == 0):
+                        intervalInfoList.append(IntervalInfo(IntervalKind.EndPoint, knot, multiplicity, knotNumber1, knotNumber2)) # EndPoint knot
 
             # Sort the list of intervals.
             intervalInfoList.sort(key=lambda intervalInfo: intervalInfo.knot)
 
             # Create a list of unique knots and their associated intervals.
             KnotInfo = namedtuple('KnotInfo', ('knot', 'multiplicity', 'intervals'))
+            atol = 1.0e-8
             intervals = []
             knotInfoList = []
             knotInfo = None
             for intervalInfo in intervalInfoList:
-                if intervalInfo.isStart:
+                if intervalInfo.kind == IntervalKind.Start:
                     intervals.append((intervalInfo.index1, intervalInfo.index2))
-                else:
+                elif intervalInfo.kind == IntervalKind.End:
                     intervals.remove((intervalInfo.index1, intervalInfo.index2))
-                intervals.sort()
+                intervals.sort(key=lambda interval: (-interval[0], interval[1]))
                 # Update previous knot or add a new knot
-                if knotInfo and np.isclose(knotInfo.knot, intervalInfo.knot):
+                if knotInfo and np.isclose(knotInfo.knot, intervalInfo.knot, atol=atol):
                     knotInfoList[-1] = KnotInfo(knotInfo.knot, max(knotInfo.multiplicity, intervalInfo.multiplicity), list(intervals))
                 else:
                     knotInfo = KnotInfo(intervalInfo.knot, intervalInfo.multiplicity, list(intervals))
