@@ -135,11 +135,20 @@ def convolve(self, other, indMap = None, productType = 'S'):
     if indMap is not None:
         # Now we need to convolve matching independent variables (variables mapped to each other).
         # We can't do this directly with b-spline coefficients, but we can indirectly with the following steps:
-        #   1) Determine the knots of the convolved spline, by Use the combined knots from matching independent variables to divide the convolved spline into segments.
-        #   2) For each segment, integrate over the intervals add the integrals of convolve
-        #   2) Convert each spline segment into a polynomial (Taylor series).
-        #   3) Sum coefficients of matching polynomial degree (the coefficients have already been multiplied together).
-        #   4) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
+        #   1) Determine the knots of the convolved spline from the knots of the matching independent variables.
+        #   2) Use the knots to create segments and integration intervals for each segment that compute integral of self(x - y) * other(y) dy.
+        #   3) For each segment:
+        #       a) Convert the self spline segment into a polynomial (Taylor series).
+        #       b) Separate the variables for the self spline segment: self(x - y) = tensor product of selfX(x) * selfY(y).
+        #       c) For each interval:
+        #           i) Convert other spline segment into a polynomial (Taylor series).
+        #           ii) Shift selfY(y) Taylor series to be about the same point as other spline segment.
+        #           iii) Multiply selfY(y) times other(y) by summing coefficients of matching polynomial degree.
+        #           iv) Integrate the result (trivial for polynomials).
+        #           v) Evaluate the integral at the interval endpoints (which are linear functions of x), shifting the Taylor series to be about the same point as selfX(x).
+        #           vi) Accumulate the result.
+        #       d) Multiply selfX(x) times the result by summing coefficients of matching polynomial degree.
+        #       e) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
 
         indMap = indMap.copy() # Make a copy, since we change the list as we combine independent variables
         while indMap:
@@ -156,7 +165,7 @@ def convolve(self, other, indMap = None, productType = 'S'):
 
             # Create a list of all the knot intervals.
             IntervalKind = Enum('IntervalKind', ('Start', 'End', 'EndPoint'))
-            IntervalInfo = namedtuple('IntervalInfo', ('isStart', 'knot', 'multiplicity', 'index1', 'index2'))
+            IntervalInfo = namedtuple('IntervalInfo', ('kind', 'knot', 'multiplicity', 'index1', 'index2'))
             intervalInfoList = []
             for knotNumber1 in range(len(knots1)):
                 for knotNumber2 in range(len(knots2)):
