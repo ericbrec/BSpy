@@ -2,6 +2,7 @@ import numpy as np
 import bspy.spline
 from collections import namedtuple
 from enum import Enum
+from math import comb
 
 def add(self, other, indMap = None):
     assert self.nDep == other.nDep
@@ -136,24 +137,23 @@ def convolve(self, other, indMap = None, productType = 'S'):
         # Now we need to convolve matching independent variables (variables mapped to each other).
         # We can't do this directly with b-spline coefficients, but we can indirectly with the following steps:
         #   1) Determine the knots of the convolved spline from the knots of the matching independent variables.
-        #   2) Use the knots to create segments and integration intervals for each segment that compute integral of self(x - y) * other(y) dy.
+        #   2) Use the knots to determine segments and integration intervals that compute integral of self(x - y) * other(y) dy.
         #   3) For each segment:
-        #       a) Convert the self spline segment into a polynomial (Taylor series).
-        #       b) Separate the variables for the self spline segment: self(x - y) = tensor product of selfX(x) * selfY(y).
-        #       c) For each interval:
-        #           i) Convert other spline segment into a polynomial (Taylor series).
-        #           ii) Shift selfY(y) Taylor series to be about the same point as other spline segment.
-        #           iii) Multiply selfY(y) times other(y) by summing coefficients of matching polynomial degree.
-        #           iv) Integrate the result (trivial for polynomials).
-        #           v) Evaluate the integral at the interval endpoints (which are linear functions of x), shifting the Taylor series to be about the same point as selfX(x).
-        #           vi) Accumulate the result.
-        #       d) Multiply selfX(x) times the result by summing coefficients of matching polynomial degree.
-        #       e) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
+        #       a) For each interval:
+        #           i) Convert each spline interval into a polynomial (Taylor series).
+        #           ii) Separate the variables for the self spline interval: self(x - y) = tensor product of selfX(x) * selfY(y).
+        #           iii) Shift selfY(y) Taylor series to be about the same point as other(y).
+        #           iv) Multiply selfY(y) times other(y) by summing coefficients of matching polynomial degree.
+        #           v) Integrate the result (trivial for polynomials).
+        #           vi) Evaluate the integral at the interval endpoints (which are linear functions of x), shifting the Taylor series to be about the same point as selfX(x).
+        #           vii) Accumulate the result.
+        #           viii) Multiply selfX(x) times the result by summing coefficients of matching polynomial degree.
+        #       b) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
 
         indMap = indMap.copy() # Make a copy, since we change the list as we combine independent variables
         while indMap:
             (ind1, ind2) = indMap.pop()
-            # 1) Use the combined knots from matching independent variables to divide the spline into segments.
+            # 1) Determine the knots of the convolved spline from the knots of the matching independent variables.
 
             # First, get multiplicities of the knots for each independent variable.
             order1 = self.order[ind1]
@@ -181,7 +181,7 @@ def convolve(self, other, indMap = None, productType = 'S'):
             # Sort the list of intervals.
             intervalInfoList.sort(key=lambda intervalInfo: intervalInfo.knot)
 
-            # Create a list of unique knots and their associated intervals.
+            # 2) Use the knots to determine segments and integration intervals that compute integral of self(x - y) * other(y) dy.
             KnotInfo = namedtuple('KnotInfo', ('knot', 'multiplicity', 'intervals'))
             atol = 1.0e-8
             intervals = []
@@ -242,39 +242,79 @@ def convolve(self, other, indMap = None, productType = 'S'):
             coefs = np.moveaxis(coefs, (ind1+1, self.nInd+1 + ind2), (0, 1))
             newCoefs = np.empty(((len(segments) - 1) * newOrder, *coefs.shape[2:]), coefs.dtype)
 
-            # Loop through the segments
+            # 3) For each segment:
             segmentStart = segments[0]
             for segmentEnd in segments[1:]:
-                # 2) Convert each spline segment into a polynomial (Taylor series).
-
-                # Isolate the appropriate segment coefficients
-                knot = newKnots[segmentStart.knot + 1]
-                ix1 = np.searchsorted(self.knots[ind1], knot, 'right')
-                ix1 = min(ix1, self.nCoef[ind1])
-                ix2 = np.searchsorted(other.knots[ind2], knot, 'right')
-                ix2 = min(ix2, other.nCoef[ind2])
-                taylorCoefs = (coefs[ix1 - order1:ix1, ix2 - order2:ix2]).T # Transpose so we multiply on the left (due to matmul rules)
-
-                # Compute taylor coefficients for the segment
-                bValues = np.empty((order1, order1), knots1.dtype)
-                for derivativeOrder in range(order1):
-                    bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix1, self.knots[ind1], order1, knot, derivativeOrder, True)
-                taylorCoefs = taylorCoefs @ bValues
-                taylorCoefs = np.moveaxis(taylorCoefs, -1, 0) # Move ind1's taylor coefficients to the left side so we can compute ind2's
-                bValues = np.empty((order2, order2), knots2.dtype)
-                for derivativeOrder in range(order2):
-                    bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix2, other.knots[ind2], order2, knot, derivativeOrder, True)
-                taylorCoefs = taylorCoefs @ bValues
-                taylorCoefs = (np.moveaxis(taylorCoefs, 0, -1)).T # Move ind1's taylor coefficients back to the right side, and re-transpose
-
-                # 3) Sum coefficients of matching polynomial degree (the coefficients have already been multiplied together by the outer product).
+                # Initialize segment coefficients.
                 a = newCoefs[segmentStart.knot:segmentStart.knot + newOrder]
                 a.fill(0.0)
-                for i2 in range(order2):
-                    for i1 in range(order1):
-                        a[i1 + i2] += taylorCoefs[i1, i2]
+                knot = newKnots[segmentStart.knot]
 
-                # 4) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
+                # Initialize lower bound of integration.
+                lowBound = None
+                # a) For each interval:
+                for interval in knotInfoList[segmentStart.unique].intervals:
+                    # i) Convert each spline interval into a polynomial (Taylor series).
+
+                    # Isolate the appropriate interval coefficients
+                    xKnot = knots1[interval[0]]
+                    ix1 = np.searchsorted(self.knots[ind1], xKnot, 'right')
+                    ix1 = min(ix1, self.nCoef[ind1])
+                    yKnot = knots2[interval[1]]
+                    ix2 = np.searchsorted(other.knots[ind2], yKnot, 'right')
+                    ix2 = min(ix2, other.nCoef[ind2])
+                    taylorCoefs = (coefs[ix1 - order1:ix1, ix2 - order2:ix2]).T # Transpose so we multiply on the left (due to matmul rules)
+
+                    # Compute taylor coefficients for the interval
+                    bValues = np.empty((order1, order1), knots1.dtype)
+                    for derivativeOrder in range(order1):
+                        bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix1, self.knots[ind1], order1, xKnot, derivativeOrder, True)
+                    taylorCoefs = taylorCoefs @ bValues
+                    taylorCoefs = np.moveaxis(taylorCoefs, -1, 0) # Move ind1's taylor coefficients to the left side so we can compute ind2's
+                    bValues = np.empty((order2, order2), knots2.dtype)
+                    for derivativeOrder in range(order2):
+                        bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix2, other.knots[ind2], order2, yKnot, derivativeOrder, True)
+                    taylorCoefs = taylorCoefs @ bValues
+                    taylorCoefs = (np.moveaxis(taylorCoefs, 0, -1)).T # Move ind1's taylor coefficients back to the right side, and re-transpose
+
+                    # ii) Separate the variables for the self spline interval: self(x - y) = tensor product of selfX(x) * selfY(y).
+                    separatedTaylorCoefs = np.empty((order1, *taylorCoefs.shape), taylorCoefs.dtype)
+                    for i in range(order1):
+                        for j in range(order1 - i):
+                            separatedTaylorCoefs[i, j] = comb(i + j, i) * ((-1) ** j) * taylorCoefs[i + j]
+                    # Move selfX(x) to the right side, so we can focus our operations on selfY * other(y)
+                    separatedTaylorCoefs = np.moveaxis(separatedTaylorCoefs, 0, -1)
+
+                    # iii) Shift selfY(y) Taylor series to be about the same point as other(y).
+                    for j in range(1, self.order[0]):
+                        for i in range(self.order[0] - 2, j - 2, -1):
+                            separatedTaylorCoefs[i] += yKnot * separatedTaylorCoefs[i + 1]
+
+                    # iv) Multiply selfY(y) times other(y) by summing coefficients of matching polynomial degree.
+                    # v) Integrate the result (trivial for polynomials).
+                    integratedTaylorCoefs = np.zeros((newOrder, *separatedTaylorCoefs.shape[2:]), separatedTaylorCoefs.dtype)
+                    for i2 in range(order2):
+                        for i1 in range(order1):
+                            integratedTaylorCoefs[i1 + i2 + 1] += separatedTaylorCoefs[i1, i2] / (i1 + i2 + 1)
+
+                    # vi) Evaluate the integral at the interval endpoints (which are linear functions of x), shifting the Taylor series to be about the same point as selfX(x).
+                    if lowBound is None:
+                        lowBoundIsConstant = knots2[interval[1]] + knots1[interval[0] + 1] >= knotInfoList[segmentStart.unique + 1].knot - atol
+                        lowBound = knots2[interval[1]] if lowBoundIsConstant else knots1[interval[0] + 1]
+                    highBoundIsConstant = knots2[interval[1] + 1] + knots1[interval[0]] <= knotInfoList[segmentStart.unique].knot + atol
+                    highBound = knots2[interval[1] + 1] if highBoundIsConstant else knots1[interval[0]]
+                    lowBound = highBound
+                    lowBoundIsConstant = highBoundIsConstant
+
+                    # ii) Accumulate the result.
+                    # viii) Multiply selfX(x) times the result by summing coefficients of matching polynomial degree.
+
+                    # 3) Sum coefficients of matching polynomial degree (the coefficients have already been multiplied together by the outer product).
+                    for i2 in range(order2):
+                        for i1 in range(order1):
+                            a[i1 + i2] += taylorCoefs[i1, i2]
+
+                # b) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
                 m = newOrder - 1
                 rho = segmentEnd.knot - segmentStart.knot
                 for j in range(m):
@@ -498,10 +538,13 @@ def multiply(self, other, indMap = None, productType = 'S'):
             # Loop through the segments
             segmentStart = segments[0]
             for segmentEnd in segments[1:]:
-                # 2) Convert each spline segment into a polynomial (Taylor series).
+                # Initialize segment coefficients.
+                a = newCoefs[segmentStart.knot:segmentStart.knot + newOrder]
+                a.fill(0.0)
+                knot = newKnots[segmentStart.knot]
 
+                # 2) Convert each spline segment into a polynomial (Taylor series).
                 # Isolate the appropriate segment coefficients
-                knot = newKnots[segmentStart.knot + 1]
                 ix1 = np.searchsorted(self.knots[ind1], knot, 'right')
                 ix1 = min(ix1, self.nCoef[ind1])
                 ix2 = np.searchsorted(other.knots[ind2], knot, 'right')
@@ -521,8 +564,6 @@ def multiply(self, other, indMap = None, productType = 'S'):
                 taylorCoefs = (np.moveaxis(taylorCoefs, 0, -1)).T # Move ind1's taylor coefficients back to the right side, and re-transpose
 
                 # 3) Sum coefficients of matching polynomial degree (the coefficients have already been multiplied together by the outer product).
-                a = newCoefs[segmentStart.knot:segmentStart.knot + newOrder]
-                a.fill(0.0)
                 for i2 in range(order2):
                     for i1 in range(order1):
                         a[i1 + i2] += taylorCoefs[i1, i2]
