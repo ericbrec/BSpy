@@ -144,10 +144,10 @@ def convolve(self, other, indMap = None, productType = 'S'):
         #           ii) Separate the variables for the self spline interval: self(x - y) = tensor product of selfX(x) * selfY(y).
         #           iii) Shift selfY(y) Taylor series to be about the same point as other(y).
         #           iv) Multiply selfY(y) times other(y) by summing coefficients of matching polynomial degree.
-        #           v) Integrate the result (trivial for polynomials).
+        #           v) Integrate the result (trivial for polynomials, just increase the order by one and divide by the increased order).
         #           vi) Evaluate the integral at the interval endpoints (which are linear functions of x), shifting the Taylor series to be about the same point as selfX(x).
-        #           vii) Accumulate the result.
-        #           viii) Multiply selfX(x) times the result by summing coefficients of matching polynomial degree.
+        #           vii) Multiply selfX(x) times the result by summing coefficients of matching polynomial degree.
+        #           viii) Accumulate the integral.
         #       b) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
 
         indMap = indMap.copy() # Make a copy, since we change the list as we combine independent variables
@@ -251,7 +251,7 @@ def convolve(self, other, indMap = None, productType = 'S'):
                 knot = newKnots[segmentStart.knot]
 
                 # Initialize lower bound of integration.
-                lowBound = None
+                lowerBound = None
                 # a) For each interval:
                 for interval in knotInfoList[segmentStart.unique].intervals:
                     # i) Convert each spline interval into a polynomial (Taylor series).
@@ -291,28 +291,58 @@ def convolve(self, other, indMap = None, productType = 'S'):
                             separatedTaylorCoefs[i] += yKnot * separatedTaylorCoefs[i + 1]
 
                     # iv) Multiply selfY(y) times other(y) by summing coefficients of matching polynomial degree.
-                    # v) Integrate the result (trivial for polynomials).
+                    # v) Integrate the result (trivial for polynomials, just increase the order by one and divide by the increased order).
                     integratedTaylorCoefs = np.zeros((newOrder, *separatedTaylorCoefs.shape[2:]), separatedTaylorCoefs.dtype)
                     for i2 in range(order2):
                         for i1 in range(order1):
                             integratedTaylorCoefs[i1 + i2 + 1] += separatedTaylorCoefs[i1, i2] / (i1 + i2 + 1)
 
-                    # vi) Evaluate the integral at the interval endpoints (which are linear functions of x), shifting the Taylor series to be about the same point as selfX(x).
-                    if lowBound is None:
-                        lowBoundIsConstant = knots2[interval[1]] + knots1[interval[0] + 1] >= knotInfoList[segmentStart.unique + 1].knot - atol
-                        lowBound = knots2[interval[1]] if lowBoundIsConstant else knots1[interval[0] + 1]
-                    highBoundIsConstant = knots2[interval[1] + 1] + knots1[interval[0]] <= knotInfoList[segmentStart.unique].knot + atol
-                    highBound = knots2[interval[1] + 1] if highBoundIsConstant else knots1[interval[0]]
-                    lowBound = highBound
-                    lowBoundIsConstant = highBoundIsConstant
+                    # vi) Evaluate the integral at the interval bounds (which are linear functions of x), shifting the Taylor series to be about the same point as selfX(x).
+                    # First, we compute the lower bound of the integral for the interval.
+                    if lowerBound is None:
+                        lowerBoundIsConstant = knots2[interval[1]] + knots1[interval[0] + 1] >= knotInfoList[segmentStart.unique + 1].knot - atol
+                        lowerBound = knots2[interval[1]] if lowerBoundIsConstant else knots1[interval[0] + 1]
+                    
+                    if lowerBoundIsConstant:
+                        # Evaluate the integral at the lower bound (TODO: always zero, so cut)
+                        base = lowerBound - yKnot
+                        integral = integratedTaylorCoefs[-1]
+                        for i in range(1, newOrder):
+                            integral = integratedTaylorCoefs[-1 - i] + base * integral
+                    else:
+                        # Shift the integral to be about xKnot
+                        center = xKnot - lowerBound - yKnot
+                        for j in range(1, self.order[0]):
+                            for i in range(self.order[0] - 2, j - 2, -1):
+                                separatedTaylorCoefs[i] += center * separatedTaylorCoefs[i + 1]
 
-                    # ii) Accumulate the result.
-                    # viii) Multiply selfX(x) times the result by summing coefficients of matching polynomial degree.
+                    # Next, we compute the upper bound of the integral for the interval
+                    upperBoundIsConstant = knots2[interval[1] + 1] + knots1[interval[0]] <= knotInfoList[segmentStart.unique].knot + atol
+                    upperBound = knots2[interval[1] + 1] if upperBoundIsConstant else knots1[interval[0]]
+                    
+                    if upperBoundIsConstant:
+                        # Evaluate the integral at the upper bound
+                        base = upperBound - yKnot
+                        integral = integratedTaylorCoefs[-1]
+                        for i in range(1, newOrder):
+                            integral = integratedTaylorCoefs[-1 - i] + base * integral
+                    else:
+                        # Shift the integral to be about xKnot
+                        center = xKnot - upperBound - yKnot
+                        for j in range(1, self.order[0]):
+                            for i in range(self.order[0] - 2, j - 2, -1):
+                                separatedTaylorCoefs[i] += center * separatedTaylorCoefs[i + 1]
 
-                    # 3) Sum coefficients of matching polynomial degree (the coefficients have already been multiplied together by the outer product).
+                    # vii) Multiply selfX(x) times the result by summing coefficients of matching polynomial degree.
                     for i2 in range(order2):
                         for i1 in range(order1):
                             a[i1 + i2] += taylorCoefs[i1, i2]
+
+                    # viii) Accumulate the integral.
+
+                    # The intervals are sorted so that the lower bound of the next interval is the upper bound of the previous one.
+                    lowerBound = upperBound
+                    lowerBoundIsConstant = upperBoundIsConstant
 
                 # b) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
                 m = newOrder - 1
