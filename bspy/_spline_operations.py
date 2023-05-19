@@ -250,8 +250,6 @@ def convolve(self, other, indMap = None, productType = 'S'):
                 a.fill(0.0)
                 knot = newKnots[segmentStart.knot]
 
-                # Initialize lower bound of integration.
-                lowerBound = None
                 # a) For each interval:
                 for interval in knotInfoList[segmentStart.unique].intervals:
                     # i) Convert each spline interval into a polynomial (Taylor series).
@@ -298,51 +296,53 @@ def convolve(self, other, indMap = None, productType = 'S'):
                             integratedTaylorCoefs[i1 + i2 + 1] += separatedTaylorCoefs[i1, i2] / (i1 + i2 + 1)
 
                     # vi) Evaluate the integral at the interval bounds (which are linear functions of x), shifting the Taylor series to be about the same point as selfX(x).
+                    integral = integratedTaylorCoefs.copy() # A polynomial of the form ai * (y - yKnot)^i
+
                     # First, we compute the lower bound of the integral for the interval.
-                    if lowerBound is None:
-                        lowerBoundIsConstant = knots2[interval[1]] + knots1[interval[0] + 1] >= knotInfoList[segmentStart.unique + 1].knot - atol
-                        lowerBound = knots2[interval[1]] if lowerBoundIsConstant else knots1[interval[0] + 1]
+                    lowerBoundIsConstant = yKnot + knots1[interval[0] + 1] >= knotInfoList[segmentStart.unique + 1].knot - atol
+                    lowerBound = yKnot if lowerBoundIsConstant else knots1[interval[0] + 1]
                     
                     if lowerBoundIsConstant:
-                        # Evaluate the integral at the lower bound (TODO: always zero, so cut)
-                        base = lowerBound - yKnot
-                        integral = integratedTaylorCoefs[-1]
-                        for i in range(1, newOrder):
-                            integral = integratedTaylorCoefs[-1 - i] + base * integral
+                        # The constant lower bound is yKnot, thus evaluating the integral at the lower bound give you zero.
+                        integral.fill(0.0)
                     else:
-                        # Shift the integral to be about xKnot
-                        center = xKnot - lowerBound - yKnot
-                        for j in range(1, self.order[0]):
-                            for i in range(self.order[0] - 2, j - 2, -1):
-                                separatedTaylorCoefs[i] += center * separatedTaylorCoefs[i + 1]
+                        # The variable lower bound is of the form (x - (knot after xKnot)).
+                        # That makes integral evaluated at the lower bound of the form ai * (x - (knot after xKnot + yKnot))^i.
+                        # Shift the integral to be about xKnot instead to match selfX(x).
+                        base = xKnot - (lowerBound + yKnot)
+                        for j in range(1, newOrder):
+                            for i in range(newOrder - 2, j - 2, -1):
+                                integral[i] += base * integral[i + 1]
+                        integral *= -1.0 # Subtract the lower bound
 
                     # Next, we compute the upper bound of the integral for the interval
-                    upperBoundIsConstant = knots2[interval[1] + 1] + knots1[interval[0]] <= knotInfoList[segmentStart.unique].knot + atol
-                    upperBound = knots2[interval[1] + 1] if upperBoundIsConstant else knots1[interval[0]]
+                    upperBoundIsConstant = knots2[interval[1] + 1] + xKnot <= knotInfoList[segmentStart.unique].knot + atol
+                    upperBound = knots2[interval[1] + 1] if upperBoundIsConstant else xKnot
                     
                     if upperBoundIsConstant:
-                        # Evaluate the integral at the upper bound
+                        # The constant upper bound is the knot after yKnot.
+                        # Evaluate the integral at the upper bound.
                         base = upperBound - yKnot
-                        integral = integratedTaylorCoefs[-1]
+                        value = integratedTaylorCoefs[-1]
                         for i in range(1, newOrder):
-                            integral = integratedTaylorCoefs[-1 - i] + base * integral
+                            value = integratedTaylorCoefs[-1 - i] + base * value
+                        integral[0] += value
                     else:
-                        # Shift the integral to be about xKnot
-                        center = xKnot - upperBound - yKnot
+                        # The variable upper bound is of the form (x - xKnot).
+                        # That makes integral evaluated at the upper bound of the form ai * (x - (xKnot + yKnot))^i.
+                        # Shift the integral polynomial to be about xKnot instead to match selfX(x).
+                        base = xKnot - (xKnot + yKnot)
                         for j in range(1, self.order[0]):
                             for i in range(self.order[0] - 2, j - 2, -1):
-                                separatedTaylorCoefs[i] += center * separatedTaylorCoefs[i + 1]
+                                integratedTaylorCoefs[i] += base * integratedTaylorCoefs[i + 1]
+                        integral += integratedTaylorCoefs
 
                     # vii) Multiply selfX(x) times the result by summing coefficients of matching polynomial degree.
-                    for i2 in range(order2):
-                        for i1 in range(order1):
-                            a[i1 + i2] += taylorCoefs[i1, i2]
-
                     # viii) Accumulate the integral.
-
-                    # The intervals are sorted so that the lower bound of the next interval is the upper bound of the previous one.
-                    lowerBound = upperBound
-                    lowerBoundIsConstant = upperBoundIsConstant
+                    integral = np.moveaxis(integral, -1, 0) # Move selfX(x) back to the left side
+                    for i2 in range(newOrder):
+                        for i1 in range(order1): # TODO: We know a is size newOrder, not newOrder + order1. However, we know selfX * selfY is of order1 (not 2*order1).
+                            a[i1 + i2] += integral[i1, i2]
 
                 # b) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
                 m = newOrder - 1
