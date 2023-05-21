@@ -265,10 +265,12 @@ def convolve(self, other, indMap = None, productType = 'S'):
                     ix2 = min(ix2, other.nCoef[ind2])
                     taylorCoefs = (coefs[ix1 - order1:ix1, ix2 - order2:ix2]).T # Transpose so we multiply on the left (due to matmul rules)
 
-                    # Compute taylor coefficients for the interval
+                    # Compute taylor coefficients for the interval.
+                    # Expand self(x) about knot.
+                    # Expand other(y) about yLeft.
                     bValues = np.empty((order1, order1), knots1.dtype)
                     for derivativeOrder in range(order1):
-                        bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix1, self.knots[ind1], order1, xLeft, derivativeOrder, True)
+                        bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix1, self.knots[ind1], order1, knot, derivativeOrder, True)
                     taylorCoefs = taylorCoefs @ bValues
                     taylorCoefs = np.moveaxis(taylorCoefs, -1, 0) # Move ind1's taylor coefficients to the left side so we can compute ind2's
                     bValues = np.empty((order2, order2), knots2.dtype)
@@ -310,8 +312,8 @@ def convolve(self, other, indMap = None, productType = 'S'):
                     else:
                         # The variable lower bound is of the form (x - xRight).
                         # That makes integral evaluated at the lower bound of the form ai * (x - (xRight + yLeft))^i.
-                        # Shift the integral to be about xLeft instead to match selfX(x).
-                        base = xLeft - (xRight + yLeft)
+                        # Shift the integral to be about knot instead to match selfX(x).
+                        base = knot - (xRight + yLeft)
                         for j in range(1, newOrder):
                             for i in range(newOrder - 2, j - 2, -1):
                                 integral[i] += base * integral[i + 1]
@@ -331,8 +333,8 @@ def convolve(self, other, indMap = None, productType = 'S'):
                     else:
                         # The variable upper bound is of the form (x - xLeft).
                         # That makes integral evaluated at the upper bound of the form ai * (x - (xLeft + yLeft))^i.
-                        # Shift the integral polynomial to be about xLeft instead to match selfX(x).
-                        base = xLeft - (xLeft + yLeft)
+                        # Shift the integral polynomial to be about knot instead to match selfX(x).
+                        base = knot - (xLeft + yLeft)
                         for j in range(1, self.order[0]):
                             for i in range(self.order[0] - 2, j - 2, -1):
                                 integratedTaylorCoefs[i] += base * integratedTaylorCoefs[i + 1]
@@ -342,7 +344,7 @@ def convolve(self, other, indMap = None, productType = 'S'):
                     # viii) Accumulate the integral.
                     integral = np.moveaxis(integral, -1, 0) # Move selfX(x) back to the left side
                     for i1 in range(order1):
-                        for i2 in range(newOrder - i1): # Values >= newOrder - i1 are zero by construction of the separation of variables
+                        for i2 in range(newOrder - i1): # Coefficients with indices >= newOrder - i1 are zero by construction of the separation of variables
                             a[i1 + i2] += integral[i1, i2]
 
                 # b) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
