@@ -255,23 +255,25 @@ def convolve(self, other, indMap = None, productType = 'S'):
                     # i) Convert each spline interval into a polynomial (Taylor series).
 
                     # Isolate the appropriate interval coefficients
-                    xKnot = knots1[interval[0]]
-                    ix1 = np.searchsorted(self.knots[ind1], xKnot, 'right')
+                    xLeft = knots1[interval[0]]
+                    xRight = knots1[interval[0] + 1]
+                    ix1 = np.searchsorted(self.knots[ind1], xLeft, 'right')
                     ix1 = min(ix1, self.nCoef[ind1])
-                    yKnot = knots2[interval[1]]
-                    ix2 = np.searchsorted(other.knots[ind2], yKnot, 'right')
+                    yLeft = knots2[interval[1]]
+                    yRight = knots2[interval[1] + 1]
+                    ix2 = np.searchsorted(other.knots[ind2], yLeft, 'right')
                     ix2 = min(ix2, other.nCoef[ind2])
                     taylorCoefs = (coefs[ix1 - order1:ix1, ix2 - order2:ix2]).T # Transpose so we multiply on the left (due to matmul rules)
 
                     # Compute taylor coefficients for the interval
                     bValues = np.empty((order1, order1), knots1.dtype)
                     for derivativeOrder in range(order1):
-                        bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix1, self.knots[ind1], order1, xKnot, derivativeOrder, True)
+                        bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix1, self.knots[ind1], order1, xLeft, derivativeOrder, True)
                     taylorCoefs = taylorCoefs @ bValues
                     taylorCoefs = np.moveaxis(taylorCoefs, -1, 0) # Move ind1's taylor coefficients to the left side so we can compute ind2's
                     bValues = np.empty((order2, order2), knots2.dtype)
                     for derivativeOrder in range(order2):
-                        bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix2, other.knots[ind2], order2, yKnot, derivativeOrder, True)
+                        bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix2, other.knots[ind2], order2, yLeft, derivativeOrder, True)
                     taylorCoefs = taylorCoefs @ bValues
                     taylorCoefs = (np.moveaxis(taylorCoefs, 0, -1)).T # Move ind1's taylor coefficients back to the right side, and re-transpose
 
@@ -287,7 +289,7 @@ def convolve(self, other, indMap = None, productType = 'S'):
                     # iii) Shift selfY(y) Taylor series to be about the same point as other(y).
                     for j in range(1, self.order[0]):
                         for i in range(self.order[0] - 2, j - 2, -1):
-                            separatedTaylorCoefs[i] += yKnot * separatedTaylorCoefs[i + 1]
+                            separatedTaylorCoefs[i] += yLeft * separatedTaylorCoefs[i + 1]
 
                     # iv) Multiply selfY(y) times other(y) by summing coefficients of matching polynomial degree.
                     # v) Integrate the result (trivial for polynomials, just increase the order by one and divide by the increased order).
@@ -297,42 +299,40 @@ def convolve(self, other, indMap = None, productType = 'S'):
                             integratedTaylorCoefs[i1 + i2 + 1] += separatedTaylorCoefs[i1, i2] / (i1 + i2 + 1)
 
                     # vi) Evaluate the integral at the interval bounds (which are linear functions of x), shifting the Taylor series to be about the same point as selfX(x).
-                    integral = integratedTaylorCoefs.copy() # A polynomial of the form ai * (y - yKnot)^i
+                    integral = integratedTaylorCoefs.copy() # A polynomial of the form ai * (y - yLeft)^i
 
                     # First, we compute the lower bound of the integral for the interval.
-                    lowerBoundIsConstant = yKnot + knots1[interval[0] + 1] >= knotInfoList[segmentStart.unique + 1].knot - atol
-                    lowerBound = yKnot if lowerBoundIsConstant else knots1[interval[0] + 1]
+                    lowerBoundIsConstant = yLeft + xRight >= knotInfoList[segmentStart.unique + 1].knot - atol
                     
                     if lowerBoundIsConstant:
-                        # The constant lower bound is yKnot, thus evaluating the integral at the lower bound give you zero.
+                        # The constant lower bound is yLeft, thus evaluating the integral at the lower bound give you zero.
                         integral.fill(0.0)
                     else:
-                        # The variable lower bound is of the form (x - (knot after xKnot)).
-                        # That makes integral evaluated at the lower bound of the form ai * (x - (knot after xKnot + yKnot))^i.
-                        # Shift the integral to be about xKnot instead to match selfX(x).
-                        base = xKnot - (lowerBound + yKnot)
+                        # The variable lower bound is of the form (x - xRight).
+                        # That makes integral evaluated at the lower bound of the form ai * (x - (xRight + yLeft))^i.
+                        # Shift the integral to be about xLeft instead to match selfX(x).
+                        base = xLeft - (xRight + yLeft)
                         for j in range(1, newOrder):
                             for i in range(newOrder - 2, j - 2, -1):
                                 integral[i] += base * integral[i + 1]
                         integral *= -1.0 # Subtract the lower bound
 
                     # Next, we compute the upper bound of the integral for the interval
-                    upperBoundIsConstant = knots2[interval[1] + 1] + xKnot <= knotInfoList[segmentStart.unique].knot + atol
-                    upperBound = knots2[interval[1] + 1] if upperBoundIsConstant else xKnot
+                    upperBoundIsConstant = yRight + xLeft <= knotInfoList[segmentStart.unique].knot + atol
                     
                     if upperBoundIsConstant:
-                        # The constant upper bound is the knot after yKnot.
+                        # The constant upper bound is yRight.
                         # Evaluate the integral at the upper bound.
-                        base = upperBound - yKnot
+                        base = yRight - yLeft
                         value = integratedTaylorCoefs[-1]
                         for i in range(1, newOrder):
                             value = integratedTaylorCoefs[-1 - i] + base * value
                         integral[0] += value
                     else:
-                        # The variable upper bound is of the form (x - xKnot).
-                        # That makes integral evaluated at the upper bound of the form ai * (x - (xKnot + yKnot))^i.
-                        # Shift the integral polynomial to be about xKnot instead to match selfX(x).
-                        base = xKnot - (xKnot + yKnot)
+                        # The variable upper bound is of the form (x - xLeft).
+                        # That makes integral evaluated at the upper bound of the form ai * (x - (xLeft + yLeft))^i.
+                        # Shift the integral polynomial to be about xLeft instead to match selfX(x).
+                        base = xLeft - (xLeft + yLeft)
                         for j in range(1, self.order[0]):
                             for i in range(self.order[0] - 2, j - 2, -1):
                                 integratedTaylorCoefs[i] += base * integratedTaylorCoefs[i + 1]
