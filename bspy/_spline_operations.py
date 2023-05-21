@@ -243,15 +243,15 @@ def convolve(self, other, indMap = None, productType = 'S'):
             newCoefs = np.empty(((len(segments) - 1) * newOrder, *coefs.shape[2:]), coefs.dtype)
 
             # 3) For each segment:
-            segmentStart = segments[2]
-            for segmentEnd in segments[3:]:
+            segmentStart = segments[0]
+            for segmentEnd in segments[1:]:
                 # Initialize segment coefficients.
                 a = newCoefs[segmentStart.knot:segmentStart.knot + newOrder]
                 a.fill(0.0)
                 knot = newKnots[segmentStart.knot]
 
                 # a) For each interval:
-                for interval in knotInfoList[segmentStart.unique].intervals[1:]:
+                for interval in knotInfoList[segmentStart.unique].intervals:
                     # i) Convert each spline interval into a polynomial (Taylor series).
 
                     # Isolate the appropriate interval coefficients
