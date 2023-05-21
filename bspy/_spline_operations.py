@@ -150,6 +150,13 @@ def convolve(self, other, indMap = None, productType = 'S'):
         #           viii) Accumulate the integral.
         #       b) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
 
+        def shiftPolynomial(polynomial, delta):
+            if abs(delta) > np.finfo(polynomial.dtype).eps:
+                length = len(polynomial)
+                for j in range(1, length):
+                    for i in range(length - 2, j - 2, -1):
+                        polynomial[i] += delta * polynomial[i + 1]
+
         indMap = indMap.copy() # Make a copy, since we change the list as we combine independent variables
         while indMap:
             (ind1, ind2) = indMap.pop()
@@ -289,9 +296,7 @@ def convolve(self, other, indMap = None, productType = 'S'):
                     separatedTaylorCoefs = np.moveaxis(separatedTaylorCoefs, 0, -1)
 
                     # iii) Shift selfY(y) Taylor series to be about the same point as other(y).
-                    for j in range(1, self.order[0]):
-                        for i in range(self.order[0] - 2, j - 2, -1):
-                            separatedTaylorCoefs[i] += yLeft * separatedTaylorCoefs[i + 1]
+                    shiftPolynomial(separatedTaylorCoefs, yLeft)
 
                     # iv) Multiply selfY(y) times other(y) by summing coefficients of matching polynomial degree.
                     # v) Integrate the result (trivial for polynomials, just increase the order by one and divide by the increased order).
@@ -313,10 +318,7 @@ def convolve(self, other, indMap = None, productType = 'S'):
                         # The variable lower bound is of the form (x - xRight).
                         # That makes integral evaluated at the lower bound of the form ai * (x - (xRight + yLeft))^i.
                         # Shift the integral to be about knot instead to match selfX(x).
-                        base = knot - (xRight + yLeft)
-                        for j in range(1, newOrder):
-                            for i in range(newOrder - 2, j - 2, -1):
-                                integral[i] += base * integral[i + 1]
+                        shiftPolynomial(integral, knot - (xRight + yLeft))
                         integral *= -1.0 # Subtract the lower bound
 
                     # Next, we compute the upper bound of the integral for the interval
@@ -334,10 +336,7 @@ def convolve(self, other, indMap = None, productType = 'S'):
                         # The variable upper bound is of the form (x - xLeft).
                         # That makes integral evaluated at the upper bound of the form ai * (x - (xLeft + yLeft))^i.
                         # Shift the integral polynomial to be about knot instead to match selfX(x).
-                        base = knot - (xLeft + yLeft)
-                        for j in range(1, newOrder):
-                            for i in range(newOrder - 2, j - 2, -1):
-                                integratedTaylorCoefs[i] += base * integratedTaylorCoefs[i + 1]
+                        shiftPolynomial(integratedTaylorCoefs, knot - (xLeft + yLeft))
                         integral += integratedTaylorCoefs
 
                     # vii) Multiply selfX(x) times the result by summing coefficients of matching polynomial degree.
