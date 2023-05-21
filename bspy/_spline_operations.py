@@ -335,8 +335,8 @@ def convolve(self, other, indMap = None, productType = 'S'):
                         # That makes integral evaluated at the upper bound of the form ai * (x - (xLeft + yLeft))^i.
                         # Shift the integral polynomial to be about knot instead to match selfX(x).
                         base = knot - (xLeft + yLeft)
-                        for j in range(1, self.order[0]):
-                            for i in range(self.order[0] - 2, j - 2, -1):
+                        for j in range(1, newOrder):
+                            for i in range(newOrder - 2, j - 2, -1):
                                 integratedTaylorCoefs[i] += base * integratedTaylorCoefs[i + 1]
                         integral += integratedTaylorCoefs
 
