@@ -243,15 +243,15 @@ def convolve(self, other, indMap = None, productType = 'S'):
             newCoefs = np.empty(((len(segments) - 1) * newOrder, *coefs.shape[2:]), coefs.dtype)
 
             # 3) For each segment:
-            segmentStart = segments[0]
-            for segmentEnd in segments[1:]:
+            segmentStart = segments[2]
+            for segmentEnd in segments[3:]:
                 # Initialize segment coefficients.
                 a = newCoefs[segmentStart.knot:segmentStart.knot + newOrder]
                 a.fill(0.0)
                 knot = newKnots[segmentStart.knot]
 
                 # a) For each interval:
-                for interval in knotInfoList[segmentStart.unique].intervals:
+                for interval in knotInfoList[segmentStart.unique].intervals[1:]:
                     # i) Convert each spline interval into a polynomial (Taylor series).
 
                     # Isolate the appropriate interval coefficients
@@ -276,7 +276,8 @@ def convolve(self, other, indMap = None, productType = 'S'):
                     taylorCoefs = (np.moveaxis(taylorCoefs, 0, -1)).T # Move ind1's taylor coefficients back to the right side, and re-transpose
 
                     # ii) Separate the variables for the self spline interval: self(x - y) = tensor product of selfX(x) * selfY(y).
-                    separatedTaylorCoefs = np.empty((order1, *taylorCoefs.shape), taylorCoefs.dtype)
+                    # Initialize coefficients to zero (separatedTaylorCoefs[i, j] = 0 for i + j >= order1).
+                    separatedTaylorCoefs = np.zeros((order1, *taylorCoefs.shape), taylorCoefs.dtype)
                     for i in range(order1):
                         for j in range(order1 - i):
                             separatedTaylorCoefs[i, j] = comb(i + j, i) * ((-1) ** j) * taylorCoefs[i + j]
@@ -340,8 +341,8 @@ def convolve(self, other, indMap = None, productType = 'S'):
                     # vii) Multiply selfX(x) times the result by summing coefficients of matching polynomial degree.
                     # viii) Accumulate the integral.
                     integral = np.moveaxis(integral, -1, 0) # Move selfX(x) back to the left side
-                    for i2 in range(newOrder):
-                        for i1 in range(order1): # TODO: We know a is size newOrder, not newOrder + order1. However, we know selfX * selfY is of order1 (not 2*order1).
+                    for i1 in range(order1):
+                        for i2 in range(newOrder - i1): # Values >= newOrder - i1 are zero by construction of the separation of variables
                             a[i1 + i2] += integral[i1, i2]
 
                 # b) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
