@@ -4,6 +4,13 @@ from collections import namedtuple
 from enum import Enum
 from math import comb
 
+def _shiftPolynomial(polynomial, delta):
+    if abs(delta) > np.finfo(polynomial.dtype).eps:
+        length = len(polynomial)
+        for j in range(1, length):
+            for i in range(length - 2, j - 2, -1):
+                polynomial[i] += delta * polynomial[i + 1]
+
 def add(self, other, indMap = None):
     assert self.nDep == other.nDep
     selfMapped = []
@@ -134,33 +141,9 @@ def convolve(self, other, indMap = None, productType = 'S'):
         coefs = outer[0]
 
     if indMap is not None:
-        # Now we need to convolve matching independent variables (variables mapped to each other).
-        # We can't do this directly with b-spline coefficients, but we can indirectly with the following steps:
-        #   1) Determine the knots of the convolved spline from the knots of the matching independent variables.
-        #   2) Use the knots to determine segments and integration intervals that compute integral of self(x - y) * other(y) dy.
-        #   3) For each segment:
-        #       a) For each interval:
-        #           i) Convert each spline interval into a polynomial (Taylor series).
-        #           ii) Separate the variables for the self spline interval: self(x - y) = tensor product of selfX(x) * selfY(y).
-        #           iii) Shift selfY(y) Taylor series to be about the same point as other(y).
-        #           iv) Multiply selfY(y) times other(y) by summing coefficients of matching polynomial degree.
-        #           v) Integrate the result (trivial for polynomials, just increase the order by one and divide by the increased order).
-        #           vi) Evaluate the integral at the interval endpoints (which are linear functions of x), shifting the Taylor series to be about the same point as selfX(x).
-        #           vii) Multiply selfX(x) times the result by summing coefficients of matching polynomial degree.
-        #           viii) Accumulate the integral.
-        #       b) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
-
-        def shiftPolynomial(polynomial, delta):
-            if abs(delta) > np.finfo(polynomial.dtype).eps:
-                length = len(polynomial)
-                for j in range(1, length):
-                    for i in range(length - 2, j - 2, -1):
-                        polynomial[i] += delta * polynomial[i + 1]
-
         indMap = indMap.copy() # Make a copy, since we change the list as we combine independent variables
         while indMap:
             (ind1, ind2) = indMap.pop()
-            # 1) Determine the knots of the convolved spline from the knots of the matching independent variables.
 
             # First, get multiplicities of the knots for each independent variable.
             order1 = self.order[ind1]
@@ -169,6 +152,24 @@ def convolve(self, other, indMap = None, productType = 'S'):
             order2 = other.order[ind2]
             knots2, multiplicities2 = np.unique(other.knots[ind2][order2-1:other.nCoef[ind2]+1], return_counts=True)
             multiplicities2[0] = multiplicities2[-1] = order2
+
+            # Now we need to convolve matching independent variables (variables mapped to each other).
+            # We can't do this directly with b-spline coefficients, but we can indirectly with the following steps:
+            #   1) Determine the knots of the convolved spline from the knots of the matching independent variables.
+            #   2) Use the knots to determine segments and integration intervals that compute integral of self(x - y) * other(y) dy.
+            #   3) For each segment:
+            #       a) For each interval:
+            #           i) Convert each spline interval into a polynomial (Taylor series).
+            #           ii) Separate the variables for the self spline interval: self(x - y) = tensor product of selfX(x) * selfY(y).
+            #           iii) Shift selfY(y) Taylor series to be about the same point as other(y).
+            #           iv) Multiply selfY(y) times other(y) by summing coefficients of matching polynomial degree.
+            #           v) Integrate the result (trivial for polynomials, just increase the order by one and divide by the increased order).
+            #           vi) Evaluate the integral at the interval endpoints (which are linear functions of x), shifting the Taylor series to be about the same point as selfX(x).
+            #           vii) Multiply selfX(x) times the result by summing coefficients of matching polynomial degree.
+            #           viii) Accumulate the integral.
+            #       b) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
+
+            # 1) Determine the knots of the convolved spline from the knots of the matching independent variables.
 
             # Create a list of all the knot intervals.
             IntervalKind = Enum('IntervalKind', ('Start', 'End', 'EndPoint'))
@@ -296,7 +297,7 @@ def convolve(self, other, indMap = None, productType = 'S'):
                     separatedTaylorCoefs = np.moveaxis(separatedTaylorCoefs, 0, -1)
 
                     # iii) Shift selfY(y) Taylor series to be about the same point as other(y).
-                    shiftPolynomial(separatedTaylorCoefs, yLeft)
+                    _shiftPolynomial(separatedTaylorCoefs, yLeft)
 
                     # iv) Multiply selfY(y) times other(y) by summing coefficients of matching polynomial degree.
                     # v) Integrate the result (trivial for polynomials, just increase the order by one and divide by the increased order).
@@ -318,7 +319,7 @@ def convolve(self, other, indMap = None, productType = 'S'):
                         # The variable lower bound is of the form (x - xRight).
                         # That makes integral evaluated at the lower bound of the form ai * (x - (xRight + yLeft))^i.
                         # Shift the integral to be about knot instead to match selfX(x).
-                        shiftPolynomial(integral, knot - (xRight + yLeft))
+                        _shiftPolynomial(integral, knot - (xRight + yLeft))
                         integral *= -1.0 # Subtract the lower bound
 
                     # Next, we compute the upper bound of the integral for the interval
@@ -336,7 +337,7 @@ def convolve(self, other, indMap = None, productType = 'S'):
                         # The variable upper bound is of the form (x - xLeft).
                         # That makes integral evaluated at the upper bound of the form ai * (x - (xLeft + yLeft))^i.
                         # Shift the integral polynomial to be about knot instead to match selfX(x).
-                        shiftPolynomial(integratedTaylorCoefs, knot - (xLeft + yLeft))
+                        _shiftPolynomial(integratedTaylorCoefs, knot - (xLeft + yLeft))
                         integral += integratedTaylorCoefs
 
                     # vii) Multiply selfX(x) times the result by summing coefficients of matching polynomial degree.
@@ -492,17 +493,9 @@ def multiply(self, other, indMap = None, productType = 'S'):
         coefs = outer[0]
 
     if indMap is not None:
-        # Now we need to combine like terms for matching independent variables (variables mapped to each other).
-        # We can't do this directly with b-spline coefficients, but we can indirectly with the following steps:
-        #   1) Use the combined knots from matching independent variables to divide the spline into segments.
-        #   2) Convert each spline segment into a polynomial (Taylor series).
-        #   3) Sum coefficients of matching polynomial degree (the coefficients have already been multiplied together).
-        #   4) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
-
         indMap = indMap.copy() # Make a copy, since we change the list as we combine independent variables
         while indMap:
             (ind1, ind2) = indMap.pop()
-            # 1) Use the combined knots from matching independent variables to divide the spline into segments.
 
             # First, get multiplicities of the knots for each independent variable.
             order1 = self.order[ind1]
@@ -511,9 +504,18 @@ def multiply(self, other, indMap = None, productType = 'S'):
             order2 = other.order[ind2]
             knots2, multiplicities2 = np.unique(other.knots[ind2][order2-1:other.nCoef[ind2]+1], return_counts=True)
             multiplicities2[0] = multiplicities2[-1] = order2
-            assert knots1[0] == knots2[0] and knots1[-1] == knots2[-1], f"self[{ind1}] domain doesn't match other[{ind2}]"
+
+            # Now we need to combine like terms for matching independent variables (variables mapped to each other).
+            # We can't do this directly with b-spline coefficients, but we can indirectly with the following steps:
+            #   1) Use the combined knots from matching independent variables to divide the spline into segments.
+            #   2) Convert each spline segment into a polynomial (Taylor series).
+            #   3) Sum coefficients of matching polynomial degree (the coefficients have already been multiplied together).
+            #   4) Use blossoms to compute the spline segment coefficients from the polynomial segment (uses the raceme function from E.T.Y. Lee).
+
+            # 1) Use the combined knots from matching independent variables to divide the spline into segments.
 
             # Compute the new order of the combined spline and its new knots array.
+            assert knots1[0] == knots2[0] and knots1[-1] == knots2[-1], f"self[{ind1}] domain doesn't match other[{ind2}]"
             newOrder = order1 + order2 - 1
             newKnots = [knots1[0]] * newOrder
             newMultiplicities = [newOrder]
