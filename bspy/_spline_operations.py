@@ -388,11 +388,11 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
                         yRight = knots2[interval[1] + 1]
                         ix2 = np.searchsorted(other.knots[ind2], yLeft, 'right')
                         ix2 = min(ix2, other.nCoef[ind2])
-                        taylorCoefs = (coefs[ix1 - order1:ix1, ix2 - order2:ix2]).T # Transpose so we multiply on the left (due to matmul rules)
 
                         # Compute taylor coefficients for the interval.
                         # Expand self(x) about knot.
                         # Expand other(y) about yLeft.
+                        taylorCoefs = (coefs[ix1 - order1:ix1, ix2 - order2:ix2]).T # Transpose so we multiply on the left (due to matmul rules)
                         bValues = np.empty((order1, order1), knots1.dtype)
                         for derivativeOrder in range(order1):
                             bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix1, self.knots[ind1], order1, knot, derivativeOrder, True)
@@ -471,9 +471,9 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
                     ix1 = min(ix1, self.nCoef[ind1])
                     ix2 = np.searchsorted(other.knots[ind2], knot, 'right')
                     ix2 = min(ix2, other.nCoef[ind2])
-                    taylorCoefs = (coefs[ix1 - order1:ix1, ix2 - order2:ix2]).T # Transpose so we multiply on the left (due to matmul rules)
 
                     # Compute taylor coefficients for the segment
+                    taylorCoefs = (coefs[ix1 - order1:ix1, ix2 - order2:ix2]).T # Transpose so we multiply on the left (due to matmul rules)
                     bValues = np.empty((order1, order1), knots1.dtype)
                     for derivativeOrder in range(order1):
                         bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix1, self.knots[ind1], order1, knot, derivativeOrder, True)
