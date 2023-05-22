@@ -55,6 +55,9 @@
                                 <a class="function" href="#Spline.contract">contract</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.convolve">convolve</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.cross">cross</a>
                         </li>
                         <li>
@@ -495,6 +498,46 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">)</span>
 
+    <span class="k">def</span> <span class="nf">convolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">productType</span> <span class="o">=</span> <span class="s1">&#39;S&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convolve two splines (cross, dot, or scalar product).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : `Spline`</span>
+<span class="sd">            The spline to convolve with self.</span>
+
+<span class="sd">        indMap : `iterable` or `None`, optional</span>
+<span class="sd">            An iterable of pairs of indices. </span>
+<span class="sd">            Each pair (n, m) maps the mth independent variable of other to the nth independent variable of self. </span>
+<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
+<span class="sd">            Unmapped independent variables remain independent (the default).</span>
+
+<span class="sd">        productType : {&#39;C&#39;, &#39;D&#39;, &#39;S&#39;}, optional</span>
+<span class="sd">            The type of product to perform on the dependent variables (default is &#39;S&#39;).</span>
+<span class="sd">                &#39;C&#39; is for a cross product, self x other (nDep must be 2 or 3).</span>
+<span class="sd">                &#39;D&#39; is for a dot product (nDep must match).</span>
+<span class="sd">                &#39;S&#39; is for a scalar product (nDep must be 1 for one of the splines).</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The result of convolving other with self.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `multiply` : Multiply two splines (cross, dot, or scalar product).</span>
+<span class="sd">        `integrate` : Integrate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Taken in part from Lee, E. T. Y. &quot;Computing a chain of blossoms, with application to products of splines.&quot; </span>
+<span class="sd">        Computer Aided Geometric Design 11, no. 6 (1994): 597-620.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="n">mapping</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">multiplyAndConvolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">,</span> <span class="n">productType</span><span class="p">)</span>
+
     <span class="k">def</span> <span class="nf">cross</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Cross product a spline with `nDep` of 2 or 3 by the given vector.</span>
@@ -883,7 +926,7 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        other : `Spline`</span>
-<span class="sd">            The spline to multiply by self. The number of dependent variables must match self.</span>
+<span class="sd">            The spline to multiply by self.</span>
 
 <span class="sd">        indMap : `iterable` or `None`, optional</span>
 <span class="sd">            An iterable of pairs of indices. </span>
@@ -907,14 +950,16 @@
 <span class="sd">        --------</span>
 <span class="sd">        `add` : Add two splines.</span>
 <span class="sd">        `subtract` : Subtract two splines.</span>
-<span class="sd">        `common_basis` : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
+<span class="sd">        `convolve` : Convolve two splines (cross, dot, or scalar product).</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
 <span class="sd">        Taken in part from Lee, E. T. Y. &quot;Computing a chain of blossoms, with application to products of splines.&quot; </span>
 <span class="sd">        Computer Aided Geometric Design 11, no. 6 (1994): 597-620.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">,</span> <span class="n">productType</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="n">mapping</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">multiplyAndConvolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">,</span> <span class="n">productType</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">range_bounds</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -1515,6 +1560,46 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">)</span>
 
+    <span class="k">def</span> <span class="nf">convolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">productType</span> <span class="o">=</span> <span class="s1">&#39;S&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convolve two splines (cross, dot, or scalar product).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : `Spline`</span>
+<span class="sd">            The spline to convolve with self.</span>
+
+<span class="sd">        indMap : `iterable` or `None`, optional</span>
+<span class="sd">            An iterable of pairs of indices. </span>
+<span class="sd">            Each pair (n, m) maps the mth independent variable of other to the nth independent variable of self. </span>
+<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
+<span class="sd">            Unmapped independent variables remain independent (the default).</span>
+
+<span class="sd">        productType : {&#39;C&#39;, &#39;D&#39;, &#39;S&#39;}, optional</span>
+<span class="sd">            The type of product to perform on the dependent variables (default is &#39;S&#39;).</span>
+<span class="sd">                &#39;C&#39; is for a cross product, self x other (nDep must be 2 or 3).</span>
+<span class="sd">                &#39;D&#39; is for a dot product (nDep must match).</span>
+<span class="sd">                &#39;S&#39; is for a scalar product (nDep must be 1 for one of the splines).</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The result of convolving other with self.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `multiply` : Multiply two splines (cross, dot, or scalar product).</span>
+<span class="sd">        `integrate` : Integrate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Taken in part from Lee, E. T. Y. &quot;Computing a chain of blossoms, with application to products of splines.&quot; </span>
+<span class="sd">        Computer Aided Geometric Design 11, no. 6 (1994): 597-620.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="n">mapping</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">multiplyAndConvolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">,</span> <span class="n">productType</span><span class="p">)</span>
+
     <span class="k">def</span> <span class="nf">cross</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Cross product a spline with `nDep` of 2 or 3 by the given vector.</span>
@@ -1903,7 +1988,7 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        other : `Spline`</span>
-<span class="sd">            The spline to multiply by self. The number of dependent variables must match self.</span>
+<span class="sd">            The spline to multiply by self.</span>
 
 <span class="sd">        indMap : `iterable` or `None`, optional</span>
 <span class="sd">            An iterable of pairs of indices. </span>
@@ -1927,14 +2012,16 @@
 <span class="sd">        --------</span>
 <span class="sd">        `add` : Add two splines.</span>
 <span class="sd">        `subtract` : Subtract two splines.</span>
-<span class="sd">        `common_basis` : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
+<span class="sd">        `convolve` : Convolve two splines (cross, dot, or scalar product).</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
 <span class="sd">        Taken in part from Lee, E. T. Y. &quot;Computing a chain of blossoms, with application to products of splines.&quot; </span>
 <span class="sd">        Computer Aided Geometric Design 11, no. 6 (1994): 597-620.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">,</span> <span class="n">productType</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="n">mapping</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">multiplyAndConvolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">,</span> <span class="n">productType</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">range_bounds</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -2720,6 +2807,98 @@ The contracted spline.</li>
 <h6 id="see-also">See Also</h6>
 
 <p><code><a href="#Spline.evaluate">evaluate</a></code>:  Compute the value of the spline at given parameter values.  </p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.convolve" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#Spline.convolve">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">convolve</span><span class="signature">(self, other, indMap=None, productType=&#39;S&#39;)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">convolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">productType</span> <span class="o">=</span> <span class="s1">&#39;S&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convolve two splines (cross, dot, or scalar product).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : `Spline`</span>
+<span class="sd">            The spline to convolve with self.</span>
+
+<span class="sd">        indMap : `iterable` or `None`, optional</span>
+<span class="sd">            An iterable of pairs of indices. </span>
+<span class="sd">            Each pair (n, m) maps the mth independent variable of other to the nth independent variable of self. </span>
+<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
+<span class="sd">            Unmapped independent variables remain independent (the default).</span>
+
+<span class="sd">        productType : {&#39;C&#39;, &#39;D&#39;, &#39;S&#39;}, optional</span>
+<span class="sd">            The type of product to perform on the dependent variables (default is &#39;S&#39;).</span>
+<span class="sd">                &#39;C&#39; is for a cross product, self x other (nDep must be 2 or 3).</span>
+<span class="sd">                &#39;D&#39; is for a dot product (nDep must match).</span>
+<span class="sd">                &#39;S&#39; is for a scalar product (nDep must be 1 for one of the splines).</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The result of convolving other with self.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `multiply` : Multiply two splines (cross, dot, or scalar product).</span>
+<span class="sd">        `integrate` : Integrate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Taken in part from Lee, E. T. Y. &quot;Computing a chain of blossoms, with application to products of splines.&quot; </span>
+<span class="sd">        Computer Aided Geometric Design 11, no. 6 (1994): 597-620.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="n">mapping</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">multiplyAndConvolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">,</span> <span class="n">productType</span><span class="p">)</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Convolve two splines (cross, dot, or scalar product).</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>other</strong> (<code><a href="#Spline">Spline</a></code>):
+The spline to convolve with self.</li>
+<li><strong>indMap</strong> (<code>iterable</code> or <code>None</code>, optional):
+An iterable of pairs of indices. 
+Each pair (n, m) maps the mth independent variable of other to the nth independent variable of self. 
+An independent variable can map to no more than one other independent variable.
+Unmapped independent variables remain independent (the default).</li>
+<li><strong>productType</strong> ({'C', 'D', 'S'}, optional):
+The type of product to perform on the dependent variables (default is 'S').
+   'C' is for a cross product, self x other (nDep must be 2 or 3).
+   'D' is for a dot product (nDep must match).
+   'S' is for a scalar product (nDep must be 1 for one of the splines).</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+The result of convolving other with self.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.multiply">multiply</a></code>:  Multiply two splines (cross, dot, or scalar product). <br />
+<code><a href="#Spline.integrate">integrate</a></code>:  Integrate a spline with respect to one of its independent variables, returning the resulting spline.  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>Taken in part from Lee, E. T. Y. "Computing a chain of blossoms, with application to products of splines." 
+Computer Aided Geometric Design 11, no. 6 (1994): 597-620.</p>
 </div>
 
 
@@ -3720,7 +3899,7 @@ A spline curve which approximates the data points.</li>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        other : `Spline`</span>
-<span class="sd">            The spline to multiply by self. The number of dependent variables must match self.</span>
+<span class="sd">            The spline to multiply by self.</span>
 
 <span class="sd">        indMap : `iterable` or `None`, optional</span>
 <span class="sd">            An iterable of pairs of indices. </span>
@@ -3744,14 +3923,16 @@ A spline curve which approximates the data points.</li>
 <span class="sd">        --------</span>
 <span class="sd">        `add` : Add two splines.</span>
 <span class="sd">        `subtract` : Subtract two splines.</span>
-<span class="sd">        `common_basis` : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
+<span class="sd">        `convolve` : Convolve two splines (cross, dot, or scalar product).</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
 <span class="sd">        Taken in part from Lee, E. T. Y. &quot;Computing a chain of blossoms, with application to products of splines.&quot; </span>
 <span class="sd">        Computer Aided Geometric Design 11, no. 6 (1994): 597-620.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">,</span> <span class="n">productType</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="n">mapping</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">multiplyAndConvolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">,</span> <span class="n">productType</span><span class="p">)</span>
 </pre></div>
 
         </details>
@@ -3762,7 +3943,7 @@ A spline curve which approximates the data points.</li>
 
 <ul>
 <li><strong>other</strong> (<code><a href="#Spline">Spline</a></code>):
-The spline to multiply by self. The number of dependent variables must match self.</li>
+The spline to multiply by self.</li>
 <li><strong>indMap</strong> (<code>iterable</code> or <code>None</code>, optional):
 An iterable of pairs of indices. 
 Each pair (n, m) maps the mth independent variable of other to the nth independent variable of self. 
@@ -3787,7 +3968,7 @@ The result of multiplying other to self.</li>
 
 <p><code><a href="#Spline.add">add</a></code>:  Add two splines. <br />
 <code><a href="#Spline.subtract">subtract</a></code>:  Subtract two splines. <br />
-<code><a href="#Spline.common_basis">common_basis</a></code>:  Align a collection of splines to a common basis, elevating the order and adding knots as needed.  </p>
+<code><a href="#Spline.convolve">convolve</a></code>:  Convolve two splines (cross, dot, or scalar product).  </p>
 
 <h6 id="notes">Notes</h6>
 

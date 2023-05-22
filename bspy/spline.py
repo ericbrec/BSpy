@@ -372,7 +372,9 @@ class Spline:
         Taken in part from Lee, E. T. Y. "Computing a chain of blossoms, with application to products of splines." 
         Computer Aided Geometric Design 11, no. 6 (1994): 597-620.
         """
-        return bspy._spline_operations.convolve(self, other, indMap, productType)
+        if indMap is not None:
+            indMap = [(*mapping, True) for mapping in indMap]
+        return bspy._spline_operations.multiplyAndConvolve(self, other, indMap, productType)
 
     def cross(self, vector):
         """
@@ -793,7 +795,9 @@ class Spline:
         Taken in part from Lee, E. T. Y. "Computing a chain of blossoms, with application to products of splines." 
         Computer Aided Geometric Design 11, no. 6 (1994): 597-620.
         """
-        return bspy._spline_operations.multiply(self, other, indMap, productType)
+        if indMap is not None:
+            indMap = [(*mapping, False) for mapping in indMap]
+        return bspy._spline_operations.multiplyAndConvolve(self, other, indMap, productType)
 
     def range_bounds(self):
         """
