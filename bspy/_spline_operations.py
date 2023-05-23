@@ -426,10 +426,12 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
                         # vi) Evaluate the integral at the interval bounds (which are linear functions of x), shifting the Taylor series to be about the same point as selfX(x).
                         integral = integratedTaylorCoefs.copy() # A polynomial of the form ai * (y - yLeft)^i
 
-                        # First, we compute the lower bound of the integral for the interval.
-                        lowerBoundIsConstant = yLeft + xRight >= knotInfoList[segmentStart.unique + 1].knot - atol
+                        # First, we determine the lower bound of the integral for the interval.
+                        # It's yLeft if xRight >= knotRight - yLeft.
+                        # Otherwise, it's x - xRight.
+                        boundIsY = yLeft + xRight >= knotInfoList[segmentStart.unique + 1].knot - atol
                         
-                        if lowerBoundIsConstant:
+                        if boundIsY:
                             # The constant lower bound is yLeft, thus evaluating the integral at the lower bound give you zero.
                             integral.fill(0.0)
                         else:
@@ -439,10 +441,12 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
                             _shiftPolynomial(integral, knot - (xRight + yLeft))
                             integral *= -1.0 # Subtract the lower bound
 
-                        # Next, we compute the upper bound of the integral for the interval
-                        upperBoundIsConstant = yRight + xLeft <= knotInfoList[segmentStart.unique].knot + atol
+                        # Next, we determine the upper bound of the integral for the interval.
+                        # It's yRight if xLeft <= knotLeft - yRight.
+                        # Otherwise, it's x - xLeft.
+                        boundIsY = yRight + xLeft <= knotInfoList[segmentStart.unique].knot + atol
                         
-                        if upperBoundIsConstant:
+                        if boundIsY:
                             # The constant upper bound is yRight.
                             # Evaluate the integral at the upper bound.
                             base = yRight - yLeft
