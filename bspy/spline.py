@@ -17,35 +17,35 @@ def _isIterable(object):
 class Spline:
     """
     A class to model, represent, and process piecewise polynomial tensor product
-    functions (spline functions) as linear combinations of B-splines. 
+    functions (splines) as linear combinations of B-splines. 
 
     Parameters
     ----------
     nInd : `int`
-        The number of independent variables of the spline
+        The number of independent variables of the spline.
 
     nDep : `int`
-        The number of dependent variables of the spline
+        The number of dependent variables of the spline.
     
     order : `tuple`
         A tuple of length nInd where each integer entry represents the
-        polynomial order of the function in that variable
+        polynomial order of the spline in that variable.
 
     nCoef : `tuple`
         A tuple of length nInd where each integer entry represents the
-        dimension (i.e. number of B-spline coefficients) of the function
-        space in that variable
+        dimension (i.e. number of B-spline coefficients) of the spline
+        in that variable.
 
     knots : `list`
-        A list of the lists of the knots of the spline in each independent variable
+        A list of the lists of the knots of the spline in each independent variable.
 
     coefs : array-like
         A list of the B-spline coefficients of the spline.
     
     accuracy : `float`, optional
-        Each spline function is presumed to be an approximation of something else. 
+        Each spline is presumed to be an approximation of something else. 
         The `accuracy` stores the infinity norm error of the difference between 
-        the given spline function and that something else. Default is zero.
+        the given spline and that something else. Default is zero.
 
     metadata : `dict`, optional
         A dictionary of ancillary data to store with the spline. Default is {}.
@@ -424,7 +424,7 @@ class Spline:
         Notes
         -----
         The derivative method uses the de Boor recurrence relations for a B-spline
-        series to evaluate a spline function.  The non-zero B-splines are
+        series to evaluate a spline.  The non-zero B-splines are
         evaluated, then the dot product of those B-splines with the vector of
         B-spline coefficients is computed.
         """
@@ -568,7 +568,7 @@ class Spline:
         Notes
         -----
         The evaluate method uses the de Boor recurrence relations for a B-spline
-        series to evaluate a spline function.  The non-zero B-splines are
+        series to evaluate a spline.  The non-zero B-splines are
         evaluated, then the dot product of those B-splines with the vector of
         B-spline coefficients is computed.
         """
@@ -726,19 +726,52 @@ class Spline:
         return bspy._spline_operations.integrate(self, with_respect_to)
 
     @staticmethod
-    def least_squares(dataPoints):
+    def least_squares(nInd, nDep, order, dataPoints, knots = None, accuracy = 0.0, metadata = {}):
         """
-        Fit a curve to a string of data points using the method of least squares.
+        Fit a spline to an array of data points using the method of least squares.
 
         Parameters
         ----------
-        dataPoints : `iterable` containing the data points to fit.
-            Each of the data points is of length nDep.
+        nInd : `int`
+            The number of independent variables of the spline.
+
+        nDep : `int`
+            The number of dependent variables of the spline.
+        
+        order : `tuple`
+            A tuple of length nInd where each integer entry represents the
+            polynomial order of the spline in that variable. When in doubt,
+            use `[4] * nInd` (a cubic spline).
+
+        dataPoints : `iterable` of array-like values
+            A collection of data points. Each data point is an array of length `nInd + nDep`. 
+            The first `nInd` values designate the independent values for the point.
+            The next `nDep` values designate the dependent values for the point. 
+            The data points need not form a regular mesh or be in any particular order.
+            In addition, each data point may instead have `nInd + nDep * (nInd + 1)` values, 
+            the first `nInd` being independent and the next `nInd + 1` sets of `nDep` values designating 
+            the dependent point and its first derivatives with respect to each independent variable.
+
+        knots : `list`, optional
+            A list of the lists of the knots of the spline in each independent variable.
+            Default is `None`, in which case knots are chosen automatically.
+        
+        accuracy : `float`, optional
+            The desired error of the spline's data fit. The value is only used when knots are chosen automatically. 
+            Regardless, the actual accuracy after fitting is stored in spline.accuracy. Default value is zero.
+
+        metadata : `dict`, optional
+            A dictionary of ancillary data to store with the spline. Default is {}.
 
         Returns
         -------
         spline : `Spline`
             A spline curve which approximates the data points.
+
+        Notes
+        -----
+        Uses `numpy.linalg.lstsq` to compute the least squares solution. The returned spline.accuracy is the 
+        maximum residual across dependent dimensions.
         """
         return bspy._spline_fitting.least_squares(dataPoints)
 

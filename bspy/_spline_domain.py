@@ -1,5 +1,4 @@
 import numpy as np
-import bspy.spline
 
 def clamp(self, left, right):
     bounds = self.nInd * [[None, None]]

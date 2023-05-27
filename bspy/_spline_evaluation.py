@@ -1,5 +1,4 @@
 import numpy as np
-import bspy.spline
 
 def blossom(self, uvw):
     def blossom_values(knot, knots, order, u):

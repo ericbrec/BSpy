@@ -1,6 +1,5 @@
 import numpy as np
 from collections import namedtuple
-import bspy.spline
 
 def zeros(self, epsilon=None):
     assert self.nInd == self.nDep
