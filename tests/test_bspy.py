@@ -819,6 +819,42 @@ def test_multiply():
             maxerror = max(maxerror, (xTest - x) ** 2)
     assert maxerror <= np.finfo(float).eps
 
+def test_least_squares():
+    spline = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0.2, 0.3, 0.4, 0.5, 0.5, 1, 1], float)], 
+        np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
+    values = [(u, *spline([u])) for u in np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], spline.nCoef[0] + 5)]
+    u = spline.knots[0][spline.order[0]-1]
+    values.append((u, *spline([u]), *spline.derivative([1], [u])))
+    u = spline.knots[0][spline.nCoef[0]]
+    values.append((u, *spline([u]), *spline.derivative([1], [u])))
+    fit = bspy.Spline.least_squares(spline.nInd, spline.nDep, spline.order, values, spline.knots)
+    maxerror = 0.0
+    for u in np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], 100):
+        xyz = spline([u]) - fit([u])
+        maxerror = max(maxerror, np.sqrt(xyz @ xyz))
+    assert maxerror <= np.sqrt(np.finfo(float).eps)
+    assert maxerror <= fit.accuracy
+
+    spline = mySurface
+    values = []
+    u = spline.knots[0][spline.order[0]-1]
+    v = spline.knots[1][spline.order[1]-1]
+    values.append((u, v, *spline([u, v]), *spline.derivative([1, 0], [u, v]), *spline.derivative([0, 1], [u, v])))
+    for u in np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], spline.nCoef[0] + 3):
+        for v in np.linspace(spline.knots[1][spline.order[1]-1], spline.knots[1][spline.nCoef[1]], spline.nCoef[1] + 7):
+            values.append((u, v, *spline((u, v))))
+    u = spline.knots[0][spline.nCoef[0]]
+    v = spline.knots[1][spline.nCoef[1]]
+    values.append((u, v, *spline([u, v]), *spline.derivative([1, 0], [u, v]), *spline.derivative([0, 1], [u, v])))
+    fit = bspy.Spline.least_squares(spline.nInd, spline.nDep, spline.order, values, spline.knots)
+    maxerror = 0.0
+    for u in np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], 100):
+        for v in np.linspace(spline.knots[1][spline.order[1]-1], spline.knots[1][spline.nCoef[1]], 100):
+            xyz = spline([u,v]) - fit([u,v])
+            maxerror = max(maxerror, np.sqrt(xyz @ xyz))
+    assert maxerror <= np.sqrt(np.finfo(float).eps)
+    assert maxerror <= fit.accuracy
+
 def test_remove_knots():
     maxerror = 0.0
     slimmed, removed, error = myCurve.remove_knots()

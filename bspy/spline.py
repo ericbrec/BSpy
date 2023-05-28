@@ -773,7 +773,7 @@ class Spline:
         Uses `numpy.linalg.lstsq` to compute the least squares solution. The returned spline.accuracy is the 
         maximum residual across dependent dimensions.
         """
-        return bspy._spline_fitting.least_squares(dataPoints)
+        return bspy._spline_fitting.least_squares(nInd, nDep, order, dataPoints, knots, accuracy, metadata)
 
     @staticmethod
     def load(fileName, splineType=None):
