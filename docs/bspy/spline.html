@@ -179,35 +179,35 @@
 <span class="k">class</span> <span class="nc">Spline</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A class to model, represent, and process piecewise polynomial tensor product</span>
-<span class="sd">    functions (spline functions) as linear combinations of B-splines. </span>
+<span class="sd">    functions (splines) as linear combinations of B-splines. </span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    nInd : `int`</span>
-<span class="sd">        The number of independent variables of the spline</span>
+<span class="sd">        The number of independent variables of the spline.</span>
 
 <span class="sd">    nDep : `int`</span>
-<span class="sd">        The number of dependent variables of the spline</span>
+<span class="sd">        The number of dependent variables of the spline.</span>
 <span class="sd">    </span>
 <span class="sd">    order : `tuple`</span>
 <span class="sd">        A tuple of length nInd where each integer entry represents the</span>
-<span class="sd">        polynomial order of the function in that variable</span>
+<span class="sd">        polynomial order of the spline in that variable.</span>
 
 <span class="sd">    nCoef : `tuple`</span>
 <span class="sd">        A tuple of length nInd where each integer entry represents the</span>
-<span class="sd">        dimension (i.e. number of B-spline coefficients) of the function</span>
-<span class="sd">        space in that variable</span>
+<span class="sd">        dimension (i.e. number of B-spline coefficients) of the spline</span>
+<span class="sd">        in that variable.</span>
 
 <span class="sd">    knots : `list`</span>
-<span class="sd">        A list of the lists of the knots of the spline in each independent variable</span>
+<span class="sd">        A list of the lists of the knots of the spline in each independent variable.</span>
 
 <span class="sd">    coefs : array-like</span>
 <span class="sd">        A list of the B-spline coefficients of the spline.</span>
 <span class="sd">    </span>
 <span class="sd">    accuracy : `float`, optional</span>
-<span class="sd">        Each spline function is presumed to be an approximation of something else. </span>
+<span class="sd">        Each spline is presumed to be an approximation of something else. </span>
 <span class="sd">        The `accuracy` stores the infinity norm error of the difference between </span>
-<span class="sd">        the given spline function and that something else. Default is zero.</span>
+<span class="sd">        the given spline and that something else. Default is zero.</span>
 
 <span class="sd">    metadata : `dict`, optional</span>
 <span class="sd">        A dictionary of ancillary data to store with the spline. Default is {}.</span>
@@ -586,7 +586,7 @@
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
 <span class="sd">        The derivative method uses the de Boor recurrence relations for a B-spline</span>
-<span class="sd">        series to evaluate a spline function.  The non-zero B-splines are</span>
+<span class="sd">        series to evaluate a spline.  The non-zero B-splines are</span>
 <span class="sd">        evaluated, then the dot product of those B-splines with the vector of</span>
 <span class="sd">        B-spline coefficients is computed.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -730,7 +730,7 @@
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
 <span class="sd">        The evaluate method uses the de Boor recurrence relations for a B-spline</span>
-<span class="sd">        series to evaluate a spline function.  The non-zero B-splines are</span>
+<span class="sd">        series to evaluate a spline.  The non-zero B-splines are</span>
 <span class="sd">        evaluated, then the dot product of those B-splines with the vector of</span>
 <span class="sd">        B-spline coefficients is computed.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -888,21 +888,54 @@
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">least_squares</span><span class="p">(</span><span class="n">dataPoints</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">least_squares</span><span class="p">(</span><span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">dataPoints</span><span class="p">,</span> <span class="n">knots</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">accuracy</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Fit a curve to a string of data points using the method of least squares.</span>
+<span class="sd">        Fit a spline to an array of data points using the method of least squares.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        dataPoints : `iterable` containing the data points to fit.</span>
-<span class="sd">            Each of the data points is of length nDep.</span>
+<span class="sd">        nInd : `int`</span>
+<span class="sd">            The number of independent variables of the spline.</span>
+
+<span class="sd">        nDep : `int`</span>
+<span class="sd">            The number of dependent variables of the spline.</span>
+<span class="sd">        </span>
+<span class="sd">        order : `tuple`</span>
+<span class="sd">            A tuple of length nInd where each integer entry represents the</span>
+<span class="sd">            polynomial order of the spline in that variable. When in doubt,</span>
+<span class="sd">            use `[4] * nInd` (a cubic spline).</span>
+
+<span class="sd">        dataPoints : `iterable` of array-like values</span>
+<span class="sd">            A collection of data points. Each data point is an array of length `nInd + nDep`. </span>
+<span class="sd">            The first `nInd` values designate the independent values for the point.</span>
+<span class="sd">            The next `nDep` values designate the dependent values for the point. </span>
+<span class="sd">            The data points need not form a regular mesh or be in any particular order.</span>
+<span class="sd">            In addition, each data point may instead have `nInd + nDep * (nInd + 1)` values, </span>
+<span class="sd">            the first `nInd` being independent and the next `nInd + 1` sets of `nDep` values designating </span>
+<span class="sd">            the dependent point and its first derivatives with respect to each independent variable.</span>
+
+<span class="sd">        knots : `list`, optional</span>
+<span class="sd">            A list of the lists of the knots of the spline in each independent variable.</span>
+<span class="sd">            Default is `None`, in which case knots are chosen automatically.</span>
+<span class="sd">        </span>
+<span class="sd">        accuracy : `float`, optional</span>
+<span class="sd">            The desired error of the spline&#39;s data fit. The value is only used when knots are chosen automatically. </span>
+<span class="sd">            Regardless, the actual accuracy after fitting is stored in spline.accuracy. Default value is zero.</span>
+
+<span class="sd">        metadata : `dict`, optional</span>
+<span class="sd">            A dictionary of ancillary data to store with the spline. Default is {}.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
 <span class="sd">            A spline curve which approximates the data points.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Uses `numpy.linalg.lstsq` to compute the least squares solution. The returned spline.accuracy is the </span>
+<span class="sd">        maximum residual across dependent dimensions.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_fitting</span><span class="o">.</span><span class="n">least_squares</span><span class="p">(</span><span class="n">dataPoints</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_fitting</span><span class="o">.</span><span class="n">least_squares</span><span class="p">(</span><span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">dataPoints</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">accuracy</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="n">fileName</span><span class="p">,</span> <span class="n">splineType</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -1241,35 +1274,35 @@
             <div class="pdoc-code codehilite"><pre><span></span><span class="k">class</span> <span class="nc">Spline</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A class to model, represent, and process piecewise polynomial tensor product</span>
-<span class="sd">    functions (spline functions) as linear combinations of B-splines. </span>
+<span class="sd">    functions (splines) as linear combinations of B-splines. </span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    nInd : `int`</span>
-<span class="sd">        The number of independent variables of the spline</span>
+<span class="sd">        The number of independent variables of the spline.</span>
 
 <span class="sd">    nDep : `int`</span>
-<span class="sd">        The number of dependent variables of the spline</span>
+<span class="sd">        The number of dependent variables of the spline.</span>
 <span class="sd">    </span>
 <span class="sd">    order : `tuple`</span>
 <span class="sd">        A tuple of length nInd where each integer entry represents the</span>
-<span class="sd">        polynomial order of the function in that variable</span>
+<span class="sd">        polynomial order of the spline in that variable.</span>
 
 <span class="sd">    nCoef : `tuple`</span>
 <span class="sd">        A tuple of length nInd where each integer entry represents the</span>
-<span class="sd">        dimension (i.e. number of B-spline coefficients) of the function</span>
-<span class="sd">        space in that variable</span>
+<span class="sd">        dimension (i.e. number of B-spline coefficients) of the spline</span>
+<span class="sd">        in that variable.</span>
 
 <span class="sd">    knots : `list`</span>
-<span class="sd">        A list of the lists of the knots of the spline in each independent variable</span>
+<span class="sd">        A list of the lists of the knots of the spline in each independent variable.</span>
 
 <span class="sd">    coefs : array-like</span>
 <span class="sd">        A list of the B-spline coefficients of the spline.</span>
 <span class="sd">    </span>
 <span class="sd">    accuracy : `float`, optional</span>
-<span class="sd">        Each spline function is presumed to be an approximation of something else. </span>
+<span class="sd">        Each spline is presumed to be an approximation of something else. </span>
 <span class="sd">        The `accuracy` stores the infinity norm error of the difference between </span>
-<span class="sd">        the given spline function and that something else. Default is zero.</span>
+<span class="sd">        the given spline and that something else. Default is zero.</span>
 
 <span class="sd">    metadata : `dict`, optional</span>
 <span class="sd">        A dictionary of ancillary data to store with the spline. Default is {}.</span>
@@ -1648,7 +1681,7 @@
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
 <span class="sd">        The derivative method uses the de Boor recurrence relations for a B-spline</span>
-<span class="sd">        series to evaluate a spline function.  The non-zero B-splines are</span>
+<span class="sd">        series to evaluate a spline.  The non-zero B-splines are</span>
 <span class="sd">        evaluated, then the dot product of those B-splines with the vector of</span>
 <span class="sd">        B-spline coefficients is computed.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1792,7 +1825,7 @@
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
 <span class="sd">        The evaluate method uses the de Boor recurrence relations for a B-spline</span>
-<span class="sd">        series to evaluate a spline function.  The non-zero B-splines are</span>
+<span class="sd">        series to evaluate a spline.  The non-zero B-splines are</span>
 <span class="sd">        evaluated, then the dot product of those B-splines with the vector of</span>
 <span class="sd">        B-spline coefficients is computed.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1950,21 +1983,54 @@
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">least_squares</span><span class="p">(</span><span class="n">dataPoints</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">least_squares</span><span class="p">(</span><span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">dataPoints</span><span class="p">,</span> <span class="n">knots</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">accuracy</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Fit a curve to a string of data points using the method of least squares.</span>
+<span class="sd">        Fit a spline to an array of data points using the method of least squares.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        dataPoints : `iterable` containing the data points to fit.</span>
-<span class="sd">            Each of the data points is of length nDep.</span>
+<span class="sd">        nInd : `int`</span>
+<span class="sd">            The number of independent variables of the spline.</span>
+
+<span class="sd">        nDep : `int`</span>
+<span class="sd">            The number of dependent variables of the spline.</span>
+<span class="sd">        </span>
+<span class="sd">        order : `tuple`</span>
+<span class="sd">            A tuple of length nInd where each integer entry represents the</span>
+<span class="sd">            polynomial order of the spline in that variable. When in doubt,</span>
+<span class="sd">            use `[4] * nInd` (a cubic spline).</span>
+
+<span class="sd">        dataPoints : `iterable` of array-like values</span>
+<span class="sd">            A collection of data points. Each data point is an array of length `nInd + nDep`. </span>
+<span class="sd">            The first `nInd` values designate the independent values for the point.</span>
+<span class="sd">            The next `nDep` values designate the dependent values for the point. </span>
+<span class="sd">            The data points need not form a regular mesh or be in any particular order.</span>
+<span class="sd">            In addition, each data point may instead have `nInd + nDep * (nInd + 1)` values, </span>
+<span class="sd">            the first `nInd` being independent and the next `nInd + 1` sets of `nDep` values designating </span>
+<span class="sd">            the dependent point and its first derivatives with respect to each independent variable.</span>
+
+<span class="sd">        knots : `list`, optional</span>
+<span class="sd">            A list of the lists of the knots of the spline in each independent variable.</span>
+<span class="sd">            Default is `None`, in which case knots are chosen automatically.</span>
+<span class="sd">        </span>
+<span class="sd">        accuracy : `float`, optional</span>
+<span class="sd">            The desired error of the spline&#39;s data fit. The value is only used when knots are chosen automatically. </span>
+<span class="sd">            Regardless, the actual accuracy after fitting is stored in spline.accuracy. Default value is zero.</span>
+
+<span class="sd">        metadata : `dict`, optional</span>
+<span class="sd">            A dictionary of ancillary data to store with the spline. Default is {}.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
 <span class="sd">            A spline curve which approximates the data points.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Uses `numpy.linalg.lstsq` to compute the least squares solution. The returned spline.accuracy is the </span>
+<span class="sd">        maximum residual across dependent dimensions.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_fitting</span><span class="o">.</span><span class="n">least_squares</span><span class="p">(</span><span class="n">dataPoints</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_fitting</span><span class="o">.</span><span class="n">least_squares</span><span class="p">(</span><span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">dataPoints</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">accuracy</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="n">fileName</span><span class="p">,</span> <span class="n">splineType</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -2289,30 +2355,30 @@
         </details>
 
             <div class="docstring"><p>A class to model, represent, and process piecewise polynomial tensor product
-functions (spline functions) as linear combinations of B-splines. </p>
+functions (splines) as linear combinations of B-splines. </p>
 
 <h6 id="parameters">Parameters</h6>
 
 <ul>
 <li><strong>nInd</strong> (<code>int</code>):
-The number of independent variables of the spline</li>
+The number of independent variables of the spline.</li>
 <li><strong>nDep</strong> (<code>int</code>):
-The number of dependent variables of the spline</li>
+The number of dependent variables of the spline.</li>
 <li><strong>order</strong> (<code>tuple</code>):
 A tuple of length nInd where each integer entry represents the
-polynomial order of the function in that variable</li>
+polynomial order of the spline in that variable.</li>
 <li><strong>nCoef</strong> (<code>tuple</code>):
 A tuple of length nInd where each integer entry represents the
-dimension (i.e. number of B-spline coefficients) of the function
-space in that variable</li>
+dimension (i.e. number of B-spline coefficients) of the spline
+in that variable.</li>
 <li><strong>knots</strong> (<code>list</code>):
-A list of the lists of the knots of the spline in each independent variable</li>
+A list of the lists of the knots of the spline in each independent variable.</li>
 <li><strong>coefs</strong> (array-like):
 A list of the B-spline coefficients of the spline.</li>
 <li><strong>accuracy</strong> (<code>float</code>, optional):
-Each spline function is presumed to be an approximation of something else. 
+Each spline is presumed to be an approximation of something else. 
 The <code>accuracy</code> stores the infinity norm error of the difference between 
-the given spline function and that something else. Default is zero.</li>
+the given spline and that something else. Default is zero.</li>
 <li><strong>metadata</strong> (<code>dict</code>, optional):
 A dictionary of ancillary data to store with the spline. Default is {}.</li>
 </ul>
@@ -2997,7 +3063,7 @@ The crossed spline: self x vector.</li>
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
 <span class="sd">        The derivative method uses the de Boor recurrence relations for a B-spline</span>
-<span class="sd">        series to evaluate a spline function.  The non-zero B-splines are</span>
+<span class="sd">        series to evaluate a spline.  The non-zero B-splines are</span>
 <span class="sd">        evaluated, then the dot product of those B-splines with the vector of</span>
 <span class="sd">        B-spline coefficients is computed.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -3035,7 +3101,7 @@ The value of the derivative of the spline at the given parameter values.</li>
 <h6 id="notes">Notes</h6>
 
 <p>The derivative method uses the de Boor recurrence relations for a B-spline
-series to evaluate a spline function.  The non-zero B-splines are
+series to evaluate a spline.  The non-zero B-splines are
 evaluated, then the dot product of those B-splines with the vector of
 B-spline coefficients is computed.</p>
 </div>
@@ -3384,7 +3450,7 @@ A spline with the order of the current spline plus <code>m</code> that includes 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
 <span class="sd">        The evaluate method uses the de Boor recurrence relations for a B-spline</span>
-<span class="sd">        series to evaluate a spline function.  The non-zero B-splines are</span>
+<span class="sd">        series to evaluate a spline.  The non-zero B-splines are</span>
 <span class="sd">        evaluated, then the dot product of those B-splines with the vector of</span>
 <span class="sd">        B-spline coefficients is computed.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -3416,7 +3482,7 @@ The value of the spline at the given parameter values.</li>
 <h6 id="notes">Notes</h6>
 
 <p>The evaluate method uses the de Boor recurrence relations for a B-spline
-series to evaluate a spline function.  The non-zero B-splines are
+series to evaluate a spline.  The non-zero B-splines are
 evaluated, then the dot product of those B-splines with the vector of
 B-spline coefficients is computed.</p>
 </div>
@@ -3806,38 +3872,93 @@ The spline that results from integrating the original spline with respect to the
                 <div class="decorator">@staticmethod</div>
 
             <span class="def">def</span>
-            <span class="name">least_squares</span><span class="signature">(dataPoints)</span>:
+            <span class="name">least_squares</span><span class="signature">(nInd, nDep, order, dataPoints, knots=None, accuracy=0.0, metadata={})</span>:
     </div>
 
             <details>
             <summary>View Source</summary>
             <div class="pdoc-code codehilite"><pre><span></span>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">least_squares</span><span class="p">(</span><span class="n">dataPoints</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">least_squares</span><span class="p">(</span><span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">dataPoints</span><span class="p">,</span> <span class="n">knots</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">accuracy</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Fit a curve to a string of data points using the method of least squares.</span>
+<span class="sd">        Fit a spline to an array of data points using the method of least squares.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        dataPoints : `iterable` containing the data points to fit.</span>
-<span class="sd">            Each of the data points is of length nDep.</span>
+<span class="sd">        nInd : `int`</span>
+<span class="sd">            The number of independent variables of the spline.</span>
+
+<span class="sd">        nDep : `int`</span>
+<span class="sd">            The number of dependent variables of the spline.</span>
+<span class="sd">        </span>
+<span class="sd">        order : `tuple`</span>
+<span class="sd">            A tuple of length nInd where each integer entry represents the</span>
+<span class="sd">            polynomial order of the spline in that variable. When in doubt,</span>
+<span class="sd">            use `[4] * nInd` (a cubic spline).</span>
+
+<span class="sd">        dataPoints : `iterable` of array-like values</span>
+<span class="sd">            A collection of data points. Each data point is an array of length `nInd + nDep`. </span>
+<span class="sd">            The first `nInd` values designate the independent values for the point.</span>
+<span class="sd">            The next `nDep` values designate the dependent values for the point. </span>
+<span class="sd">            The data points need not form a regular mesh or be in any particular order.</span>
+<span class="sd">            In addition, each data point may instead have `nInd + nDep * (nInd + 1)` values, </span>
+<span class="sd">            the first `nInd` being independent and the next `nInd + 1` sets of `nDep` values designating </span>
+<span class="sd">            the dependent point and its first derivatives with respect to each independent variable.</span>
+
+<span class="sd">        knots : `list`, optional</span>
+<span class="sd">            A list of the lists of the knots of the spline in each independent variable.</span>
+<span class="sd">            Default is `None`, in which case knots are chosen automatically.</span>
+<span class="sd">        </span>
+<span class="sd">        accuracy : `float`, optional</span>
+<span class="sd">            The desired error of the spline&#39;s data fit. The value is only used when knots are chosen automatically. </span>
+<span class="sd">            Regardless, the actual accuracy after fitting is stored in spline.accuracy. Default value is zero.</span>
+
+<span class="sd">        metadata : `dict`, optional</span>
+<span class="sd">            A dictionary of ancillary data to store with the spline. Default is {}.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
 <span class="sd">            A spline curve which approximates the data points.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Uses `numpy.linalg.lstsq` to compute the least squares solution. The returned spline.accuracy is the </span>
+<span class="sd">        maximum residual across dependent dimensions.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_fitting</span><span class="o">.</span><span class="n">least_squares</span><span class="p">(</span><span class="n">dataPoints</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_fitting</span><span class="o">.</span><span class="n">least_squares</span><span class="p">(</span><span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">dataPoints</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">accuracy</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span>
 </pre></div>
 
         </details>
 
-            <div class="docstring"><p>Fit a curve to a string of data points using the method of least squares.</p>
+            <div class="docstring"><p>Fit a spline to an array of data points using the method of least squares.</p>
 
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>dataPoints</strong> (<code>iterable</code> containing the data points to fit.):
-Each of the data points is of length nDep.</li>
+<li><strong>nInd</strong> (<code>int</code>):
+The number of independent variables of the spline.</li>
+<li><strong>nDep</strong> (<code>int</code>):
+The number of dependent variables of the spline.</li>
+<li><strong>order</strong> (<code>tuple</code>):
+A tuple of length nInd where each integer entry represents the
+polynomial order of the spline in that variable. When in doubt,
+use <code>[4] * nInd</code> (a cubic spline).</li>
+<li><strong>dataPoints</strong> (<code>iterable</code> of array-like values):
+A collection of data points. Each data point is an array of length <code>nInd + nDep</code>. 
+The first <code>nInd</code> values designate the independent values for the point.
+The next <code>nDep</code> values designate the dependent values for the point. 
+The data points need not form a regular mesh or be in any particular order.
+In addition, each data point may instead have <code>nInd + nDep * (nInd + 1)</code> values, 
+the first <code>nInd</code> being independent and the next <code>nInd + 1</code> sets of <code>nDep</code> values designating 
+the dependent point and its first derivatives with respect to each independent variable.</li>
+<li><strong>knots</strong> (<code>list</code>, optional):
+A list of the lists of the knots of the spline in each independent variable.
+Default is <code>None</code>, in which case knots are chosen automatically.</li>
+<li><strong>accuracy</strong> (<code>float</code>, optional):
+The desired error of the spline's data fit. The value is only used when knots are chosen automatically. 
+Regardless, the actual accuracy after fitting is stored in spline.accuracy. Default value is zero.</li>
+<li><strong>metadata</strong> (<code>dict</code>, optional):
+A dictionary of ancillary data to store with the spline. Default is {}.</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -3846,6 +3967,11 @@ Each of the data points is of length nDep.</li>
 <li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
 A spline curve which approximates the data points.</li>
 </ul>
+
+<h6 id="notes">Notes</h6>
+
+<p>Uses <code>numpy.linalg.lstsq</code> to compute the least squares solution. The returned spline.accuracy is the 
+maximum residual across dependent dimensions.</p>
 </div>
 
 
