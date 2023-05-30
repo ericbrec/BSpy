@@ -1,10 +1,12 @@
 import numpy as np
 import bspy.spline
+import math
 
-def least_squares(nInd, nDep, order, dataPoints, knotList = None, accuracy = 0.0, metadata = {}):
+def least_squares(nInd, nDep, order, dataPoints, knotList = None, compression = 0, metadata = {}):
     assert nInd >= 0, "nInd < 0"
     assert nDep >= 0, "nDep < 0"
     assert len(order) == nInd, "len(order) != nInd"
+    assert 0 <= compression < 100, "compression not between 0 and 99"
     totalOrder = 1
     for ord in order:
         totalOrder *= ord
@@ -16,7 +18,45 @@ def least_squares(nInd, nDep, order, dataPoints, knotList = None, accuracy = 0.0
             totalDataPoints += nInd
 
     if knotList is None:
-        return NotImplemented
+        # Compute the target number of coefficients and the actual number of samples in each independent variable.
+        targetTotalCoef = len(dataPoints) * (100 - compression) / 100.0
+        totalCoef = 1
+        knotSamples = np.array([point[:nInd] for point in dataPoints], type(dataPoints[0][0])).T
+        knotList = []
+        for knotSample in knotSamples:
+            knots = np.unique(knotSample)
+            knotList.append(knots)
+            totalCoef *= len(knots)
+        
+        # Scale the number of coefficients for each independent variable so that the total closely matches the target.
+        scaling = min((targetTotalCoef / totalCoef) ** (1.0 / nInd), 1.0)
+        nCoef = []
+        totalCoef = 1
+        for knots in knotList:
+            nCf = int(math.ceil(len(knots) * scaling))
+            nCoef.append(nCf)
+            totalCoef *= nCf
+        
+        # Compute "ideal" knots for each independent variable, based on the number of coefficients and the sample values.
+        # Piegl, Les A., and Wayne Tiller. "Surface approximation to scanned data." The visual computer 16 (2000): 386-395.
+        newKnotList = []
+        for iInd, ord, nCf, knots in zip(range(nInd), order, nCoef, knotList):
+            degree = ord - 1
+            newKnots = [knots[0]] * ord
+            inc = len(knots)/nCf
+            low = 0
+            d = -1
+            w = np.empty((nCf,), float)
+            for i in range(nCf):
+                d += inc
+                high = int(d + 0.5 + 1) # Paper's algorithm sets high to d + 0.5, but only references high + 1
+                w[i] = np.mean(knots[low:high])
+                low = high
+            for i in range(1, nCf - degree):
+                newKnots.append(np.mean(w[i:i + degree]))
+            newKnots += [knots[-1]] * ord
+            newKnotList.append(np.array(newKnots, knots.dtype))
+        knotList = newKnotList
     else:
         assert len(knotList) == nInd, "len(knots) != nInd" # The documented interface uses the argument 'knots' instead of 'knotList'
         nCoef = [len(knotList[i]) - order[i] for i in range(nInd)]
@@ -94,5 +134,5 @@ def least_squares(nInd, nDep, order, dataPoints, knotList = None, accuracy = 0.0
     # Return the resulting spline, computing the accuracy based on system epsilon and the norm of the residuals.
     maxError = np.finfo(coefs.dtype).eps
     if residuals.size > 0:
-        maxError = max(maxError, np.linalg.norm(residuals))
+        maxError = max(maxError, residuals.sum())
     return bspy.Spline(nInd, nDep, order, nCoef, knotList, coefs, np.sqrt(maxError), metadata)

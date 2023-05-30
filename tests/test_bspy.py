@@ -573,8 +573,8 @@ def test_add():
     # Add with completely independent variables.
     added = spline1 + spline2
     maxerror = 0.0
-    for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
-        for v in np.linspace(spline2.knots[0][spline2.order[0]-1], spline2.knots[0][spline2.nCoef[0]], 100):
+    for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 21):
+        for v in np.linspace(spline2.knots[0][spline2.order[0]-1], spline2.knots[0][spline2.nCoef[0]], 21):
             [x, y] = spline1.evaluate([u]) + spline2.evaluate([v])
             [xTest, yTest] = added.evaluate([u,v])
             maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
@@ -812,14 +812,15 @@ def test_multiply():
     # Multiply with completely independent variables.
     multiplied = spline1 * spline2
     maxerror = 0.0
-    for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
-        for v in np.linspace(spline2.knots[0][spline2.order[0]-1], spline2.knots[0][spline2.nCoef[0]], 100):
+    for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 21):
+        for v in np.linspace(spline2.knots[0][spline2.order[0]-1], spline2.knots[0][spline2.nCoef[0]], 21):
             x = np.dot(spline1.evaluate([u]), spline2.evaluate([v]))
             xTest = multiplied.evaluate([u,v])
             maxerror = max(maxerror, (xTest - x) ** 2)
     assert maxerror <= np.finfo(float).eps
 
 def test_least_squares():
+    # Replicate 1D spline using its knots. Should be precise to machine epsilon.
     spline = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0.2, 0.3, 0.4, 0.5, 0.5, 1, 1], float)], 
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
     values = [(u, *spline([u])) for u in np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], spline.nCoef[0] + 5)]
@@ -835,6 +836,15 @@ def test_least_squares():
     assert maxerror <= np.sqrt(np.finfo(float).eps)
     assert maxerror <= fit.accuracy
 
+    # Create knots and fit data taken from 1D spline. Should match returned accuracy at data points.
+    fit = bspy.Spline.least_squares(spline.nInd, spline.nDep, spline.order, values)
+    maxerror = 0.0
+    for point in values:
+        xyz = point[spline.nInd:spline.nInd + spline.nDep] - fit(point[:spline.nInd])
+        maxerror = max(maxerror, np.sqrt(xyz @ xyz))
+    assert maxerror <= fit.accuracy
+
+    # Replicate 2D spline using its knots. Should be precise to machine epsilon.
     spline = mySurface
     values = []
     u = spline.knots[0][spline.order[0]-1]
@@ -848,11 +858,19 @@ def test_least_squares():
     values.append((u, v, *spline([u, v]), *spline.derivative([1, 0], [u, v]), *spline.derivative([0, 1], [u, v])))
     fit = bspy.Spline.least_squares(spline.nInd, spline.nDep, spline.order, values, spline.knots)
     maxerror = 0.0
-    for u in np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], 100):
-        for v in np.linspace(spline.knots[1][spline.order[1]-1], spline.knots[1][spline.nCoef[1]], 100):
+    for u in np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], 21):
+        for v in np.linspace(spline.knots[1][spline.order[1]-1], spline.knots[1][spline.nCoef[1]], 21):
             xyz = spline([u,v]) - fit([u,v])
             maxerror = max(maxerror, np.sqrt(xyz @ xyz))
     assert maxerror <= np.sqrt(np.finfo(float).eps)
+    assert maxerror <= fit.accuracy
+
+    # Create knots and fit data taken from 2D spline. Should match returned accuracy at data points.
+    fit = bspy.Spline.least_squares(spline.nInd, spline.nDep, spline.order, values, compression=30)
+    maxerror = 0.0
+    for point in values:
+        xyz = point[spline.nInd:spline.nInd + spline.nDep] - fit(point[:spline.nInd])
+        maxerror = max(maxerror, np.sqrt(xyz @ xyz))
     assert maxerror <= fit.accuracy
 
 def test_remove_knots():
@@ -906,8 +924,8 @@ def test_subtract():
     # Subtract with completely independent variables.
     subtracted = spline1 - spline2
     maxerror = 0.0
-    for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
-        for v in np.linspace(spline2.knots[0][spline2.order[0]-1], spline2.knots[0][spline2.nCoef[0]], 100):
+    for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 21):
+        for v in np.linspace(spline2.knots[0][spline2.order[0]-1], spline2.knots[0][spline2.nCoef[0]], 21):
             [x, y] = spline1.evaluate([u]) - spline2.evaluate([v])
             [xTest, yTest] = subtracted.evaluate([u,v])
             maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)

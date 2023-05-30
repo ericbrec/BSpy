@@ -888,7 +888,7 @@
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">least_squares</span><span class="p">(</span><span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">dataPoints</span><span class="p">,</span> <span class="n">knots</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">accuracy</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}):</span>
+    <span class="k">def</span> <span class="nf">least_squares</span><span class="p">(</span><span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">dataPoints</span><span class="p">,</span> <span class="n">knots</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">compression</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Fit a spline to an array of data points using the method of least squares.</span>
 
@@ -909,7 +909,7 @@
 <span class="sd">            A collection of data points. Each data point is an array of length `nInd + nDep`. </span>
 <span class="sd">            The first `nInd` values designate the independent values for the point.</span>
 <span class="sd">            The next `nDep` values designate the dependent values for the point. </span>
-<span class="sd">            The data points need not form a regular mesh or be in any particular order.</span>
+<span class="sd">            The data points need not form a regular mesh nor be in any particular order.</span>
 <span class="sd">            In addition, each data point may instead have `nInd + nDep * (nInd + 1)` values, </span>
 <span class="sd">            the first `nInd` being independent and the next `nInd + 1` sets of `nDep` values designating </span>
 <span class="sd">            the dependent point and its first derivatives with respect to each independent variable.</span>
@@ -918,9 +918,11 @@
 <span class="sd">            A list of the lists of the knots of the spline in each independent variable.</span>
 <span class="sd">            Default is `None`, in which case knots are chosen automatically.</span>
 <span class="sd">        </span>
-<span class="sd">        accuracy : `float`, optional</span>
-<span class="sd">            The desired error of the spline&#39;s data fit. The value is only used when knots are chosen automatically. </span>
-<span class="sd">            Regardless, the actual accuracy after fitting is stored in spline.accuracy. Default value is zero.</span>
+<span class="sd">        compression : `int`, optional</span>
+<span class="sd">            The desired compression of data used as a percentage of the number of data points (0 - 99). </span>
+<span class="sd">            This percentage is used to determine the total number of spline coefficients when </span>
+<span class="sd">            knots are chosen automatically (it&#39;s ignored otherwise). The actual compression will be slightly less </span>
+<span class="sd">            because the number of coefficients is rounded up. The default value is zero (interpolation, no compression).</span>
 
 <span class="sd">        metadata : `dict`, optional</span>
 <span class="sd">            A dictionary of ancillary data to store with the spline. Default is {}.</span>
@@ -932,10 +934,12 @@
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        Uses `numpy.linalg.lstsq` to compute the least squares solution. The returned spline.accuracy is the </span>
-<span class="sd">        maximum residual across dependent dimensions.</span>
+<span class="sd">        Uses `numpy.linalg.lstsq` to compute the least squares solution. The returned spline.accuracy is computed </span>
+<span class="sd">        from the sum of the residual across dependent variables and the system epsilon. </span>
+<span class="sd">        The algorithm to choose knots automatically is from Piegl, Les A., and Wayne Tiller. </span>
+<span class="sd">        &quot;Surface approximation to scanned data.&quot; The visual computer 16 (2000): 386-395.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_fitting</span><span class="o">.</span><span class="n">least_squares</span><span class="p">(</span><span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">dataPoints</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">accuracy</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_fitting</span><span class="o">.</span><span class="n">least_squares</span><span class="p">(</span><span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">dataPoints</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">compression</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="n">fileName</span><span class="p">,</span> <span class="n">splineType</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -1983,7 +1987,7 @@
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">least_squares</span><span class="p">(</span><span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">dataPoints</span><span class="p">,</span> <span class="n">knots</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">accuracy</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}):</span>
+    <span class="k">def</span> <span class="nf">least_squares</span><span class="p">(</span><span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">dataPoints</span><span class="p">,</span> <span class="n">knots</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">compression</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Fit a spline to an array of data points using the method of least squares.</span>
 
@@ -2004,7 +2008,7 @@
 <span class="sd">            A collection of data points. Each data point is an array of length `nInd + nDep`. </span>
 <span class="sd">            The first `nInd` values designate the independent values for the point.</span>
 <span class="sd">            The next `nDep` values designate the dependent values for the point. </span>
-<span class="sd">            The data points need not form a regular mesh or be in any particular order.</span>
+<span class="sd">            The data points need not form a regular mesh nor be in any particular order.</span>
 <span class="sd">            In addition, each data point may instead have `nInd + nDep * (nInd + 1)` values, </span>
 <span class="sd">            the first `nInd` being independent and the next `nInd + 1` sets of `nDep` values designating </span>
 <span class="sd">            the dependent point and its first derivatives with respect to each independent variable.</span>
@@ -2013,9 +2017,11 @@
 <span class="sd">            A list of the lists of the knots of the spline in each independent variable.</span>
 <span class="sd">            Default is `None`, in which case knots are chosen automatically.</span>
 <span class="sd">        </span>
-<span class="sd">        accuracy : `float`, optional</span>
-<span class="sd">            The desired error of the spline&#39;s data fit. The value is only used when knots are chosen automatically. </span>
-<span class="sd">            Regardless, the actual accuracy after fitting is stored in spline.accuracy. Default value is zero.</span>
+<span class="sd">        compression : `int`, optional</span>
+<span class="sd">            The desired compression of data used as a percentage of the number of data points (0 - 99). </span>
+<span class="sd">            This percentage is used to determine the total number of spline coefficients when </span>
+<span class="sd">            knots are chosen automatically (it&#39;s ignored otherwise). The actual compression will be slightly less </span>
+<span class="sd">            because the number of coefficients is rounded up. The default value is zero (interpolation, no compression).</span>
 
 <span class="sd">        metadata : `dict`, optional</span>
 <span class="sd">            A dictionary of ancillary data to store with the spline. Default is {}.</span>
@@ -2027,10 +2033,12 @@
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        Uses `numpy.linalg.lstsq` to compute the least squares solution. The returned spline.accuracy is the </span>
-<span class="sd">        maximum residual across dependent dimensions.</span>
+<span class="sd">        Uses `numpy.linalg.lstsq` to compute the least squares solution. The returned spline.accuracy is computed </span>
+<span class="sd">        from the sum of the residual across dependent variables and the system epsilon. </span>
+<span class="sd">        The algorithm to choose knots automatically is from Piegl, Les A., and Wayne Tiller. </span>
+<span class="sd">        &quot;Surface approximation to scanned data.&quot; The visual computer 16 (2000): 386-395.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_fitting</span><span class="o">.</span><span class="n">least_squares</span><span class="p">(</span><span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">dataPoints</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">accuracy</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_fitting</span><span class="o">.</span><span class="n">least_squares</span><span class="p">(</span><span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">dataPoints</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">compression</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="n">fileName</span><span class="p">,</span> <span class="n">splineType</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -3872,13 +3880,21 @@ The spline that results from integrating the original spline with respect to the
                 <div class="decorator">@staticmethod</div>
 
             <span class="def">def</span>
-            <span class="name">least_squares</span><span class="signature">(nInd, nDep, order, dataPoints, knots=None, accuracy=0.0, metadata={})</span>:
+            <span class="name">least_squares</span><span class="signature">(
+    nInd,
+    nDep,
+    order,
+    dataPoints,
+    knots=None,
+    compression=0,
+    metadata={}
+)</span>:
     </div>
 
             <details>
             <summary>View Source</summary>
             <div class="pdoc-code codehilite"><pre><span></span>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">least_squares</span><span class="p">(</span><span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">dataPoints</span><span class="p">,</span> <span class="n">knots</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">accuracy</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}):</span>
+    <span class="k">def</span> <span class="nf">least_squares</span><span class="p">(</span><span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">dataPoints</span><span class="p">,</span> <span class="n">knots</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">compression</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Fit a spline to an array of data points using the method of least squares.</span>
 
@@ -3899,7 +3915,7 @@ The spline that results from integrating the original spline with respect to the
 <span class="sd">            A collection of data points. Each data point is an array of length `nInd + nDep`. </span>
 <span class="sd">            The first `nInd` values designate the independent values for the point.</span>
 <span class="sd">            The next `nDep` values designate the dependent values for the point. </span>
-<span class="sd">            The data points need not form a regular mesh or be in any particular order.</span>
+<span class="sd">            The data points need not form a regular mesh nor be in any particular order.</span>
 <span class="sd">            In addition, each data point may instead have `nInd + nDep * (nInd + 1)` values, </span>
 <span class="sd">            the first `nInd` being independent and the next `nInd + 1` sets of `nDep` values designating </span>
 <span class="sd">            the dependent point and its first derivatives with respect to each independent variable.</span>
@@ -3908,9 +3924,11 @@ The spline that results from integrating the original spline with respect to the
 <span class="sd">            A list of the lists of the knots of the spline in each independent variable.</span>
 <span class="sd">            Default is `None`, in which case knots are chosen automatically.</span>
 <span class="sd">        </span>
-<span class="sd">        accuracy : `float`, optional</span>
-<span class="sd">            The desired error of the spline&#39;s data fit. The value is only used when knots are chosen automatically. </span>
-<span class="sd">            Regardless, the actual accuracy after fitting is stored in spline.accuracy. Default value is zero.</span>
+<span class="sd">        compression : `int`, optional</span>
+<span class="sd">            The desired compression of data used as a percentage of the number of data points (0 - 99). </span>
+<span class="sd">            This percentage is used to determine the total number of spline coefficients when </span>
+<span class="sd">            knots are chosen automatically (it&#39;s ignored otherwise). The actual compression will be slightly less </span>
+<span class="sd">            because the number of coefficients is rounded up. The default value is zero (interpolation, no compression).</span>
 
 <span class="sd">        metadata : `dict`, optional</span>
 <span class="sd">            A dictionary of ancillary data to store with the spline. Default is {}.</span>
@@ -3922,10 +3940,12 @@ The spline that results from integrating the original spline with respect to the
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        Uses `numpy.linalg.lstsq` to compute the least squares solution. The returned spline.accuracy is the </span>
-<span class="sd">        maximum residual across dependent dimensions.</span>
+<span class="sd">        Uses `numpy.linalg.lstsq` to compute the least squares solution. The returned spline.accuracy is computed </span>
+<span class="sd">        from the sum of the residual across dependent variables and the system epsilon. </span>
+<span class="sd">        The algorithm to choose knots automatically is from Piegl, Les A., and Wayne Tiller. </span>
+<span class="sd">        &quot;Surface approximation to scanned data.&quot; The visual computer 16 (2000): 386-395.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_fitting</span><span class="o">.</span><span class="n">least_squares</span><span class="p">(</span><span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">dataPoints</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">accuracy</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_fitting</span><span class="o">.</span><span class="n">least_squares</span><span class="p">(</span><span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">dataPoints</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">compression</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span>
 </pre></div>
 
         </details>
@@ -3947,16 +3967,18 @@ use <code>[4] * nInd</code> (a cubic spline).</li>
 A collection of data points. Each data point is an array of length <code>nInd + nDep</code>. 
 The first <code>nInd</code> values designate the independent values for the point.
 The next <code>nDep</code> values designate the dependent values for the point. 
-The data points need not form a regular mesh or be in any particular order.
+The data points need not form a regular mesh nor be in any particular order.
 In addition, each data point may instead have <code>nInd + nDep * (nInd + 1)</code> values, 
 the first <code>nInd</code> being independent and the next <code>nInd + 1</code> sets of <code>nDep</code> values designating 
 the dependent point and its first derivatives with respect to each independent variable.</li>
 <li><strong>knots</strong> (<code>list</code>, optional):
 A list of the lists of the knots of the spline in each independent variable.
 Default is <code>None</code>, in which case knots are chosen automatically.</li>
-<li><strong>accuracy</strong> (<code>float</code>, optional):
-The desired error of the spline's data fit. The value is only used when knots are chosen automatically. 
-Regardless, the actual accuracy after fitting is stored in spline.accuracy. Default value is zero.</li>
+<li><strong>compression</strong> (<code>int</code>, optional):
+The desired compression of data used as a percentage of the number of data points (0 - 99). 
+This percentage is used to determine the total number of spline coefficients when 
+knots are chosen automatically (it's ignored otherwise). The actual compression will be slightly less 
+because the number of coefficients is rounded up. The default value is zero (interpolation, no compression).</li>
 <li><strong>metadata</strong> (<code>dict</code>, optional):
 A dictionary of ancillary data to store with the spline. Default is {}.</li>
 </ul>
@@ -3970,8 +3992,10 @@ A spline curve which approximates the data points.</li>
 
 <h6 id="notes">Notes</h6>
 
-<p>Uses <code>numpy.linalg.lstsq</code> to compute the least squares solution. The returned spline.accuracy is the 
-maximum residual across dependent dimensions.</p>
+<p>Uses <code>numpy.linalg.lstsq</code> to compute the least squares solution. The returned spline.accuracy is computed 
+from the sum of the residual across dependent variables and the system epsilon. 
+The algorithm to choose knots automatically is from Piegl, Les A., and Wayne Tiller. 
+"Surface approximation to scanned data." The visual computer 16 (2000): 386-395.</p>
 </div>
 
 

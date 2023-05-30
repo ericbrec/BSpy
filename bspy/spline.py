@@ -726,7 +726,7 @@ class Spline:
         return bspy._spline_operations.integrate(self, with_respect_to)
 
     @staticmethod
-    def least_squares(nInd, nDep, order, dataPoints, knots = None, accuracy = 0.0, metadata = {}):
+    def least_squares(nInd, nDep, order, dataPoints, knots = None, compression = 0, metadata = {}):
         """
         Fit a spline to an array of data points using the method of least squares.
 
@@ -747,7 +747,7 @@ class Spline:
             A collection of data points. Each data point is an array of length `nInd + nDep`. 
             The first `nInd` values designate the independent values for the point.
             The next `nDep` values designate the dependent values for the point. 
-            The data points need not form a regular mesh or be in any particular order.
+            The data points need not form a regular mesh nor be in any particular order.
             In addition, each data point may instead have `nInd + nDep * (nInd + 1)` values, 
             the first `nInd` being independent and the next `nInd + 1` sets of `nDep` values designating 
             the dependent point and its first derivatives with respect to each independent variable.
@@ -756,9 +756,11 @@ class Spline:
             A list of the lists of the knots of the spline in each independent variable.
             Default is `None`, in which case knots are chosen automatically.
         
-        accuracy : `float`, optional
-            The desired error of the spline's data fit. The value is only used when knots are chosen automatically. 
-            Regardless, the actual accuracy after fitting is stored in spline.accuracy. Default value is zero.
+        compression : `int`, optional
+            The desired compression of data used as a percentage of the number of data points (0 - 99). 
+            This percentage is used to determine the total number of spline coefficients when 
+            knots are chosen automatically (it's ignored otherwise). The actual compression will be slightly less 
+            because the number of coefficients is rounded up. The default value is zero (interpolation, no compression).
 
         metadata : `dict`, optional
             A dictionary of ancillary data to store with the spline. Default is {}.
@@ -770,10 +772,12 @@ class Spline:
 
         Notes
         -----
-        Uses `numpy.linalg.lstsq` to compute the least squares solution. The returned spline.accuracy is the 
-        maximum residual across dependent dimensions.
+        Uses `numpy.linalg.lstsq` to compute the least squares solution. The returned spline.accuracy is computed 
+        from the sum of the residual across dependent variables and the system epsilon. 
+        The algorithm to choose knots automatically is from Piegl, Les A., and Wayne Tiller. 
+        "Surface approximation to scanned data." The visual computer 16 (2000): 386-395.
         """
-        return bspy._spline_fitting.least_squares(nInd, nDep, order, dataPoints, knots, accuracy, metadata)
+        return bspy._spline_fitting.least_squares(nInd, nDep, order, dataPoints, knots, compression, metadata)
 
     @staticmethod
     def load(fileName, splineType=None):
