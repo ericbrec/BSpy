@@ -23,7 +23,8 @@ The [bspyGraphics](https://ericbrec.github.io/bspy/bspy/bspyApp.html#bspyGraphic
 It launches a [bspyApp](https://ericbrec.github.io/bspy/bspy/bspyApp.html) and issues commands to the app for use 
 in [jupyter](https://jupyter.org/) notebooks and other scripting environments.
 
-![Image of the bspyApp rendering the Utah teapot](/docs/bspyApp.png?raw=true "bspyApp rendering the Utah teapot")
+![Image of the bspyApp rendering the Utah teapot](https://ericbrec.github.io/bspy/bspyApp.png) "bspyApp rendering the Utah teapot")
 
-The full documentation for bspy can be found [here](https://ericbrec.github.io/bspy) and its 
-GitHub project can be found [here](https://github.com/ericbrec/bspy).
+The full documentation for bspy can be found [here](https://ericbrec.github.io/bspy), its GitHub project can be found 
+[here](https://github.com/ericbrec/bspy), a test suite can be found [here](https://github.com/ericbrec/bspy/tree/main/tests), and
+a set of examples, including a jupyter notebook can be found [here](https://github.com/ericbrec/bspy/tree/main/examples).

@@ -168,7 +168,7 @@ class Spline:
 
         indMap : `iterable` or `None`, optional
             An iterable of pairs of indices. 
-            Each pair (n, m) maps the mth independent variable of other to the nth independent variable of self. 
+            Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. 
             The domains of the nth and mth independent variables must match. 
             An independent variable can map to no more than one other independent variable.
             Unmapped independent variables remain independent (the default).
@@ -347,7 +347,7 @@ class Spline:
 
         indMap : `iterable` or `None`, optional
             An iterable of pairs of indices. 
-            Each pair (n, m) maps the mth independent variable of other to the nth independent variable of self. 
+            Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. 
             An independent variable can map to no more than one other independent variable.
             Unmapped independent variables remain independent (the default).
 
@@ -805,7 +805,7 @@ class Spline:
 
         indMap : `iterable` or `None`, optional
             An iterable of pairs of indices. 
-            Each pair (n, m) maps the mth independent variable of other to the nth independent variable of self. 
+            Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. 
             The domains of the nth and mth independent variables must match. 
             An independent variable can map to no more than one other independent variable.
             Unmapped independent variables remain independent (the default).
@@ -948,7 +948,7 @@ class Spline:
 
         indMap : `iterable` or `None`, optional
             An iterable of pairs of indices. 
-            Each pair (n, m) maps the mth independent variable of other to the nth independent variable of self. 
+            Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. 
             The domains of the nth and mth independent variables must match. 
             An independent variable can map to no more than one other independent variable.
             Unmapped independent variables remain independent (the default).
