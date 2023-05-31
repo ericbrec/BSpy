@@ -27,4 +27,4 @@ in [jupyter](https://jupyter.org/) notebooks and other scripting environments.
 
 The full documentation for bspy can be found [here](https://ericbrec.github.io/bspy), its GitHub project can be found 
 [here](https://github.com/ericbrec/bspy), a test suite can be found [here](https://github.com/ericbrec/bspy/tree/main/tests), and
-a set of examples, including a jupyter notebook can be found [here](https://github.com/ericbrec/bspy/tree/main/examples).
+a set of examples, including a jupyter notebook, can be found [here](https://github.com/ericbrec/bspy/tree/main/examples).
