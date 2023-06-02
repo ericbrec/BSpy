@@ -338,13 +338,13 @@
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
-<span class="sd">            The result of adding other to self.</span>
+<span class="sd">            The result of adding self and other.</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
 <span class="sd">        `subtract` : Subtract two splines.</span>
 <span class="sd">        `multiply` : Multiply two splines.</span>
-<span class="sd">        `common_basis : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
+<span class="sd">        `common_basis` : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -354,7 +354,7 @@
 
     <span class="k">def</span> <span class="nf">blossom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Compute the blossom of the spline at a given parameter values.</span>
+<span class="sd">        Compute the blossom of the spline at given parameter values.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -485,7 +485,7 @@
 <span class="sd">        ----------</span>
 <span class="sd">        uvw : `iterable`</span>
 <span class="sd">            An iterable of length `nInd` that specifies the values of each independent variable to contract.</span>
-<span class="sd">            A value of `None` for an independent variables indicates that variable should remain unchanged.</span>
+<span class="sd">            A value of `None` for an independent variable indicates that variable should remain unchanged.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -522,7 +522,7 @@
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
-<span class="sd">            The result of convolving other with self.</span>
+<span class="sd">            The result of convolving self with other.</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
@@ -981,7 +981,7 @@
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
-<span class="sd">            The result of multiplying other to self.</span>
+<span class="sd">            The result of multiplying self and other.</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
@@ -1124,7 +1124,7 @@
 <span class="sd">        --------</span>
 <span class="sd">        `add` : Add two splines.</span>
 <span class="sd">        `multiply` : Multiply two splines.</span>
-<span class="sd">        `common_basis : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
+<span class="sd">        `common_basis` : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -1437,13 +1437,13 @@
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
-<span class="sd">            The result of adding other to self.</span>
+<span class="sd">            The result of adding self and other.</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
 <span class="sd">        `subtract` : Subtract two splines.</span>
 <span class="sd">        `multiply` : Multiply two splines.</span>
-<span class="sd">        `common_basis : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
+<span class="sd">        `common_basis` : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -1453,7 +1453,7 @@
 
     <span class="k">def</span> <span class="nf">blossom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Compute the blossom of the spline at a given parameter values.</span>
+<span class="sd">        Compute the blossom of the spline at given parameter values.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1584,7 +1584,7 @@
 <span class="sd">        ----------</span>
 <span class="sd">        uvw : `iterable`</span>
 <span class="sd">            An iterable of length `nInd` that specifies the values of each independent variable to contract.</span>
-<span class="sd">            A value of `None` for an independent variables indicates that variable should remain unchanged.</span>
+<span class="sd">            A value of `None` for an independent variable indicates that variable should remain unchanged.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -1621,7 +1621,7 @@
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
-<span class="sd">            The result of convolving other with self.</span>
+<span class="sd">            The result of convolving self with other.</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
@@ -2080,7 +2080,7 @@
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
-<span class="sd">            The result of multiplying other to self.</span>
+<span class="sd">            The result of multiplying self and other.</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
@@ -2223,7 +2223,7 @@
 <span class="sd">        --------</span>
 <span class="sd">        `add` : Add two splines.</span>
 <span class="sd">        `multiply` : Multiply two splines.</span>
-<span class="sd">        `common_basis : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
+<span class="sd">        `common_basis` : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -2470,13 +2470,13 @@ A dictionary of ancillary data to store with the spline. Default is {}.</li>
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
-<span class="sd">            The result of adding other to self.</span>
+<span class="sd">            The result of adding self and other.</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
 <span class="sd">        `subtract` : Subtract two splines.</span>
 <span class="sd">        `multiply` : Multiply two splines.</span>
-<span class="sd">        `common_basis : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
+<span class="sd">        `common_basis` : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -2506,14 +2506,14 @@ Unmapped independent variables remain independent (the default).</li>
 
 <ul>
 <li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
-The result of adding other to self.</li>
+The result of adding self and other.</li>
 </ul>
 
 <h6 id="see-also">See Also</h6>
 
 <p><code><a href="#Spline.subtract">subtract</a></code>:  Subtract two splines. <br />
 <code><a href="#Spline.multiply">multiply</a></code>:  Multiply two splines. <br />
-`<code><a href="#Spline.common_basis">common_basis</a></code>:  Align a collection of splines to a common basis, elevating the order and adding knots as needed.  </p>
+<code><a href="#Spline.common_basis">common_basis</a></code>:  Align a collection of splines to a common basis, elevating the order and adding knots as needed.  </p>
 
 <h6 id="notes">Notes</h6>
 
@@ -2534,7 +2534,7 @@ The result of adding other to self.</li>
             <summary>View Source</summary>
             <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">blossom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Compute the blossom of the spline at a given parameter values.</span>
+<span class="sd">        Compute the blossom of the spline at given parameter values.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -2560,7 +2560,7 @@ The result of adding other to self.</li>
 
         </details>
 
-            <div class="docstring"><p>Compute the blossom of the spline at a given parameter values.</p>
+            <div class="docstring"><p>Compute the blossom of the spline at given parameter values.</p>
 
 <h6 id="parameters">Parameters</h6>
 
@@ -2845,7 +2845,7 @@ The aligned collection of N splines.</li>
 <span class="sd">        ----------</span>
 <span class="sd">        uvw : `iterable`</span>
 <span class="sd">            An iterable of length `nInd` that specifies the values of each independent variable to contract.</span>
-<span class="sd">            A value of `None` for an independent variables indicates that variable should remain unchanged.</span>
+<span class="sd">            A value of `None` for an independent variable indicates that variable should remain unchanged.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -2868,7 +2868,7 @@ The aligned collection of N splines.</li>
 <ul>
 <li><strong>uvw</strong> (<code>iterable</code>):
 An iterable of length <code>nInd</code> that specifies the values of each independent variable to contract.
-A value of <code>None</code> for an independent variables indicates that variable should remain unchanged.</li>
+A value of <code>None</code> for an independent variable indicates that variable should remain unchanged.</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -2919,7 +2919,7 @@ The contracted spline.</li>
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
-<span class="sd">            The result of convolving other with self.</span>
+<span class="sd">            The result of convolving self with other.</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
@@ -2961,7 +2961,7 @@ The type of product to perform on the dependent variables (default is 'S').
 
 <ul>
 <li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
-The result of convolving other with self.</li>
+The result of convolving self with other.</li>
 </ul>
 
 <h6 id="see-also">See Also</h6>
@@ -4067,7 +4067,7 @@ The algorithm to choose knots automatically is from Piegl, Les A., and Wayne Til
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        spline : `Spline`</span>
-<span class="sd">            The result of multiplying other to self.</span>
+<span class="sd">            The result of multiplying self and other.</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
@@ -4111,7 +4111,7 @@ The type of product to perform on the dependent variables (default is 'S').
 
 <ul>
 <li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
-The result of multiplying other to self.</li>
+The result of multiplying self and other.</li>
 </ul>
 
 <h6 id="see-also">See Also</h6>
@@ -4429,7 +4429,7 @@ The scaled spline.</li>
 <span class="sd">        --------</span>
 <span class="sd">        `add` : Add two splines.</span>
 <span class="sd">        `multiply` : Multiply two splines.</span>
-<span class="sd">        `common_basis : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
+<span class="sd">        `common_basis` : Align a collection of splines to a common basis, elevating the order and adding knots as needed.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -4466,7 +4466,7 @@ The result of subtracting other from self.</li>
 
 <p><code><a href="#Spline.add">add</a></code>:  Add two splines. <br />
 <code><a href="#Spline.multiply">multiply</a></code>:  Multiply two splines. <br />
-`<code><a href="#Spline.common_basis">common_basis</a></code>:  Align a collection of splines to a common basis, elevating the order and adding knots as needed.  </p>
+<code><a href="#Spline.common_basis">common_basis</a></code>:  Align a collection of splines to a common basis, elevating the order and adding knots as needed.  </p>
 
 <h6 id="notes">Notes</h6>
 
