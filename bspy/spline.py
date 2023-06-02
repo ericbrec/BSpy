@@ -176,13 +176,13 @@ class Spline:
         Returns
         -------
         spline : `Spline`
-            The result of adding other to self.
+            The result of adding self and other.
 
         See Also
         --------
         `subtract` : Subtract two splines.
         `multiply` : Multiply two splines.
-        `common_basis : Align a collection of splines to a common basis, elevating the order and adding knots as needed.
+        `common_basis` : Align a collection of splines to a common basis, elevating the order and adding knots as needed.
 
         Notes
         -----
@@ -192,7 +192,7 @@ class Spline:
 
     def blossom(self, uvw):
         """
-        Compute the blossom of the spline at a given parameter values.
+        Compute the blossom of the spline at given parameter values.
 
         Parameters
         ----------
@@ -323,7 +323,7 @@ class Spline:
         ----------
         uvw : `iterable`
             An iterable of length `nInd` that specifies the values of each independent variable to contract.
-            A value of `None` for an independent variables indicates that variable should remain unchanged.
+            A value of `None` for an independent variable indicates that variable should remain unchanged.
 
         Returns
         -------
@@ -360,7 +360,7 @@ class Spline:
         Returns
         -------
         spline : `Spline`
-            The result of convolving other with self.
+            The result of convolving self with other.
 
         See Also
         --------
@@ -819,7 +819,7 @@ class Spline:
         Returns
         -------
         spline : `Spline`
-            The result of multiplying other to self.
+            The result of multiplying self and other.
 
         See Also
         --------
@@ -962,7 +962,7 @@ class Spline:
         --------
         `add` : Add two splines.
         `multiply` : Multiply two splines.
-        `common_basis : Align a collection of splines to a common basis, elevating the order and adding knots as needed.
+        `common_basis` : Align a collection of splines to a common basis, elevating the order and adding knots as needed.
 
         Notes
         -----
