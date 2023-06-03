@@ -562,7 +562,7 @@ def test_add():
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
     
     # Add with shared independent variable.
-    added = spline1.add(spline2, [[0, 0]])
+    added = spline1.add(spline2, [0])
     maxerror = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
         [x, y] = spline1.evaluate([u]) + spline2.evaluate([u])
@@ -801,7 +801,7 @@ def test_multiply():
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
     
     # Multiply with shared independent variable.
-    multiplied = spline1.multiply(spline2, [[0, 0]], 'D')
+    multiplied = spline1.multiply(spline2, [0], 'D')
     maxerror = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
         x = np.dot(spline1.evaluate([u]), spline2.evaluate([u]))

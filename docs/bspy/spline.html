@@ -329,11 +329,13 @@
 <span class="sd">            The spline to add to self. The number of dependent variables must match self.</span>
 
 <span class="sd">        indMap : `iterable` or `None`, optional</span>
-<span class="sd">            An iterable of pairs of indices. </span>
-<span class="sd">            Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. </span>
-<span class="sd">            The domains of the nth and mth independent variables must match. </span>
-<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
+<span class="sd">            An iterable of indices or pairs of indices. Each index refers to an independent variable.</span>
+<span class="sd">            Within the iterable, a single index, `n`, maps the nth independent variable of self to the same independent variable of other.</span>
+<span class="sd">            A pair `(n, m)` maps the nth independent variable of self to the mth independent variable of other. </span>
+<span class="sd">            For example, if you wanted to compute `self(u, v, w) + other(u, w)`, you&#39;d pass `[0, (2, 1)]` for `indMap`.  </span>
 <span class="sd">            Unmapped independent variables remain independent (the default).</span>
+<span class="sd">            The domains of mapped independent variables must match. </span>
+<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -350,6 +352,8 @@
 <span class="sd">        -----</span>
 <span class="sd">        Uses `common_basis` to ensure mapped variables share the same order and knots. </span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[</span><span class="n">mapping</span> <span class="k">if</span> <span class="n">_isIterable</span><span class="p">(</span><span class="n">mapping</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="n">mapping</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">blossom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">):</span>
@@ -508,10 +512,12 @@
 <span class="sd">            The spline to convolve with self.</span>
 
 <span class="sd">        indMap : `iterable` or `None`, optional</span>
-<span class="sd">            An iterable of pairs of indices. </span>
-<span class="sd">            Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. </span>
-<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
+<span class="sd">            An iterable of indices or pairs of indices. Each index refers to an independent variable.</span>
+<span class="sd">            Within the iterable, a single index, `n`, maps the nth independent variable of self to the same independent variable of other.</span>
+<span class="sd">            A pair `(n, m)` maps the nth independent variable of self to the mth independent variable of other. </span>
+<span class="sd">            For example, if you wanted to convolve `self(u, v, w)` with `other(u, w)`, you&#39;d pass `[0, (2, 1)]` for `indMap`.  </span>
 <span class="sd">            Unmapped independent variables remain independent (the default).</span>
+<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
 
 <span class="sd">        productType : {&#39;C&#39;, &#39;D&#39;, &#39;S&#39;}, optional</span>
 <span class="sd">            The type of product to perform on the dependent variables (default is &#39;S&#39;).</span>
@@ -535,7 +541,7 @@
 <span class="sd">        Computer Aided Geometric Design 11, no. 6 (1994): 597-620.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="n">mapping</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
+            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="p">(</span><span class="n">mapping</span> <span class="k">if</span> <span class="n">_isIterable</span><span class="p">(</span><span class="n">mapping</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="n">mapping</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)),</span> <span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">multiplyAndConvolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">,</span> <span class="n">productType</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">cross</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
@@ -966,11 +972,13 @@
 <span class="sd">            The spline to multiply by self.</span>
 
 <span class="sd">        indMap : `iterable` or `None`, optional</span>
-<span class="sd">            An iterable of pairs of indices. </span>
-<span class="sd">            Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. </span>
-<span class="sd">            The domains of the nth and mth independent variables must match. </span>
-<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
+<span class="sd">            An iterable of indices or pairs of indices. Each index refers to an independent variable.</span>
+<span class="sd">            Within the iterable, a single index, `n`, maps the nth independent variable of self to the same independent variable of other.</span>
+<span class="sd">            A pair `(n, m)` maps the nth independent variable of self to the mth independent variable of other. </span>
+<span class="sd">            For example, if you wanted to compute `self(u, v, w) * other(u, w)`, you&#39;d pass `[0, (2, 1)]` for `indMap`.  </span>
 <span class="sd">            Unmapped independent variables remain independent (the default).</span>
+<span class="sd">            The domains of mapped independent variables must match. </span>
+<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
 
 <span class="sd">        productType : {&#39;C&#39;, &#39;D&#39;, &#39;S&#39;}, optional</span>
 <span class="sd">            The type of product to perform on the dependent variables (default is &#39;S&#39;).</span>
@@ -995,7 +1003,7 @@
 <span class="sd">        Computer Aided Geometric Design 11, no. 6 (1994): 597-620.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="n">mapping</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
+            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="p">(</span><span class="n">mapping</span> <span class="k">if</span> <span class="n">_isIterable</span><span class="p">(</span><span class="n">mapping</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="n">mapping</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)),</span> <span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">multiplyAndConvolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">,</span> <span class="n">productType</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">range_bounds</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -1109,11 +1117,13 @@
 <span class="sd">            The spline to subtract from self. The number of dependent variables must match self.</span>
 
 <span class="sd">        indMap : `iterable` or `None`, optional</span>
-<span class="sd">            An iterable of pairs of indices. </span>
-<span class="sd">            Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. </span>
-<span class="sd">            The domains of the nth and mth independent variables must match. </span>
-<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
+<span class="sd">            An iterable of indices or pairs of indices. Each index refers to an independent variable.</span>
+<span class="sd">            Within the iterable, a single index, `n`, maps the nth independent variable of self to the same independent variable of other.</span>
+<span class="sd">            A pair `(n, m)` maps the nth independent variable of self to the mth independent variable of other. </span>
+<span class="sd">            For example, if you wanted to compute `self(u, v, w) - other(u, w)`, you&#39;d pass `[0, (2, 1)]` for `indMap`.  </span>
 <span class="sd">            Unmapped independent variables remain independent (the default).</span>
+<span class="sd">            The domains of mapped independent variables must match. </span>
+<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -1130,6 +1140,8 @@
 <span class="sd">        -----</span>
 <span class="sd">        Uses `common_basis` to ensure mapped variables share the same order and knots. </span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[</span><span class="n">mapping</span> <span class="k">if</span> <span class="n">_isIterable</span><span class="p">(</span><span class="n">mapping</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="n">mapping</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">),</span> <span class="n">indMap</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">maxSingularValue</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -1428,11 +1440,13 @@
 <span class="sd">            The spline to add to self. The number of dependent variables must match self.</span>
 
 <span class="sd">        indMap : `iterable` or `None`, optional</span>
-<span class="sd">            An iterable of pairs of indices. </span>
-<span class="sd">            Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. </span>
-<span class="sd">            The domains of the nth and mth independent variables must match. </span>
-<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
+<span class="sd">            An iterable of indices or pairs of indices. Each index refers to an independent variable.</span>
+<span class="sd">            Within the iterable, a single index, `n`, maps the nth independent variable of self to the same independent variable of other.</span>
+<span class="sd">            A pair `(n, m)` maps the nth independent variable of self to the mth independent variable of other. </span>
+<span class="sd">            For example, if you wanted to compute `self(u, v, w) + other(u, w)`, you&#39;d pass `[0, (2, 1)]` for `indMap`.  </span>
 <span class="sd">            Unmapped independent variables remain independent (the default).</span>
+<span class="sd">            The domains of mapped independent variables must match. </span>
+<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -1449,6 +1463,8 @@
 <span class="sd">        -----</span>
 <span class="sd">        Uses `common_basis` to ensure mapped variables share the same order and knots. </span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[</span><span class="n">mapping</span> <span class="k">if</span> <span class="n">_isIterable</span><span class="p">(</span><span class="n">mapping</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="n">mapping</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">blossom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">):</span>
@@ -1607,10 +1623,12 @@
 <span class="sd">            The spline to convolve with self.</span>
 
 <span class="sd">        indMap : `iterable` or `None`, optional</span>
-<span class="sd">            An iterable of pairs of indices. </span>
-<span class="sd">            Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. </span>
-<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
+<span class="sd">            An iterable of indices or pairs of indices. Each index refers to an independent variable.</span>
+<span class="sd">            Within the iterable, a single index, `n`, maps the nth independent variable of self to the same independent variable of other.</span>
+<span class="sd">            A pair `(n, m)` maps the nth independent variable of self to the mth independent variable of other. </span>
+<span class="sd">            For example, if you wanted to convolve `self(u, v, w)` with `other(u, w)`, you&#39;d pass `[0, (2, 1)]` for `indMap`.  </span>
 <span class="sd">            Unmapped independent variables remain independent (the default).</span>
+<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
 
 <span class="sd">        productType : {&#39;C&#39;, &#39;D&#39;, &#39;S&#39;}, optional</span>
 <span class="sd">            The type of product to perform on the dependent variables (default is &#39;S&#39;).</span>
@@ -1634,7 +1652,7 @@
 <span class="sd">        Computer Aided Geometric Design 11, no. 6 (1994): 597-620.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="n">mapping</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
+            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="p">(</span><span class="n">mapping</span> <span class="k">if</span> <span class="n">_isIterable</span><span class="p">(</span><span class="n">mapping</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="n">mapping</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)),</span> <span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">multiplyAndConvolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">,</span> <span class="n">productType</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">cross</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
@@ -2065,11 +2083,13 @@
 <span class="sd">            The spline to multiply by self.</span>
 
 <span class="sd">        indMap : `iterable` or `None`, optional</span>
-<span class="sd">            An iterable of pairs of indices. </span>
-<span class="sd">            Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. </span>
-<span class="sd">            The domains of the nth and mth independent variables must match. </span>
-<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
+<span class="sd">            An iterable of indices or pairs of indices. Each index refers to an independent variable.</span>
+<span class="sd">            Within the iterable, a single index, `n`, maps the nth independent variable of self to the same independent variable of other.</span>
+<span class="sd">            A pair `(n, m)` maps the nth independent variable of self to the mth independent variable of other. </span>
+<span class="sd">            For example, if you wanted to compute `self(u, v, w) * other(u, w)`, you&#39;d pass `[0, (2, 1)]` for `indMap`.  </span>
 <span class="sd">            Unmapped independent variables remain independent (the default).</span>
+<span class="sd">            The domains of mapped independent variables must match. </span>
+<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
 
 <span class="sd">        productType : {&#39;C&#39;, &#39;D&#39;, &#39;S&#39;}, optional</span>
 <span class="sd">            The type of product to perform on the dependent variables (default is &#39;S&#39;).</span>
@@ -2094,7 +2114,7 @@
 <span class="sd">        Computer Aided Geometric Design 11, no. 6 (1994): 597-620.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="n">mapping</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
+            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="p">(</span><span class="n">mapping</span> <span class="k">if</span> <span class="n">_isIterable</span><span class="p">(</span><span class="n">mapping</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="n">mapping</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)),</span> <span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">multiplyAndConvolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">,</span> <span class="n">productType</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">range_bounds</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -2208,11 +2228,13 @@
 <span class="sd">            The spline to subtract from self. The number of dependent variables must match self.</span>
 
 <span class="sd">        indMap : `iterable` or `None`, optional</span>
-<span class="sd">            An iterable of pairs of indices. </span>
-<span class="sd">            Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. </span>
-<span class="sd">            The domains of the nth and mth independent variables must match. </span>
-<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
+<span class="sd">            An iterable of indices or pairs of indices. Each index refers to an independent variable.</span>
+<span class="sd">            Within the iterable, a single index, `n`, maps the nth independent variable of self to the same independent variable of other.</span>
+<span class="sd">            A pair `(n, m)` maps the nth independent variable of self to the mth independent variable of other. </span>
+<span class="sd">            For example, if you wanted to compute `self(u, v, w) - other(u, w)`, you&#39;d pass `[0, (2, 1)]` for `indMap`.  </span>
 <span class="sd">            Unmapped independent variables remain independent (the default).</span>
+<span class="sd">            The domains of mapped independent variables must match. </span>
+<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -2229,6 +2251,8 @@
 <span class="sd">        -----</span>
 <span class="sd">        Uses `common_basis` to ensure mapped variables share the same order and knots. </span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[</span><span class="n">mapping</span> <span class="k">if</span> <span class="n">_isIterable</span><span class="p">(</span><span class="n">mapping</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="n">mapping</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">),</span> <span class="n">indMap</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">maxSingularValue</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -2461,11 +2485,13 @@ A dictionary of ancillary data to store with the spline. Default is {}.</li>
 <span class="sd">            The spline to add to self. The number of dependent variables must match self.</span>
 
 <span class="sd">        indMap : `iterable` or `None`, optional</span>
-<span class="sd">            An iterable of pairs of indices. </span>
-<span class="sd">            Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. </span>
-<span class="sd">            The domains of the nth and mth independent variables must match. </span>
-<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
+<span class="sd">            An iterable of indices or pairs of indices. Each index refers to an independent variable.</span>
+<span class="sd">            Within the iterable, a single index, `n`, maps the nth independent variable of self to the same independent variable of other.</span>
+<span class="sd">            A pair `(n, m)` maps the nth independent variable of self to the mth independent variable of other. </span>
+<span class="sd">            For example, if you wanted to compute `self(u, v, w) + other(u, w)`, you&#39;d pass `[0, (2, 1)]` for `indMap`.  </span>
 <span class="sd">            Unmapped independent variables remain independent (the default).</span>
+<span class="sd">            The domains of mapped independent variables must match. </span>
+<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -2482,6 +2508,8 @@ A dictionary of ancillary data to store with the spline. Default is {}.</li>
 <span class="sd">        -----</span>
 <span class="sd">        Uses `common_basis` to ensure mapped variables share the same order and knots. </span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[</span><span class="n">mapping</span> <span class="k">if</span> <span class="n">_isIterable</span><span class="p">(</span><span class="n">mapping</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="n">mapping</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">)</span>
 </pre></div>
 
@@ -2495,11 +2523,13 @@ A dictionary of ancillary data to store with the spline. Default is {}.</li>
 <li><strong>other</strong> (<code><a href="#Spline">Spline</a></code>):
 The spline to add to self. The number of dependent variables must match self.</li>
 <li><strong>indMap</strong> (<code>iterable</code> or <code>None</code>, optional):
-An iterable of pairs of indices. 
-Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. 
-The domains of the nth and mth independent variables must match. 
-An independent variable can map to no more than one other independent variable.
-Unmapped independent variables remain independent (the default).</li>
+An iterable of indices or pairs of indices. Each index refers to an independent variable.
+Within the iterable, a single index, <code>n</code>, maps the nth independent variable of self to the same independent variable of other.
+A pair <code>(n, m)</code> maps the nth independent variable of self to the mth independent variable of other. 
+For example, if you wanted to compute <code>self(u, v, w) + other(u, w)</code>, you'd pass <code>[0, (2, 1)]</code> for <code>indMap</code>. <br />
+Unmapped independent variables remain independent (the default).
+The domains of mapped independent variables must match. 
+An independent variable can map to no more than one other independent variable.</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -2905,10 +2935,12 @@ The contracted spline.</li>
 <span class="sd">            The spline to convolve with self.</span>
 
 <span class="sd">        indMap : `iterable` or `None`, optional</span>
-<span class="sd">            An iterable of pairs of indices. </span>
-<span class="sd">            Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. </span>
-<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
+<span class="sd">            An iterable of indices or pairs of indices. Each index refers to an independent variable.</span>
+<span class="sd">            Within the iterable, a single index, `n`, maps the nth independent variable of self to the same independent variable of other.</span>
+<span class="sd">            A pair `(n, m)` maps the nth independent variable of self to the mth independent variable of other. </span>
+<span class="sd">            For example, if you wanted to convolve `self(u, v, w)` with `other(u, w)`, you&#39;d pass `[0, (2, 1)]` for `indMap`.  </span>
 <span class="sd">            Unmapped independent variables remain independent (the default).</span>
+<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
 
 <span class="sd">        productType : {&#39;C&#39;, &#39;D&#39;, &#39;S&#39;}, optional</span>
 <span class="sd">            The type of product to perform on the dependent variables (default is &#39;S&#39;).</span>
@@ -2932,7 +2964,7 @@ The contracted spline.</li>
 <span class="sd">        Computer Aided Geometric Design 11, no. 6 (1994): 597-620.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="n">mapping</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
+            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="p">(</span><span class="n">mapping</span> <span class="k">if</span> <span class="n">_isIterable</span><span class="p">(</span><span class="n">mapping</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="n">mapping</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)),</span> <span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">multiplyAndConvolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">,</span> <span class="n">productType</span><span class="p">)</span>
 </pre></div>
 
@@ -2946,10 +2978,12 @@ The contracted spline.</li>
 <li><strong>other</strong> (<code><a href="#Spline">Spline</a></code>):
 The spline to convolve with self.</li>
 <li><strong>indMap</strong> (<code>iterable</code> or <code>None</code>, optional):
-An iterable of pairs of indices. 
-Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. 
-An independent variable can map to no more than one other independent variable.
-Unmapped independent variables remain independent (the default).</li>
+An iterable of indices or pairs of indices. Each index refers to an independent variable.
+Within the iterable, a single index, <code>n</code>, maps the nth independent variable of self to the same independent variable of other.
+A pair <code>(n, m)</code> maps the nth independent variable of self to the mth independent variable of other. 
+For example, if you wanted to convolve <code>self(u, v, w)</code> with <code>other(u, w)</code>, you'd pass <code>[0, (2, 1)]</code> for <code>indMap</code>. <br />
+Unmapped independent variables remain independent (the default).
+An independent variable can map to no more than one other independent variable.</li>
 <li><strong>productType</strong> ({'C', 'D', 'S'}, optional):
 The type of product to perform on the dependent variables (default is 'S').
    'C' is for a cross product, self x other (nDep must be 2 or 3).
@@ -4052,11 +4086,13 @@ The algorithm to choose knots automatically is from Piegl, Les A., and Wayne Til
 <span class="sd">            The spline to multiply by self.</span>
 
 <span class="sd">        indMap : `iterable` or `None`, optional</span>
-<span class="sd">            An iterable of pairs of indices. </span>
-<span class="sd">            Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. </span>
-<span class="sd">            The domains of the nth and mth independent variables must match. </span>
-<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
+<span class="sd">            An iterable of indices or pairs of indices. Each index refers to an independent variable.</span>
+<span class="sd">            Within the iterable, a single index, `n`, maps the nth independent variable of self to the same independent variable of other.</span>
+<span class="sd">            A pair `(n, m)` maps the nth independent variable of self to the mth independent variable of other. </span>
+<span class="sd">            For example, if you wanted to compute `self(u, v, w) * other(u, w)`, you&#39;d pass `[0, (2, 1)]` for `indMap`.  </span>
 <span class="sd">            Unmapped independent variables remain independent (the default).</span>
+<span class="sd">            The domains of mapped independent variables must match. </span>
+<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
 
 <span class="sd">        productType : {&#39;C&#39;, &#39;D&#39;, &#39;S&#39;}, optional</span>
 <span class="sd">            The type of product to perform on the dependent variables (default is &#39;S&#39;).</span>
@@ -4081,7 +4117,7 @@ The algorithm to choose knots automatically is from Piegl, Les A., and Wayne Til
 <span class="sd">        Computer Aided Geometric Design 11, no. 6 (1994): 597-620.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="n">mapping</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
+            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="p">(</span><span class="n">mapping</span> <span class="k">if</span> <span class="n">_isIterable</span><span class="p">(</span><span class="n">mapping</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="n">mapping</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)),</span> <span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">multiplyAndConvolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">,</span> <span class="n">productType</span><span class="p">)</span>
 </pre></div>
 
@@ -4095,11 +4131,13 @@ The algorithm to choose knots automatically is from Piegl, Les A., and Wayne Til
 <li><strong>other</strong> (<code><a href="#Spline">Spline</a></code>):
 The spline to multiply by self.</li>
 <li><strong>indMap</strong> (<code>iterable</code> or <code>None</code>, optional):
-An iterable of pairs of indices. 
-Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. 
-The domains of the nth and mth independent variables must match. 
-An independent variable can map to no more than one other independent variable.
-Unmapped independent variables remain independent (the default).</li>
+An iterable of indices or pairs of indices. Each index refers to an independent variable.
+Within the iterable, a single index, <code>n</code>, maps the nth independent variable of self to the same independent variable of other.
+A pair <code>(n, m)</code> maps the nth independent variable of self to the mth independent variable of other. 
+For example, if you wanted to compute <code>self(u, v, w) * other(u, w)</code>, you'd pass <code>[0, (2, 1)]</code> for <code>indMap</code>. <br />
+Unmapped independent variables remain independent (the default).
+The domains of mapped independent variables must match. 
+An independent variable can map to no more than one other independent variable.</li>
 <li><strong>productType</strong> ({'C', 'D', 'S'}, optional):
 The type of product to perform on the dependent variables (default is 'S').
    'C' is for a cross product, self x other (nDep must be 2 or 3).
@@ -4414,11 +4452,13 @@ The scaled spline.</li>
 <span class="sd">            The spline to subtract from self. The number of dependent variables must match self.</span>
 
 <span class="sd">        indMap : `iterable` or `None`, optional</span>
-<span class="sd">            An iterable of pairs of indices. </span>
-<span class="sd">            Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. </span>
-<span class="sd">            The domains of the nth and mth independent variables must match. </span>
-<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
+<span class="sd">            An iterable of indices or pairs of indices. Each index refers to an independent variable.</span>
+<span class="sd">            Within the iterable, a single index, `n`, maps the nth independent variable of self to the same independent variable of other.</span>
+<span class="sd">            A pair `(n, m)` maps the nth independent variable of self to the mth independent variable of other. </span>
+<span class="sd">            For example, if you wanted to compute `self(u, v, w) - other(u, w)`, you&#39;d pass `[0, (2, 1)]` for `indMap`.  </span>
 <span class="sd">            Unmapped independent variables remain independent (the default).</span>
+<span class="sd">            The domains of mapped independent variables must match. </span>
+<span class="sd">            An independent variable can map to no more than one other independent variable.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -4435,6 +4475,8 @@ The scaled spline.</li>
 <span class="sd">        -----</span>
 <span class="sd">        Uses `common_basis` to ensure mapped variables share the same order and knots. </span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">indMap</span> <span class="o">=</span> <span class="p">[</span><span class="n">mapping</span> <span class="k">if</span> <span class="n">_isIterable</span><span class="p">(</span><span class="n">mapping</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="n">mapping</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">),</span> <span class="n">indMap</span><span class="p">)</span>
 </pre></div>
 
@@ -4448,11 +4490,13 @@ The scaled spline.</li>
 <li><strong>other</strong> (<code><a href="#Spline">Spline</a></code>):
 The spline to subtract from self. The number of dependent variables must match self.</li>
 <li><strong>indMap</strong> (<code>iterable</code> or <code>None</code>, optional):
-An iterable of pairs of indices. 
-Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. 
-The domains of the nth and mth independent variables must match. 
-An independent variable can map to no more than one other independent variable.
-Unmapped independent variables remain independent (the default).</li>
+An iterable of indices or pairs of indices. Each index refers to an independent variable.
+Within the iterable, a single index, <code>n</code>, maps the nth independent variable of self to the same independent variable of other.
+A pair <code>(n, m)</code> maps the nth independent variable of self to the mth independent variable of other. 
+For example, if you wanted to compute <code>self(u, v, w) - other(u, w)</code>, you'd pass <code>[0, (2, 1)]</code> for <code>indMap</code>. <br />
+Unmapped independent variables remain independent (the default).
+The domains of mapped independent variables must match. 
+An independent variable can map to no more than one other independent variable.</li>
 </ul>
 
 <h6 id="returns">Returns</h6>

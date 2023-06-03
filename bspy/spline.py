@@ -167,11 +167,13 @@ class Spline:
             The spline to add to self. The number of dependent variables must match self.
 
         indMap : `iterable` or `None`, optional
-            An iterable of pairs of indices. 
-            Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. 
-            The domains of the nth and mth independent variables must match. 
-            An independent variable can map to no more than one other independent variable.
+            An iterable of indices or pairs of indices. Each index refers to an independent variable.
+            Within the iterable, a single index, `n`, maps the nth independent variable of self to the same independent variable of other.
+            A pair `(n, m)` maps the nth independent variable of self to the mth independent variable of other. 
+            For example, if you wanted to compute `self(u, v, w) + other(u, w)`, you'd pass `[0, (2, 1)]` for `indMap`.  
             Unmapped independent variables remain independent (the default).
+            The domains of mapped independent variables must match. 
+            An independent variable can map to no more than one other independent variable.
 
         Returns
         -------
@@ -188,6 +190,8 @@ class Spline:
         -----
         Uses `common_basis` to ensure mapped variables share the same order and knots. 
         """
+        if indMap is not None:
+            indMap = [mapping if _isIterable(mapping) else (mapping, mapping) for mapping in indMap]
         return bspy._spline_operations.add(self, other, indMap)
 
     def blossom(self, uvw):
@@ -346,10 +350,12 @@ class Spline:
             The spline to convolve with self.
 
         indMap : `iterable` or `None`, optional
-            An iterable of pairs of indices. 
-            Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. 
-            An independent variable can map to no more than one other independent variable.
+            An iterable of indices or pairs of indices. Each index refers to an independent variable.
+            Within the iterable, a single index, `n`, maps the nth independent variable of self to the same independent variable of other.
+            A pair `(n, m)` maps the nth independent variable of self to the mth independent variable of other. 
+            For example, if you wanted to convolve `self(u, v, w)` with `other(u, w)`, you'd pass `[0, (2, 1)]` for `indMap`.  
             Unmapped independent variables remain independent (the default).
+            An independent variable can map to no more than one other independent variable.
 
         productType : {'C', 'D', 'S'}, optional
             The type of product to perform on the dependent variables (default is 'S').
@@ -373,7 +379,7 @@ class Spline:
         Computer Aided Geometric Design 11, no. 6 (1994): 597-620.
         """
         if indMap is not None:
-            indMap = [(*mapping, True) for mapping in indMap]
+            indMap = [(*(mapping if _isIterable(mapping) else (mapping, mapping)), True) for mapping in indMap]
         return bspy._spline_operations.multiplyAndConvolve(self, other, indMap, productType)
 
     def cross(self, vector):
@@ -804,11 +810,13 @@ class Spline:
             The spline to multiply by self.
 
         indMap : `iterable` or `None`, optional
-            An iterable of pairs of indices. 
-            Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. 
-            The domains of the nth and mth independent variables must match. 
-            An independent variable can map to no more than one other independent variable.
+            An iterable of indices or pairs of indices. Each index refers to an independent variable.
+            Within the iterable, a single index, `n`, maps the nth independent variable of self to the same independent variable of other.
+            A pair `(n, m)` maps the nth independent variable of self to the mth independent variable of other. 
+            For example, if you wanted to compute `self(u, v, w) * other(u, w)`, you'd pass `[0, (2, 1)]` for `indMap`.  
             Unmapped independent variables remain independent (the default).
+            The domains of mapped independent variables must match. 
+            An independent variable can map to no more than one other independent variable.
 
         productType : {'C', 'D', 'S'}, optional
             The type of product to perform on the dependent variables (default is 'S').
@@ -833,7 +841,7 @@ class Spline:
         Computer Aided Geometric Design 11, no. 6 (1994): 597-620.
         """
         if indMap is not None:
-            indMap = [(*mapping, False) for mapping in indMap]
+            indMap = [(*(mapping if _isIterable(mapping) else (mapping, mapping)), False) for mapping in indMap]
         return bspy._spline_operations.multiplyAndConvolve(self, other, indMap, productType)
 
     def range_bounds(self):
@@ -947,11 +955,13 @@ class Spline:
             The spline to subtract from self. The number of dependent variables must match self.
 
         indMap : `iterable` or `None`, optional
-            An iterable of pairs of indices. 
-            Each pair (n, m) maps the nth independent variable of self to the mth independent variable of other. 
-            The domains of the nth and mth independent variables must match. 
-            An independent variable can map to no more than one other independent variable.
+            An iterable of indices or pairs of indices. Each index refers to an independent variable.
+            Within the iterable, a single index, `n`, maps the nth independent variable of self to the same independent variable of other.
+            A pair `(n, m)` maps the nth independent variable of self to the mth independent variable of other. 
+            For example, if you wanted to compute `self(u, v, w) - other(u, w)`, you'd pass `[0, (2, 1)]` for `indMap`.  
             Unmapped independent variables remain independent (the default).
+            The domains of mapped independent variables must match. 
+            An independent variable can map to no more than one other independent variable.
 
         Returns
         -------
@@ -968,6 +978,8 @@ class Spline:
         -----
         Uses `common_basis` to ensure mapped variables share the same order and knots. 
         """
+        if indMap is not None:
+            indMap = [mapping if _isIterable(mapping) else (mapping, mapping) for mapping in indMap]
         return self.add(other.scale(-1.0), indMap)
 
     def transform(self, matrix, maxSingularValue=None):
