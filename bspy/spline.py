@@ -170,7 +170,7 @@ class Spline:
             An iterable of indices or pairs of indices. Each index refers to an independent variable.
             Within the iterable, a single index, `n`, maps the nth independent variable of self to the same independent variable of other.
             A pair `(n, m)` maps the nth independent variable of self to the mth independent variable of other. 
-            For example, if you wanted to compute `self(u, v, w) + other(u, w)`, you'd pass `[0, (2, 1)]` for `indMap`.  
+            For example, if you wanted to compute `self(u, v, w) + other(u, w)`, you'd pass `[0, (2, 1)]` for `indMap`. 
             Unmapped independent variables remain independent (the default).
             The domains of mapped independent variables must match. 
             An independent variable can map to no more than one other independent variable.
@@ -353,7 +353,7 @@ class Spline:
             An iterable of indices or pairs of indices. Each index refers to an independent variable.
             Within the iterable, a single index, `n`, maps the nth independent variable of self to the same independent variable of other.
             A pair `(n, m)` maps the nth independent variable of self to the mth independent variable of other. 
-            For example, if you wanted to convolve `self(u, v, w)` with `other(u, w)`, you'd pass `[0, (2, 1)]` for `indMap`.  
+            For example, if you wanted to convolve `self(u, v, w)` with `other(u, w)`, you'd pass `[0, (2, 1)]` for `indMap`. 
             Unmapped independent variables remain independent (the default).
             An independent variable can map to no more than one other independent variable.
 
@@ -813,7 +813,7 @@ class Spline:
             An iterable of indices or pairs of indices. Each index refers to an independent variable.
             Within the iterable, a single index, `n`, maps the nth independent variable of self to the same independent variable of other.
             A pair `(n, m)` maps the nth independent variable of self to the mth independent variable of other. 
-            For example, if you wanted to compute `self(u, v, w) * other(u, w)`, you'd pass `[0, (2, 1)]` for `indMap`.  
+            For example, if you wanted to compute `self(u, v, w) * other(u, w)`, you'd pass `[0, (2, 1)]` for `indMap`. 
             Unmapped independent variables remain independent (the default).
             The domains of mapped independent variables must match. 
             An independent variable can map to no more than one other independent variable.
@@ -958,7 +958,7 @@ class Spline:
             An iterable of indices or pairs of indices. Each index refers to an independent variable.
             Within the iterable, a single index, `n`, maps the nth independent variable of self to the same independent variable of other.
             A pair `(n, m)` maps the nth independent variable of self to the mth independent variable of other. 
-            For example, if you wanted to compute `self(u, v, w) - other(u, w)`, you'd pass `[0, (2, 1)]` for `indMap`.  
+            For example, if you wanted to compute `self(u, v, w) - other(u, w)`, you'd pass `[0, (2, 1)]` for `indMap`. 
             Unmapped independent variables remain independent (the default).
             The domains of mapped independent variables must match. 
             An independent variable can map to no more than one other independent variable.
