@@ -61,11 +61,14 @@ def least_squares(nInd, nDep, order, dataPoints, knotList = None, compression = 
         assert len(knotList) == nInd, "len(knots) != nInd" # The documented interface uses the argument 'knots' instead of 'knotList'
         nCoef = [len(knotList[i]) - order[i] for i in range(nInd)]
         totalCoef = 1
+        newKnotList = []
         for knots, ord, nCf in zip(knotList, order, nCoef):
             for i in range(nCf):
                 assert knots[i] <= knots[i + 1] and knots[i] < knots[i + ord], "Improperly ordered knot sequence"
             totalCoef *= nCf
+            newKnotList.append(np.array(knots))
         assert totalCoef <= totalDataPoints, f"Insufficient number of data points. You need at least {totalCoef}."
+        knotList = newKnotList
     
     # Initialize A and b from the likely overdetermined equation, A x = b, where A contains the bspline values at the independent variables,
     # b contains point values for the dependent variables, and the x contains the desired coefficients.
@@ -126,7 +129,7 @@ def least_squares(nInd, nDep, order, dataPoints, knotList = None, compression = 
     
     # Yay, the A and b arrays are ready to solve.
     # Now, we call numpy's least squares solver.
-    coefs, residuals, rank, s = np.linalg.lstsq(A, b)
+    coefs, residuals, rank, s = np.linalg.lstsq(A, b, rcond=None)
 
     # Reshape the coefs array to match nCoef (un-flatten) and move the dependent variables to the front.
     coefs = np.moveaxis(coefs.reshape((*nCoef, nDep)), -1, 0)
