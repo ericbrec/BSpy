@@ -28,7 +28,7 @@ def zeros_using_interval_newton(self, epsilon=None):
                 if interval.atMachineEpsilon or slope < epsilon:
                     root = np.array((intercept + 0.5 * slope,))
                     # Double-check that we're at an actual zero (avoids boundary case).
-                    if self(root) < evaluationEpsilon:
+                    if np.linalg.norm(self(root)) < evaluationEpsilon:
                         # Check for duplicate root. We test for a distance between roots of 2*epsilon to account for a left vs. right sided limit.
                         if roots and abs(root - roots[-1]) < 2.0 * epsilon:
                             # For a duplicate root, return the average value.
@@ -41,7 +41,7 @@ def zeros_using_interval_newton(self, epsilon=None):
     # Process intervals until none remain
     while intervalStack:
         interval = intervalStack.pop()
-        scale = np.abs(interval.spline.range_bounds()).max(axis=1)
+        scale = np.abs(interval.spline.range_bounds()).max()
         if scale < epsilon:
             # Return the bounds of the interval within which the spline is zero.
             roots.append((interval.intercept, interval.slope + interval.intercept))
@@ -172,7 +172,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
     # Process intervals until none remain
     while intervalStack:
         interval = intervalStack.pop()
-        scale = np.abs(interval.spline.range_bounds()).max(axis=1)
+        scale = np.abs(interval.spline.range_bounds()).max()
         if scale < epsilon:
             # Return the bounds of the interval within which the spline is zero.
             roots.append((interval.intercept, interval.slope + interval.intercept))
@@ -224,7 +224,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
                     intercept = np.multiply(domain[0], interval.slope) + interval.intercept
                     root = intercept + 0.5 * slope
                     # Double-check that we're at an actual zero (avoids boundary case).
-                    if self(root) < evaluationEpsilon:
+                    if np.linalg.norm(self(root)) < evaluationEpsilon:
                         # Check for duplicate root. We test for a distance between roots of 2*epsilon to account for a left vs. right sided limit.
                         if roots and np.linalg.norm(root - roots[-1]) < 2.0 * epsilon:
                             # For a duplicate root, return the average value.
@@ -259,5 +259,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
 
 def zeros(self, epsilon=None):
     assert self.nInd == self.nDep
-    return zeros_using_interval_newton(self, epsilon)
-    #return zeros_using_projected_polyhedron(self, epsilon)
+    if self.nInd <= 1:
+        return zeros_using_interval_newton(self, epsilon)
+    else:
+        return zeros_using_projected_polyhedron(self, epsilon)
