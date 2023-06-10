@@ -8,6 +8,7 @@ def zeros_using_interval_newton(self, epsilon=None):
     machineEpsilon = np.finfo(self.knots[0].dtype).eps
     if epsilon is None:
         epsilon = max(self.accuracy, machineEpsilon)
+    evaluationEpsilon = np.sqrt(epsilon)
     roots = []
     # Set initial spline, domain, and interval.
     spline = self
@@ -25,9 +26,9 @@ def zeros_using_interval_newton(self, epsilon=None):
                 # Iteration is complete if the interval actual width (slope) is either
                 # one iteration past being less than sqrt(machineEpsilon) or simply less than epsilon.
                 if interval.atMachineEpsilon or slope < epsilon:
-                    root = intercept + 0.5 * slope
+                    root = np.array((intercept + 0.5 * slope,))
                     # Double-check that we're at an actual zero (avoids boundary case).
-                    if self((root,)) < epsilon:
+                    if self(root) < evaluationEpsilon:
                         # Check for duplicate root. We test for a distance between roots of 2*epsilon to account for a left vs. right sided limit.
                         if roots and abs(root - roots[-1]) < 2.0 * epsilon:
                             # For a duplicate root, return the average value.
@@ -40,9 +41,9 @@ def zeros_using_interval_newton(self, epsilon=None):
     # Process intervals until none remain
     while intervalStack:
         interval = intervalStack.pop()
-        range = interval.spline.range_bounds()
-        scale = np.abs(range).max(axis=1)
+        scale = np.abs(interval.spline.range_bounds()).max(axis=1)
         if scale < epsilon:
+            # Return the bounds of the interval within which the spline is zero.
             roots.append((interval.intercept, interval.slope + interval.intercept))
         else:
             spline = interval.spline.scale(1.0 / scale)
@@ -159,6 +160,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
     if epsilon is None:
         epsilon = max(self.accuracy, machineEpsilon)
     Crit = 0.85 # Required percentage decrease in domain per iteration.
+    evaluationEpsilon = np.sqrt(epsilon)
     roots = []
 
     # Set initial spline, domain, and interval.
@@ -170,9 +172,9 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
     # Process intervals until none remain
     while intervalStack:
         interval = intervalStack.pop()
-        range = interval.spline.range_bounds()
-        scale = np.abs(range).max(axis=1)
+        scale = np.abs(interval.spline.range_bounds()).max(axis=1)
         if scale < epsilon:
+            # Return the bounds of the interval within which the spline is zero.
             roots.append((interval.intercept, interval.slope + interval.intercept))
         else:
             # Rescale the spline to max 1.0.
@@ -194,7 +196,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
                 xInterval = (0.0, 1.0)
                 for nDep in range(spline.nDep):
                     # Compute the 2D convex hull of the knot coefficients and the spline's coefficients
-                    hull = _convex_hull_2D(knotCoefs, coefs[nDep].flatten, xInterval)
+                    hull = _convex_hull_2D(knotCoefs, coefs[nDep].flatten(), xInterval)
                     if hull is None:
                         xInterval = None
                         break
@@ -214,13 +216,15 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
                 domain = np.array(domain).T
                 width = domain[1] - domain[0]
                 slope = np.multiply(width, interval.slope)
+                # TODO: Remove the next line (just here for debugging).
+                intercept = np.multiply(domain[0], interval.slope) + interval.intercept
                 # Iteration is complete if the interval actual width (slope) is either
                 # one iteration past being less than sqrt(machineEpsilon) or simply less than epsilon.
                 if interval.atMachineEpsilon or slope.max() < epsilon:
                     intercept = np.multiply(domain[0], interval.slope) + interval.intercept
                     root = intercept + 0.5 * slope
                     # Double-check that we're at an actual zero (avoids boundary case).
-                    if self(root) < epsilon:
+                    if self(root) < evaluationEpsilon:
                         # Check for duplicate root. We test for a distance between roots of 2*epsilon to account for a left vs. right sided limit.
                         if roots and np.linalg.norm(root - roots[-1]) < 2.0 * epsilon:
                             # For a duplicate root, return the average value.
@@ -249,6 +253,8 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
                         intercept = np.multiply(domain[0], interval.slope) + interval.intercept
                         intervalStack.append(Interval(spline.trim(domain.T).reparametrize(((0.0, 1.0),) * spline.nInd), slope, intercept, np.dot(slope, slope) < machineEpsilon))
 
+    if self.nInd == 1:
+        roots.sort(key=lambda root: root[0] if type(root) is tuple else root)
     return roots
 
 def zeros(self, epsilon=None):
