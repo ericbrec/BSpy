@@ -1,3 +1,4 @@
+import math
 import numpy as np
 from collections import namedtuple
 
@@ -165,28 +166,6 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
     Interval = namedtuple('Interval', ('spline', 'slope', 'intercept', 'atMachineEpsilon'))
     intervalStack = [Interval(spline.trim(domain.T).reparametrize(((0.0, 1.0),) * spline.nInd), domain[1] - domain[0], domain[0], False)]
 
-    def test_and_add_domain():
-        """Macro to perform common operations when considering a domain as a new interval."""
-        if domain[0] <= 1.0 and domain[1] >= 0.0:
-            width = domain[1] - domain[0]
-            if width >= 0.0:
-                slope = width * interval.slope
-                intercept = domain[0] * interval.slope + interval.intercept
-                # Iteration is complete if the interval actual width (slope) is either
-                # one iteration past being less than sqrt(machineEpsilon) or simply less than epsilon.
-                if interval.atMachineEpsilon or slope < epsilon:
-                    root = intercept + 0.5 * slope
-                    # Double-check that we're at an actual zero (avoids boundary case).
-                    if self((root,)) < epsilon:
-                        # Check for duplicate root. We test for a distance between roots of 2*epsilon to account for a left vs. right sided limit.
-                        if roots and abs(root - roots[-1]) < 2.0 * epsilon:
-                            # For a duplicate root, return the average value.
-                            roots[-1] = 0.5 * (roots[-1] + root)
-                        else:
-                            roots.append(root)
-                else:
-                    intervalStack.append(Interval(spline.trim((domain,)).reparametrize(((0.0, 1.0),)), slope, intercept, slope * slope < machineEpsilon))
-
     # Process intervals until none remain
     while intervalStack:
         interval = intervalStack.pop()
@@ -195,24 +174,62 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
         if scale < epsilon:
             roots.append((interval.intercept, interval.slope + interval.intercept))
         else:
+            # Rescale the spline to max 1.0.
             spline = interval.spline.scale(1.0 / scale)
-            mValue = spline((0.5,))
-            derivativeRange = spline.differentiate().range_bounds()
-            if derivativeRange[0, 0] * derivativeRange[0, 1] <= 0.0:
-                # Derivative range contains zero, so consider two intervals.
-                leftIndex = 0 if mValue > 0.0 else 1
-                domain[0] = max(0.5 - mValue / derivativeRange[0, leftIndex], 0.0)
-                domain[1] = 1.0
-                test_and_add_domain()
-                domain[0] = 0.0
-                domain[1] = min(0.5 - mValue / derivativeRange[0, 1 - leftIndex], 1.0)
-                test_and_add_domain()
-            else:
-                leftIndex = 0 if mValue > 0.0 else 1
-                domain[0] = max(0.5 - mValue / derivativeRange[0, leftIndex], 0.0)
-                domain[1] = min(0.5 - mValue / derivativeRange[0, 1 - leftIndex], 1.0)
-                test_and_add_domain()
-    
+            # Loop through each independent variable to determine a tighter domain around roots.
+            domain = []
+            for nInd, order, knots, nCoef in zip(range(spline.nInd), spline.order, spline.knots, spline.nCoef):
+                # Move independent variable to the last (fastest) axis, adding 1 to account for the dependent variables.
+                coefs = np.moveaxis(spline.coefs, nInd + 1, -1)
+
+                # Compute the coefficients for f(x) = x for the independent variable and its knots.
+                degree = order - 1
+                knotCoefs = np.empty((nCoef,), knots.dtype)
+                knotCoefs[0] = knots[1]
+                for i in range(1, nCoef):
+                    knotCoefs[i] = knotCoefs[i - 1] + (knots[i + degree] - knots[i])/degree
+                
+                # Loop through each dependent variable to compute the interval containing the root for this independent variable.
+                xInterval = (0.0, 1.0)
+                for nDep in range(spline.nDep):
+                    # Compute the 2D convex hull of the knot coefficients and the spline's coefficients
+                    hull = _convex_hull_2D(knotCoefs, coefs[nDep].flatten, xInterval)
+                    if hull is None:
+                        xInterval = None
+                        break
+                    
+                    # Intersect the convex hull with the xInterval along the x axis (the knot coefficients axis).
+                    xInterval = _intersect_convex_hull_with_x_interval(hull, xInterval)
+                    if xInterval is None:
+                        break
+                
+                # Add valid xInterval to domain.
+                if xInterval is None:
+                    domain = None
+                    break
+                domain.append(xInterval)
+            
+            if domain is not None:
+                domain = np.array(domain).T
+                width = domain[1] - domain[0]
+                slope = np.multiply(width, interval.slope)
+                intercept = np.multiply(domain[0], interval.slope) + interval.intercept
+                # Iteration is complete if the interval actual width (slope) is either
+                # one iteration past being less than sqrt(machineEpsilon) or simply less than epsilon.
+                if interval.atMachineEpsilon or slope.max() < epsilon:
+                    root = intercept + 0.5 * slope
+                    # Double-check that we're at an actual zero (avoids boundary case).
+                    if self(root) < epsilon:
+                        # Check for duplicate root. We test for a distance between roots of 2*epsilon to account for a left vs. right sided limit.
+                        if roots and np.linalg.norm(root - roots[-1]) < 2.0 * epsilon:
+                            # For a duplicate root, return the average value.
+                            roots[-1] = 0.5 * (roots[-1] + root)
+                        else:
+                            roots.append(root)
+                else:
+                    # TODO: Split wide domains.
+                    intervalStack.append(Interval(spline.trim((domain,)).reparametrize(((0.0, 1.0),)), slope, intercept, slope * slope < machineEpsilon))
+
     return roots
 
 def zeros(self, epsilon=None):
