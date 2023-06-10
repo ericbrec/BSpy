@@ -158,6 +158,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
     machineEpsilon = np.finfo(self.knots[0].dtype).eps
     if epsilon is None:
         epsilon = max(self.accuracy, machineEpsilon)
+    Crit = 0.85 # Required percentage decrease in domain per iteration.
     roots = []
 
     # Set initial spline, domain, and interval.
@@ -213,10 +214,10 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
                 domain = np.array(domain).T
                 width = domain[1] - domain[0]
                 slope = np.multiply(width, interval.slope)
-                intercept = np.multiply(domain[0], interval.slope) + interval.intercept
                 # Iteration is complete if the interval actual width (slope) is either
                 # one iteration past being less than sqrt(machineEpsilon) or simply less than epsilon.
                 if interval.atMachineEpsilon or slope.max() < epsilon:
+                    intercept = np.multiply(domain[0], interval.slope) + interval.intercept
                     root = intercept + 0.5 * slope
                     # Double-check that we're at an actual zero (avoids boundary case).
                     if self(root) < epsilon:
@@ -227,11 +228,30 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
                         else:
                             roots.append(root)
                 else:
-                    # TODO: Split wide domains.
-                    intervalStack.append(Interval(spline.trim((domain,)).reparametrize(((0.0, 1.0),)), slope, intercept, slope * slope < machineEpsilon))
+                    # Split domain in dimensions that aren't decreasing in width sufficiently.
+                    domains = [domain]
+                    for nInd, w, s in zip(range(spline.nInd), width, slope):
+                        if s >= epsilon and w > Crit:
+                            # Not close to root and didn't get the required decrease in with, so split the domain.
+                            domainCount = len(domains) # Cache the domain list size, since we're increasing it mid loop
+                            w *= 0.5 # Halve the domain width for this independent variable
+                            for i in range(domainCount):
+                                leftDomain = domains[i]
+                                rightDomain = leftDomain.copy()
+                                leftDomain[1][nInd] -= w # Alters domain in domains list
+                                rightDomain[0][nInd] += w
+                                domains.append(rightDomain)
+                    
+                    # Add new intervals to interval stack.
+                    for domain in domains:
+                        width = domain[1] - domain[0]
+                        slope = np.multiply(width, interval.slope)
+                        intercept = np.multiply(domain[0], interval.slope) + interval.intercept
+                        intervalStack.append(Interval(spline.trim(domain.T).reparametrize(((0.0, 1.0),) * spline.nInd), slope, intercept, np.dot(slope, slope) < machineEpsilon))
 
     return roots
 
 def zeros(self, epsilon=None):
     assert self.nInd == self.nDep
     return zeros_using_interval_newton(self, epsilon)
+    #return zeros_using_projected_polyhedron(self, epsilon)
