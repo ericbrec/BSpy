@@ -901,8 +901,9 @@ class Spline:
         Parameters
         ----------
         newDomain : array-like
-            nInd x 2 array of the new upper and lower bounds on each of the independent variables. 
-            Same form as returned from `domain`.
+            nInd x 2 array of the new upper and lower bounds on each of the independent variables (same form as 
+            returned from `domain`). If a bound pair is `None` then the original bound (and knots) are left unchanged. 
+            For example, `[[0.0, 1.0], None]` will reparametrize the first independent variable and leave the second unchanged)
 
         Returns
         -------
@@ -1100,12 +1101,19 @@ class Spline:
         Returns
         -------
         roots : `iterable`
-            An ordered iterable containing the roots of the spline. If the spline is 
-            zero over an interval, that root will appear as a tuple of the interval.
+            An iterable containing the roots of the spline. If the spline is 
+            zero over an interval, that root will appear as a tuple of the interval. 
+            For curves (nInd == 1), the roots are ordered.
 
         Notes
         -----
-        Currently, the algorithm only works for nInd == 1. 
-        Implements the algorithm from Grandine, Thomas A. "Computing zeroes of spline functions." Computer Aided Geometric Design 6, no. 2 (1989): 129-136.
+        For curves (nInd == 1), it implements interval Newton's method from Grandine, Thomas A. "Computing zeroes of spline functions." 
+        Computer Aided Geometric Design 6, no. 2 (1989): 129-136.
+        For all higher dimensions, it implements the project projected-polyhedron technique from Sherbrooke, Evan C., and Nicholas M. Patrikalakis. 
+        "Computation of the solutions of nonlinear polynomial systems." Computer Aided Geometric Design 10, no. 5 (1993): 379-405.
         """
-        return bspy._spline_intersection.zeros(self, epsilon)
+        assert self.nInd == self.nDep, "The number of independent variables (nInd) must match the number of dependent variables (nDep)."
+        if self.nInd <= 1:
+            return bspy._spline_intersection.zeros_using_interval_newton(self, epsilon)
+        else:
+            return bspy._spline_intersection.zeros_using_projected_polyhedron(self, epsilon)

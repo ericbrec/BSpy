@@ -2,6 +2,7 @@ import numpy as np
 import scipy.integrate
 import pytest
 import bspy
+import math
 
 myCurve = bspy.Spline(1, 2, [4], [5], [[0,0,0,0,0.3,1,1,1,1]], [[0, 0], [0.3, 1],
                     [0.5, 0.0], [0.7, -0.5], [1, 1]])
@@ -958,39 +959,77 @@ def test_trim():
     assert maxerror <= np.finfo(float).eps
 
 def test_zeros():
-    def check_roots(expectedRoots, roots, tolerance):
+    def check_1D_roots(expectedRoots, roots, tolerance):
         assert len(expectedRoots) == len(roots)
         for (expectedRoot, root) in zip(expectedRoots, roots):
             assert abs(expectedRoot - root) < tolerance
+
+    def check_roots(spline, expectedRootCount, roots, tolerance):
+        assert expectedRootCount == len(roots)
+        for root in roots:
+            value = spline(root)
+            assert np.dot(value, value) < tolerance
 
     tolerance = 1.0e-6
 
     spline = bspy.Spline(1, 1, (4,), (4,), ((0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0),), ((1.0, -2.0, -2.0, 1.0),))
     expectedRoots = (0.127322, 0.872678)
     roots = spline.zeros(tolerance)
-    check_roots(expectedRoots, roots, tolerance)
+    check_1D_roots(expectedRoots, roots, tolerance)
 
     spline = bspy.Spline(1, 1, (4,), (5,), ((0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 2.0, 2.0, 2.0),), ((1.0, -2.0, -2.0, 3.0, -1.0),))
     expectedRoots = (0.126791, 1.179700, 1.901525)
     roots = spline.zeros(tolerance)
-    check_roots(expectedRoots, roots, tolerance)
+    check_1D_roots(expectedRoots, roots, tolerance)
 
     spline = bspy.Spline(1, 1, (4,), (10,), ((0.0, 0.0, 0.0, 0.0, 1.0, 3.0, 4.0, 7.0, 7.0, 8.0, 10.0, 10.0, 10.0, 10.0),), ((1.0, -2.0, -3.0, -4.0, 5.0, 6.0, 7.0, -8.0, -9.0, 1.0),))
     expectedRoots = (0.124277, 3.556169, 7.866681, 9.930791)
     roots = spline.zeros(tolerance)
-    check_roots(expectedRoots, roots, tolerance)
+    check_1D_roots(expectedRoots, roots, tolerance)
 
     spline = bspy.Spline(1, 1, (5,), (7,), ((0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 4.0, 4.0, 4.0, 4.0, 4.0),), ((1.0, -2.0, -3.0, 4.0, 5.0, -6.0, 1.0),))
     expectedRoots = (0.094002, 1.201821, 3.019268, 3.918820)
     roots = spline.zeros(tolerance)
-    check_roots(expectedRoots, roots, tolerance)
+    check_1D_roots(expectedRoots, roots, tolerance)
 
     spline = bspy.Spline(1, 1, (6,), (11,), ((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 2.0, 2.0, 2.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0),), ((2.0, -1.0, -1.0, -1.0, 1.0, 2.0, 2.0, -3.0, -3.0, 4.0, 1.0),))
     expectedRoots = (0.197807, 0.959259, 2.368276, 3.336228)
     roots = spline.zeros(tolerance)
-    check_roots(expectedRoots, roots, tolerance)
+    check_1D_roots(expectedRoots, roots, tolerance)
 
     spline = bspy.Spline(1, 1, (4,), (4,), ((0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0),), ((1.0, -13.0 / 9.0, 25.0 / 12.0, -3.0),))
     expectedRoots = (0.400000, 0.428571)
     roots = spline.zeros(tolerance)
-    check_roots(expectedRoots, roots, tolerance)
+    check_1D_roots(expectedRoots, roots, tolerance)
+
+    data = []
+    for u in np.linspace(-2.0, 2.0, 3):
+        for v in np.linspace(-2.0, 2.0, 7):
+            data.append((u, v, 9 * u * u + v * v - 1.0, u - v))
+    spline = bspy.Spline.least_squares(2, 2, (3,3), data)
+    roots = spline.zeros(tolerance)
+    check_roots(spline, 2, roots, tolerance)
+
+    data = []
+    for u in np.linspace(-2.0, 2.0, 3):
+        for v in np.linspace(-2.0, 2.0, 7):
+            data.append((u, v, 9 * u * u + v * v - 1.0, u))
+    spline = bspy.Spline.least_squares(2, 2, (3,3), data)
+    roots = spline.zeros(tolerance)
+    check_roots(spline, 2, roots, tolerance)
+
+    data = []
+    for u in np.linspace(-2.0, 2.0, 3):
+        for v in np.linspace(-2.0, 2.0, 7):
+            data.append((u, v, 9 * u * u + v * v - 1.0, v))
+    spline = bspy.Spline.least_squares(2, 2, (3,3), data)
+    roots = spline.zeros(tolerance)
+    check_roots(spline, 2, roots, tolerance)
+
+    data = []
+    for u in np.linspace(-2.0, 2.0, 21):
+        for v in np.linspace(-2.0, 2.0, 21):
+            data.append((u, v, math.cos(math.pi * (u * u + v * v)), u - v))
+    spline = bspy.Spline.least_squares(2, 2, (4,4), data)
+    roots = spline.zeros(tolerance)
+    check_roots(spline, 16, roots, tolerance)

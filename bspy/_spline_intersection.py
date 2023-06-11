@@ -3,8 +3,8 @@ import numpy as np
 from collections import namedtuple
 
 def zeros_using_interval_newton(self, epsilon=None):
-    assert self.nInd == self.nDep
-    assert self.nInd == 1
+    assert self.nInd == self.nDep, "The number of independent variables (nInd) must match the number of dependent variables (nDep)."
+    assert self.nInd == 1, "Only works for curves (nInd == 1)."
     machineEpsilon = np.finfo(self.knots[0].dtype).eps
     if epsilon is None:
         epsilon = max(self.accuracy, machineEpsilon)
@@ -66,7 +66,7 @@ def zeros_using_interval_newton(self, epsilon=None):
     
     return roots
 
-def _convex_hull_2D(xData, yData, xInterval = None):
+def _convex_hull_2D(xData, yData, epsilon = 1.0e-8, xInterval = None):
     # Allow xData to be repeated for longer yData, but only if yData is a multiple.
     assert len(yData) % len(xData) == 0
 
@@ -87,7 +87,7 @@ def _convex_hull_2D(xData, yData, xInterval = None):
         yMax = max(yMax, y)
 
     # Only return convex null if it contains y = 0 and x within xInterval.
-    if xInterval is not None and (y0 > 1.0e-8 or yMax < -1.0e-8 or xMin > xInterval[1] or xMax < xInterval[0]):
+    if xInterval is not None and (y0 > epsilon or yMax < -epsilon or xMin > xInterval[1] or xMax < xInterval[0]):
         return None
 
     # Sort points by angle around p0.
@@ -106,7 +106,7 @@ def _convex_hull_2D(xData, yData, xInterval = None):
     previousPoint = None
     previousDistance = -1.0
     for point in sortedPoints[1:]:
-        if previousPoint is not None and abs(previousPoint[0] - point[0]) < 1.0e-8:
+        if previousPoint is not None and abs(previousPoint[0] - point[0]) < epsilon:
             if previousDistance < 0.0:
                 previousDistance = (previousPoint[1] - x0) ** 2 + (previousPoint[2] - y0) ** 2
             distance = (point[1] - x0) ** 2 + (point[2] - y0) ** 2
@@ -130,20 +130,20 @@ def _convex_hull_2D(xData, yData, xInterval = None):
 
     return hullPoints
 
-def _intersect_convex_hull_with_x_interval(hullPoints, xInterval):
-    xMin = xInterval[1] + 1.0e-8
-    xMax = xInterval[0] - 1.0e-8
+def _intersect_convex_hull_with_x_interval(hullPoints, epsilon, xInterval):
+    xMin = xInterval[1] + epsilon
+    xMax = xInterval[0] - epsilon
     previousPoint = hullPoints[-1]
     for point in hullPoints:
         # Check for intersection with x axis.
-        if previousPoint[1] * point[1] <= 1.0e-8:
+        if previousPoint[1] * point[1] <= epsilon:
             determinant = point[1] - previousPoint[1]
-            if abs(determinant) > 1.0e-8:
+            if abs(determinant) > epsilon:
                 # Crosses x axis, determine intersection.
                 x = previousPoint[0] - previousPoint[1] * (point[0] - previousPoint[0]) / determinant
                 xMin = min(xMin, x)
                 xMax = max(xMax, x)
-            elif abs(point[1]) < 1.0e-8:
+            elif abs(point[1]) < epsilon:
                 # Touches at endpoint. (Previous point is checked earlier.)
                 xMin = min(xMin, point[0])
                 xMax = max(xMax, point[0])
@@ -155,7 +155,7 @@ def _intersect_convex_hull_with_x_interval(hullPoints, xInterval):
         return (max(xMin, xInterval[0]), min(xMax, xInterval[1]))
 
 def zeros_using_projected_polyhedron(self, epsilon=None):
-    assert self.nInd == self.nDep
+    assert self.nInd == self.nDep, "The number of independent variables (nInd) must match the number of dependent variables (nDep)."
     machineEpsilon = np.finfo(self.knots[0].dtype).eps
     if epsilon is None:
         epsilon = max(self.accuracy, machineEpsilon)
@@ -202,13 +202,13 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
                     xInterval = (0.0, 1.0)
                     for nDep in range(spline.nDep):
                         # Compute the 2D convex hull of the knot coefficients and the spline's coefficients
-                        hull = _convex_hull_2D(knotCoefs, coefs[nDep].flatten(), xInterval)
+                        hull = _convex_hull_2D(knotCoefs, coefs[nDep].flatten(), epsilon, xInterval)
                         if hull is None:
                             xInterval = None
                             break
                         
                         # Intersect the convex hull with the xInterval along the x axis (the knot coefficients axis).
-                        xInterval = _intersect_convex_hull_with_x_interval(hull, xInterval)
+                        xInterval = _intersect_convex_hull_with_x_interval(hull, epsilon, xInterval)
                         if xInterval is None:
                             break
                     
@@ -261,10 +261,3 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
     if self.nInd == 1:
         roots.sort(key=lambda root: root[0] if type(root) is tuple else root)
     return roots
-
-def zeros(self, epsilon=None):
-    assert self.nInd == self.nDep
-    if self.nInd <= 1:
-        return zeros_using_interval_newton(self, epsilon)
-    else:
-        return zeros_using_projected_polyhedron(self, epsilon)
