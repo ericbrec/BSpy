@@ -484,22 +484,22 @@ def remove_knots(self, oldKnots=((),), maxRemovalsPerKnot=0, tolerance=None):
 
 def reparametrize(self, newDomain):
     assert len(newDomain) == self.nInd
-    domain = self.domain()
     knotList = []
-    for order, knots, d, nD in zip(self.order, self.knots, domain, newDomain):
-        divisor = d[1] - d[0]
-        assert abs(divisor) > 0.0
-        slope = (nD[1] - nD[0]) / divisor
-        assert abs(slope) > 0.0
-        intercept = (nD[0] * d[1] - nD[1] * d[0]) / divisor
-        knots = knots * slope + intercept
-        # Force domain to match exactly at its ends and knots to be non-decreasing.
-        knots[order-1] = nD[0]
-        for i in range(0, order-1):
-            knots[i] = min(knots[i], nD[0])
-        knots[-order] = nD[1]
-        for i in range(1-order, 0):
-            knots[i] = max(knots[i], nD[1])
+    for order, knots, d, nD in zip(self.order, self.knots, self.domain(), newDomain):
+        if nD is not None:
+            divisor = d[1] - d[0]
+            assert divisor > np.finfo(self.knots[0].dtype).eps
+            slope = (nD[1] - nD[0]) / divisor
+            assert abs(slope) > 0.0
+            intercept = (nD[0] * d[1] - nD[1] * d[0]) / divisor
+            knots = knots * slope + intercept
+            # Force domain to match exactly at its ends and knots to be non-decreasing.
+            knots[order-1] = nD[0]
+            for i in range(0, order-1):
+                knots[i] = min(knots[i], nD[0])
+            knots[-order] = nD[1]
+            for i in range(1-order, 0):
+                knots[i] = max(knots[i], nD[1])
         knotList.append(knots)
     
     return type(self)(self.nInd, self.nDep, self.order, self.nCoef, knotList, self.coefs, self.accuracy, self.metadata)   
@@ -545,7 +545,7 @@ def trim(self, newDomain):
     knotsList = []
     coefIndex = [slice(None)] # First index is for nDep
     for (order, knots, bounds) in zip(spline.order, spline.knots, newDomain):
-        leftIndex = order - 1 if bounds[0] is None or np.isnan(bounds[0]) else np.searchsorted(knots, bounds[0])
+        leftIndex = 0 if bounds[0] is None or np.isnan(bounds[0]) else np.searchsorted(knots, bounds[0])
         rightIndex = len(knots) - order if bounds[1] is None or np.isnan(bounds[1]) else np.searchsorted(knots, bounds[1])
         knotsList.append(knots[leftIndex:rightIndex + order])
         coefIndex.append(slice(leftIndex, rightIndex))

@@ -87,7 +87,7 @@ def _convex_hull_2D(xData, yData, xInterval = None):
         yMax = max(yMax, y)
 
     # Only return convex null if it contains y = 0 and x within xInterval.
-    if xInterval is not None and (y0 > 0.0 or yMax < 0.0 or xMin > xInterval[1] or xMax < xInterval[0]):
+    if xInterval is not None and (y0 > 1.0e-8 or yMax < -1.0e-8 or xMin > xInterval[1] or xMax < xInterval[0]):
         return None
 
     # Sort points by angle around p0.
@@ -181,43 +181,47 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
             spline = interval.spline.scale(1.0 / scale)
             # Loop through each independent variable to determine a tighter domain around roots.
             domain = []
-            for nInd, order, knots, nCoef in zip(range(spline.nInd), spline.order, spline.knots, spline.nCoef):
-                # Move independent variable to the last (fastest) axis, adding 1 to account for the dependent variables.
-                coefs = np.moveaxis(spline.coefs, nInd + 1, -1)
+            for nInd, order, knots, nCoef, slope in zip(range(spline.nInd), spline.order, spline.knots, spline.nCoef, interval.slope):
+                # Start with the current interval for this independent variable.
+                if slope < epsilon:
+                    # If the slope for this independent variable is less than epsilon, 
+                    # then we've isolated its value and should leave its interval unchanged.
+                    domain.append(spline.domain()[nInd])
+                else:
+                    # Move independent variable to the last (fastest) axis, adding 1 to account for the dependent variables.
+                    coefs = np.moveaxis(spline.coefs, nInd + 1, -1)
 
-                # Compute the coefficients for f(x) = x for the independent variable and its knots.
-                degree = order - 1
-                knotCoefs = np.empty((nCoef,), knots.dtype)
-                knotCoefs[0] = knots[1]
-                for i in range(1, nCoef):
-                    knotCoefs[i] = knotCoefs[i - 1] + (knots[i + degree] - knots[i])/degree
-                
-                # Loop through each dependent variable to compute the interval containing the root for this independent variable.
-                xInterval = (0.0, 1.0)
-                for nDep in range(spline.nDep):
-                    # Compute the 2D convex hull of the knot coefficients and the spline's coefficients
-                    hull = _convex_hull_2D(knotCoefs, coefs[nDep].flatten(), xInterval)
-                    if hull is None:
-                        xInterval = None
-                        break
+                    # Compute the coefficients for f(x) = x for the independent variable and its knots.
+                    degree = order - 1
+                    knotCoefs = np.empty((nCoef,), knots.dtype)
+                    knotCoefs[0] = knots[1]
+                    for i in range(1, nCoef):
+                        knotCoefs[i] = knotCoefs[i - 1] + (knots[i + degree] - knots[i])/degree
                     
-                    # Intersect the convex hull with the xInterval along the x axis (the knot coefficients axis).
-                    xInterval = _intersect_convex_hull_with_x_interval(hull, xInterval)
+                    # Loop through each dependent variable to compute the interval containing the root for this independent variable.
+                    xInterval = (0.0, 1.0)
+                    for nDep in range(spline.nDep):
+                        # Compute the 2D convex hull of the knot coefficients and the spline's coefficients
+                        hull = _convex_hull_2D(knotCoefs, coefs[nDep].flatten(), xInterval)
+                        if hull is None:
+                            xInterval = None
+                            break
+                        
+                        # Intersect the convex hull with the xInterval along the x axis (the knot coefficients axis).
+                        xInterval = _intersect_convex_hull_with_x_interval(hull, xInterval)
+                        if xInterval is None:
+                            break
+                    
+                    # Add valid xInterval to domain.
                     if xInterval is None:
+                        domain = None
                         break
-                
-                # Add valid xInterval to domain.
-                if xInterval is None:
-                    domain = None
-                    break
-                domain.append(xInterval)
+                    domain.append(xInterval)
             
             if domain is not None:
                 domain = np.array(domain).T
                 width = domain[1] - domain[0]
                 slope = np.multiply(width, interval.slope)
-                # TODO: Remove the next line (just here for debugging).
-                intercept = np.multiply(domain[0], interval.slope) + interval.intercept
                 # Iteration is complete if the interval actual width (slope) is either
                 # one iteration past being less than sqrt(machineEpsilon) or simply less than epsilon.
                 if interval.atMachineEpsilon or slope.max() < epsilon:
@@ -251,7 +255,8 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
                         width = domain[1] - domain[0]
                         slope = np.multiply(width, interval.slope)
                         intercept = np.multiply(domain[0], interval.slope) + interval.intercept
-                        intervalStack.append(Interval(spline.trim(domain.T).reparametrize(((0.0, 1.0),) * spline.nInd), slope, intercept, np.dot(slope, slope) < machineEpsilon))
+                        newDomain = [None if s < epsilon else (0.0, 1.0) for s in slope]
+                        intervalStack.append(Interval(spline.trim(domain.T).reparametrize(newDomain), slope, intercept, np.dot(slope, slope) < machineEpsilon))
 
     if self.nInd == 1:
         roots.sort(key=lambda root: root[0] if type(root) is tuple else root)
