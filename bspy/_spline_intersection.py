@@ -28,7 +28,7 @@ def zeros_using_interval_newton(self, epsilon=None):
                 if interval.atMachineEpsilon or slope < epsilon:
                     root = np.array((intercept + 0.5 * slope,))
                     # Double-check that we're at an actual zero (avoids boundary case).
-                    if np.linalg.norm(self(root)) < evaluationEpsilon:
+                    if abs(self(root)) < evaluationEpsilon:
                         # Check for duplicate root. We test for a distance between roots of 2*epsilon to account for a left vs. right sided limit.
                         if roots and abs(root - roots[-1]) < 2.0 * epsilon:
                             # For a duplicate root, return the average value.
@@ -230,10 +230,14 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
                     # Double-check that we're at an actual zero (avoids boundary case).
                     if np.linalg.norm(self(root)) < evaluationEpsilon:
                         # Check for duplicate root. We test for a distance between roots of 2*epsilon to account for a left vs. right sided limit.
-                        if roots and np.linalg.norm(root - roots[-1]) < 2.0 * epsilon:
-                            # For a duplicate root, return the average value.
-                            roots[-1] = 0.5 * (roots[-1] + root)
-                        else:
+                        foundDuplicate = False
+                        for i, oldRoot in zip(range(len(roots)), roots):
+                            if np.linalg.norm(root - oldRoot) < 2.0 * epsilon:
+                                # For a duplicate root, return the average value.
+                                roots[i] = 0.5 * (oldRoot + root)
+                                foundDuplicate = True
+                                break
+                        if not foundDuplicate:
                             roots.append(root)
                 else:
                     # Split domain in dimensions that aren't decreasing in width sufficiently.

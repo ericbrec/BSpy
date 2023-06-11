@@ -1109,7 +1109,7 @@ class Spline:
         -----
         For curves (nInd == 1), it implements interval Newton's method from Grandine, Thomas A. "Computing zeroes of spline functions." 
         Computer Aided Geometric Design 6, no. 2 (1989): 129-136.
-        For all higher dimensions, it implements the project projected-polyhedron technique from Sherbrooke, Evan C., and Nicholas M. Patrikalakis. 
+        For all higher dimensions, it implements the projected-polyhedron technique from Sherbrooke, Evan C., and Nicholas M. Patrikalakis. 
         "Computation of the solutions of nonlinear polynomial systems." Computer Aided Geometric Design 10, no. 5 (1993): 379-405.
         """
         assert self.nInd == self.nDep, "The number of independent variables (nInd) must match the number of dependent variables (nDep)."
