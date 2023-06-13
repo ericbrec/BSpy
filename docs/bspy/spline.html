@@ -1063,8 +1063,9 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        newDomain : array-like</span>
-<span class="sd">            nInd x 2 array of the new upper and lower bounds on each of the independent variables. </span>
-<span class="sd">            Same form as returned from `domain`.</span>
+<span class="sd">            nInd x 2 array of the new upper and lower bounds on each of the independent variables (same form as </span>
+<span class="sd">            returned from `domain`). If a bound pair is `None` then the original bound (and knots) are left unchanged. </span>
+<span class="sd">            For example, `[[0.0, 1.0], None]` will reparametrize the first independent variable and leave the second unchanged)</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -1262,15 +1263,22 @@
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        roots : `iterable`</span>
-<span class="sd">            An ordered iterable containing the roots of the spline. If the spline is </span>
-<span class="sd">            zero over an interval, that root will appear as a tuple of the interval.</span>
+<span class="sd">            An iterable containing the roots of the spline. If the spline is </span>
+<span class="sd">            zero over an interval, that root will appear as a tuple of the interval. </span>
+<span class="sd">            For curves (nInd == 1), the roots are ordered.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        Currently, the algorithm only works for nInd == 1. </span>
-<span class="sd">        Implements the algorithm from Grandine, Thomas A. &quot;Computing zeroes of spline functions.&quot; Computer Aided Geometric Design 6, no. 2 (1989): 129-136.</span>
+<span class="sd">        For curves (nInd == 1), it implements interval Newton&#39;s method from Grandine, Thomas A. &quot;Computing zeroes of spline functions.&quot; </span>
+<span class="sd">        Computer Aided Geometric Design 6, no. 2 (1989): 129-136.</span>
+<span class="sd">        For all higher dimensions, it implements the projected-polyhedron technique from Sherbrooke, Evan C., and Nicholas M. Patrikalakis. </span>
+<span class="sd">        &quot;Computation of the solutions of nonlinear polynomial systems.&quot; Computer Aided Geometric Design 10, no. 5 (1993): 379-405.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">,</span> <span class="s2">&quot;The number of independent variables (nInd) must match the number of dependent variables (nDep).&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">zeros_using_interval_newton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">zeros_using_projected_polyhedron</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
 </pre></div>
 
         </details>
@@ -2174,8 +2182,9 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        newDomain : array-like</span>
-<span class="sd">            nInd x 2 array of the new upper and lower bounds on each of the independent variables. </span>
-<span class="sd">            Same form as returned from `domain`.</span>
+<span class="sd">            nInd x 2 array of the new upper and lower bounds on each of the independent variables (same form as </span>
+<span class="sd">            returned from `domain`). If a bound pair is `None` then the original bound (and knots) are left unchanged. </span>
+<span class="sd">            For example, `[[0.0, 1.0], None]` will reparametrize the first independent variable and leave the second unchanged)</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -2373,15 +2382,22 @@
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        roots : `iterable`</span>
-<span class="sd">            An ordered iterable containing the roots of the spline. If the spline is </span>
-<span class="sd">            zero over an interval, that root will appear as a tuple of the interval.</span>
+<span class="sd">            An iterable containing the roots of the spline. If the spline is </span>
+<span class="sd">            zero over an interval, that root will appear as a tuple of the interval. </span>
+<span class="sd">            For curves (nInd == 1), the roots are ordered.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        Currently, the algorithm only works for nInd == 1. </span>
-<span class="sd">        Implements the algorithm from Grandine, Thomas A. &quot;Computing zeroes of spline functions.&quot; Computer Aided Geometric Design 6, no. 2 (1989): 129-136.</span>
+<span class="sd">        For curves (nInd == 1), it implements interval Newton&#39;s method from Grandine, Thomas A. &quot;Computing zeroes of spline functions.&quot; </span>
+<span class="sd">        Computer Aided Geometric Design 6, no. 2 (1989): 129-136.</span>
+<span class="sd">        For all higher dimensions, it implements the projected-polyhedron technique from Sherbrooke, Evan C., and Nicholas M. Patrikalakis. </span>
+<span class="sd">        &quot;Computation of the solutions of nonlinear polynomial systems.&quot; Computer Aided Geometric Design 10, no. 5 (1993): 379-405.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">,</span> <span class="s2">&quot;The number of independent variables (nInd) must match the number of dependent variables (nDep).&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">zeros_using_interval_newton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">zeros_using_projected_polyhedron</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
 </pre></div>
 
         </details>
@@ -4307,8 +4323,9 @@ The residual error relative to the old spline. (The returned spline's accuracy i
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        newDomain : array-like</span>
-<span class="sd">            nInd x 2 array of the new upper and lower bounds on each of the independent variables. </span>
-<span class="sd">            Same form as returned from `domain`.</span>
+<span class="sd">            nInd x 2 array of the new upper and lower bounds on each of the independent variables (same form as </span>
+<span class="sd">            returned from `domain`). If a bound pair is `None` then the original bound (and knots) are left unchanged. </span>
+<span class="sd">            For example, `[[0.0, 1.0], None]` will reparametrize the first independent variable and leave the second unchanged)</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -4330,8 +4347,9 @@ The residual error relative to the old spline. (The returned spline's accuracy i
 
 <ul>
 <li><strong>newDomain</strong> (array-like):
-nInd x 2 array of the new upper and lower bounds on each of the independent variables. 
-Same form as returned from <code><a href="#Spline.domain">domain</a></code>.</li>
+nInd x 2 array of the new upper and lower bounds on each of the independent variables (same form as 
+returned from <code><a href="#Spline.domain">domain</a></code>). If a bound pair is <code>None</code> then the original bound (and knots) are left unchanged. 
+For example, <code>[[0.0, 1.0], None]</code> will reparametrize the first independent variable and leave the second unchanged)</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -4814,15 +4832,22 @@ so long as unfold unscrambles things in the corresponding way.  The second splin
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        roots : `iterable`</span>
-<span class="sd">            An ordered iterable containing the roots of the spline. If the spline is </span>
-<span class="sd">            zero over an interval, that root will appear as a tuple of the interval.</span>
+<span class="sd">            An iterable containing the roots of the spline. If the spline is </span>
+<span class="sd">            zero over an interval, that root will appear as a tuple of the interval. </span>
+<span class="sd">            For curves (nInd == 1), the roots are ordered.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        Currently, the algorithm only works for nInd == 1. </span>
-<span class="sd">        Implements the algorithm from Grandine, Thomas A. &quot;Computing zeroes of spline functions.&quot; Computer Aided Geometric Design 6, no. 2 (1989): 129-136.</span>
+<span class="sd">        For curves (nInd == 1), it implements interval Newton&#39;s method from Grandine, Thomas A. &quot;Computing zeroes of spline functions.&quot; </span>
+<span class="sd">        Computer Aided Geometric Design 6, no. 2 (1989): 129-136.</span>
+<span class="sd">        For all higher dimensions, it implements the projected-polyhedron technique from Sherbrooke, Evan C., and Nicholas M. Patrikalakis. </span>
+<span class="sd">        &quot;Computation of the solutions of nonlinear polynomial systems.&quot; Computer Aided Geometric Design 10, no. 5 (1993): 379-405.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">,</span> <span class="s2">&quot;The number of independent variables (nInd) must match the number of dependent variables (nDep).&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">zeros_using_interval_newton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">zeros_using_projected_polyhedron</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
 </pre></div>
 
         </details>
@@ -4841,14 +4866,17 @@ The default is the max of spline accuracy and machine epsilon.</li>
 
 <ul>
 <li><strong>roots</strong> (<code>iterable</code>):
-An ordered iterable containing the roots of the spline. If the spline is 
-zero over an interval, that root will appear as a tuple of the interval.</li>
+An iterable containing the roots of the spline. If the spline is 
+zero over an interval, that root will appear as a tuple of the interval. 
+For curves (nInd == 1), the roots are ordered.</li>
 </ul>
 
 <h6 id="notes">Notes</h6>
 
-<p>Currently, the algorithm only works for nInd == 1. 
-Implements the algorithm from Grandine, Thomas A. "Computing zeroes of spline functions." Computer Aided Geometric Design 6, no. 2 (1989): 129-136.</p>
+<p>For curves (nInd == 1), it implements interval Newton's method from Grandine, Thomas A. "Computing zeroes of spline functions." 
+Computer Aided Geometric Design 6, no. 2 (1989): 129-136.
+For all higher dimensions, it implements the projected-polyhedron technique from Sherbrooke, Evan C., and Nicholas M. Patrikalakis. 
+"Computation of the solutions of nonlinear polynomial systems." Computer Aided Geometric Design 10, no. 5 (1993): 379-405.</p>
 </div>
 
 
