@@ -342,7 +342,9 @@ class Spline:
 
         dF : `iterable` or `None`, optional
             An `iterable` of the `n` functions representing the `n` first derivatives of `F`. 
-            If `dF` is `None` (the default), the first derivatives will be computed for you.
+            If `dF` is `None` (the default), the first derivatives will be computed for you. 
+            If `F` is not a spline, computing the first derivatives involves multiple calls to `F` 
+            and can be numerically unstable. 
 
         epsilon : `float`, optional
             Tolerance for contour precision. Evaluating `F` with contour values will be within epsilon 

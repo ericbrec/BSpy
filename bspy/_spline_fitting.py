@@ -141,14 +141,52 @@ def least_squares(nInd, nDep, order, dataPoints, knotList = None, compression = 
     return bspy.Spline(nInd, nDep, order, nCoef, knotList, coefs, np.sqrt(maxError), metadata)
 
 def contour(F, x0, x1, dF = None, epsilon = None, metadata = {}):
-    nInd = 1
+    # Record the boundary conditions.
     x0 = np.array(x0)
     x1 = np.array(x1)
-    nDep = len(x0)
+
+    # Establish the error bound.
     if epsilon is None:
         epsilon = math.sqrt(np.finfo(x0.dtype).eps)
+
+    # Verify the given function.
+    nDep = len(x0)
     assert len(x1) == nDep, "x0 and x1 must be of the same length."
     value = F(x0)
     assert len(value) == nDep - 1 and np.linalg.norm(value) < epsilon, f"F(x0) must be a zero vector of length {nDep - 1}."
     value = F(x1)
     assert len(value) == nDep - 1 and np.linalg.norm(value) < epsilon, f"F(x1) must be a zero vector of length {nDep - 1}."
+
+    # Establish the first derivatives of F.
+    if dF is None:
+        dF = []
+        if isinstance(F, bspy.Spline):
+            for i in range(nDep):
+                def splineDerivative(x, i=i):
+                    return F.derivative((i,), x)
+                dF.append(splineDerivative)
+        else:
+            for i in range(nDep):
+                def fDerivative(x, i=i):
+                    h = epsilon * (1.0 + x[i])
+                    xShift = np.array(x, copy=True)
+                    xShift[i] -= h
+                    fLeft = F(xShift)
+                    h2 = h * 2.0
+                    xShift[i] += h2
+                    return (F(xShift) - fLeft) / h2
+                dF.append(fDerivative)
+    else:
+        assert len(dF) == nDep, f"Must provide {nDep} first derivatives."
+    
+    # Set up initial guess for x(t).
+    order = 3
+    degree = order - 1
+    m = 2
+    nCoef = m * (degree - 1) + 2
+    N = nDep * nCoef
+    knots = np.empty(nCoef + order, dtype=x0.dtype)
+    knots[0:degree] = 0.0
+    knots[nCoef + 1:] = 1.0
+    knots[degree:nCoef + 1] = np.linspace(0.0, 1.0, nCoef + 1 - degree, dtype=x0.dtype)
+    t = np.linspace(0.0, 1.0, nCoef, dtype=x0.dtype)
