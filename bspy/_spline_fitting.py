@@ -139,3 +139,16 @@ def least_squares(nInd, nDep, order, dataPoints, knotList = None, compression = 
     if residuals.size > 0:
         maxError = max(maxError, residuals.sum())
     return bspy.Spline(nInd, nDep, order, nCoef, knotList, coefs, np.sqrt(maxError), metadata)
+
+def contour(F, x0, x1, dF = None, epsilon = None, metadata = {}):
+    nInd = 1
+    x0 = np.array(x0)
+    x1 = np.array(x1)
+    nDep = len(x0)
+    if epsilon is None:
+        epsilon = math.sqrt(np.finfo(x0.dtype).eps)
+    assert len(x1) == nDep, "x0 and x1 must be of the same length."
+    value = F(x0)
+    assert len(value) == nDep - 1 and np.linalg.norm(value) < epsilon, f"F(x0) must be a zero vector of length {nDep - 1}."
+    value = F(x1)
+    assert len(value) == nDep - 1 and np.linalg.norm(value) < epsilon, f"F(x1) must be a zero vector of length {nDep - 1}."

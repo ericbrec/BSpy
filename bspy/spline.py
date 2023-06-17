@@ -319,6 +319,57 @@ class Spline:
         """
         return bspy._spline_domain.common_basis(self, splines, indMap)
 
+    @staticmethod
+    def contour(F, x0, x1, dF = None, epsilon = None, metadata = {}):
+        """
+        Fit a spline to the contour defined by `F(x) = 0`, where `F` maps n dimensions to 
+        n-1 dimensions. Thus, the solution, `x(t)`, is a contour curve (one degree of freedom) 
+        returned in the form of a spline.
+
+        Parameters
+        ----------
+        F : function or `Spline`
+            A function or spline that takes an array-like argument of length `n` and returns an 
+            array-like result of length `n - 1`.
+
+        x0 : array-like
+            An array of length `n` that specifies the contour's starting value, `x(0)`. 
+            `F(x0)` must be a zero vector of length `n-1`.
+
+        x1 : array-like
+            An array of length `n` that specifies the contour's ending value, `x(1)`. 
+            `F(x1)` must be a zero vector of length `n-1`.
+
+        dF : `iterable` or `None`, optional
+            An `iterable` of the `n` functions representing the `n` first derivatives of `F`. 
+            If `dF` is `None` (the default), the first derivatives will be computed for you.
+
+        epsilon : `float`, optional
+            Tolerance for contour precision. Evaluating `F` with contour values will be within epsilon 
+            of zero. The default is square root of machine epsilon. The actual accuracy of the contour 
+            is returned as `spline.accuracy`.
+            
+        metadata : `dict`, optional
+            A dictionary of ancillary data to store with the spline. Default is {}.
+
+        Returns
+        -------
+        spline : `Spline`
+            The spline contour, `x(t)`, with nInd == 1 and nDep == n.
+
+        See Also
+        --------
+        `least_squares` : Fit a spline to an array of data points using the method of least squares.
+        `zeros` : Find the roots of a spline (nInd must match nDep).
+
+        Notes
+        -----
+        The returned spline has constant parametric speed (the length of its derivative is constant). 
+        Implements the algorithm described in section 7 of Grandine, Thomas A. 
+        "Applications of contouring." Siam Review 42, no. 2 (2000): 297-316.
+        """
+        return bspy._spline_fitting.contour(F, x0, x1, dF, epsilon, metadata)
+
     def contract(self, uvw):
         """
         Contract a spline by assigning a fixed value to one or more of its independent variables.
