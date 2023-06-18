@@ -140,6 +140,27 @@ def least_squares(nInd, nDep, order, dataPoints, knotList = None, compression = 
         maxError = max(maxError, residuals.sum())
     return bspy.Spline(nInd, nDep, order, nCoef, knotList, coefs, np.sqrt(maxError), metadata)
 
+# From Lowan, Arnold N., Norman Davids, and Arthur Levenson. "Table of the zeros of the Legendre polynomials of 
+# order 1-16 and the weight coefficients for Gauss' mechanical quadrature formula." (1942): 739-743.
+_legendre_polynomial_zeros = [
+    [0.000000000000000],
+    [0.577350269189626],
+    [0.000000000000000,0.774596669241483],
+    [0.339981043584856,0.861136311594053],
+    [0.000000000000000,0.538469310105683,0.906179845938664],
+    [0.238619186083197,0.661209386466265,0.932469514203152],
+    [0.000000000000000,0.405845151377397,0.741531185599394,0.949107912342759],
+    [0.183434642495650,0.525532409916329,0.796666477413627,0.960289856497536],
+    [0.000000000000000,0.324253423403809,0.613371432700590,0.836031107326636,0.968160239507626],
+    [0.148874338981631,0.433395394129247,0.679409568299024,0.865063366688985,0.973906528517172],
+    [0.000000000000000,0.269543155952345,0.519096129110681,0.730152005574049,0.887062599768095,0.978228658146057],
+    [0.125333408511469,0.367831498918180,0.587317954286617,0.769902674194305,0.904117256370475,0.981560634246719],
+    [0.000000000000000,0.230458315955135,0.448492751036447,0.642349339440340,0.801578090733310,0.917598399222978,0.984183054718588],
+    [0.108054948707344,0.319112368927890,0.515248636358154,0.687292904811685,0.827201315069765,0.928434883663574,0.986283808696812],
+    [0.000000000000000,0.201194093997435,0.394151347077563,0.570972172608539,0.724417731360170,0.848206583410427,0.937273392400706,0.987992518020485],
+    [0.095012509837637,0.281603550779259,0.458016777657227,0.617876244402644,0.755404408355003,0.865631202387832,0.944575023073233,0.989400934991650],
+    ]
+
 def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     # Check the boundary conditions.
     assert len(knownXValues) >= 2, "There must be at least 2 Known x values"
@@ -178,10 +199,10 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                     h = epsilon * (1.0 + x[i])
                     xShift = np.array(x, copy=True)
                     xShift[i] -= h
-                    fLeft = F(xShift)
+                    fLeft = np.array(F(xShift))
                     h2 = h * 2.0
                     xShift[i] += h2
-                    return (F(xShift) - fLeft) / h2
+                    return (np.array(F(xShift)) - fLeft) / h2
                 dF.append(fDerivative)
     else:
         assert len(dF) == nDep, f"Must provide {nDep} first derivatives."
@@ -189,11 +210,24 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     # Set up initial guess for x(t).
     order = 4
     degree = order - 1
-    m = 1
+    rhos = _legendre_polynomial_zeros[degree - 1 - 1]
+    m = len(knownXValues) - 1
     nCoef = m * (degree - 1) + 2
-    N = nDep * nCoef
-    knots = np.empty(nCoef + order, dtype=x0.dtype)
-    knots[0:degree] = 0.0
-    knots[nCoef + 1:] = 1.0
-    knots[degree:nCoef + 1] = np.linspace(0.0, 1.0, nCoef + 1 - degree, dtype=contourDtype)
-    t = np.linspace(0.0, 1.0, nCoef, dtype=contourDtype)
+
+    # Build up knots and data points to construct initial guess.
+    point = np.array((knownXValues[0][0], *knownXValues[0][1]), dtype=contourDtype)
+    knots = [point[0]] * order
+    dataPoints = [point]
+    for knownXValue in knownXValues[1:]:
+        previousPoint = point
+        point = np.array((knownXValue[0], *knownXValue[1]), dtype=contourDtype)
+        knots += [point[0]] * (order - 2)
+        for rho in reversed(rhos):
+            dataPoints.append(0.5 * (previousPoint + point - rho * (point - previousPoint)))
+        for rho in rhos[0 if degree % 2 == 1 else 1:]:
+            dataPoints.append(0.5 * (previousPoint + point + rho * (point - previousPoint)))
+    knots += [point[0]] * 2
+    dataPoints.append(point)
+    spline = least_squares(1, nDep, (order,), dataPoints, (knots,))
+
+    return spline
