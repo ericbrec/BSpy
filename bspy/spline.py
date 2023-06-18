@@ -320,7 +320,7 @@ class Spline:
         return bspy._spline_domain.common_basis(self, splines, indMap)
 
     @staticmethod
-    def contour(F, x0, x1, dF = None, epsilon = None, metadata = {}):
+    def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         """
         Fit a spline to the contour defined by `F(x) = 0`, where `F` maps n dimensions to 
         n-1 dimensions. Thus, the solution, `x(t)`, is a contour curve (one degree of freedom) 
@@ -332,13 +332,14 @@ class Spline:
             A function or spline that takes an array-like argument of length `n` and returns an 
             array-like result of length `n - 1`.
 
-        x0 : array-like
-            An array of length `n` that specifies the contour's starting value, `x(0)`. 
-            `F(x0)` must be a zero vector of length `n-1`.
-
-        x1 : array-like
-            An array of length `n` that specifies the contour's ending value, `x(1)`. 
-            `F(x1)` must be a zero vector of length `n-1`.
+        knownXValues : `iterable` of `tuples`
+            An `iterable` of ordered known x(t) value pairs that lie on the same contour. 
+            The length of `knownXValues` must be at least 2 (for the two boundary conditions). 
+            The value pairs are of the form `(t, x(t))`, where 
+            t is a constant scalar and x(t) is a constant vector of length `n`. The first known
+            value pair must have `t = 0`, t for the next value pair must be larger than the previous t,
+            and the last value pair must have `t = 1`. 
+            `F(x)` for all known x values must be a zero vector of length `n-1`.
 
         dF : `iterable` or `None`, optional
             An `iterable` of the `n` functions representing the `n` first derivatives of `F`. 
@@ -370,7 +371,7 @@ class Spline:
         Implements the algorithm described in section 7 of Grandine, Thomas A. 
         "Applications of contouring." Siam Review 42, no. 2 (2000): 297-316.
         """
-        return bspy._spline_fitting.contour(F, x0, x1, dF, epsilon, metadata)
+        return bspy._spline_fitting.contour(F, knownXValues, dF, epsilon, metadata)
 
     def contract(self, uvw):
         """

@@ -140,22 +140,29 @@ def least_squares(nInd, nDep, order, dataPoints, knotList = None, compression = 
         maxError = max(maxError, residuals.sum())
     return bspy.Spline(nInd, nDep, order, nCoef, knotList, coefs, np.sqrt(maxError), metadata)
 
-def contour(F, x0, x1, dF = None, epsilon = None, metadata = {}):
-    # Record the boundary conditions.
-    x0 = np.array(x0)
-    x1 = np.array(x1)
-
-    # Establish the error bound.
-    if epsilon is None:
-        epsilon = math.sqrt(np.finfo(x0.dtype).eps)
-
-    # Verify the given function.
-    nDep = len(x0)
-    assert len(x1) == nDep, "x0 and x1 must be of the same length."
-    value = F(x0)
-    assert len(value) == nDep - 1 and np.linalg.norm(value) < epsilon, f"F(x0) must be a zero vector of length {nDep - 1}."
-    value = F(x1)
-    assert len(value) == nDep - 1 and np.linalg.norm(value) < epsilon, f"F(x1) must be a zero vector of length {nDep - 1}."
+def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
+    # Check the boundary conditions.
+    assert len(knownXValues) >= 2, "There must be at least 2 Known x values"
+    nDep = 0
+    previousT = 0.0
+    for knownXValue in knownXValues:
+        assert len(knownXValue) == 2, "Known x values must be a tuple of the form (t, x(t))."
+        (t, x) = knownXValue
+        if nDep > 0:
+            assert len(x) == nDep, "Known x values must be of the same length."
+            assert t >= previousT + epsilon, "The values of t must be increasing and separated by at least epsilon."
+        else:
+            nDep = len(x)
+            assert t == 0.0, "First known x value must have t = 0."
+            # Establish the error bound.
+            x = np.array(x)
+            contourDtype = x.dtype
+            if epsilon is None:
+                epsilon = math.sqrt(np.finfo(contourDtype).eps)
+        value = F(x)
+        assert len(value) == nDep - 1 and np.linalg.norm(value) < epsilon, f"F(x0) must be a zero vector of length {nDep - 1}."
+        previousT = t
+    assert previousT == 1.0, "Last known x value must have t = 1."
 
     # Establish the first derivatives of F.
     if dF is None:
@@ -180,13 +187,13 @@ def contour(F, x0, x1, dF = None, epsilon = None, metadata = {}):
         assert len(dF) == nDep, f"Must provide {nDep} first derivatives."
     
     # Set up initial guess for x(t).
-    order = 3
+    order = 4
     degree = order - 1
-    m = 2
+    m = 1
     nCoef = m * (degree - 1) + 2
     N = nDep * nCoef
     knots = np.empty(nCoef + order, dtype=x0.dtype)
     knots[0:degree] = 0.0
     knots[nCoef + 1:] = 1.0
-    knots[degree:nCoef + 1] = np.linspace(0.0, 1.0, nCoef + 1 - degree, dtype=x0.dtype)
-    t = np.linspace(0.0, 1.0, nCoef, dtype=x0.dtype)
+    knots[degree:nCoef + 1] = np.linspace(0.0, 1.0, nCoef + 1 - degree, dtype=contourDtype)
+    t = np.linspace(0.0, 1.0, nCoef, dtype=contourDtype)
