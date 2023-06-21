@@ -241,29 +241,36 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     # Working array to hold the Jacobian of F for a particular x(t).
     dFValues = np.empty((nDep - 1, nDep), contourDtype)
 
-    # Fill in samples and its Jacobian (J) with respect to the coefficients of x(t).
-    for i, t in zip(range(0, N, nDep), ts):
-        # Isolate coefficients and compute bspline values and their first two derivatives at t.
-        ix = np.searchsorted(knots, t, 'right')
-        ix = min(ix, nCoef)
-        coefs = spline.coefs[:, ix - order:ix]
-        bValues = spline.bspline_values(ix, knots, order, t)
-        dValues = spline.bspline_values(ix, knots, order, t, 1)
-        d2Values = spline.bspline_values(ix, knots, order, t, 2)
+    while True:
+        # Fill in samples and its Jacobian (J) with respect to the coefficients of x(t).
+        for i, t in zip(range(0, N, nDep), ts):
+            # Isolate coefficients and compute bspline values and their first two derivatives at t.
+            ix = np.searchsorted(knots, t, 'right')
+            ix = min(ix, nCoef)
+            coefs = spline.coefs[:, ix - order:ix]
+            bValues = spline.bspline_values(ix, knots, order, t)
+            dValues = spline.bspline_values(ix, knots, order, t, 1)
+            d2Values = spline.bspline_values(ix, knots, order, t, 2)
 
-        # Compute x(t).
-        x = coefs @ bValues
+            # Compute x(t).
+            x = coefs @ bValues
 
-        # Compute samples for t: F(x) and contour speed constraint.
-        samples[i:i + nDep] = (*F(x), np.dot(coefs @ d2Values, coefs @ dValues))
+            # Compute samples for t: F(x) and contour speed constraint.
+            samples[i:i + nDep] = (*F(x), np.dot(coefs @ d2Values, coefs @ dValues))
 
-        # Compute the Jacobian of F(x).
-        for j in range(nDep):
-            dFValues.T[j] = dF[j](x) # dF are the columns of dFValues, so take the transpose
+            # Compute the Jacobian of F(x).
+            for j in range(nDep):
+                dFValues.T[j] = dF[j](x) # dF are the columns of dFValues, so take the transpose
 
-        # Compute the Jacobian of samples with respect to the coefficients of x(t).
-        FPortion = np.outer(dFValues, bValues).reshape(nDep - 1, nDep * order)
-        dotPortion = (np.outer(coefs @ dValues, d2Values) + np.outer(coefs @ d2Values, dValues)).reshape(nDep * order)
-        J[i:i + nDep, (ix - order) * nDep:ix * nDep] = (*FPortion, dotPortion)
+            # Compute the Jacobian of samples with respect to the coefficients of x(t).
+            FPortion = np.outer(dFValues, bValues).reshape(nDep - 1, nDep * order)
+            dotPortion = (np.outer(coefs @ dValues, d2Values) + np.outer(coefs @ d2Values, dValues)).reshape(nDep * order)
+            J[i:i + nDep, (ix - order) * nDep:ix * nDep] = (*FPortion, dotPortion)
+        
+        # Perform a Newton iteration
+        coefDelta = np.linalg.solve(J.T, samples).reshape(nDep, nCoef)
+        spline.coefs -= coefDelta
+        if np.linalg.norm(coefDelta) < epsilon:
+            break
 
     return spline
