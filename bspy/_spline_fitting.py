@@ -213,14 +213,15 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     rhos = _legendre_polynomial_zeros[degree - 1 - 1]
     m = len(knownXValues) - 1
     nCoef = m * (degree - 1) + 2
+    N = nDep * nCoef
 
     # Build up knots and data points to construct initial guess.
-    point = np.array((knownXValues[0][0], *knownXValues[0][1]), dtype=contourDtype)
+    point = np.array((knownXValues[0][0], *knownXValues[0][1]), contourDtype)
     knots = [point[0]] * order
     dataPoints = [point]
     for knownXValue in knownXValues[1:]:
         previousPoint = point
-        point = np.array((knownXValue[0], *knownXValue[1]), dtype=contourDtype)
+        point = np.array((knownXValue[0], *knownXValue[1]), contourDtype)
         knots += [point[0]] * (order - 2)
         for rho in reversed(rhos):
             dataPoints.append(0.5 * (previousPoint + point - rho * (point - previousPoint)))
@@ -229,5 +230,40 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     knots += [point[0]] * 2
     dataPoints.append(point)
     spline = least_squares(1, nDep, (order,), dataPoints, (knots,))
+    knots = spline.knots[0]
+    ts = [point[0] for point in dataPoints]
+
+    # Array to hold the values of F and contour speed for each t.
+    samples = np.empty(N, contourDtype)
+    # Array to hold the Jacobian of the samples with respect to the coefficients.
+    # The Jacobian is banded due to b-spline local support, so initialize it to zero.
+    J = np.zeros((N, N), contourDtype)
+    # Working array to hold the Jacobian of F for a particular x(t).
+    dFValues = np.empty((nDep - 1, nDep), contourDtype)
+
+    # Fill in samples and its Jacobian (J) with respect to the coefficients of x(t).
+    for i, t in zip(range(0, N, nDep), ts):
+        # Isolate coefficients and compute bspline values and their first two derivatives at t.
+        ix = np.searchsorted(knots, t, 'right')
+        ix = min(ix, nCoef)
+        coefs = spline.coefs[:, ix - order:ix]
+        bValues = spline.bspline_values(ix, knots, order, t)
+        dValues = spline.bspline_values(ix, knots, order, t, 1)
+        d2Values = spline.bspline_values(ix, knots, order, t, 2)
+
+        # Compute x(t).
+        x = coefs @ bValues
+
+        # Compute samples for t: F(x) and contour speed constraint.
+        samples[i:i + nDep] = (*F(x), np.dot(coefs @ d2Values, coefs @ dValues))
+
+        # Compute the Jacobian of F(x).
+        for j in range(nDep):
+            dFValues.T[j] = dF[j](x) # dF are the columns of dFValues, so take the transpose
+
+        # Compute the Jacobian of samples with respect to the coefficients of x(t).
+        FPortion = np.outer(dFValues, bValues).reshape(nDep - 1, nDep * order)
+        dotPortion = (np.outer(coefs @ dValues, d2Values) + np.outer(coefs @ d2Values, dValues)).reshape(nDep * order)
+        J[i:i + nDep, (ix - order) * nDep:ix * nDep] = (*FPortion, dotPortion)
 
     return spline
