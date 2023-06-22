@@ -180,8 +180,9 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             contourDtype = x.dtype
             if epsilon is None:
                 epsilon = math.sqrt(np.finfo(contourDtype).eps)
+            evaluationEpsilon = np.sqrt(epsilon)
         value = F(x)
-        assert len(value) == nDep - 1 and np.linalg.norm(value) < epsilon, f"F(x0) must be a zero vector of length {nDep - 1}."
+        assert len(value) == nDep - 1 and np.linalg.norm(value) < evaluationEpsilon, f"F(x0) must be a zero vector of length {nDep - 1}."
         previousT = t
     assert previousT == 1.0, "Last known x value must have t = 1."
 
@@ -196,7 +197,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         else:
             for i in range(nDep):
                 def fDerivative(x, i=i):
-                    h = epsilon * (1.0 + x[i])
+                    h = epsilon * (1.0 + abs(x[i]))
                     xShift = np.array(x, copy=True)
                     xShift[i] -= h
                     fLeft = np.array(F(xShift))
@@ -268,7 +269,10 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             J[i:i + nDep, (ix - order) * nDep:ix * nDep] = (*FPortion, dotPortion)
         
         # Perform a Newton iteration
-        coefDelta = np.linalg.solve(J.T, samples).reshape(nDep, nCoef)
+        samplesNorm = np.linalg.norm(samples)
+        if samplesNorm < evaluationEpsilon:
+            break
+        coefDelta = np.linalg.solve(J, samples).reshape(nDep, nCoef)
         spline.coefs -= coefDelta
         if np.linalg.norm(coefDelta) < epsilon:
             break
