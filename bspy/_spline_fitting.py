@@ -208,7 +208,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     # Compute initial guess for x(t).
     spline = least_squares(1, nDep, (order,), dataPoints, (knots,))
     knots = spline.knots[0]
-    ts = [point[0] for point in dataPoints]
+    ts = [point[0] for point in dataPoints[1:-1]] # Exclude endpoints
 
     # Establish the first derivatives of F.
     if dF is None:
@@ -232,18 +232,17 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     else:
         assert len(dF) == nDep, f"Must provide {nDep} first derivatives."
 
-    # Array to hold the values of F and contour speed for each t.
-    N = nDep * nCoef
-    samples = np.empty(N, contourDtype)
+    # Array to hold the values of F and contour speed for each t, excluding endpoints.
+    samples = np.empty(nDep * (nCoef - 2), contourDtype)
     # Array to hold the Jacobian of the samples with respect to the coefficients.
     # The Jacobian is banded due to b-spline local support, so initialize it to zero.
-    J = np.zeros((N, N), contourDtype)
-    # Working array to hold the Jacobian of F for a particular x(t).
-    dFValues = np.empty((nDep - 1, nDep), contourDtype)
+    J = np.zeros((nDep * (nCoef - 2), nDep * nCoef), contourDtype)
+    # Working array to hold the transpose of the Jacobian of F for a particular x(t).
+    dFValues = np.empty((nDep, nDep - 1), contourDtype)
 
     while True:
         # Fill in samples and its Jacobian (J) with respect to the coefficients of x(t).
-        for i, t in zip(range(0, N, nDep), ts):
+        for i, t in zip(range(0, nDep * (nCoef - 2), nDep), ts):
             # Isolate coefficients and compute bspline values and their first two derivatives at t.
             ix = np.searchsorted(knots, t, 'right')
             ix = min(ix, nCoef)
@@ -260,10 +259,10 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
 
             # Compute the Jacobian of F(x).
             for j in range(nDep):
-                dFValues.T[j] = dF[j](x) # dF are the columns of dFValues, so take the transpose
+                dFValues[j] = dF[j](x)
 
             # Compute the Jacobian of samples with respect to the coefficients of x(t).
-            FPortion = np.outer(dFValues, bValues).reshape(nDep - 1, nDep * order)
+            FPortion = np.outer(dFValues.T, bValues).reshape(nDep - 1, nDep * order)
             dotPortion = (np.outer(coefs @ dValues, d2Values) + np.outer(coefs @ d2Values, dValues)).reshape(nDep * order)
             J[i:i + nDep, (ix - order) * nDep:ix * nDep] = (*FPortion, dotPortion)
         
@@ -271,8 +270,8 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         samplesNorm = np.linalg.norm(samples)
         if samplesNorm < evaluationEpsilon:
             break
-        coefDelta = np.linalg.solve(J, samples).reshape(nDep, nCoef)
-        spline.coefs -= coefDelta
+        coefDelta = np.linalg.solve(J[:,nDep:-nDep], samples).reshape(nDep, nCoef - 2)
+        spline.coefs[:, 1:-1] -= coefDelta # Exclude endpoints
         if np.linalg.norm(coefDelta) < epsilon:
             break
 
