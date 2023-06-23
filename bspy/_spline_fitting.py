@@ -162,29 +162,53 @@ _legendre_polynomial_zeros = [
     ]
 
 def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
-    # Check the boundary conditions.
-    assert len(knownXValues) >= 2, "There must be at least 2 Known x values"
+    # Set up parameters for initial guess of x(t) and validate arguments.
+    order = 4
+    degree = order - 1
+    rhos = _legendre_polynomial_zeros[degree - 1 - 1]
+    assert len(knownXValues) >= 2, "There must be at least 2 known x values"
+    m = len(knownXValues) - 1
+    nCoef = m * (degree - 1) + 2
     nDep = 0
-    previousT = 0.0
-    for knownXValue in knownXValues:
-        assert len(knownXValue) == 2, "Known x values must be a tuple of the form (t, x(t))."
-        (t, x) = knownXValue
-        if nDep > 0:
-            assert len(x) == nDep, "Known x values must be of the same length."
-            assert t >= previousT + epsilon, "The values of t must be increasing and separated by at least epsilon."
-        else:
+    for x in knownXValues:
+        if nDep == 0:
             nDep = len(x)
-            assert t == 0.0, "First known x value must have t = 0."
-            # Establish the error bound.
+            t = 0.0 # We start with t measuring contour length and later rescale.
             x = np.array(x)
             contourDtype = x.dtype
             if epsilon is None:
                 epsilon = math.sqrt(np.finfo(contourDtype).eps)
             evaluationEpsilon = np.sqrt(epsilon)
+            point = np.array((t, *x), contourDtype)
+            knots = [t] * order
+            dataPoints = [point]
+        else:
+            assert len(x) == nDep, "Known x values must be of the same length."
+            point = np.array((t, *x), contourDtype)
+            dt = np.linalg.norm(point[1:] - previousPoint[1:])
+            if dt > epsilon: # Skip duplicates
+                t += dt
+                point[0] = t
+                knots += [t] * (order - 2)
+                for rho in reversed(rhos):
+                    dataPoints.append(0.5 * (previousPoint + point - rho * (point - previousPoint)))
+                for rho in rhos[0 if degree % 2 == 1 else 1:]:
+                    dataPoints.append(0.5 * (previousPoint + point + rho * (point - previousPoint)))
         value = F(x)
         assert len(value) == nDep - 1 and np.linalg.norm(value) < evaluationEpsilon, f"F(x0) must be a zero vector of length {nDep - 1}."
-        previousT = t
-    assert previousT == 1.0, "Last known x value must have t = 1."
+        previousPoint = point
+    knots += [t] * 2
+    dataPoints.append(point)
+
+    # Rescale t values in knots and data points to be [0, 1].
+    knots[:] /= t
+    for point in dataPoints:
+        point[0] /= t
+
+    # Compute initial guess for x(t).
+    spline = least_squares(1, nDep, (order,), dataPoints, (knots,))
+    knots = spline.knots[0]
+    ts = [point[0] for point in dataPoints]
 
     # Establish the first derivatives of F.
     if dF is None:
@@ -207,34 +231,9 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                 dF.append(fDerivative)
     else:
         assert len(dF) == nDep, f"Must provide {nDep} first derivatives."
-    
-    # Set up initial guess for x(t).
-    order = 4
-    degree = order - 1
-    rhos = _legendre_polynomial_zeros[degree - 1 - 1]
-    m = len(knownXValues) - 1
-    nCoef = m * (degree - 1) + 2
-    N = nDep * nCoef
-
-    # Build up knots and data points to construct initial guess.
-    point = np.array((knownXValues[0][0], *knownXValues[0][1]), contourDtype)
-    knots = [point[0]] * order
-    dataPoints = [point]
-    for knownXValue in knownXValues[1:]:
-        previousPoint = point
-        point = np.array((knownXValue[0], *knownXValue[1]), contourDtype)
-        knots += [point[0]] * (order - 2)
-        for rho in reversed(rhos):
-            dataPoints.append(0.5 * (previousPoint + point - rho * (point - previousPoint)))
-        for rho in rhos[0 if degree % 2 == 1 else 1:]:
-            dataPoints.append(0.5 * (previousPoint + point + rho * (point - previousPoint)))
-    knots += [point[0]] * 2
-    dataPoints.append(point)
-    spline = least_squares(1, nDep, (order,), dataPoints, (knots,))
-    knots = spline.knots[0]
-    ts = [point[0] for point in dataPoints]
 
     # Array to hold the values of F and contour speed for each t.
+    N = nDep * nCoef
     samples = np.empty(N, contourDtype)
     # Array to hold the Jacobian of the samples with respect to the coefficients.
     # The Jacobian is banded due to b-spline local support, so initialize it to zero.

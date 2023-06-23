@@ -332,13 +332,10 @@ class Spline:
             A function or spline that takes an array-like argument of length `n` and returns an 
             array-like result of length `n - 1`.
 
-        knownXValues : `iterable` of `tuples`
-            An `iterable` of ordered known x(t) value pairs that lie on the same contour. 
+        knownXValues : `iterable` of array-like
+            An `iterable` of known x values (array-like) that lie on the desired contour. 
             The length of `knownXValues` must be at least 2 (for the two boundary conditions). 
-            The value pairs are of the form `(t, x(t))`, where 
-            t is a constant scalar and x(t) is a constant vector of length `n`. The first known
-            value pair must have `t = 0`, t for the next value pair must be larger than the previous t,
-            and the last value pair must have `t = 1`. 
+            All x values must be length `n` and be listed in the order they appear on the contour.  
             `F(x)` for all known x values must be a zero vector of length `n-1`.
 
         dF : `iterable` or `None`, optional
