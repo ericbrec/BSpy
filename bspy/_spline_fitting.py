@@ -166,7 +166,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     order = 4
     degree = order - 1
     rhos = _legendre_polynomial_zeros[degree - 1 - 1]
-    assert len(knownXValues) >= 2, "There must be at least 2 known x values"
+    assert len(knownXValues) >= 2, "There must be at least 2 known x values."
     m = len(knownXValues) - 1
     nCoef = m * (degree - 1) + 2
     nDep = 0
@@ -195,7 +195,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                 for rho in rhos[0 if degree % 2 == 1 else 1:]:
                     dataPoints.append(0.5 * (previousPoint + point + rho * (point - previousPoint)))
         value = F(x)
-        assert len(value) == nDep - 1 and np.linalg.norm(value) < evaluationEpsilon, f"F(x0) must be a zero vector of length {nDep - 1}."
+        assert len(value) == nDep - 1 and np.linalg.norm(value) < evaluationEpsilon, f"F(known x) must be a zero vector of length {nDep - 1}."
         previousPoint = point
     knots += [t] * 2
     dataPoints.append(point)
