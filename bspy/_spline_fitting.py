@@ -169,6 +169,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     assert len(knownXValues) >= 2, "There must be at least 2 known x values."
     m = len(knownXValues) - 1
     nCoef = m * (degree - 1) + 2
+    nUnknowns = nCoef - 2
     nDep = 0
     for x in knownXValues:
         if nDep == 0:
@@ -209,6 +210,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     spline = least_squares(1, nDep, (order,), dataPoints, (knots,))
     knots = spline.knots[0]
     ts = [point[0] for point in dataPoints[1:-1]] # Exclude endpoints
+    assert len(ts) == nUnknowns
 
     # Establish the first derivatives of F.
     if dF is None:
@@ -233,16 +235,19 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         assert len(dF) == nDep, f"Must provide {nDep} first derivatives."
 
     # Array to hold the values of F and contour speed for each t, excluding endpoints.
-    samples = np.empty(nDep * (nCoef - 2), contourDtype)
+    samples = np.empty(nDep * nUnknowns, contourDtype)
     # Array to hold the Jacobian of the samples with respect to the coefficients.
     # The Jacobian is banded due to b-spline local support, so initialize it to zero.
-    J = np.zeros((nDep * (nCoef - 2), nDep * nCoef), contourDtype)
+    J = np.zeros((nDep * nUnknowns, nDep * nCoef), contourDtype)
     # Working array to hold the transpose of the Jacobian of F for a particular x(t).
     dFValues = np.empty((nDep, nDep - 1), contourDtype)
 
+    FScale = 0.0
+    dotScale = 0.0
+    iDotStart = (nDep - 1) * nUnknowns
     while True:
         # Fill in samples and its Jacobian (J) with respect to the coefficients of x(t).
-        for i, t in zip(range(0, nDep * (nCoef - 2), nDep), ts):
+        for iF, iDot, t in zip(range(0, iDotStart, nDep - 1), range(iDotStart, nDep * nUnknowns), ts):
             # Isolate coefficients and compute bspline values and their first two derivatives at t.
             ix = np.searchsorted(knots, t, 'right')
             ix = min(ix, nCoef)
@@ -255,23 +260,35 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             x = coefs @ bValues
 
             # Compute samples for t: F(x) and contour speed constraint.
-            samples[i:i + nDep] = (*F(x), np.dot(coefs @ d2Values, coefs @ dValues))
+            FValues = F(x)
+            dotValues = np.dot(coefs @ d2Values, coefs @ dValues)
+            samples[iF:iF + nDep - 1] = FValues
+            samples[iDot] = dotValues
+            for FValue in FValues:
+                FScale = max(FScale, abs(FValue))
+            dotScale = max(dotScale, abs(dotValues))
 
             # Compute the Jacobian of F(x).
             for j in range(nDep):
                 dFValues[j] = dF[j](x)
 
             # Compute the Jacobian of samples with respect to the coefficients of x(t).
-            FPortion = np.outer(dFValues.T, bValues).reshape(nDep - 1, nDep * order)
-            dotPortion = (np.outer(coefs @ dValues, d2Values) + np.outer(coefs @ d2Values, dValues)).reshape(nDep * order)
-            J[i:i + nDep, (ix - order) * nDep:ix * nDep] = (*FPortion, dotPortion)
+            FValues = np.outer(dFValues.T, bValues).reshape(nDep - 1, nDep * order)
+            dotValues = (np.outer(coefs @ dValues, d2Values) + np.outer(coefs @ d2Values, dValues)).reshape(nDep * order)
+            J[iF:iF + nDep - 1, (ix - order) * nDep:ix * nDep] = FValues
+            J[iDot, (ix - order) * nDep:ix * nDep] = dotValues
         
         # Perform a Newton iteration
         samplesNorm = np.linalg.norm(samples)
-        if samplesNorm < evaluationEpsilon:
+        if samplesNorm < evaluationEpsilon or FScale < evaluationEpsilon:
             break
+        samples[:iDotStart] /= FScale
+        J[:iDotStart] /= FScale
+        if dotScale >= evaluationEpsilon:
+            samples[iDotStart:] /= dotScale 
+            J[iDotStart:] /= dotScale 
         coefDelta = np.linalg.solve(J[:,nDep:-nDep], samples).reshape(nDep, nCoef - 2)
-        spline.coefs[:, 1:-1] -= coefDelta # Exclude endpoints
+        spline.coefs[:, 1:-1] -= coefDelta # Don't update endpoints
         if np.linalg.norm(coefDelta) < epsilon:
             break
 
