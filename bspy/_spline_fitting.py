@@ -242,10 +242,11 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     # Working array to hold the transpose of the Jacobian of F for a particular x(t).
     dFValues = np.empty((nDep, nDep - 1), contourDtype)
 
-    FScale = 0.0
-    dotScale = 0.0
     iDotStart = (nDep - 1) * nUnknowns
+    previousSamplesNorm = 0.0
     while True:
+        FScale = 0.0
+        dotScale = 0.0
         # Fill in samples and its Jacobian (J) with respect to the coefficients of x(t).
         for iF, iDot, t in zip(range(0, iDotStart, nDep - 1), range(iDotStart, nDep * nUnknowns), ts):
             # Isolate coefficients and compute bspline values and their first two derivatives at t.
@@ -264,9 +265,16 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             dotValues = np.dot(coefs @ d2Values, coefs @ dValues)
             samples[iF:iF + nDep - 1] = FValues
             samples[iDot] = dotValues
+
+            # Compute samples scale values and norm.
             for FValue in FValues:
                 FScale = max(FScale, abs(FValue))
             dotScale = max(dotScale, abs(dotValues))
+            samplesNorm = max(FScale, dotScale)
+
+            # Check for divergence from the solution.
+            if previousSamplesNorm > 0.0 and samplesNorm > previousSamplesNorm * (1.0 - evaluationEpsilon):
+                break
 
             # Compute the Jacobian of F(x).
             for j in range(nDep):
@@ -278,17 +286,31 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             J[iF:iF + nDep - 1, (ix - order) * nDep:ix * nDep] = FValues
             J[iDot, (ix - order) * nDep:ix * nDep] = dotValues
         
-        # Perform a Newton iteration
-        samplesNorm = np.linalg.norm(samples)
+        # Check for convergence of residual.
         if samplesNorm < evaluationEpsilon or FScale < evaluationEpsilon:
             break
-        samples[:iDotStart] /= FScale
-        J[:iDotStart] /= FScale
-        if dotScale >= evaluationEpsilon:
-            samples[iDotStart:] /= dotScale 
-            J[iDotStart:] /= dotScale 
-        coefDelta = np.linalg.solve(J[:,nDep:-nDep], samples).reshape(nDep, nCoef - 2)
-        spline.coefs[:, 1:-1] -= coefDelta # Don't update endpoints
+        
+        # Check if we got closer to the solution.
+        if previousSamplesNorm > 0.0 and samplesNorm > previousSamplesNorm * (1.0 - evaluationEpsilon):
+            # No we didn't, take a dampened step.
+            coefDelta *= 0.5
+            spline.coefs[:, 1:-1] += coefDelta
+        else:
+            # Yes we did, rescale samples and its Jacobian.
+            samples[:iDotStart] /= FScale
+            J[:iDotStart] /= FScale
+            if dotScale >= evaluationEpsilon:
+                samples[iDotStart:] /= dotScale 
+                J[iDotStart:] /= dotScale
+            
+            # Perform a Newton iteration.
+            coefDelta = np.linalg.solve(J[:,nDep:-nDep], samples).reshape(nDep, nCoef - 2)
+            spline.coefs[:, 1:-1] -= coefDelta # Don't update endpoints
+
+            # Record samples norm to ensure this Newton step is productive.
+            previousSamplesNorm = samplesNorm
+
+        # Check for convergence of step size.
         if np.linalg.norm(coefDelta) < epsilon:
             break
 
