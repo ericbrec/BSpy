@@ -257,24 +257,24 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             dValues = spline.bspline_values(ix, knots, order, t, 1)
             d2Values = spline.bspline_values(ix, knots, order, t, 2)
 
-            # Compute x(t).
-            x = coefs @ bValues
-
-            # Compute samples for t: F(x) and contour speed constraint.
-            FValues = F(x)
+            # Compute the speed constraint of x(t) and check from divergence from solution.
             dotValues = np.dot(coefs @ d2Values, coefs @ dValues)
-            samples[iF:iF + nDep - 1] = FValues
-            samples[iDot] = dotValues
-
-            # Compute samples scale values and norm.
-            for FValue in FValues:
-                FScale = max(FScale, abs(FValue))
-            dotScale = max(dotScale, abs(dotValues))
-            samplesNorm = max(FScale, dotScale)
-
-            # Check for divergence from the solution.
+            samplesNorm = dotScale = max(dotScale, abs(dotValues))
             if previousSamplesNorm > 0.0 and samplesNorm > previousSamplesNorm * (1.0 - evaluationEpsilon):
                 break
+
+            # Do the same for F(x(t)).
+            x = coefs @ bValues
+            FValues = F(x)
+            for FValue in FValues:
+                FScale = max(FScale, abs(FValue))
+            samplesNorm = max(samplesNorm, FScale)
+            if previousSamplesNorm > 0.0 and samplesNorm > previousSamplesNorm * (1.0 - evaluationEpsilon):
+                break
+
+            # Record samples for t.
+            samples[iF:iF + nDep - 1] = FValues
+            samples[iDot] = dotValues
 
             # Compute the Jacobian of F(x).
             for j in range(nDep):
@@ -287,7 +287,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             J[iDot, (ix - order) * nDep:ix * nDep] = dotValues
         
         # Check for convergence of residual.
-        if samplesNorm < evaluationEpsilon or FScale < evaluationEpsilon:
+        if samplesNorm < evaluationEpsilon:
             break
         
         # Check if we got closer to the solution.
@@ -297,8 +297,9 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             spline.coefs[:, 1:-1] += coefDelta
         else:
             # Yes we did, rescale samples and its Jacobian.
-            samples[:iDotStart] /= FScale
-            J[:iDotStart] /= FScale
+            if FScale >= evaluationEpsilon:
+                samples[:iDotStart] /= FScale
+                J[:iDotStart] /= FScale
             if dotScale >= evaluationEpsilon:
                 samples[iDotStart:] /= dotScale 
                 J[iDotStart:] /= dotScale
