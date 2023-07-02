@@ -170,22 +170,29 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     m = len(knownXValues) - 1
     nCoef = m * (degree - 1) + 2
     nUnknownCoefs = nCoef - 2
-    nDep = 0
-    for x in knownXValues:
-        if nDep == 0:
-            nDep = len(x)
-            t = 0.0 # We start with t measuring contour length and later rescale.
-            x = np.array(x)
-            contourDtype = x.dtype
-            if epsilon is None:
-                epsilon = math.sqrt(np.finfo(contourDtype).eps)
-            evaluationEpsilon = np.sqrt(epsilon)
-            point = np.array((t, *x), contourDtype)
+
+    # Create the list of data points for an initial guess of x(t), rescaled to [0, 1].
+    knownXValues = np.array(knownXValues)
+    contourDtype = knownXValues.dtype
+    if epsilon is None:
+        epsilon = math.sqrt(np.finfo(contourDtype).eps)
+    evaluationEpsilon = np.sqrt(epsilon)
+    coefsMin = knownXValues.min(axis=0)
+    coefsMaxMinusMin = knownXValues.max(axis=0) - coefsMin
+    coefsMaxMinMin = np.where(coefsMaxMinusMin < 1.0, 1.0, coefsMaxMinusMin)
+    coefsMaxMinMinReciprocal = np.reciprocal(coefsMaxMinusMin)
+    nDep = knownXValues.shape[1]
+    previousPoint = None
+    t = 0.0 # We start with t measuring contour length and later rescale.
+    for knownXValue in knownXValues:
+        FValues = F(knownXValue)
+        assert len(FValues) == nDep - 1 and np.linalg.norm(FValues) < evaluationEpsilon, f"F(known x) must be a zero vector of length {nDep - 1}."
+        x = (knownXValue - coefsMin) * coefsMaxMinMinReciprocal # rescale to [0 , 1]
+        point = np.insert(x, 0, t) # full data point
+        if previousPoint is None:
             knots = [t] * order
             dataPoints = [point]
         else:
-            assert len(x) == nDep, "Known x values must be of the same length."
-            point = np.array((t, *x), contourDtype)
             dt = np.linalg.norm(point[1:] - previousPoint[1:])
             if dt > epsilon: # Skip duplicates
                 t += dt
@@ -195,23 +202,21 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                     dataPoints.append(0.5 * (previousPoint + point - rho * (point - previousPoint)))
                 for rho in rhos[0 if degree % 2 == 1 else 1:]:
                     dataPoints.append(0.5 * (previousPoint + point + rho * (point - previousPoint)))
-        value = F(x)
-        assert len(value) == nDep - 1 and np.linalg.norm(value) < evaluationEpsilon, f"F(known x) must be a zero vector of length {nDep - 1}."
         previousPoint = point
     knots += [t] * 2
     contourSpeed = t * t
     dataPoints.append(point)
 
-    # Rescale t values in knots and data points to be [0, 1].
+    # Rescale t values in knots and data points to be [0, 1], and collect ts.
     knots[:] /= t
     for point in dataPoints:
         point[0] /= t
+    ts = [point[0] for point in dataPoints[1:-1]] # Exclude endpoints
+    assert len(ts) == nUnknownCoefs
 
     # Compute initial guess for x(t).
     spline = least_squares(1, nDep, (order,), dataPoints, (knots,))
     knots = spline.knots[0]
-    ts = [point[0] for point in dataPoints[1:-1]] # Exclude endpoints
-    assert len(ts) == nUnknownCoefs
 
     # Establish the first derivatives of F.
     if dF is None:
@@ -274,7 +279,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                     break
 
                 # Do the same for F(x(t)).
-                x = coefs @ bValues
+                x = coefsMin + (coefs @ bValues) * coefsMaxMinusMin
                 FValues = F(x)
                 for FValue in FValues:
                     FScale = max(FScale, abs(FValue))
@@ -309,7 +314,8 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                 dValues = spline.bspline_values(ix, knots, order, 1.0, 1) # Using 1.0 for the final value (ix and coefs are aligned to it)
                 xPrime = coefs @ dValues
                 dotValues = np.dot(xPrime, xPrime) - contourSpeed
-                samplesNorm = max(samplesNorm, abs(dotValues))
+                dotScale = max(dotScale, abs(dotValues))
+                samplesNorm = max(samplesNorm, dotScale)
                 samples[-1] = dotValues
                 dotValues = (2.0 * np.outer(xPrime, dValues)).reshape(nDep * order)
                 J[-1, (ix - order) * nDep:ix * nDep] = dotValues
@@ -368,4 +374,6 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         nUnknownCoefs = nCoef - 2
         assert len(ts) == nUnknownCoefs
 
+    # Rescale x(t) back to original data points.
+    spline.coefs = (coefsMin + spline.coefs.T * coefsMaxMinusMin).T
     return spline
