@@ -186,7 +186,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     t = 0.0 # We start with t measuring contour length and later rescale.
     for knownXValue in knownXValues:
         FValues = F(knownXValue)
-        assert len(FValues) == nDep - 1 and np.linalg.norm(FValues) < evaluationEpsilon, f"F(known x) must be a zero vector of length {nDep - 1}."
+        #assert len(FValues) == nDep - 1 and np.linalg.norm(FValues) < evaluationEpsilon, f"F(known x) must be a zero vector of length {nDep - 1}."
         x = (knownXValue - coefsMin) * coefsMaxMinMinReciprocal # rescale to [0 , 1]
         point = np.insert(x, 0, t) # full data point
         if previousPoint is None:
@@ -204,7 +204,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                     dataPoints.append(0.5 * (previousPoint + point + rho * (point - previousPoint)))
         previousPoint = point
     knots += [t] * 2
-    contourSpeed = t * t
+    contourSpeedMin = contourSpeed = t * t
     dataPoints.append(point)
 
     # Rescale t values in knots and data points to be [0, 1], and collect ts.
@@ -293,7 +293,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
 
                 # Compute the Jacobian of samples with respect to the coefficients of x(t).
                 for j in range(nDep):
-                    dFValues[j] = dF[j](x)
+                    dFValues[j] = dF[j](x) * coefsMaxMinusMin[j]
                 FValues = np.outer(dFValues.T, bValues).reshape(nDep - 1, nDep * order)
                 dotValues = (2.0 * np.outer(xPrime, dValues)).reshape(nDep * order)
                 J[iF:iF + nDep - 1, (ix - order) * nDep:ix * nDep] = FValues
@@ -331,8 +331,14 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                 
                 # Perform a Newton iteration.
                 coefDelta = np.linalg.solve(JFinal, samples)
+
+                # Dampen the iteration to a reasonable size within [0, 1].
+                deltaMax = abs(coefDelta[:-1].max())
+                if deltaMax > 0.5:
+                    coefDelta *= 0.5 / deltaMax
                 spline.coefs[:, 1:-1] -= coefDelta[:-1].reshape(nDep, nCoef - 2) # Don't update endpoints
                 contourSpeed -= coefDelta[-1]
+                contourSpeed = max(contourSpeed, contourSpeedMin)
 
                 # Record samples norm to ensure this Newton step is productive.
                 previousSamplesNorm = samplesNorm
