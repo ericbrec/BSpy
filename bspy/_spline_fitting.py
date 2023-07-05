@@ -205,6 +205,9 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         previousPoint = point
     knots += [t] * 2
     speedMin = speedTarget = t
+    # Max speed is the max contour length, which we estimate as 3.0 times 
+    # the number of edges in the boundary times the length of each edge (1.0).
+    speedMax = 3.0 * nDep * 2.0 ** (nDep - 1 )
     dataPoints.append(point)
 
     # Rescale t values in knots and data points to be [0, 1], and collect ts.
@@ -332,19 +335,23 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                 # Perform a Newton iteration.
                 coefDelta = np.linalg.solve(JComplete, samples)
 
-                # Dampen the iteration to a reasonable size within [0, 1].
-                deltaMax = abs(coefDelta[:-1].max())
-                if deltaMax > 0.5:
-                    coefDelta *= 0.5 / deltaMax
+                # Restrict the Newton iteration to lie within bounds ([0 , 1] for coefficients).
+                clipDistance = min(1.0, (speedTarget - speedMin if coefDelta[-1] >= 0.0 else speedTarget - speedMax) / coefDelta[-1])
+                for coef, delta in zip(spline.coefs[:, 1:-1].flatten(), coefDelta[:-1]):
+                    clipDistance = min(clipDistance, (coef if delta >= 0.0 else coef - 1.0) / delta)
+                coefDelta *= clipDistance
                 spline.coefs[:, 1:-1] -= coefDelta[:-1].reshape(nDep, nCoef - 2) # Don't update endpoints
                 speedTarget -= coefDelta[-1]
-                speedTarget = max(speedTarget, speedMin)
 
                 # Record samples norm to ensure this Newton step is productive.
                 previousSamplesNorm = samplesNorm
 
-            # Check for convergence of Newton step size.
+            # Check for convergence of step size.
             if np.linalg.norm(coefDelta) < epsilon:
+                # If dampening never improved the solution, remove the step.
+                if previousSamplesNorm > 0.0 and samplesNorm > previousSamplesNorm * (1.0 - evaluationEpsilon):
+                    spline.coefs[:, 1:-1] += coefDelta[:-1].reshape(nDep, nCoef - 2) # Don't update endpoints
+                    speedTarget += coefDelta[-1]
                 break
 
         # Newton steps are done. Now check if we need to subdivide.
