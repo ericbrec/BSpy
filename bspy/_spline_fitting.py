@@ -193,7 +193,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             knots = [t] * order
             dataPoints = [point]
         else:
-            dt = np.linalg.norm(point[1:] - previousPoint[1:], 1)
+            dt = np.linalg.norm(point[1:] - previousPoint[1:])
             if dt > epsilon: # Skip duplicates
                 t += dt
                 point[0] = t
@@ -204,10 +204,6 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                     dataPoints.append(0.5 * (previousPoint + point + rho * (point - previousPoint)))
         previousPoint = point
     knots += [t] * 2
-    speedMin = speedTarget = t
-    # Max speed is the max contour length, which we estimate as 3.0 times 
-    # the number of edges in the boundary times the length of each edge (1.0).
-    speedMax = 3.0 * nDep * 2.0 ** (nDep - 1 )
     dataPoints.append(point)
 
     # Rescale t values in knots and data points to be [0, 1], and collect ts.
@@ -245,39 +241,35 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     
     # Start subdivision loop.
     while True:
-        # Array to hold the values of F and contour speed for each t, excluding endpoints.
-        samples = np.empty(nDep * nUnknownCoefs + 1, contourDtype)
-        # Array to hold the base Jacobian of the samples with respect to the coefficients.
-        # We'll trim it and expand it to form the complete Jacobian at the end.
+        # Array to hold the values of F and contour dot for each t, excluding endpoints.
+        samples = np.empty(nDep * nUnknownCoefs, contourDtype)
+        # Array to hold the Jacobian of the samples with respect to the coefficients.
         # The Jacobian is banded due to b-spline local support, so initialize it to zero.
-        J = np.zeros((nDep * nUnknownCoefs + 1, nDep * nCoef), contourDtype)
+        J = np.zeros((nDep * nUnknownCoefs, nDep * nCoef), contourDtype)
         # Working array to hold the transpose of the Jacobian of F for a particular x(t).
         dFValues = np.empty((nDep, nDep - 1), contourDtype)
-        # Working array to hold the last column of the complete Jacobian (its always the same).
-        JLastColumn = np.zeros(nDep * nUnknownCoefs + 1, contourDtype)
-        iSpeedStart = (nDep - 1) * nUnknownCoefs
-        JLastColumn[iSpeedStart:] = -1.0
 
         # Start Newton's method loop.
+        iDotStart = (nDep - 1) * nUnknownCoefs
         previousSamplesNorm = 0.0
         while True:
             FScale = 0.0
-            speedScale = 0.0
+            dotScale = 0.0
             samplesNorm = 0.0
             # Fill in samples and its Jacobian (J) with respect to the coefficients of x(t).
-            for iF, iSpeed, t in zip(range(0, iSpeedStart, nDep - 1), range(iSpeedStart, nDep * nUnknownCoefs), ts):
+            for iF, iDot, t in zip(range(0, iDotStart, nDep - 1), range(iDotStart, nDep * nUnknownCoefs), ts):
                 # Isolate coefficients and compute bspline values and their first two derivatives at t.
                 ix = np.searchsorted(knots, t, 'right')
                 ix = min(ix, nCoef)
                 coefs = spline.coefs[:, ix - order:ix]
                 bValues = spline.bspline_values(ix, knots, order, t)
                 dValues = spline.bspline_values(ix, knots, order, t, 1)
+                d2Values = spline.bspline_values(ix, knots, order, t, 2)
 
-                # Compute the speed constraint for x(t) and check from divergence from solution.
-                xPrime = coefs @ dValues
-                speedValues = np.linalg.norm(xPrime, 1) - speedTarget
-                speedScale = max(speedScale, abs(speedValues))
-                samplesNorm = max(samplesNorm, speedScale)
+                # Compute the dot constraint for x(t) and check from divergence from solution.
+                dotValues = np.dot(coefs @ d2Values, coefs @ dValues)
+                dotScale = max(dotScale, abs(dotValues))
+                samplesNorm = max(samplesNorm, dotScale)
                 if previousSamplesNorm > 0.0 and samplesNorm > previousSamplesNorm * (1.0 - evaluationEpsilon):
                     break
 
@@ -292,15 +284,15 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
 
                 # Record samples for t.
                 samples[iF:iF + nDep - 1] = FValues
-                samples[iSpeed] = speedValues
+                samples[iDot] = dotValues
 
                 # Compute the Jacobian of samples with respect to the coefficients of x(t).
                 for j in range(nDep):
                     dFValues[j] = dF[j](x) * coefsMaxMinusMin[j]
                 FValues = np.outer(dFValues.T, bValues).reshape(nDep - 1, nDep * order)
-                speedValues = np.outer(np.sign(xPrime), dValues).reshape(nDep * order)
+                dotValues = (np.outer(coefs @ dValues, d2Values) + np.outer(coefs @ d2Values, dValues)).reshape(nDep * order)
                 J[iF:iF + nDep - 1, (ix - order) * nDep:ix * nDep] = FValues
-                J[iSpeed, (ix - order) * nDep:ix * nDep] = speedValues
+                J[iDot, (ix - order) * nDep:ix * nDep] = dotValues
             
             # Check for convergence of residual.
             if samplesNorm < evaluationEpsilon:
@@ -310,38 +302,26 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             if previousSamplesNorm > 0.0 and samplesNorm > previousSamplesNorm * (1.0 - evaluationEpsilon):
                 # No we didn't, take a dampened step.
                 coefDelta *= 0.5
-                spline.coefs[:, 1:-1] += coefDelta[:-1].reshape(nDep, nCoef - 2) # Don't update endpoints
-                speedTarget += coefDelta[-1]
+                spline.coefs[:, 1:-1] += coefDelta # Don't update endpoints
             else:
-                # Yes we did, construct the complete sample and Jacobian.
-                dValues = spline.bspline_values(ix, knots, order, 1.0, 1) # Using 1.0 for the last value (ix and coefs are aligned to it)
-                xPrime = coefs @ dValues
-                speedValues = np.linalg.norm(xPrime, 1) - speedTarget
-                speedScale = max(speedScale, abs(speedValues))
-                samplesNorm = max(samplesNorm, speedScale)
-                samples[-1] = speedValues
-                speedValues = np.outer(np.sign(xPrime), dValues).reshape(nDep * order)
-                J[-1, (ix - order) * nDep:ix * nDep] = speedValues
-                JComplete = np.c_[J[:, nDep:-nDep], JLastColumn]
-
-                # Rescale samples and its Jacobian.
+                # Yes we did, rescale samples and its Jacobian.
                 if FScale >= evaluationEpsilon:
-                    samples[:iSpeedStart] /= FScale
-                    JComplete[:iSpeedStart] /= FScale
-                if speedScale >= evaluationEpsilon:
-                    samples[iSpeedStart:] /= speedScale 
-                    JComplete[iSpeedStart:] /= speedScale
+                    samples[:iDotStart] /= FScale
+                    J[:iDotStart] /= FScale
+                if dotScale >= evaluationEpsilon:
+                    samples[iDotStart:] /= dotScale 
+                    J[iDotStart:] /= dotScale
                 
                 # Perform a Newton iteration.
-                coefDelta = np.linalg.solve(JComplete, samples)
-
+                coefDelta = np.linalg.solve(J[:,nDep:-nDep], samples)
+                
                 # Restrict the Newton iteration to lie within bounds ([0 , 1] for coefficients).
-                clipDistance = min(1.0, (speedTarget - speedMin if coefDelta[-1] >= 0.0 else speedTarget - speedMax) / coefDelta[-1])
+                clipDistance = 1.0
                 for coef, delta in zip(spline.coefs[:, 1:-1].flatten(), coefDelta[:-1]):
                     clipDistance = min(clipDistance, (coef if delta >= 0.0 else coef - 1.0) / delta)
+                coefDelta = coefDelta.reshape(nDep, nCoef - 2)
                 coefDelta *= clipDistance
-                spline.coefs[:, 1:-1] -= coefDelta[:-1].reshape(nDep, nCoef - 2) # Don't update endpoints
-                speedTarget -= coefDelta[-1]
+                spline.coefs[:, 1:-1] -= coefDelta # Don't update endpoints
 
                 # Record samples norm to ensure this Newton step is productive.
                 previousSamplesNorm = samplesNorm
@@ -350,12 +330,11 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             if np.linalg.norm(coefDelta) < epsilon:
                 # If dampening never improved the solution, remove the step.
                 if previousSamplesNorm > 0.0 and samplesNorm > previousSamplesNorm * (1.0 - evaluationEpsilon):
-                    spline.coefs[:, 1:-1] += coefDelta[:-1].reshape(nDep, nCoef - 2) # Don't update endpoints
-                    speedTarget += coefDelta[-1]
+                    spline.coefs[:, 1:-1] += coefDelta # Don't update endpoints
                 break
 
         # Newton steps are done. Now check if we need to subdivide.
-        if samplesNorm / np.linalg.norm(JComplete, np.inf) < epsilon:
+        if samplesNorm / np.linalg.norm(J[:,nDep:-nDep], np.inf) < epsilon:
             break # We're done!
         
         # We need to subdivide, so build new knots array and new ts array.
