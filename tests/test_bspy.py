@@ -962,7 +962,11 @@ def test_zeros():
     def check_1D_roots(expectedRoots, roots, tolerance):
         assert len(expectedRoots) == len(roots)
         for (expectedRoot, root) in zip(expectedRoots, roots):
-            assert abs(expectedRoot - root) < tolerance
+            if type(expectedRoot) is type((1.0, 2.0),):
+                assert abs(expectedRoot[0] - root[0]) < tolerance
+                assert abs(expectedRoot[1] - root[1]) < tolerance
+            else:
+                assert abs(expectedRoot - root) < tolerance
 
     def check_roots(spline, expectedRootCount, roots, tolerance):
         assert expectedRootCount == len(roots)
@@ -970,41 +974,52 @@ def test_zeros():
             value = spline(root)
             assert np.dot(value, value) < tolerance
 
-    tolerance = 1.0e-6
+    tolerance = 1.0e-14
 
     spline = bspy.Spline(1, 1, (4,), (4,), ((0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0),), ((1.0, -2.0, -2.0, 1.0),))
-    expectedRoots = (0.127322, 0.872678)
-    roots = spline.zeros(tolerance)
+    expectedRoots = (0.12732200375003502, 0.8726779962499649)
+    roots = spline.zeros()
     check_1D_roots(expectedRoots, roots, tolerance)
 
     spline = bspy.Spline(1, 1, (4,), (5,), ((0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 2.0, 2.0, 2.0),), ((1.0, -2.0, -2.0, 3.0, -1.0),))
-    expectedRoots = (0.126791, 1.179700, 1.901525)
-    roots = spline.zeros(tolerance)
+    expectedRoots = (0.12679064971673917, 1.1797004713504056, 1.9015253538967793)
+    roots = spline.zeros()
     check_1D_roots(expectedRoots, roots, tolerance)
 
     spline = bspy.Spline(1, 1, (4,), (10,), ((0.0, 0.0, 0.0, 0.0, 1.0, 3.0, 4.0, 7.0, 7.0, 8.0, 10.0, 10.0, 10.0, 10.0),), ((1.0, -2.0, -3.0, -4.0, 5.0, 6.0, 7.0, -8.0, -9.0, 1.0),))
-    expectedRoots = (0.124277, 3.556169, 7.866681, 9.930791)
-    roots = spline.zeros(tolerance)
+    expectedRoots = (0.1242770027023396, 3.556169240708571, 7.866681344525834, 9.930791005970617)
+    roots = spline.zeros()
     check_1D_roots(expectedRoots, roots, tolerance)
 
     spline = bspy.Spline(1, 1, (5,), (7,), ((0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 4.0, 4.0, 4.0, 4.0, 4.0),), ((1.0, -2.0, -3.0, 4.0, 5.0, -6.0, 1.0),))
-    expectedRoots = (0.094002, 1.201821, 3.019268, 3.918820)
-    roots = spline.zeros(tolerance)
+    expectedRoots = (0.09400220779701107, 1.2018213294830917, 3.019267586117955, 3.918820194105917)
+    roots = spline.zeros()
     check_1D_roots(expectedRoots, roots, tolerance)
 
     spline = bspy.Spline(1, 1, (6,), (11,), ((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 2.0, 2.0, 2.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0),), ((2.0, -1.0, -1.0, -1.0, 1.0, 2.0, 2.0, -3.0, -3.0, 4.0, 1.0),))
-    expectedRoots = (0.197807, 0.959259, 2.368276, 3.336228)
-    roots = spline.zeros(tolerance)
+    expectedRoots = (0.19780681921299614, 0.959258605483323, 2.3682761525810267, 3.3362282254078597)
+    roots = spline.zeros()
     check_1D_roots(expectedRoots, roots, tolerance)
 
     spline = bspy.Spline(1, 1, (4,), (4,), ((0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0),), ((1.0, -13.0 / 9.0, 25.0 / 12.0, -3.0),))
-    expectedRoots = (0.400000, 0.428571)
-    roots = spline.zeros(tolerance)
+    expectedRoots = (0.39999999558761995, 0.4285714285714262)
+    roots = spline.zeros()
     check_1D_roots(expectedRoots, roots, tolerance)
 
     spline = bspy.Spline(1, 1, (4,), (6,), ((0.0, 0.0, 0.0, 0.0, 0.3, 0.7, 1.0, 1.0, 1.0, 1.0),), ((1.3, 0, 0, 0, 0, -2.6),))
+    expectedRoots = ((0.3, 0.7),)
     roots = spline.zeros()
-    # TODO: Make this test case work
+    check_1D_roots(expectedRoots, roots, tolerance)
+
+    spline = bspy.Spline(1, 1, (4,), (6,), ((0.0, 0.0, 0.0, 0.0, 0.3, 0.7, 1.0, 1.0, 1.0, 1.0),), ((0, 0, 0, 0, 0, -2.6),))
+    expectedRoots = ((0.0, 0.7),)
+    roots = spline.zeros()
+    check_1D_roots(expectedRoots, roots, tolerance)
+
+    spline = bspy.Spline(1, 1, (4,), (11,), ((0.0, 0.0, 0.0, 0.0, 0.1, 0.2, 0.3, 0.5, 0.6, 0.7, 0.8, 1.0, 1.0, 1.0, 1.0),), ((4, 0, 0, 0, 0, -2.6, 0, 0, 0, 0, 0),))
+    expectedRoots = ((0.1, 0.2), (0.7, 1.0))
+    roots = spline.zeros()
+    check_1D_roots(expectedRoots, roots, tolerance)
 
     data = []
     for u in np.linspace(-2.0, 2.0, 3):

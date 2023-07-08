@@ -2,69 +2,88 @@ import math
 import numpy as np
 from collections import namedtuple
 
-def zeros_using_interval_newton(self, epsilon=None):
+def zeros_using_interval_newton(self):
     assert self.nInd == self.nDep, "The number of independent variables (nInd) must match the number of dependent variables (nDep)."
     assert self.nInd == 1, "Only works for curves (nInd == 1)."
-    machineEpsilon = np.finfo(self.knots[0].dtype).eps
-    if epsilon is None:
-        epsilon = max(self.accuracy, machineEpsilon)
-    evaluationEpsilon = np.sqrt(epsilon)
-    roots = []
-    # Set initial spline, domain, and interval.
+    epsilon = np.finfo(self.knots[0].dtype).eps
+
+    # Set initial spline and domain
+ 
     spline = self
     (domain,) = spline.domain()
-    Interval = namedtuple('Interval', ('spline', 'slope', 'intercept', 'atMachineEpsilon'))
-    intervalStack = [Interval(spline.trim((domain,)).reparametrize(((0.0, 1.0),)), domain[1] - domain[0], domain[0], False)]
 
-    def test_and_add_domain():
-        """Macro to perform common operations when considering a domain as a new interval."""
-        if domain[0] <= 1.0 and domain[1] >= 0.0:
-            width = domain[1] - domain[0]
-            if width >= 0.0:
-                slope = width * interval.slope
-                intercept = domain[0] * interval.slope + interval.intercept
-                # Iteration is complete if the interval actual width (slope) is either
-                # one iteration past being less than sqrt(machineEpsilon) or simply less than epsilon.
-                if interval.atMachineEpsilon or slope < epsilon:
-                    root = np.array((intercept + 0.5 * slope,))
-                    # Double-check that we're at an actual zero (avoids boundary case).
-                    if abs(self(root)) < evaluationEpsilon:
-                        # Check for duplicate root. We test for a distance between roots of 2*epsilon to account for a left vs. right sided limit.
-                        if roots and abs(root - roots[-1]) < 2.0 * epsilon:
-                            # For a duplicate root, return the average value.
-                            roots[-1] = 0.5 * (roots[-1] + root)
-                        else:
-                            roots.append(root)
-                else:
-                    intervalStack.append(Interval(spline.trim((domain,)).reparametrize(((0.0, 1.0),)), slope, intercept, slope * slope < machineEpsilon))
+    # Perform an interval Newton step
 
-    # Process intervals until none remain
-    while intervalStack:
-        interval = intervalStack.pop()
-        scale = np.abs(interval.spline.range_bounds()).max()
-        if scale < epsilon:
-            # Return the bounds of the interval within which the spline is zero.
-            roots.append((interval.intercept, interval.slope + interval.intercept))
-        else:
-            spline = interval.spline.scale(1.0 / scale)
-            mValue = spline((0.5,))
-            derivativeRange = spline.differentiate().range_bounds()
-            if derivativeRange[0, 0] * derivativeRange[0, 1] <= 0.0:
-                # Derivative range contains zero, so consider two intervals.
-                leftIndex = 0 if mValue > 0.0 else 1
-                domain[0] = max(0.5 - mValue / derivativeRange[0, leftIndex], 0.0)
-                domain[1] = 1.0
-                test_and_add_domain()
-                domain[0] = 0.0
-                domain[1] = min(0.5 - mValue / derivativeRange[0, 1 - leftIndex], 1.0)
-                test_and_add_domain()
-            else:
-                leftIndex = 0 if mValue > 0.0 else 1
-                domain[0] = max(0.5 - mValue / derivativeRange[0, leftIndex], 0.0)
-                domain[1] = min(0.5 - mValue / derivativeRange[0, 1 - leftIndex], 1.0)
-                test_and_add_domain()
+    def refine(spline, intervalSize, maxFunc):
+        (bbox,) = spline.range_bounds()
+        if bbox[0] * bbox[1] > epsilon:
+            return []
+        scalefactor = max(abs(bbox[0]), abs(bbox[1]))
+        scalespl = spline.scale(1.0 / scalefactor)
+        (mydomain,) = scalespl.domain()
+        intervalSize *= mydomain[1] - mydomain[0]
+        maxFunc *= scalefactor
+        myspline = scalespl.reparametrize([[0.0, 1.0]])
+        midPoint = 0.5
+        [fval] = myspline([midPoint])
+
+        # Root found
+
+        if intervalSize < epsilon or abs(fval) * maxFunc < epsilon:
+            return [0.5 * (mydomain[0] + mydomain[1])]
     
-    return roots
+        # Calculate Newton update
+
+        (fder,) = myspline.differentiate().range_bounds()
+        if fder[0] == 0.0:
+            fder[0] = epsilon
+        if fder[1] == 0.0:
+            fder[1] = -epsilon
+        xleft = midPoint - fval / fder[0]
+        xright = midPoint - fval / fder[1]
+        dleft = min(xleft, xright) - 0.5 * epsilon
+        dright = max(xleft, xright) + 0.5 * epsilon
+        if fder[0] * fder[1] >= 0.0:    # Refine interval
+           xnewleft = max(0.0, dleft)
+           xnewright = min(1.0, dright)
+           if xnewleft <= xnewright:
+               trimspl = myspline.trim(((xnewleft, xnewright),))
+               myzeros = refine(trimspl, intervalSize, maxFunc)
+           else:
+               return []
+        else:                           # . . . or split as needed
+            myzeros = []
+            if dleft > 0.0:
+                trimspl = myspline.trim(((0.0, dleft),))
+                myzeros += refine(trimspl, intervalSize, maxFunc)
+            if dright < 1.0:
+                trimspl = myspline.trim(((dright, 1.0),))
+                myzeros += refine(trimspl, intervalSize, maxFunc)
+        return [(1.0 - thiszero) * mydomain[0] + thiszero * mydomain[1] for thiszero in myzeros]
+
+    # See if there are any zero intervals
+
+    (bbox,) = spline.range_bounds()
+    scalefactor = max(abs(bbox[0]), abs(bbox[1]))
+    mysolution = []
+    for interval in range(spline.nCoef[0] - spline.order[0] + 1):
+        maxFunc = max(np.abs(spline.coefs[0][interval:interval + spline.order[0]]))
+        if maxFunc < scalefactor * epsilon:     # Found an interval of zeros
+            intExtend = spline.nCoef[0] - spline.order[0] - interval
+            for ix in range(intExtend):         # Attempt to extend the interval to more than one polynomial piece
+                if abs(spline.coefs[0][interval + ix + spline.order[0]]) >= scalefactor * epsilon:
+                    intExtend = ix
+                    break
+            leftend = spline.knots[0][interval + spline.order[0] - 1]
+            rightend = spline.knots[0][interval + spline.order[0] + intExtend]
+            if domain[0] != leftend:            # Compute zeros from left of the interval
+                mysolution = refine(spline.trim(((domain[0], leftend - np.sqrt(epsilon)),)),
+                                    max (1.0, 1.0 / (leftend - domain[0])), 1.0)
+            mysolution += [(leftend, rightend)] # Add the interval of zeros
+            if rightend != domain[1]:           # Add the zeros from right of the interval
+                mysolution += spline.trim(((rightend + np.sqrt(epsilon), domain[1]),)).zeros()
+            return mysolution
+    return refine(spline, max (1.0, 1.0 / (domain[1] - domain[0])), 1.0)
 
 def _convex_hull_2D(xData, yData, epsilon = 1.0e-8, xInterval = None):
     # Allow xData to be repeated for longer yData, but only if yData is a multiple.
