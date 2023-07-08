@@ -1165,6 +1165,6 @@ class Spline:
         """
         assert self.nInd == self.nDep, "The number of independent variables (nInd) must match the number of dependent variables (nDep)."
         if self.nInd <= 1:
-            return bspy._spline_intersection.zeros_using_interval_newton(self, epsilon)
+            return bspy._spline_intersection.zeros_using_interval_newton(self)
         else:
             return bspy._spline_intersection.zeros_using_projected_polyhedron(self, epsilon)
