@@ -230,32 +230,33 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         t += dt
         knots += [t] * (order - 2)
         previousPoint = point
-    knots += [t] * 2
+    knots += [t] * 2 # Clamp last knot
     knots = np.array(knots, contourDtype) / t # Rescale knots
     tValues /= t # Rescale t values
     assert i == nUnknownCoefs
-
-    # Define G(coefs) = dGCoefs @ coefs - GSamples.
-    # dGCoefs is banded due to b-spline local support, so initialize it to zero.
-    # Solving for coefs provides us our initial coefficients of x(t).
-    dGCoefs = np.zeros((nUnknownCoefs, nDep, nDep, nCoef), contourDtype)
-    i = 0
-    for t, i in zip(tValues, range(nUnknownCoefs)):
-        ix = np.searchsorted(knots, t, 'right')
-        ix = min(ix, nCoef)
-        bValues = bspy.Spline.bspline_values(ix, knots, order, t)
-        for j in range(nDep):
-            dGCoefs[i, j, j, ix - order:ix] = bValues
-    GSamples -= dGCoefs[:, :, :, 0] @ knownXValues[0] + dGCoefs[:, :, :, -1] @ knownXValues[-1]
-    GSamples = GSamples.reshape(nUnknownCoefs * nDep)
-    dGCoefs = dGCoefs[:, :, :, 1:-1].reshape(nUnknownCoefs * nDep, nDep * nUnknownCoefs)
-    coefs = np.empty((nDep, nCoef), contourDtype)
-    coefs[:, 0] = knownXValues[0]
-    coefs[:, -1] = knownXValues[-1]
-    coefs[:, 1:-1] = np.linalg.solve(dGCoefs, GSamples).reshape(nDep, nUnknownCoefs)
     
     # Start subdivision loop.
     while True:
+        # Define G(coefs) to be dGCoefs @ coefs - GSamples,
+        # where dGCoefs and GSamples are the b-spline values and sample points, respectively, for x(t).
+        # The dGCoefs matrix is banded due to b-spline local support, so initialize it to zero.
+        # Solving for coefs provides us our initial coefficients of x(t).
+        dGCoefs = np.zeros((nUnknownCoefs, nDep, nDep, nCoef), contourDtype)
+        i = 0
+        for t, i in zip(tValues, range(nUnknownCoefs)):
+            ix = np.searchsorted(knots, t, 'right')
+            ix = min(ix, nCoef)
+            bValues = bspy.Spline.bspline_values(ix, knots, order, t)
+            for j in range(nDep):
+                dGCoefs[i, j, j, ix - order:ix] = bValues
+        GSamples -= dGCoefs[:, :, :, 0] @ knownXValues[0] + dGCoefs[:, :, :, -1] @ knownXValues[-1]
+        GSamples = GSamples.reshape(nUnknownCoefs * nDep)
+        dGCoefs = dGCoefs[:, :, :, 1:-1].reshape(nUnknownCoefs * nDep, nDep * nUnknownCoefs)
+        coefs = np.empty((nDep, nCoef), contourDtype)
+        coefs[:, 0] = knownXValues[0]
+        coefs[:, -1] = knownXValues[-1]
+        coefs[:, 1:-1] = np.linalg.solve(dGCoefs, GSamples).reshape(nDep, nUnknownCoefs)
+
         # Array to hold the values of F and contour dot for each t, excluding endpoints.
         FSamples = np.empty((nUnknownCoefs, nDep), contourDtype)
         # Array to hold the Jacobian of the FSamples with respect to the coefficients.
@@ -280,7 +281,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                 dValues = bspy.Spline.bspline_values(ix, knots, order, t, 1)
                 d2Values = bspy.Spline.bspline_values(ix, knots, order, t, 2)
 
-                # Compute the dot constraint for x(t) and check from divergence from solution.
+                # Compute the dot constraint for x(t) and check for divergence from solution.
                 dotValues = np.dot(compactCoefs @ d2Values, compactCoefs @ dValues)
                 dotScale = max(dotScale, abs(dotValues))
                 FSamplesNorm = max(FSamplesNorm, dotScale)
@@ -349,36 +350,48 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         if FSamplesNorm / np.linalg.norm(dHCoefs, np.inf) < epsilon:
             break # We're done!
         
-        # We need to subdivide, so build new knots array and new tValues array.
-        newKnots = []
-        tValues = []
-        uniqueKnots = np.unique(knots)
-        previousKnot = uniqueKnots[0]
-        for knot in uniqueKnots[1:]:
+        # We need to subdivide, so build new knots, tValues, and GSamples arrays.
+        nCoef = 2 * (nCoef - 1)
+        nUnknownCoefs = nCoef - 2
+        tValues = np.empty(nUnknownCoefs, contourDtype)
+        GSamples = np.empty((nUnknownCoefs, nDep), contourDtype)
+        previousKnot = knots[degree]
+        newKnots = [previousKnot] * order
+        i = 0
+        for ix in range(order, len(knots) - degree, order - 2):
+            knot = knots[ix]
+            compactCoefs = coefs[:, ix - order:ix]
+
             # New knots are at the midpoint between old knots.
             newKnot = 0.5 * (previousKnot + knot)
-            newKnots += [newKnot] * (order - 2) # C1 continuity
 
             # Place tValues at Gauss points for the intervals [previousKnot, newKnot] and [newKnot, knot].
             for rho in reversed(rhos):
-                tValues.append(0.5 * (previousKnot + newKnot - rho * (newKnot - previousKnot)))
+                tValues[i] = t = 0.5 * (previousKnot + newKnot - rho * (newKnot - previousKnot))
+                GSamples[i] = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)
+                i += 1
             for rho in rhos[0 if degree % 2 == 1 else 1:]:
-                tValues.append(0.5 * (previousKnot + newKnot + rho * (newKnot - previousKnot)))
+                tValues[i] = t = 0.5 * (previousKnot + newKnot + rho * (newKnot - previousKnot))
+                GSamples[i] = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)
+                i += 1
             for rho in reversed(rhos):
-                tValues.append(0.5 * (newKnot + knot - rho * (knot - newKnot)))
+                tValues[i] = t = 0.5 * (newKnot + knot - rho * (knot - newKnot))
+                GSamples[i] = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)
+                i += 1
             for rho in rhos[0 if degree % 2 == 1 else 1:]:
-                tValues.append(0.5 * (newKnot + knot + rho * (knot - newKnot)))
+                tValues[i] = t = 0.5 * (newKnot + knot + rho * (knot - newKnot))
+                GSamples[i] = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)
+                i += 1
             
+            newKnots += [newKnot] * (order - 2) # C1 continuity
+            newKnots += [knot] * (order - 2) # C1 continuity
             previousKnot = knot
         
-        # Add new knots to spline and update knots, nCoef, and nUnknownCoefs.
-        spline = bspy.Spline(1, nDep, (order,), (nCoef,), (knots,), coefs)
-        spline = spline.elevate_and_insert_knots((0,), (newKnots,))
-        knots = spline.knots[0]
-        nCoef = spline.nCoef[0]
-        coefs = spline.coefs
-        nUnknownCoefs = nCoef - 2
-        assert len(tValues) == nUnknownCoefs
+        # Update knots array.
+        newKnots += [knot] * 2 # Clamp last knot
+        knots = np.array(newKnots, contourDtype)
+        assert i == nUnknownCoefs
+        assert len(knots) == nCoef + order
 
     # Rescale x(t) back to original data points.
     coefs = (coefsMin + coefs.T * coefsMaxMinusMin).T
