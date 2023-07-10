@@ -326,14 +326,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                 # Perform a Newton iteration.
                 HSamples = FSamples.reshape(nUnknownCoefs * nDep)
                 dHCoefs = dFCoefs[:, :, :, 1:-1].reshape((nUnknownCoefs * nDep, nDep * nUnknownCoefs))
-                coefDelta = np.linalg.solve(dHCoefs, HSamples)
-                
-                # Restrict the Newton iteration to lie within bounds ([0 , 1] for coefficients).
-                clipDistance = 1.0
-                for coef, delta in zip(coefs[:, 1:-1].flatten(), coefDelta):
-                    clipDistance = min(clipDistance, (coef if delta >= 0.0 else coef - 1.0) / delta)
-                coefDelta = coefDelta.reshape(nDep, nUnknownCoefs)
-                coefDelta *= clipDistance
+                coefDelta = np.linalg.solve(dHCoefs, HSamples).reshape(nDep, nUnknownCoefs)
                 coefs[:, 1:-1] -= coefDelta # Don't update endpoints
 
                 # Record FSamples norm to ensure this Newton step is productive.
@@ -341,7 +334,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
 
             # Check for convergence of step size.
             if np.linalg.norm(coefDelta) < epsilon:
-                # If dampening never improved the solution, remove the step.
+                # If step didn't improve the solution, remove it.
                 if previousFSamplesNorm > 0.0 and FSamplesNorm > previousFSamplesNorm * (1.0 - evaluationEpsilon):
                     coefs[:, 1:-1] += coefDelta # Don't update endpoints
                 break
