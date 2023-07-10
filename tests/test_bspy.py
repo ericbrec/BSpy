@@ -596,7 +596,6 @@ def test_contour():
     maxerror = 0.0
     F = lambda x: (x[0] - x[2], x[1] - x[3], x[0]*x[0] + x[1]*x[1]/9.0 - 1.0 + x[2]*x[2] + x[3]*x[3]/9.0 - 1.0)
     spline = bspy.Spline.contour(F, ((1.0, 0.0, 1.0, 0.0), (0.0, 3.0, 0.0, 3.0)))
-    print(spline)
     for t in np.linspace(0.0, 1.0, 21):
         x = spline((t,))
         maxerror = max(maxerror, np.linalg.norm(F(x)))
