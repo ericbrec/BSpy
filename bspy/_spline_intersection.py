@@ -177,7 +177,8 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
     assert self.nInd == self.nDep, "The number of independent variables (nInd) must match the number of dependent variables (nDep)."
     machineEpsilon = np.finfo(self.knots[0].dtype).eps
     if epsilon is None:
-        epsilon = max(self.accuracy, machineEpsilon)
+        epsilon = self.accuracy
+    epsilon = max(epsilon, np.sqrt(machineEpsilon))
     Crit = 0.85 # Required percentage decrease in domain per iteration.
     evaluationEpsilon = np.sqrt(epsilon)
     roots = []
@@ -221,7 +222,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
                     xInterval = (0.0, 1.0)
                     for nDep in range(spline.nDep):
                         # Compute the 2D convex hull of the knot coefficients and the spline's coefficients
-                        hull = _convex_hull_2D(knotCoefs, coefs[nDep].flatten(), epsilon, xInterval)
+                        hull = _convex_hull_2D(knotCoefs, coefs[nDep].ravel(), epsilon, xInterval)
                         if hull is None:
                             xInterval = None
                             break
