@@ -812,10 +812,10 @@ class Spline:
         The algorithm used to to find all intersection curves is from Grandine, Thomas A., and Frederick W. Klein IV. 
         "A new approach to the surface intersection problem." Computer Aided Geometric Design 14, no. 2 (1997): 111-134.
         """
-        assert self.nDep == other.nDep
+        assert self.nDep == other.nDep, "The number of dependent variables for both splines much match."
         freeParameters = self.nInd + other.nInd - self.nDep
         if freeParameters == 0:
-            return bspy._spline_intersection.intersection_points(self, other)
+            return (self - other).zeros()
         elif freeParameters == 1:
             return bspy._spline_intersection.intersection_curves(self, other)
         else:

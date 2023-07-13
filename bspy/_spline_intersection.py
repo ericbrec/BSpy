@@ -285,3 +285,196 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
     if self.nInd == 1:
         roots.sort(key=lambda root: root[0] if type(root) is tuple else root)
     return roots
+
+def intersection_curves(self, other):
+    assert self.nDep == other.nDep, "The number of dependent variables for both splines much match."
+    assert self.nInd + other.nInd - self.nDep == 1, "The number of free variables (self.nInd + other.nInd - self.nDep) must be one."
+    assert self.nInd == 2, "Only surfaces are supported."
+    assert other.nInd == 2, "Only surfaces are supported."
+
+    FMinusG = self - other
+    Fu = self.differentiate(0)
+    Fv = self.differentiate(1)
+    Gs = other.differentiate(0)
+    Gt = other.differentiate(1)
+    GCross = Gs.multiply(Gt, (0, 1), 'C') # Map s and t to each other for Gs and Gt
+    FuDotGCross = Fu.dot(GCross) # Fu and GCross don't share variables, so no mapping needed
+    FvDotGCross = Fv.dot(GCross) # Fv and GCross don't share variables, so no mapping needed
+    Point = namedtuple('Point', ('d', 'det', 'uvst'))
+    theta = np.sqrt(2) # Arbitrary starting value for theta (picked one unlikely to be a stationary point)
+    # Try different theta values until no border or turning points are degenerate.
+    while True:
+        points = []
+        theta *= 0.7
+        cosTheta = np.cos(theta)
+        sinTheta = np.sin(theta)
+        abort = False
+
+        # Construct the turning point determinant, mapping u and v in FuDotGCross and FvDotGCross.
+        turningPointDeterminant = (sinTheta * FuDotGCross).add(-cosTheta * FvDotGCross, (0, 1))
+
+        # Find intersections with boundaries, starting with u = 0.
+        zeros = FMinusG.contract((0.0, None, None, None)).zeros()
+        for zero in zeros:
+            if not isinstance(zero, np.ndarray):
+                abort = True
+                break
+            uvst = np.array((0.0, zero[0], zero[1], zero[2]))
+            d = cosTheta * uvst[0] + sinTheta * uvst[1]
+            det = (0.5 - uvst[1]) * FuDotGCross(uvst) * turningPointDeterminant(uvst)
+            if abs(det) < 1.0e-8:
+                about = True
+                break
+            points.append(Point(d, det, uvst))
+        if abort:
+            continue # Try a different theta
+
+        # Find intersections with u = 1.
+        zeros = FMinusG.contract((0.0, None, None, None)).zeros()
+        for zero in zeros:
+            if not isinstance(zero, np.ndarray):
+                abort = True
+                break
+            uvst = np.array((1.0, zero[0], zero[1], zero[2]))
+            d = cosTheta * uvst[0] + sinTheta * uvst[1]
+            det = (0.5 - uvst[1]) * FuDotGCross(uvst) * turningPointDeterminant(uvst)
+            if abs(det) < 1.0e-8:
+                about = True
+                break
+            points.append(Point(d, det, uvst))
+        if abort:
+            continue # Try a different theta
+
+        # Find intersections with v = 0.
+        zeros = FMinusG.contract((None, 0.0, None, None)).zeros()
+        for zero in zeros:
+            if not isinstance(zero, np.ndarray):
+                abort = True
+                break
+            uvst = np.array((zero[0], 0.0, zero[1], zero[2]))
+            d = cosTheta * uvst[0] + sinTheta * uvst[1]
+            det = (uvst[0] - 0.5) * FvDotGCross(uvst) * turningPointDeterminant(uvst)
+            if abs(det) < 1.0e-8:
+                about = True
+                break
+            points.append(Point(d, det, uvst))
+        if abort:
+            continue # Try a different theta
+
+        # Find intersections with v = 1.
+        zeros = FMinusG.contract((None, 1.0, None, None)).zeros()
+        for zero in zeros:
+            if not isinstance(zero, np.ndarray):
+                abort = True
+                break
+            uvst = np.array((zero[0], 1.0, zero[1], zero[2]))
+            d = cosTheta * uvst[0] + sinTheta * uvst[1]
+            det = (uvst[0] - 0.5) * FvDotGCross(uvst) * turningPointDeterminant(uvst)
+            if abs(det) < 1.0e-8:
+                about = True
+                break
+            points.append(Point(d, det, uvst))
+        if abort:
+            continue # Try a different theta
+
+        # Find intersections with s = 0.
+        zeros = FMinusG.contract((None, None, 0.0, None)).zeros()
+        for zero in zeros:
+            if not isinstance(zero, np.ndarray):
+                abort = True
+                break
+            uvst = np.array((zero[0], zero[1], 0.0, zero[2]))
+            d = cosTheta * uvst[0] + sinTheta * uvst[1]
+            duv = np.solve(np.column_stack(Fu(uvst[:2]), Fv(uvst[:2]), -Gt(uvst[2:])), Gs(uvst[2:]))
+            det = np.arctan2((0.5 - uvst[2]) * (duv[0] * cosTheta + duv[1] * sinTheta), (0.5 - uvst[2]) * (duv[0] * cosTheta - duv[1] * sinTheta))
+            if abs(det) < 1.0e-8:
+                about = True
+                break
+            points.append(Point(d, det, uvst))
+        if abort:
+            continue # Try a different theta
+
+        # Find intersections with s = 1.
+        zeros = FMinusG.contract((None, None, 1.0, None)).zeros()
+        for zero in zeros:
+            if not isinstance(zero, np.ndarray):
+                abort = True
+                break
+            uvst = np.array((zero[0], zero[1], 1.0, zero[2]))
+            d = cosTheta * uvst[0] + sinTheta * uvst[1]
+            duv = np.solve(np.column_stack(Fu(uvst[:2]), Fv(uvst[:2]), -Gt(uvst[2:])), Gs(uvst[2:]))
+            det = np.arctan2((0.5 - uvst[2]) * (duv[0] * cosTheta + duv[1] * sinTheta), (0.5 - uvst[2]) * (duv[0] * cosTheta - duv[1] * sinTheta))
+            if abs(det) < 1.0e-8:
+                about = True
+                break
+            points.append(Point(d, det, uvst))
+        if abort:
+            continue # Try a different theta
+
+        # Find intersections with t = 0.
+        zeros = FMinusG.contract((None, None, None, 0.0)).zeros()
+        for zero in zeros:
+            if not isinstance(zero, np.ndarray):
+                abort = True
+                break
+            uvst = np.array((zero[0], zero[1], zero[2], 0.0))
+            d = cosTheta * uvst[0] + sinTheta * uvst[1]
+            duv = np.solve(np.column_stack(Fu(uvst[:2]), Fv(uvst[:2]), -Gs(uvst[2:])), Gt(uvst[2:]))
+            det = np.arctan2((0.5 - uvst[3]) * (duv[0] * cosTheta + duv[1] * sinTheta), (0.5 - uvst[2]) * (duv[0] * cosTheta - duv[1] * sinTheta))
+            if abs(det) < 1.0e-8:
+                about = True
+                break
+            points.append(Point(d, det, uvst))
+        if abort:
+            continue # Try a different theta
+
+        # Find intersections with t = 1.
+        zeros = FMinusG.contract((None, None, None, 1.0)).zeros()
+        for zero in zeros:
+            if not isinstance(zero, np.ndarray):
+                abort = True
+                break
+            uvst = np.array((zero[0], zero[1], zero[2], 1.0))
+            d = cosTheta * uvst[0] + sinTheta * uvst[1]
+            duv = np.solve(np.column_stack(Fu(uvst[:2]), Fv(uvst[:2]), -Gs(uvst[2:])), Gt(uvst[2:]))
+            det = np.arctan2((0.5 - uvst[3]) * (duv[0] * cosTheta + duv[1] * sinTheta), (0.5 - uvst[2]) * (duv[0] * cosTheta - duv[1] * sinTheta))
+            if abs(det) < 1.0e-8:
+                about = True
+                break
+            points.append(Point(d, det, uvst))
+        if abort:
+            continue # Try a different theta
+
+        # Find turning points by combining FMinusG and turningPointDeterminant into a system and processing its zeros.
+        systemFMinusG, systemTurningPointDeterminant = FMinusG.common_basis((turningPointDeterminant,), ((0,0), (1,1), (2,2), (3,3)))
+        system = type(systemFMinusG)(4, 4, systemFMinusG.order, systemFMinusG.nCoef, systemFMinusG.knots, \
+            np.concatenate((systemFMinusG.coef, systemTurningPointDeterminant.coef)), systemFMinusG.accuracy, systemFMinusG.metadata)
+        zeros = system.zeros()
+        for uvst in zeros:
+            if not isinstance(uvst, np.ndarray):
+                abort = True
+                break
+            d = cosTheta * uvst[0] + sinTheta * uvst[1]
+            gCross = GCross(uvst[2:])
+            fuDotGCross = FuDotGCross(uvst)
+            fvDotGCross = FvDotGCross(uvst)
+            fCross = np.cross(Fu(uvst[:2]), Fv(uvst[:2]))
+            gsDotFCross = np.dot(Gs(uvst[2:]), fCross)
+            gtDotFCross = np.dot(Gt(uvst[2:]), fCross)
+            gamma = np.dot(self.derivative((2, 0), uvst[:2]), gCross) * fvDotGCross * fvDotGCross \
+                - 2.0 * np.dot(self.derivative((1, 1), uvst[:2]), gCross) * fuDotGCross * fvDotGCross \
+                + np.dot(self.derivative((0, 2), uvst[:2]), gCross) * fuDotGCross * fuDotGCross \
+                - np.dot(other.derivative((2, 0), uvst[2:]), gCross) * gtDotFCross * gtDotFCross \
+                + 2.0 * np.dot(other.derivative((1, 1), uvst[2:]), gCross) * gsDotFCross * gtDotFCross \
+                - np.dot(other.derivative((0, 2), uvst[2:]), gCross) * gsDotFCross * gsDotFCross
+            alpha = cosTheta * fuDotGCross + sinTheta * fvDotGCross
+            det = alpha * gamma
+            if abs(det) < 1.0e-8:
+                about = True
+                break
+            points.append(Point(d, det, uvst))
+        if abort:
+            continue # Try a different theta
+    
+        # We successfully got all the contour points, break out of the theta loop
+        break
