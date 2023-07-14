@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import bspy.spline
 from collections import namedtuple
 
 def zeros_using_interval_newton(self):
@@ -300,12 +301,14 @@ def intersection_curves(self, other):
     GCross = Gs.multiply(Gt, (0, 1), 'C') # Map s and t to each other for Gs and Gt
     FuDotGCross = Fu.dot(GCross) # Fu and GCross don't share variables, so no mapping needed
     FvDotGCross = Fv.dot(GCross) # Fv and GCross don't share variables, so no mapping needed
-    Point = namedtuple('Point', ('d', 'det', 'onBoundary', 'uvst',))
-    theta = np.sqrt(2) # Arbitrary starting value for theta (picked one unlikely to be a stationary point)
+    Point = namedtuple('Point', ('d', 'det', 'onBoundary', 'uvst'))
+    epsilon = np.sqrt(np.finfo(FMinusG.coefs.dtype).eps)
+    theta = np.sqrt(2) # Arbitrary starting value for theta (picked one in [0, pi/2] unlikely to be a stationary point)
+    theta = np.pi / 6.0 # Test case, TODO remove this line.
     # Try different theta values until no border or turning points are degenerate.
     while True:
         points = []
-        theta *= 0.7
+        theta *= 0.77
         cosTheta = np.cos(theta)
         sinTheta = np.sin(theta)
         abort = False
@@ -320,10 +323,10 @@ def intersection_curves(self, other):
                 abort = True
                 break
             uvst = np.array((0.0, zero[0], zero[1], zero[2]))
-            d = cosTheta * uvst[0] + sinTheta * uvst[1]
+            d = uvst[0] * cosTheta + uvst[1] * sinTheta 
             det = (0.5 - uvst[1]) * FuDotGCross(uvst) * turningPointDeterminant(uvst)
-            if abs(det) < 1.0e-8:
-                about = True
+            if abs(det) < epsilon:
+                abort = True
                 break
             points.append(Point(d, det, True, uvst))
         if abort:
@@ -336,10 +339,10 @@ def intersection_curves(self, other):
                 abort = True
                 break
             uvst = np.array((1.0, zero[0], zero[1], zero[2]))
-            d = cosTheta * uvst[0] + sinTheta * uvst[1]
+            d = uvst[0] * cosTheta + uvst[1] * sinTheta 
             det = (0.5 - uvst[1]) * FuDotGCross(uvst) * turningPointDeterminant(uvst)
-            if abs(det) < 1.0e-8:
-                about = True
+            if abs(det) < epsilon:
+                abort = True
                 break
             points.append(Point(d, det, True, uvst))
         if abort:
@@ -352,10 +355,10 @@ def intersection_curves(self, other):
                 abort = True
                 break
             uvst = np.array((zero[0], 0.0, zero[1], zero[2]))
-            d = cosTheta * uvst[0] + sinTheta * uvst[1]
+            d = uvst[0] * cosTheta + uvst[1] * sinTheta 
             det = (uvst[0] - 0.5) * FvDotGCross(uvst) * turningPointDeterminant(uvst)
-            if abs(det) < 1.0e-8:
-                about = True
+            if abs(det) < epsilon:
+                abort = True
                 break
             points.append(Point(d, det, True, uvst))
         if abort:
@@ -368,10 +371,10 @@ def intersection_curves(self, other):
                 abort = True
                 break
             uvst = np.array((zero[0], 1.0, zero[1], zero[2]))
-            d = cosTheta * uvst[0] + sinTheta * uvst[1]
+            d = uvst[0] * cosTheta + uvst[1] * sinTheta 
             det = (uvst[0] - 0.5) * FvDotGCross(uvst) * turningPointDeterminant(uvst)
-            if abs(det) < 1.0e-8:
-                about = True
+            if abs(det) < epsilon:
+                abort = True
                 break
             points.append(Point(d, det, True, uvst))
         if abort:
@@ -384,11 +387,11 @@ def intersection_curves(self, other):
                 abort = True
                 break
             uvst = np.array((zero[0], zero[1], 0.0, zero[2]))
-            d = cosTheta * uvst[0] + sinTheta * uvst[1]
+            d = uvst[0] * cosTheta + uvst[1] * sinTheta 
             duv = np.solve(np.column_stack(Fu(uvst[:2]), Fv(uvst[:2]), -Gt(uvst[2:])), Gs(uvst[2:]))
             det = np.arctan2((0.5 - uvst[2]) * (duv[0] * cosTheta + duv[1] * sinTheta), (0.5 - uvst[2]) * (duv[0] * cosTheta - duv[1] * sinTheta))
-            if abs(det) < 1.0e-8:
-                about = True
+            if abs(det) < epsilon:
+                abort = True
                 break
             points.append(Point(d, det, True, uvst))
         if abort:
@@ -401,11 +404,11 @@ def intersection_curves(self, other):
                 abort = True
                 break
             uvst = np.array((zero[0], zero[1], 1.0, zero[2]))
-            d = cosTheta * uvst[0] + sinTheta * uvst[1]
+            d = uvst[0] * cosTheta + uvst[1] * sinTheta 
             duv = np.solve(np.column_stack(Fu(uvst[:2]), Fv(uvst[:2]), -Gt(uvst[2:])), Gs(uvst[2:]))
             det = np.arctan2((0.5 - uvst[2]) * (duv[0] * cosTheta + duv[1] * sinTheta), (0.5 - uvst[2]) * (duv[0] * cosTheta - duv[1] * sinTheta))
-            if abs(det) < 1.0e-8:
-                about = True
+            if abs(det) < epsilon:
+                abort = True
                 break
             points.append(Point(d, det, True, uvst))
         if abort:
@@ -418,11 +421,11 @@ def intersection_curves(self, other):
                 abort = True
                 break
             uvst = np.array((zero[0], zero[1], zero[2], 0.0))
-            d = cosTheta * uvst[0] + sinTheta * uvst[1]
+            d = uvst[0] * cosTheta + uvst[1] * sinTheta 
             duv = np.solve(np.column_stack(Fu(uvst[:2]), Fv(uvst[:2]), -Gs(uvst[2:])), Gt(uvst[2:]))
             det = np.arctan2((0.5 - uvst[3]) * (duv[0] * cosTheta + duv[1] * sinTheta), (0.5 - uvst[2]) * (duv[0] * cosTheta - duv[1] * sinTheta))
-            if abs(det) < 1.0e-8:
-                about = True
+            if abs(det) < epsilon:
+                abort = True
                 break
             points.append(Point(d, det, True, uvst))
         if abort:
@@ -435,11 +438,11 @@ def intersection_curves(self, other):
                 abort = True
                 break
             uvst = np.array((zero[0], zero[1], zero[2], 1.0))
-            d = cosTheta * uvst[0] + sinTheta * uvst[1]
+            d = uvst[0] * cosTheta + uvst[1] * sinTheta 
             duv = np.solve(np.column_stack(Fu(uvst[:2]), Fv(uvst[:2]), -Gs(uvst[2:])), Gt(uvst[2:]))
             det = np.arctan2((0.5 - uvst[3]) * (duv[0] * cosTheta + duv[1] * sinTheta), (0.5 - uvst[2]) * (duv[0] * cosTheta - duv[1] * sinTheta))
-            if abs(det) < 1.0e-8:
-                about = True
+            if abs(det) < epsilon:
+                abort = True
                 break
             points.append(Point(d, det, True, uvst))
         if abort:
@@ -454,7 +457,7 @@ def intersection_curves(self, other):
             if not isinstance(uvst, np.ndarray):
                 abort = True
                 break
-            d = cosTheta * uvst[0] + sinTheta * uvst[1]
+            d = uvst[0] * cosTheta + uvst[1] * sinTheta 
             uv = uvst[:2]
             st = uvst[2:]
             gCross = GCross(st)
@@ -471,8 +474,8 @@ def intersection_curves(self, other):
                 - np.dot(other.derivative((0, 2), st), gCross) * gsDotFCross * gsDotFCross
             alpha = cosTheta * fuDotGCross + sinTheta * fvDotGCross
             det = alpha * gamma
-            if abs(det) < 1.0e-8:
-                about = True
+            if abs(det) < epsilon:
+                abort = True
                 break
             points.append(Point(d, det, False, uvst))
         if not abort:
@@ -525,13 +528,49 @@ def intersection_curves(self, other):
             # or v = 1 edge, add a new contour to the end of the ordered list. If it is an
             # ending point, then delete a contour from either the beginning or the end of the
             # list, depending upon which edge the point is on. Go back to Step (5).
-            pass
+            if point.det > 0.0:
+                # Starting point
+                if abs(point.uvst[0] - 1.0) < epsilon or abs(point.uvst[1]) < epsilon:
+                    currentContourPoints.insert(0, [point.uvst])
+                else:
+                    currentContourPoints.append([point.uvst])
+            else:
+                # Ending point
+                if abs(point.uvst[0] - 1.0) < epsilon or abs(point.uvst[1]) < epsilon:
+                    contourPoints.append(currentContourPoints.pop(0) + [point.uvst])
+                else:
+                    contourPoints.append(currentContourPoints.pop(-1) + [point.uvst])
         else:
-            # (7) Determine whether the point is a turning point or a critical point. For now, we
-            # will assume that the point is a turning point and defer the discussion of critical
-            # points to Section 2. Determine whether two contours start or two contours end
+            # (7) Determine whether two contours start or two contours end
             # at the turning point. Locate the two contours in the list of contours by finding
             # all points which lie on both the panel boundary and on the contour. The turning
             # point will be one of these, and it will be well ordered with respect to the other
             # points. Either insert two new contours in the list or delete two existing ones from
             # the list. Go back to Step (5).
+            panelFMinusG.coefs[3] -= point.d # We subtract d to form u * cosTheta + v * sinTheta - d = 0
+            panelPoints = panelFMinusG.zeros()
+            panelFMinusG.coefs[3] += point.d # Add d back to prepare for next turning point
+            # Sort zeros by their position along the panel boundary (using vector orthogonal to its normal).
+            panelPoints.sort(key=lambda uvst: uvst[1] * cosTheta - uvst[0] * sinTheta)
+            removalAdjustment = 0 # Adjust index when a contour is removed.
+            for i, uvst in zip(range(len(panelPoints)), panelPoints):
+                if np.isclose(point.uvst, uvst):
+                    if point.det > 0.0:
+                        # Insert the turning point twice.
+                        currentContourPoints.insert(i, [point.uvst])
+                        currentContourPoints.insert(i, [point.uvst])
+                    else:
+                        secondHalf = currentContourPoints.pop(i + 1)
+                        secondHalf.reverse
+                        contourPoints.append(currentContourPoints.pop(i) + [point.uvst] + secondHalf)
+                        removalAdjustment = -1
+                else:
+                    currentContourPoints[i + removalAdjustment].append(uvst)
+
+    # We've determined a bunch of points along all the contours, including starting and ending points.
+    # Now we just need to create splines for those contours using the Spline.contour method.
+    splineContours = []
+    for points in contourPoints:
+        splineContours.append(bspy.spline.Spline.contour(FMinusG, points))
+    
+    return splineContours
