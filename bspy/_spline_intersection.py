@@ -300,7 +300,7 @@ def intersection_curves(self, other):
     GCross = Gs.multiply(Gt, (0, 1), 'C') # Map s and t to each other for Gs and Gt
     FuDotGCross = Fu.dot(GCross) # Fu and GCross don't share variables, so no mapping needed
     FvDotGCross = Fv.dot(GCross) # Fv and GCross don't share variables, so no mapping needed
-    Point = namedtuple('Point', ('d', 'det', 'uvst'))
+    Point = namedtuple('Point', ('d', 'det', 'onBoundary', 'uvst',))
     theta = np.sqrt(2) # Arbitrary starting value for theta (picked one unlikely to be a stationary point)
     # Try different theta values until no border or turning points are degenerate.
     while True:
@@ -325,7 +325,7 @@ def intersection_curves(self, other):
             if abs(det) < 1.0e-8:
                 about = True
                 break
-            points.append(Point(d, det, uvst))
+            points.append(Point(d, det, True, uvst))
         if abort:
             continue # Try a different theta
 
@@ -341,7 +341,7 @@ def intersection_curves(self, other):
             if abs(det) < 1.0e-8:
                 about = True
                 break
-            points.append(Point(d, det, uvst))
+            points.append(Point(d, det, True, uvst))
         if abort:
             continue # Try a different theta
 
@@ -357,7 +357,7 @@ def intersection_curves(self, other):
             if abs(det) < 1.0e-8:
                 about = True
                 break
-            points.append(Point(d, det, uvst))
+            points.append(Point(d, det, True, uvst))
         if abort:
             continue # Try a different theta
 
@@ -373,7 +373,7 @@ def intersection_curves(self, other):
             if abs(det) < 1.0e-8:
                 about = True
                 break
-            points.append(Point(d, det, uvst))
+            points.append(Point(d, det, True, uvst))
         if abort:
             continue # Try a different theta
 
@@ -390,7 +390,7 @@ def intersection_curves(self, other):
             if abs(det) < 1.0e-8:
                 about = True
                 break
-            points.append(Point(d, det, uvst))
+            points.append(Point(d, det, True, uvst))
         if abort:
             continue # Try a different theta
 
@@ -407,7 +407,7 @@ def intersection_curves(self, other):
             if abs(det) < 1.0e-8:
                 about = True
                 break
-            points.append(Point(d, det, uvst))
+            points.append(Point(d, det, True, uvst))
         if abort:
             continue # Try a different theta
 
@@ -424,7 +424,7 @@ def intersection_curves(self, other):
             if abs(det) < 1.0e-8:
                 about = True
                 break
-            points.append(Point(d, det, uvst))
+            points.append(Point(d, det, True, uvst))
         if abort:
             continue # Try a different theta
 
@@ -441,7 +441,7 @@ def intersection_curves(self, other):
             if abs(det) < 1.0e-8:
                 about = True
                 break
-            points.append(Point(d, det, uvst))
+            points.append(Point(d, det, True, uvst))
         if abort:
             continue # Try a different theta
 
@@ -455,26 +455,83 @@ def intersection_curves(self, other):
                 abort = True
                 break
             d = cosTheta * uvst[0] + sinTheta * uvst[1]
-            gCross = GCross(uvst[2:])
+            uv = uvst[:2]
+            st = uvst[2:]
+            gCross = GCross(st)
             fuDotGCross = FuDotGCross(uvst)
             fvDotGCross = FvDotGCross(uvst)
-            fCross = np.cross(Fu(uvst[:2]), Fv(uvst[:2]))
-            gsDotFCross = np.dot(Gs(uvst[2:]), fCross)
-            gtDotFCross = np.dot(Gt(uvst[2:]), fCross)
-            gamma = np.dot(self.derivative((2, 0), uvst[:2]), gCross) * fvDotGCross * fvDotGCross \
-                - 2.0 * np.dot(self.derivative((1, 1), uvst[:2]), gCross) * fuDotGCross * fvDotGCross \
-                + np.dot(self.derivative((0, 2), uvst[:2]), gCross) * fuDotGCross * fuDotGCross \
-                - np.dot(other.derivative((2, 0), uvst[2:]), gCross) * gtDotFCross * gtDotFCross \
-                + 2.0 * np.dot(other.derivative((1, 1), uvst[2:]), gCross) * gsDotFCross * gtDotFCross \
-                - np.dot(other.derivative((0, 2), uvst[2:]), gCross) * gsDotFCross * gsDotFCross
+            fCross = np.cross(Fu(uv), Fv(uv))
+            gsDotFCross = np.dot(Gs(st), fCross)
+            gtDotFCross = np.dot(Gt(st), fCross)
+            gamma = np.dot(self.derivative((2, 0), uv), gCross) * fvDotGCross * fvDotGCross \
+                - 2.0 * np.dot(self.derivative((1, 1), uv), gCross) * fuDotGCross * fvDotGCross \
+                + np.dot(self.derivative((0, 2), uv), gCross) * fuDotGCross * fuDotGCross \
+                - np.dot(other.derivative((2, 0), st), gCross) * gtDotFCross * gtDotFCross \
+                + 2.0 * np.dot(other.derivative((1, 1), st), gCross) * gsDotFCross * gtDotFCross \
+                - np.dot(other.derivative((0, 2), st), gCross) * gsDotFCross * gsDotFCross
             alpha = cosTheta * fuDotGCross + sinTheta * fvDotGCross
             det = alpha * gamma
             if abs(det) < 1.0e-8:
                 about = True
                 break
-            points.append(Point(d, det, uvst))
-        if abort:
-            continue # Try a different theta
+            points.append(Point(d, det, False, uvst))
+        if not abort:
+            break # We're done!
     
-        # We successfully got all the contour points, break out of the theta loop
-        break
+    # We've got all the contour points, now we bucket them into individual contours using the algorithm 
+    # from Grandine, Thomas A., and Frederick W. Klein IV. "A new approach to the surface intersection problem." 
+    # Computer Aided Geometric Design 14, no. 2 (1997): 111-134.
+
+    # Before we sort, we're going to need a system to find all the contour points on 
+    # a panel boundary: u * cosTheta + v * sinTheta = d. Basically, we add this panel boundary plane
+    # to the FMinusG contour condition. We'll define it for d = 0, and add the actual d later.
+    # We didn't construct the panel system earlier, because we didn't have theta.
+    panelCoefs = np.empty((4, *FMinusG.coefs.shape[1:]), FMinusG.coefs.dtype)
+    panelCoefs[:3] = FMinusG.coefs
+    # The following value should be -d. We're setting it for d = 0 to start.
+    panelCoefs[3, 0, 0, :, :] = 0.0 
+    degree = FMinusG.order[0] - 1
+    for i in range(1, FMinusG.nCoef[0]):
+        panelCoefs[3, i, 0, :, :] = panelCoefs[3, i - 1, 0, :, :] + ((FMinusG.knots[0][degree + i] - FMinusG.knots[0][i]) / degree) * cosTheta
+    degree = FMinusG.order[1] - 1
+    for i in range(1, FMinusG.nCoef[1]):
+        panelCoefs[3, :, i, :, :] = panelCoefs[3, :, i - 1, :, :] + ((FMinusG.knots[1][degree + i] - FMinusG.knots[1][i]) / degree) * sinTheta
+    panelFMinusG = type(FMinusG)(4, 4, FMinusG.order, FMinusG.nCoef, FMinusG.knots, panelCoefs, FMinusG.accuracy, FMinusG.metadata)
+
+    # Okay, we have everything we need to determine the contour topology and points along each contour.
+    # We've done the first two steps of Grandine and Klein's algorithm:
+    # (1) Choose theta and find all solutions to (1.6) (system)
+    # (2) Find all zeros of f on the boundary of [0, 1]^2
+
+    # Next, sort the edge and turning points by panel distance (d) and then by the determinant (det)
+    # (3) Take all the points found in Step (1) and Step (2) and order them by distance in the theta direction from the origin.
+    points.sort()
+
+    # (4) Initialize an ordered list of contours. No contours will be on the list at first.
+    currentContourPoints = [] # Holds contours currently being identified
+    contourPoints = [] # Hold contours already identified
+
+    # (5) If no points remain to be processed, stop. Otherwise, take the next closest point.
+    while points:
+        point = points.pop(0)
+        # If it is a boundary point, go to Step (6). Otherwise, go to Step (7).
+        if point.onBoundary:
+            # (6) Determine whether the point corresponds to a contour which is starting or ending
+            # at the given point. A point corresponds to a starting contour if it continues in the
+            # increasing panel direction, and it corresponds to an ending contour if it continues
+            # in the decreasing panel direction. If it is starting and the point is on the v = 0
+            # or u = 1 edge, add a new contour to the front of the ordered list of contours
+            # with the given point as an endpoint. If it is starting and the point is on the u = 0
+            # or v = 1 edge, add a new contour to the end of the ordered list. If it is an
+            # ending point, then delete a contour from either the beginning or the end of the
+            # list, depending upon which edge the point is on. Go back to Step (5).
+            pass
+        else:
+            # (7) Determine whether the point is a turning point or a critical point. For now, we
+            # will assume that the point is a turning point and defer the discussion of critical
+            # points to Section 2. Determine whether two contours start or two contours end
+            # at the turning point. Locate the two contours in the list of contours by finding
+            # all points which lie on both the panel boundary and on the contour. The turning
+            # point will be one of these, and it will be well ordered with respect to the other
+            # points. Either insert two new contours in the list or delete two existing ones from
+            # the list. Go back to Step (5).
