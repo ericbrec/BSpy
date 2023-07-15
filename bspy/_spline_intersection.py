@@ -531,9 +531,9 @@ def intersection_curves(self, other):
             if point.det > 0.0:
                 # Starting point
                 if abs(point.uvst[0] - 1.0) < epsilon or abs(point.uvst[1]) < epsilon:
-                    currentContourPoints.insert(0, [point.uvst])
+                    currentContourPoints.insert(0, [True, point.uvst]) # True indicates end point
                 else:
-                    currentContourPoints.append([point.uvst])
+                    currentContourPoints.append([True, point.uvst]) # True indicates end point
             else:
                 # Ending point
                 if abs(point.uvst[0] - 1.0) < epsilon or abs(point.uvst[1]) < epsilon:
@@ -552,25 +552,31 @@ def intersection_curves(self, other):
             panelFMinusG.coefs[3] += point.d # Add d back to prepare for next turning point
             # Sort zeros by their position along the panel boundary (using vector orthogonal to its normal).
             panelPoints.sort(key=lambda uvst: uvst[1] * cosTheta - uvst[0] * sinTheta)
-            removalAdjustment = 0 # Adjust index when a contour is removed.
+            adjustment = 0 # Adjust index after a contour point is added or removed.
             for i, uvst in zip(range(len(panelPoints)), panelPoints):
                 if np.isclose(point.uvst, uvst):
                     if point.det > 0.0:
                         # Insert the turning point twice.
-                        currentContourPoints.insert(i, [point.uvst])
-                        currentContourPoints.insert(i, [point.uvst])
+                        currentContourPoints.insert(i, [True, point.uvst]) # True indicates end point
+                        currentContourPoints.insert(i, [False, point.uvst]) # False indicates continuation point
+                        adjustment = 1
                     else:
                         secondHalf = currentContourPoints.pop(i + 1)
+                        endPoint = secondHalf.pop(0)
                         secondHalf.reverse
-                        contourPoints.append(currentContourPoints.pop(i) + [point.uvst] + secondHalf)
-                        removalAdjustment = -1
+                        fullList = currentContourPoints.pop(i) + [point.uvst] + secondHalf
+                        if endPoint:
+                            contourPoints.append(fullList)
+                        else:
+                            currentContourPoints[i] = fullList + currentContourPoints[i][1:]
+                        adjustment = -1
                 else:
-                    currentContourPoints[i + removalAdjustment].append(uvst)
+                    currentContourPoints[i + adjustment].append(uvst)
 
     # We've determined a bunch of points along all the contours, including starting and ending points.
     # Now we just need to create splines for those contours using the Spline.contour method.
     splineContours = []
     for points in contourPoints:
-        splineContours.append(bspy.spline.Spline.contour(FMinusG, points))
+        splineContours.append(bspy.spline.Spline.contour(FMinusG, points[1:])) # Skip endPoint boolean at start of points list
     
     return splineContours
