@@ -280,6 +280,9 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
                         width = domain[1] - domain[0]
                         slope = np.multiply(width, interval.slope)
                         intercept = np.multiply(domain[0], interval.slope) + interval.intercept
+                        for nDep, w in zip(range(spline.nDep), width):
+                            if w < machineEpsilon:
+                                domain[1, nDep] = domain[0, nDep] + machineEpsilon
                         newDomain = [None if s < epsilon else (0.0, 1.0) for s in slope]
                         intervalStack.append(Interval(spline.trim(domain.T).reparametrize(newDomain), slope, intercept, np.dot(slope, slope) < machineEpsilon))
 
@@ -304,7 +307,7 @@ def intersection_curves(self, other):
     Point = namedtuple('Point', ('d', 'det', 'onBoundary', 'uvst'))
     epsilon = np.sqrt(np.finfo(FMinusG.coefs.dtype).eps)
     theta = np.sqrt(2) # Arbitrary starting value for theta (picked one in [0, pi/2] unlikely to be a stationary point)
-    theta = np.pi / 6.0 # Test case, TODO remove this line.
+    theta = (np.pi / 6) / 0.77 # Test case, TODO remove this line.
     # Try different theta values until no border or turning points are degenerate.
     while True:
         points = []
@@ -314,7 +317,7 @@ def intersection_curves(self, other):
         abort = False
 
         # Construct the turning point determinant, mapping u and v in FuDotGCross and FvDotGCross.
-        turningPointDeterminant = (sinTheta * FuDotGCross).add(-cosTheta * FvDotGCross, (0, 1))
+        turningPointDeterminant = (sinTheta * FuDotGCross).add(-cosTheta * FvDotGCross, (0, 1, 2, 3))
 
         # Find intersections with boundaries, starting with u = 0.
         zeros = FMinusG.contract((0.0, None, None, None)).zeros()
@@ -324,7 +327,7 @@ def intersection_curves(self, other):
                 break
             uvst = np.array((0.0, zero[0], zero[1], zero[2]))
             d = uvst[0] * cosTheta + uvst[1] * sinTheta 
-            det = (0.5 - uvst[1]) * FuDotGCross(uvst) * turningPointDeterminant(uvst)
+            det = (uvst[0] - 0.5) * FvDotGCross(uvst) * turningPointDeterminant(uvst)
             if abs(det) < epsilon:
                 abort = True
                 break
@@ -333,14 +336,14 @@ def intersection_curves(self, other):
             continue # Try a different theta
 
         # Find intersections with u = 1.
-        zeros = FMinusG.contract((0.0, None, None, None)).zeros()
+        zeros = FMinusG.contract((1.0, None, None, None)).zeros()
         for zero in zeros:
             if not isinstance(zero, np.ndarray):
                 abort = True
                 break
             uvst = np.array((1.0, zero[0], zero[1], zero[2]))
             d = uvst[0] * cosTheta + uvst[1] * sinTheta 
-            det = (0.5 - uvst[1]) * FuDotGCross(uvst) * turningPointDeterminant(uvst)
+            det = (uvst[0] - 0.5) * FvDotGCross(uvst) * turningPointDeterminant(uvst)
             if abs(det) < epsilon:
                 abort = True
                 break
@@ -356,7 +359,7 @@ def intersection_curves(self, other):
                 break
             uvst = np.array((zero[0], 0.0, zero[1], zero[2]))
             d = uvst[0] * cosTheta + uvst[1] * sinTheta 
-            det = (uvst[0] - 0.5) * FvDotGCross(uvst) * turningPointDeterminant(uvst)
+            det = (0.5 - uvst[1]) * FuDotGCross(uvst) * turningPointDeterminant(uvst)
             if abs(det) < epsilon:
                 abort = True
                 break
@@ -372,7 +375,7 @@ def intersection_curves(self, other):
                 break
             uvst = np.array((zero[0], 1.0, zero[1], zero[2]))
             d = uvst[0] * cosTheta + uvst[1] * sinTheta 
-            det = (uvst[0] - 0.5) * FvDotGCross(uvst) * turningPointDeterminant(uvst)
+            det = (0.5 - uvst[1]) * FuDotGCross(uvst) * turningPointDeterminant(uvst)
             if abs(det) < epsilon:
                 abort = True
                 break
@@ -451,7 +454,7 @@ def intersection_curves(self, other):
         # Find turning points by combining FMinusG and turningPointDeterminant into a system and processing its zeros.
         systemFMinusG, systemTurningPointDeterminant = FMinusG.common_basis((turningPointDeterminant,), ((0,0), (1,1), (2,2), (3,3)))
         system = type(systemFMinusG)(4, 4, systemFMinusG.order, systemFMinusG.nCoef, systemFMinusG.knots, \
-            np.concatenate((systemFMinusG.coef, systemTurningPointDeterminant.coef)), systemFMinusG.accuracy, systemFMinusG.metadata)
+            np.concatenate((systemFMinusG.coefs, systemTurningPointDeterminant.coefs)), systemFMinusG.accuracy, systemFMinusG.metadata)
         zeros = system.zeros()
         for uvst in zeros:
             if not isinstance(uvst, np.ndarray):
