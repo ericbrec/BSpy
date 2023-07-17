@@ -86,7 +86,7 @@ def zeros_using_interval_newton(self):
             return mysolution
     return refine(spline, max (1.0, 1.0 / (domain[1] - domain[0])), 1.0)
 
-def _convex_hull_2D(xData, yData, epsilon = 1.0e-8, xInterval = None):
+def _convex_hull_2D(xData, yData, epsilon = 1.0e-8, evaluationEpsilon = 1.0e-4, xInterval = None):
     # Allow xData to be repeated for longer yData, but only if yData is a multiple.
     assert len(yData) % len(xData) == 0
 
@@ -107,7 +107,7 @@ def _convex_hull_2D(xData, yData, epsilon = 1.0e-8, xInterval = None):
         yMax = max(yMax, y)
 
     # Only return convex null if it contains y = 0 and x within xInterval.
-    if xInterval is not None and (y0 > epsilon or yMax < -epsilon or xMin > xInterval[1] or xMax < xInterval[0]):
+    if xInterval is not None and (y0 > evaluationEpsilon or yMax < -evaluationEpsilon or xMin > xInterval[1] or xMax < xInterval[0]):
         return None
 
     # Sort points by angle around p0.
@@ -223,7 +223,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
                     xInterval = (0.0, 1.0)
                     for nDep in range(spline.nDep):
                         # Compute the 2D convex hull of the knot coefficients and the spline's coefficients
-                        hull = _convex_hull_2D(knotCoefs, coefs[nDep].ravel(), epsilon, xInterval)
+                        hull = _convex_hull_2D(knotCoefs, coefs[nDep].ravel(), epsilon, evaluationEpsilon, xInterval)
                         if hull is None:
                             xInterval = None
                             break
@@ -260,6 +260,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
                                 break
                         if not foundDuplicate:
                             roots.append(root)
+                    print(f"Root: {root}")
                 else:
                     # Split domain in dimensions that aren't decreasing in width sufficiently.
                     domains = [domain]
@@ -316,7 +317,7 @@ def intersection_curves(self, other):
         sinTheta = np.sin(theta)
         abort = False
 
-        # Construct the turning point determinant, mapping u and v in FuDotGCross and FvDotGCross.
+        # Construct the turning point determinant, mapping u, v, s and t in FuDotGCross and FvDotGCross.
         turningPointDeterminant = (sinTheta * FuDotGCross).add(-cosTheta * FvDotGCross, (0, 1, 2, 3))
 
         # Find intersections with boundaries, starting with u = 0.
@@ -518,8 +519,7 @@ def intersection_curves(self, other):
     contourPoints = [] # Hold contours already identified
 
     # (5) If no points remain to be processed, stop. Otherwise, take the next closest point.
-    while points:
-        point = points.pop(0)
+    for point in points:
         # If it is a boundary point, go to Step (6). Otherwise, go to Step (7).
         if point.onBoundary:
             # (6) Determine whether the point corresponds to a contour which is starting or ending
@@ -558,8 +558,8 @@ def intersection_curves(self, other):
             adjustment = 0 # Adjust index after a contour point is added or removed.
             for i, uvst in zip(range(len(panelPoints)), panelPoints):
                 if np.isclose(point.uvst, uvst):
-                    if point.det > 0.0:
-                        # Insert the turning point twice.
+                    if point.det < 0.0:
+                        # Insert the turning point twice (second one appears before the first one in the points list).
                         currentContourPoints.insert(i, [True, point.uvst]) # True indicates end point
                         currentContourPoints.insert(i, [False, point.uvst]) # False indicates continuation point
                         adjustment = 1
