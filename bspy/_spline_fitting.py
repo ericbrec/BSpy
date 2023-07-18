@@ -193,7 +193,9 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         if isinstance(F, bspy.Spline):
             for i in range(nDep):
                 def splineDerivative(x, i=i):
-                    return F.derivative((i,), x)
+                    wrt = [0] * nDep
+                    wrt[i] = 1
+                    return F.derivative(wrt, x)
                 dF.append(splineDerivative)
         else:
             for i in range(nDep):

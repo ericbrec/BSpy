@@ -307,6 +307,7 @@ def intersection_curves(self, other):
     FvDotGCross = Fv.dot(GCross) # Fv and GCross don't share variables, so no mapping needed
     Point = namedtuple('Point', ('d', 'det', 'onBoundary', 'uvst'))
     epsilon = np.sqrt(np.finfo(FMinusG.coefs.dtype).eps)
+    evaluationEpsilon = np.sqrt(epsilon)
     theta = np.sqrt(2) # Arbitrary starting value for theta (picked one in [0, pi/2] unlikely to be a stationary point)
     theta = (np.pi / 6) / 0.77 # Test case, TODO remove this line.
     # Try different theta values until no border or turning points are degenerate.
@@ -540,9 +541,16 @@ def intersection_curves(self, other):
             else:
                 # Ending point
                 if abs(point.uvst[0] - 1.0) < epsilon or abs(point.uvst[1]) < epsilon:
-                    contourPoints.append(currentContourPoints.pop(0) + [point.uvst])
+                    i = 0
                 else:
-                    contourPoints.append(currentContourPoints.pop(-1) + [point.uvst])
+                    i = -1
+                fullList = currentContourPoints.pop(i) + [point.uvst]
+                endPoint = fullList[0]
+                if endPoint:
+                    contourPoints.append(fullList)
+                else:
+                    fullList.reverse() # The last two values will be a repeat turning point and the endPoint flag, we remove them on the next line
+                    currentContourPoints[i] = [True] + fullList[:-2] + currentContourPoints[i][1:]
         else:
             # (7) Determine whether two contours start or two contours end
             # at the turning point. Locate the two contours in the list of contours by finding
@@ -550,14 +558,20 @@ def intersection_curves(self, other):
             # point will be one of these, and it will be well ordered with respect to the other
             # points. Either insert two new contours in the list or delete two existing ones from
             # the list. Go back to Step (5).
-            panelFMinusG.coefs[3] -= point.d # We subtract d to form u * cosTheta + v * sinTheta - d = 0
-            panelPoints = panelFMinusG.zeros()
-            panelFMinusG.coefs[3] += point.d # Add d back to prepare for next turning point
-            # Sort zeros by their position along the panel boundary (using vector orthogonal to its normal).
+            # First, construct panelFMinusG, whose zeros lie along the panel boundary, u * cosTheta + v * sinTheta - d = 0.
+            panelFMinusG.coefs[3] -= point.d
+            # Split panelFMinusG below and above the known zero point.
+            # This avoids extra computation and the high-zero at the known zero point.
+            panelPoints = [point.uvst]
+            panelPoints += panelFMinusG.trim(((point.uvst[0] + 2.0 * evaluationEpsilon, 1.0), (0.0, point.uvst[1] - 2.0 * evaluationEpsilon), (0.0, 1.0), (0.0, 1.0))).zeros()
+            panelPoints += panelFMinusG.trim(((0.0, point.uvst[0] - 2.0 * evaluationEpsilon), (point.uvst[1] + 2.0 * evaluationEpsilon, 1.0), (0.0, 1.0), (0.0, 1.0))).zeros()
+            # Add d back to prepare for next turning point.
+            panelFMinusG.coefs[3] += point.d 
+            # Sort zero points by their position along the panel boundary (using vector orthogonal to its normal).
             panelPoints.sort(key=lambda uvst: uvst[1] * cosTheta - uvst[0] * sinTheta)
             adjustment = 0 # Adjust index after a contour point is added or removed.
             for i, uvst in zip(range(len(panelPoints)), panelPoints):
-                if np.isclose(point.uvst, uvst):
+                if np.allclose(point.uvst, uvst):
                     if point.det < 0.0:
                         # Insert the turning point twice (second one appears before the first one in the points list).
                         currentContourPoints.insert(i, [True, point.uvst]) # True indicates end point
@@ -566,7 +580,7 @@ def intersection_curves(self, other):
                     else:
                         secondHalf = currentContourPoints.pop(i + 1)
                         endPoint = secondHalf.pop(0)
-                        secondHalf.reverse
+                        secondHalf.reverse()
                         fullList = currentContourPoints.pop(i) + [point.uvst] + secondHalf
                         if endPoint:
                             contourPoints.append(fullList)
