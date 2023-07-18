@@ -556,7 +556,7 @@ truthSurface = \
  [1.000000000000000000e+00, 1.000000000000000000e+00, 0.000000000000000000e+00]]
 
 def test_add():
-    maxerror = 0.0
+    maxError = 0.0
     spline1 = bspy.Spline(1, 2, (5,), (5,), [np.array([0, 0, 0, 0, 0.2, 0.5, 0.5, 1, 1, 1], float)], 
         np.array(((100, 260), (260, 100), (580, 260), (260, 420), (420, 100)), float))
     spline2 = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0.2, 0.3, 0.4, 0.5, 0.5, 1, 1], float)], 
@@ -564,89 +564,89 @@ def test_add():
     
     # Add with shared independent variable.
     added = spline1.add(spline2, [0])
-    maxerror = 0.0
+    maxError = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
         [x, y] = spline1.evaluate([u]) + spline2.evaluate([u])
         [xTest, yTest] = added.evaluate([u])
-        maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
-    assert maxerror <= np.finfo(float).eps
+        maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxError <= np.finfo(float).eps
 
     # Add with completely independent variables.
     added = spline1 + spline2
-    maxerror = 0.0
+    maxError = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 21):
         for v in np.linspace(spline2.knots[0][spline2.order[0]-1], spline2.knots[0][spline2.nCoef[0]], 21):
             [x, y] = spline1.evaluate([u]) + spline2.evaluate([v])
             [xTest, yTest] = added.evaluate([u,v])
-            maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
-    assert maxerror <= np.finfo(float).eps
+            maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxError <= np.finfo(float).eps
 
 def test_blossom():
-    maxerror = 0.0
+    maxError = 0.0
     for [u, x, y] in truthCurve:
         [xTest, yTest] = myCurve.blossom([(myCurve.order[0] - 1) * [u]])
-        maxerror = max(maxerror, np.sqrt((xTest - x) ** 2 + (yTest - y) ** 2))
-    assert maxerror <= np.finfo(float).eps
+        maxError = max(maxError, np.sqrt((xTest - x) ** 2 + (yTest - y) ** 2))
+    assert maxError <= np.finfo(float).eps
     for i in range(myCurve.nCoef[0]):
         coef = myCurve.blossom([myCurve.knots[0][i+1:i+myCurve.order[0]]])
-        maxerror = max(maxerror, np.linalg.norm(myCurve.coefs[:,i] - coef))
-    assert maxerror <= np.finfo(float).eps
+        maxError = max(maxError, np.linalg.norm(myCurve.coefs[:,i] - coef))
+    assert maxError <= np.finfo(float).eps
 
 def test_contour():
-    maxerror = 0.0
+    maxError = 0.0
     F = lambda x: (x[0] - x[2], x[1] - x[3], x[0]*x[0] + x[1]*x[1]/9.0 - 1.0 + x[2]*x[2] + x[3]*x[3]/9.0 - 1.0)
     spline = bspy.Spline.contour(F, ((1.0, 0.0, 1.0, 0.0), (0.0, 3.0, 0.0, 3.0)))
     for t in np.linspace(0.0, 1.0, 21):
         x = spline((t,))
-        maxerror = max(maxerror, np.linalg.norm(F(x)))
-    assert maxerror <= 0.05
+        maxError = max(maxError, np.linalg.norm(F(x)))
+    assert maxError <= 0.05
 
 def test_contract():
-    maxerror = 0.0
+    maxError = 0.0
     contracted = mySurface.contract([.25, None])
     for u in np.linspace(0, 1, 21):
         xyz = mySurface([.25, u]) - contracted([u])
-        maxerror = max(maxerror, np.sqrt(xyz @ xyz))
-    assert maxerror <= 2.5 * np.finfo(float).eps
+        maxError = max(maxError, np.sqrt(xyz @ xyz))
+    assert maxError <= 2.5 * np.finfo(float).eps
 
-    maxerror = 0.0
+    maxError = 0.0
     contracted = mySurface.contract([None, .75])
     for u in np.linspace(0, 1, 21):
         xyz = mySurface([u, .75]) - contracted([u])
-        maxerror = max(maxerror, np.sqrt(xyz @ xyz))
-    assert maxerror <= 2.5 * np.finfo(float).eps
+        maxError = max(maxError, np.sqrt(xyz @ xyz))
+    assert maxError <= 2.5 * np.finfo(float).eps
 
 def test_convolve():
-    maxerror = 0.0
+    maxError = 0.0
     #spline1 = bspy.Spline(1, 1, (2,), (3,), ((-1.0, -1.0, 0.0, 1.0, 1.0),), (1.0, 0.0, 1.0))
     spline1 = bspy.Spline(1, 1, (5,), (8,), ((-1.1, -1.1, -1.1, -1.1, -1.1, -0.3, 0.0, 0.7, 2.0, 2.0, 2.0, 2.0, 2.0),), (1.0, 1.5, -0.5, 0.0, -1.0, 2.0, 0.5, 3.0))
     spline2 = bspy.Spline(1, 1, (4,), (7,), ((-1.0, -1.0, -1.0, -1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0),), (0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0))
     
     # Convolve with shared independent variable.
     convolution = spline1.convolve(spline2, [[0, 0]])
-    maxerror = 0.0
+    maxError = 0.0
     for u in np.linspace(convolution.knots[0][convolution.order[0]-1], convolution.knots[0][convolution.nCoef[0]], 21):
         x = scipy.integrate.quad(lambda s: spline1([u - s])[0] * spline2([s]), \
             max(u - spline1.knots[0][spline1.nCoef[0]], spline2.knots[0][spline2.order[0]-1]), 
             min(u - spline1.knots[0][spline1.order[0]-1], spline2.knots[0][spline2.nCoef[0]]))[0]
         xTest = convolution.evaluate([u])
-        maxerror = max(maxerror, (xTest - x) ** 2)
-    assert maxerror <= np.finfo(float).eps
+        maxError = max(maxError, (xTest - x) ** 2)
+    assert maxError <= np.finfo(float).eps
     
 def test_cross():
     # Test with constant vector
-    maxerror = 0.0
+    maxError = 0.0
     vector = np.array([1.0, 2.0, 3.0])
     crossSurface = mySurface.cross(vector)
     for v in np.linspace(0, 1, 21):
         for u in np.linspace(0, 1, 21):
             xyz1 = np.cross(mySurface([u, v]), vector) 
             xyz = xyz1 - crossSurface([u , v])
-            maxerror = max(maxerror, np.sqrt(xyz @ xyz))
-    assert maxerror <= np.sqrt(np.finfo(float).eps)
+            maxError = max(maxError, np.sqrt(xyz @ xyz))
+    assert maxError <= np.sqrt(np.finfo(float).eps)
 
     # Test with spline
-    maxerror = 0.0
+    maxError = 0.0
     crossSurface = mySurface.cross(mySurface)
     for v in np.linspace(0, 1, 5):
         for u in np.linspace(0, 1, 5):
@@ -654,80 +654,80 @@ def test_cross():
                 for s in np.linspace(0, 1, 5):
                     xyz1 = np.cross(mySurface([u, v]), mySurface([s, t])) 
                     xyz = xyz1 - crossSurface([u , v, s, t])
-                    maxerror = max(maxerror, np.sqrt(xyz @ xyz))
-    assert maxerror <= np.sqrt(np.finfo(float).eps)
+                    maxError = max(maxError, np.sqrt(xyz @ xyz))
+    assert maxError <= np.sqrt(np.finfo(float).eps)
 
 def test_derivative():
-    maxerror = 0.0
+    maxError = 0.0
     myDerivative = myCurve.differentiate()
     for [u, x, y] in truthCurve:
         [xTest, yTest] = myCurve.derivative([1], [u])
         [x, y] = myDerivative.evaluate([u])
-        maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
-    assert maxerror <= np.finfo(float).eps
+        maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxError <= np.finfo(float).eps
 
 def test_dot():
-    maxerror = 0.0
+    maxError = 0.0
     dottedCurve = myCurve.dot([2.0, 3.0])
     for [u, x, y] in truthCurve:
         valueTest = dottedCurve.evaluate([u])
-        maxerror = max(maxerror, (valueTest - 2.0 * x - 3.0 * y) ** 2)
-    assert maxerror <= np.finfo(float).eps
+        maxError = max(maxError, (valueTest - 2.0 * x - 3.0 * y) ** 2)
+    assert maxError <= np.finfo(float).eps
 
 def test_elevate():
-    maxerror = 0.0
+    maxError = 0.0
     original = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0, 0.5, 0.5, 1, 1, 1, 1], float)], 
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
     elevated = original.elevate((1,))
-    maxerror = 0.0
+    maxError = 0.0
     for u in np.linspace(original.knots[0][original.order[0]-1], original.knots[0][original.nCoef[0]], 100):
         [x, y] = original.evaluate([u])
         [xTest, yTest] = elevated.evaluate([u])
-        maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
-    assert maxerror <= np.finfo(float).eps
+        maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxError <= np.finfo(float).eps
 
 def test_elevate_and_insert_knots():
-    maxerror = 0.0
+    maxError = 0.0
     original = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0, 0.5, 0.5, 1, 1, 1, 1], float)], 
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
     elevated = original.elevate_and_insert_knots((1,), ((.5,.3, .6, .6),))
-    maxerror = 0.0
+    maxError = 0.0
     for u in np.linspace(original.knots[0][original.order[0]-1], original.knots[0][original.nCoef[0]], 100):
         [x, y] = original.evaluate([u])
         [xTest, yTest] = elevated.evaluate([u])
-        maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
-    assert maxerror < np.finfo(float).eps
+        maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxError < np.finfo(float).eps
 
 def test_evaluate():
-    maxerror = 0.0
+    maxError = 0.0
     for [u, x, y] in truthCurve:
         [xTest, yTest] = myCurve.evaluate([u])
-        maxerror = max(maxerror, np.sqrt((xTest - x) ** 2 + (yTest - y) ** 2))
-    assert maxerror <= np.finfo(float).eps
-    maxerror = 0.0
+        maxError = max(maxError, np.sqrt((xTest - x) ** 2 + (yTest - y) ** 2))
+    assert maxError <= np.finfo(float).eps
+    maxError = 0.0
     i = 0
     for v in np.linspace(0, 1, 21):
         for u in np.linspace(0, 1, 21):
             xyz1 = mySurface([u, v])
             xyz = xyz1 - np.array(truthSurface[i])
-            maxerror = max(maxerror, np.sqrt(xyz @ xyz))
+            maxError = max(maxError, np.sqrt(xyz @ xyz))
             i += 1
-    assert maxerror <= 2.5 * np.finfo(float).eps
+    assert maxError <= 2.5 * np.finfo(float).eps
 
 def test_extrapolate():
-    maxerror = 0.0
+    maxError = 0.0
     spline = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0.2, 0.3, 0.4, 0.5, 0.5, 1, 1], float)], 
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
     #spline = bspy.Spline(1, 2, (4,), (5,), [np.array([0, 0, 0.2, 0.2, 0.5, 0.8, 0.8, 1, 1], float)], 
     #    np.array(((260, 100), (100, 260), (300, 300), (100, 260), (260, 100)), float))
     extrapolated = spline.extrapolate([[-0.5, 1.5]], 2)
-    maxerror = 0.0
+    maxError = 0.0
     for u in np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], 3):
         for i in range(0, 3):
             [x, y] = spline.derivative([i],[u])
             [xTest, yTest] = extrapolated.derivative([i],[u - np.finfo(float).eps])
-            maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
-            assert maxerror <= np.finfo(float).eps
+            maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
+            assert maxError <= np.finfo(float).eps
 
 def test_fold_unfold():
     nInd = 3
@@ -770,41 +770,74 @@ def test_fold_unfold():
     assert (unfolded.knots[2] == spline.knots[2]).all()
     assert unfolded.coefs.shape == spline.coefs.shape
 
-    maxerror = 0.0
+    maxError = 0.0
     for i in range(coefs.shape[0]):
         for j in range(coefs.shape[1]):
             for k in range(coefs.shape[2]):
                 for l in range(coefs.shape[3]):
-                    maxerror = max(maxerror, abs(unfolded.coefs[i, j, k, l] - spline.coefs[i, j, k, l]))
-    assert maxerror <= np.finfo(float).eps
+                    maxError = max(maxError, abs(unfolded.coefs[i, j, k, l] - spline.coefs[i, j, k, l]))
+    assert maxError <= np.finfo(float).eps
 
 def test_insert_knots():
-    maxerror = 0.0
+    maxError = 0.0
     newCurve = myCurve.insert_knots([[.2, .3]])
     for [u, x, y] in truthCurve:
         [xTest, yTest] = newCurve.evaluate([u])
-        maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
-    assert maxerror <= np.finfo(float).eps
+        maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxError <= np.finfo(float).eps
 
 def test_integral():
-    maxerror = 0.0
+    maxError = 0.0
     myIntegral = myCurve.integrate()
     myDerivative = myIntegral.differentiate()
     for [u, x, y] in truthCurve:
         [xTest, yTest] = myCurve([u])
         [x, y] = myDerivative.evaluate([u])
-        maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
-    assert maxerror <= np.finfo(float).eps
+        maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxError <= np.finfo(float).eps
 
     limits = myCurve.domain()
     for u in np.linspace(limits[0][0], limits[0][1], 11):
         x = scipy.integrate.quad(lambda s: myCurve([s])[0], limits[0][0], u)[0]
         xTest = myCurve.integral([1], [limits[0][0]], [u])[0]
-        maxerror = max(maxerror, (xTest - x) ** 2)
-    assert maxerror <= np.finfo(float).eps
+        maxError = max(maxError, (xTest - x) ** 2)
+    assert maxError <= np.finfo(float).eps
+
+def test_intersect():
+    maxError = 0.0
+    F = lambda u , v : (u ** 2 + (v - 3/4) ** 2 - 1/25) * \
+        ((u - 2/5) ** 2 + (v - 3/5) ** 2 - 1/25) * \
+        (u ** 2 + (v - 3/2) ** 2 - 25/16) * \
+        ((u - 1) ** 2 + (v - 3/10) ** 2 - 1/25)
+
+    order = 9
+    knots = [0.0] * order + [1.0] * order
+    nCoef = order
+    points = []
+    for u in np.linspace(0.0, 1.0, nCoef):
+        for v in np.linspace(0.0, 1.0, nCoef):
+            points.append((u, v, u, v, F(u, v)))
+    spline = bspy.Spline.least_squares(2, 3, (order, order), points, (knots, knots))
+
+    order = 4
+    knots = [0.0] * order + [1.0] * order
+    nCoef = order
+    points = []
+    for u in np.linspace(0.0, 1.0, nCoef):
+        for v in np.linspace(0.0, 1.0, nCoef):
+            points.append((u, v, 2*u - 0.5, 2*v - 0.5, 0.0))
+    plane = bspy.Spline.least_squares(2, 3, (order, order), points, (knots, knots))
+
+    contours = [] # Uncomment the next line to run this lengthy test
+    #contours = spline.intersect(plane)
+    for contour in contours:
+        for t in np.linspace(0.0, 1.0, 11):
+            uvst = contour((t,))
+            maxError = max(maxError, np.linalg.norm(spline(uvst[:2]) - plane(uvst[2:])))
+    assert maxError <= np.finfo(float).eps ** 0.25
 
 def test_multiply():
-    maxerror = 0.0
+    maxError = 0.0
     spline1 = bspy.Spline(1, 2, (5,), (5,), [np.array([0, 0, 0, 0, 0.2, 0.5, 0.5, 1, 1, 1], float)], 
         np.array(((100, 260), (260, 100), (580, 260), (260, 420), (420, 100)), float))
     spline2 = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0.2, 0.3, 0.4, 0.5, 0.5, 1, 1], float)], 
@@ -812,22 +845,22 @@ def test_multiply():
     
     # Multiply with shared independent variable.
     multiplied = spline1.multiply(spline2, [0], 'D')
-    maxerror = 0.0
+    maxError = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
         x = np.dot(spline1.evaluate([u]), spline2.evaluate([u]))
         xTest = multiplied.evaluate([u])
-        maxerror = max(maxerror, (xTest - x) ** 2)
-    assert maxerror <= np.finfo(float).eps
+        maxError = max(maxError, (xTest - x) ** 2)
+    assert maxError <= np.finfo(float).eps
 
     # Multiply with completely independent variables.
     multiplied = spline1 * spline2
-    maxerror = 0.0
+    maxError = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 21):
         for v in np.linspace(spline2.knots[0][spline2.order[0]-1], spline2.knots[0][spline2.nCoef[0]], 21):
             x = np.dot(spline1.evaluate([u]), spline2.evaluate([v]))
             xTest = multiplied.evaluate([u,v])
-            maxerror = max(maxerror, (xTest - x) ** 2)
-    assert maxerror <= np.finfo(float).eps
+            maxError = max(maxError, (xTest - x) ** 2)
+    assert maxError <= np.finfo(float).eps
 
 def test_least_squares():
     # Replicate 1D spline using its knots. Should be precise to machine epsilon.
@@ -839,20 +872,20 @@ def test_least_squares():
     u = spline.knots[0][spline.nCoef[0]]
     values.append((u, *spline([u]), *spline.derivative([1], [u])))
     fit = bspy.Spline.least_squares(spline.nInd, spline.nDep, spline.order, values, spline.knots)
-    maxerror = 0.0
+    maxError = 0.0
     for u in np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], 100):
         xyz = spline([u]) - fit([u])
-        maxerror = max(maxerror, np.sqrt(xyz @ xyz))
-    assert maxerror <= np.sqrt(np.finfo(float).eps)
-    assert maxerror <= fit.accuracy
+        maxError = max(maxError, np.sqrt(xyz @ xyz))
+    assert maxError <= np.sqrt(np.finfo(float).eps)
+    assert maxError <= fit.accuracy
 
     # Create knots and fit data taken from 1D spline. Should match returned accuracy at data points.
     fit = bspy.Spline.least_squares(spline.nInd, spline.nDep, spline.order, values)
-    maxerror = 0.0
+    maxError = 0.0
     for point in values:
         xyz = point[spline.nInd:spline.nInd + spline.nDep] - fit(point[:spline.nInd])
-        maxerror = max(maxerror, np.sqrt(xyz @ xyz))
-    assert maxerror <= fit.accuracy
+        maxError = max(maxError, np.sqrt(xyz @ xyz))
+    assert maxError <= fit.accuracy
 
     # Replicate 2D spline using its knots. Should be precise to machine epsilon.
     spline = mySurface
@@ -867,56 +900,56 @@ def test_least_squares():
     v = spline.knots[1][spline.nCoef[1]]
     values.append((u, v, *spline([u, v]), *spline.derivative([1, 0], [u, v]), *spline.derivative([0, 1], [u, v])))
     fit = bspy.Spline.least_squares(spline.nInd, spline.nDep, spline.order, values, spline.knots)
-    maxerror = 0.0
+    maxError = 0.0
     for u in np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], 21):
         for v in np.linspace(spline.knots[1][spline.order[1]-1], spline.knots[1][spline.nCoef[1]], 21):
             xyz = spline([u,v]) - fit([u,v])
-            maxerror = max(maxerror, np.sqrt(xyz @ xyz))
-    assert maxerror <= np.sqrt(np.finfo(float).eps)
-    assert maxerror <= fit.accuracy
+            maxError = max(maxError, np.sqrt(xyz @ xyz))
+    assert maxError <= np.sqrt(np.finfo(float).eps)
+    assert maxError <= fit.accuracy
 
     # Create knots and fit data taken from 2D spline. Should match returned accuracy at data points.
     fit = bspy.Spline.least_squares(spline.nInd, spline.nDep, spline.order, values, compression=30)
-    maxerror = 0.0
+    maxError = 0.0
     for point in values:
         xyz = point[spline.nInd:spline.nInd + spline.nDep] - fit(point[:spline.nInd])
-        maxerror = max(maxerror, np.sqrt(xyz @ xyz))
-    assert maxerror <= fit.accuracy
+        maxError = max(maxError, np.sqrt(xyz @ xyz))
+    assert maxError <= fit.accuracy
 
 def test_remove_knots():
-    maxerror = 0.0
+    maxError = 0.0
     slimmed, removed, error = myCurve.remove_knots()
     assert removed == 1
     for [u, x, y] in truthCurve:
         [xTest, yTest] = slimmed.evaluate([u])
-        maxerror = max(maxerror, np.sqrt((xTest - x) ** 2 + (yTest - y) ** 2))
-    assert maxerror <= error
+        maxError = max(maxError, np.sqrt((xTest - x) ** 2 + (yTest - y) ** 2))
+    assert maxError <= error
 
 def test_reparametrize():
-    maxerror = 0.0
+    maxError = 0.0
     reparametrized = myCurve.reparametrize([[1.5, 2.0]])
     for [u, x, y] in truthCurve:
         [xTest, yTest] = reparametrized.evaluate([u * 0.5 + 1.5])
-        maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
-    assert maxerror <= np.finfo(float).eps
+        maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxError <= np.finfo(float).eps
 
 def test_scale():
-    maxerror = 0.0
+    maxError = 0.0
     scaledCurve = myCurve.scale([2.0, 3.0])
     for [u, x, y] in truthCurve:
         [xTest, yTest] = scaledCurve.evaluate([u])
-        maxerror = max(maxerror, (xTest - 2.0 * x) ** 2 + (yTest - 3.0 * y) ** 2)
-    assert maxerror <= np.finfo(float).eps
+        maxError = max(maxError, (xTest - 2.0 * x) ** 2 + (yTest - 3.0 * y) ** 2)
+    assert maxError <= np.finfo(float).eps
 
-    maxerror = 0.0
+    maxError = 0.0
     scaledCurve = 3.0 * myCurve
     for [u, x, y] in truthCurve:
         [xTest, yTest] = scaledCurve.evaluate([u])
-        maxerror = max(maxerror, (xTest - 3.0 * x) ** 2 + (yTest - 3.0 * y) ** 2)
-    assert maxerror <= np.finfo(float).eps
+        maxError = max(maxError, (xTest - 3.0 * x) ** 2 + (yTest - 3.0 * y) ** 2)
+    assert maxError <= np.finfo(float).eps
 
 def test_subtract():
-    maxerror = 0.0
+    maxError = 0.0
     spline1 = bspy.Spline(1, 2, (5,), (5,), [np.array([0, 0, 0, 0, 0.2, 0.5, 0.5, 1, 1, 1], float)], 
         np.array(((260, 100), (100, 260), (260, 420), (580, 260), (420, 100)), float))
     spline2 = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0.2, 0.3, 0.4, 0.5, 0.5, 1, 1], float)], 
@@ -924,48 +957,48 @@ def test_subtract():
     
     # Subtract with shared independent variable.
     subtracted = spline1.subtract(spline2, [[0, 0]])
-    maxerror = 0.0
+    maxError = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
         [x, y] = spline1.evaluate([u]) - spline2.evaluate([u])
         [xTest, yTest] = subtracted.evaluate([u])
-        maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
-    assert maxerror <= np.finfo(float).eps
+        maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxError <= np.finfo(float).eps
 
     # Subtract with completely independent variables.
     subtracted = spline1 - spline2
-    maxerror = 0.0
+    maxError = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 21):
         for v in np.linspace(spline2.knots[0][spline2.order[0]-1], spline2.knots[0][spline2.nCoef[0]], 21):
             [x, y] = spline1.evaluate([u]) - spline2.evaluate([v])
             [xTest, yTest] = subtracted.evaluate([u,v])
-            maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
-    assert maxerror <= np.finfo(float).eps
+            maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxError <= np.finfo(float).eps
 
 def test_transform():
-    maxerror = 0.0
+    maxError = 0.0
     transformedCurve = myCurve.transform(np.array([[2.0, 3.0], [-1.0, -4.0]]))
     for [u, x, y] in truthCurve:
         [xTest, yTest] = transformedCurve.evaluate([u])
-        maxerror = max(maxerror, (xTest - (2.0 * x + 3.0 * y)) ** 2 + (yTest - (-1.0 * x - 4.0 * y)) ** 2)
-    assert maxerror <= np.finfo(float).eps
+        maxError = max(maxError, (xTest - (2.0 * x + 3.0 * y)) ** 2 + (yTest - (-1.0 * x - 4.0 * y)) ** 2)
+    assert maxError <= np.finfo(float).eps
 
 def test_translate():
-    maxerror = 0.0
+    maxError = 0.0
     translatedCurve = myCurve.translate([2.0, 3.0])
     for [u, x, y] in truthCurve:
         [xTest, yTest] = translatedCurve.evaluate([u])
-        maxerror = max(maxerror, (xTest - (2.0 + x)) ** 2 + (yTest - (3.0 + y)) ** 2)
-    assert maxerror <= np.finfo(float).eps
+        maxError = max(maxError, (xTest - (2.0 + x)) ** 2 + (yTest - (3.0 + y)) ** 2)
+    assert maxError <= np.finfo(float).eps
 
 def test_trim():
-    maxerror = 0.0
+    maxError = 0.0
     left = 13
     right = 89
     trimmed = myCurve.trim([[truthCurve[left][0], truthCurve[right][0]]])
     for [u, x, y] in truthCurve[left:right+1]:
         [xTest, yTest] = trimmed.evaluate([u])
-        maxerror = max(maxerror, (xTest - x) ** 2 + (yTest - y) ** 2)
-    assert maxerror <= np.finfo(float).eps
+        maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxError <= np.finfo(float).eps
 
 def test_zeros():
     def check_1D_roots(expectedRoots, roots, tolerance):

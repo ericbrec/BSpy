@@ -260,7 +260,6 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
                                 break
                         if not foundDuplicate:
                             roots.append(root)
-                    print(f"Root: {root}")
                 else:
                     # Split domain in dimensions that aren't decreasing in width sufficiently.
                     domains = [domain]
