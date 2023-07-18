@@ -193,7 +193,9 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         if isinstance(F, bspy.Spline):
             for i in range(nDep):
                 def splineDerivative(x, i=i):
-                    return F.derivative((i,), x)
+                    wrt = [0] * nDep
+                    wrt[i] = 1
+                    return F.derivative(wrt, x)
                 dF.append(splineDerivative)
         else:
             for i in range(nDep):
@@ -268,8 +270,6 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         # Start Newton's method loop.
         previousFSamplesNorm = 0.0
         while True:
-            FScale = 0.0
-            dotScale = 0.0
             FSamplesNorm = 0.0
             # Fill in FSamples and its Jacobian (dFCoefs) with respect to the coefficients of x(t).
             for t, i in zip(tValues, range(nUnknownCoefs)):
@@ -283,8 +283,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
 
                 # Compute the dot constraint for x(t) and check for divergence from solution.
                 dotValues = np.dot(compactCoefs @ d2Values, compactCoefs @ dValues)
-                dotScale = max(dotScale, abs(dotValues))
-                FSamplesNorm = max(FSamplesNorm, dotScale)
+                FSamplesNorm = max(FSamplesNorm, abs(dotValues))
                 if previousFSamplesNorm > 0.0 and FSamplesNorm > previousFSamplesNorm * (1.0 - evaluationEpsilon):
                     break
 
@@ -292,8 +291,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                 x = coefsMin + (compactCoefs @ bValues) * coefsMaxMinusMin
                 FValues = F(x)
                 for FValue in FValues:
-                    FScale = max(FScale, abs(FValue))
-                FSamplesNorm = max(FSamplesNorm, FScale)
+                    FSamplesNorm = max(FSamplesNorm, abs(FValue))
                 if previousFSamplesNorm > 0.0 and FSamplesNorm > previousFSamplesNorm * (1.0 - evaluationEpsilon):
                     break
 
@@ -316,12 +314,9 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                 coefs[:, 1:-1] += coefDelta # Don't update endpoints
             else:
                 # Yes we did, rescale FSamples and its Jacobian.
-                if FScale >= evaluationEpsilon:
-                    FSamples[:, :-1] /= FScale
-                    dFCoefs[:, :-1] /= FScale
-                if dotScale >= evaluationEpsilon:
-                    FSamples[:, -1] /= dotScale 
-                    dFCoefs[:, -1] /= dotScale
+                if FSamplesNorm >= evaluationEpsilon:
+                    FSamples /= FSamplesNorm
+                    dFCoefs /= FSamplesNorm
                 
                 # Perform a Newton iteration.
                 HSamples = FSamples.reshape(nUnknownCoefs * nDep)
@@ -340,6 +335,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                 break
 
         # Newton steps are done. Now check if we need to subdivide.
+        # TODO: This would be FSamplesNorm / dHCoefs norm, but dHCoefs was divided by FSamplesNorm earlier.
         if FSamplesNorm / np.linalg.norm(dHCoefs, np.inf) < epsilon:
             break # We're done!
         

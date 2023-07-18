@@ -361,6 +361,7 @@ class Spline:
         --------
         `least_squares` : Fit a spline to an array of data points using the method of least squares.
         `zeros` : Find the roots of a spline (nInd must match nDep).
+        `intersect` : Intersect two splines.
 
         Notes
         -----
@@ -782,6 +783,44 @@ class Spline:
         """
         return bspy._spline_operations.integrate(self, with_respect_to)
 
+    def intersect(self, other):
+        """
+        Intersect two splines.
+
+        Parameters
+        ----------
+        other : `Spline`
+            The spline to intersect with self (`other.nDep` match match `self.nDep`).
+
+        Returns
+        -------
+        intersection : `iterable` or `NotImplemented`
+            If `self.nInd + other.nInd - self.nDep` is 0, returns an iterable of intersection points in the 
+            parameter space of the two splines (a vector of size `self.nInd + other.nInd`).
+            If `self.nInd + other.nInd - self.nDep` is 1, returns an iterable of `Spline` curves, each of whose domain is [0, 1] 
+            and each of whose range is in the parameter space of the two splines (a vector of size `self.nInd + other.nInd`).
+            If `self.nInd + other.nInd - self.nDep` is < 0 or > 1, `NotImplemented` is returned.
+        
+        See Also
+        --------
+        `zeros` : Find the roots of a spline (nInd must match nDep).
+        `contour` : Fit a spline to the contour defined by `F(x) = 0`.
+
+        Notes
+        -----
+        Uses `zeros` to find all intersection points and `contour` to find individual intersection curves. 
+        The algorithm used to to find all intersection curves is from Grandine, Thomas A., and Frederick W. Klein IV. 
+        "A new approach to the surface intersection problem." Computer Aided Geometric Design 14, no. 2 (1997): 111-134.
+        """
+        assert self.nDep == other.nDep, "The number of dependent variables for both splines much match."
+        freeParameters = self.nInd + other.nInd - self.nDep
+        if freeParameters == 0:
+            return (self - other).zeros()
+        elif freeParameters == 1:
+            return bspy._spline_intersection.intersection_curves(self, other)
+        else:
+            return NotImplemented
+
     @staticmethod
     def least_squares(nInd, nDep, order, dataPoints, knots = None, compression = 0, metadata = {}):
         """
@@ -1155,6 +1194,11 @@ class Spline:
             An iterable containing the roots of the spline. If the spline is 
             zero over an interval, that root will appear as a tuple of the interval. 
             For curves (nInd == 1), the roots are ordered.
+        
+        See Also
+        --------
+        `intersect` : Intersect two splines.
+        `contour` : Fit a spline to the contour defined by `F(x) = 0`.
 
         Notes
         -----
