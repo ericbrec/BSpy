@@ -11,11 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Test glxinfo
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mesa-utils xvfb
-          xvfb-run glxinfo
+      - uses: openrndr/setup-opengl@v1.1
       
       - uses: actions/setup-python@v4
         with:
