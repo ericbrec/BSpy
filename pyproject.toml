@@ -7,3 +7,4 @@ build-backend = "setuptools.build_meta"
 [tool.semantic_release]
 version_variables = ["pyproject.toml:version"]
 build_command = "python -m build"
+commit_parser = "scipy"

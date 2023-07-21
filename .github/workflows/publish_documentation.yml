@@ -1,4 +1,4 @@
-name: Build Package and Documentation then Publish to PyPI
+name: Build documentation then publish to GitHub pages
 
 # Manually build the package and documentation then publish it to PyPI.
 on:
@@ -15,7 +15,7 @@ jobs:
         with:
           python-version: '3.x'
 
-      - run: pip install pdoc
+      - run: pip install pdoc numpy tk PyOpenGL pyopengltk
 
       - run: pdoc -o docs -d numpy bspy !bspy._
 
