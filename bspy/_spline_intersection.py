@@ -182,29 +182,22 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
     epsilon = max(epsilon, np.sqrt(machineEpsilon))
     Crit = 0.85 # Required percentage decrease in domain per iteration.
     evaluationEpsilon = np.sqrt(epsilon)
-    roots = []
 
-    # Set initial spline, domain, and interval.
-    spline = self
-    domain = spline.domain().T
-    Interval = namedtuple('Interval', ('spline', 'slope', 'intercept', 'atMachineEpsilon'))
-    intervalStack = [Interval(spline.trim(domain.T).reparametrize(((0.0, 1.0),) * spline.nInd), domain[1] - domain[0], domain[0], False)]
-
-    # Process intervals until none remain
-    while intervalStack:
-        interval = intervalStack.pop()
-        scale = np.abs(interval.spline.range_bounds()).max()
+    # Primary function to return zeros within the interval defined by slope and intercept.
+    def refine(spline, slope, intercept, atMachineEpsilon):
+        roots = []
+        scale = np.abs(spline.range_bounds()).max()
         if scale < epsilon:
             # Return the bounds of the interval within which the spline is zero.
-            roots.append((interval.intercept, interval.slope + interval.intercept))
+            roots.append((intercept, slope + intercept))
         else:
             # Rescale the spline to max 1.0.
-            spline = interval.spline.scale(1.0 / scale)
+            spline = spline.scale(1.0 / scale)
             # Loop through each independent variable to determine a tighter domain around roots.
             domain = []
-            for nInd, order, knots, nCoef, slope in zip(range(spline.nInd), spline.order, spline.knots, spline.nCoef, interval.slope):
+            for nInd, order, knots, nCoef, s in zip(range(spline.nInd), spline.order, spline.knots, spline.nCoef, slope):
                 # Start with the current interval for this independent variable.
-                if slope < epsilon:
+                if s < epsilon:
                     # If the slope for this independent variable is less than epsilon, 
                     # then we've isolated its value and should leave its interval unchanged.
                     domain.append(spline.domain()[nInd])
@@ -242,28 +235,19 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
             if domain is not None:
                 domain = np.array(domain).T
                 width = domain[1] - domain[0]
-                slope = np.multiply(width, interval.slope)
+                newSlope = np.multiply(width, slope)
                 # Iteration is complete if the interval actual width (slope) is either
                 # one iteration past being less than sqrt(machineEpsilon) or simply less than epsilon.
-                if interval.atMachineEpsilon or slope.max() < epsilon:
-                    intercept = np.multiply(domain[0], interval.slope) + interval.intercept
-                    root = intercept + 0.5 * slope
+                if atMachineEpsilon or newSlope.max() < epsilon:
+                    newIntercept = np.multiply(domain[0], slope) + intercept
+                    root = newIntercept + 0.5 * newSlope
                     # Double-check that we're at an actual zero (avoids boundary case).
                     if np.linalg.norm(self(root)) < evaluationEpsilon:
-                        # Check for duplicate root. We test for a distance between roots of 2*epsilon to account for a left vs. right sided limit.
-                        foundDuplicate = False
-                        for i, oldRoot in zip(range(len(roots)), roots):
-                            if np.linalg.norm(root - oldRoot) < 2.0 * epsilon:
-                                # For a duplicate root, return the average value.
-                                roots[i] = 0.5 * (oldRoot + root)
-                                foundDuplicate = True
-                                break
-                        if not foundDuplicate:
-                            roots.append(root)
+                        roots.append(root)
                 else:
                     # Split domain in dimensions that aren't decreasing in width sufficiently.
                     domains = [domain]
-                    for nInd, w, s in zip(range(spline.nInd), width, slope):
+                    for nInd, w, s in zip(range(spline.nInd), width, newSlope):
                         if s >= epsilon and w > Crit:
                             # Not close to root and didn't get the required decrease in with, so split the domain.
                             domainCount = len(domains) # Cache the domain list size, since we're increasing it mid loop
@@ -278,16 +262,40 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
                     # Add new intervals to interval stack.
                     for domain in domains:
                         width = domain[1] - domain[0]
-                        slope = np.multiply(width, interval.slope)
-                        intercept = np.multiply(domain[0], interval.slope) + interval.intercept
-                        for nDep, w in zip(range(spline.nDep), width):
+                        newSlope = np.multiply(width, slope)
+                        newIntercept = np.multiply(domain[0], slope) + intercept
+                        for i, w in zip(range(spline.nInd), width):
                             if w < machineEpsilon:
-                                domain[1, nDep] = domain[0, nDep] + machineEpsilon
-                        newDomain = [None if s < epsilon else (0.0, 1.0) for s in slope]
-                        intervalStack.append(Interval(spline.trim(domain.T).reparametrize(newDomain), slope, intercept, np.dot(slope, slope) < machineEpsilon))
+                                domain[1, i] = domain[0, i] + machineEpsilon
+                        newDomain = [None if s < epsilon else (0.0, 1.0) for s in newSlope]
+                        roots += refine(spline.trim(domain.T).reparametrize(newDomain), newSlope, newIntercept, np.dot(newSlope, newSlope) < machineEpsilon)
+        
+        return roots
 
+    # Set initial spline, domain, and interval.
+    domain = self.domain().T
+    roots = refine(self.trim(domain.T).reparametrize(((0.0, 1.0),) * self.nInd), domain[1] - domain[0], domain[0], False)
+
+    # Check for duplicate roots. We test for a distance between roots of 2*epsilon to account for a left vs. right sided limit.
+    i = 0
+    rootCount = len(roots)
+    while i < rootCount:
+        root = roots[i]
+        j = i + 1
+        while j < rootCount:
+            if np.linalg.norm(root - roots[j]) < 2.0 * epsilon:
+                # For a duplicate root, return the average value.
+                roots[i] = 0.5 * (root + roots[j])
+                roots.pop(j)
+                rootCount -= 1
+            else:
+                j += 1
+        i += 1
+
+    # Sort roots if there's only one dimension.
     if self.nInd == 1:
         roots.sort(key=lambda root: root[0] if type(root) is tuple else root)
+
     return roots
 
 def intersection_curves(self, other):
