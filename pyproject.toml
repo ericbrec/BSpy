@@ -4,7 +4,3 @@ requires = [
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
-[project]
-version = "1.0.3"
-[tool.semantic_release]
-version_variables = ["pyproject.toml:version"]
