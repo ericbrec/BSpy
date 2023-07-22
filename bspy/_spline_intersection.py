@@ -177,6 +177,7 @@ def _intersect_convex_hull_with_x_interval(hullPoints, epsilon, xInterval):
 
 Interval = namedtuple('Interval', ('spline', 'scale', 'slope', 'intercept', 'epsilon', 'atMachineEpsilon'))
 
+# We use multiprocessing.Pool to call this function in parallel, so it cannot be nested and must take a single argument.
 def _refine_projected_polyhedron(interval):
     Crit = 0.85 # Required percentage decrease in domain per iteration.
     epsilon = interval.epsilon
