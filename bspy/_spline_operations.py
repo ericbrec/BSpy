@@ -12,7 +12,7 @@ def _shiftPolynomial(polynomial, delta):
                 polynomial[i] += delta * polynomial[i + 1]
 
 def add(self, other, indMap = None):
-    assert self.nDep == other.nDep
+    if not(self.nDep == other.nDep): raise ValueError("self and other must have same nDep")
     selfMapped = []
     otherMapped = []
     otherToSelf = {}
@@ -100,7 +100,7 @@ def cross(self, vector):
     if isinstance(vector, bspy.Spline):
         return self.multiply(vector, None, 'C')
     elif self.nDep == 3:
-        assert len(vector) == self.nDep
+        if not(len(vector) == self.nDep): raise ValueError("Invalid vector")
 
         coefs = np.empty(self.coefs.shape, self.coefs.dtype)
         coefs[0] = vector[2] * self.coefs[1] - vector[1] * self.coefs[2]
@@ -108,16 +108,16 @@ def cross(self, vector):
         coefs[2] = vector[1] * self.coefs[0] - vector[0] * self.coefs[1]
         return type(self)(self.nInd, 3, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
     else:
-        assert self.nDep == 2
-        assert len(vector) == self.nDep
+        if not(self.nDep == 2): raise ValueError("Invalid nDep")
+        if not(len(vector) == self.nDep): raise ValueError("Invalid vector")
 
         coefs = np.empty((1, *self.coefs.shape[1:]), self.coefs.dtype)
         coefs[0] = vector[1] * self.coefs[0] - vector[0] * self.coefs[1]
         return type(self)(self.nInd, 3, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
 
 def differentiate(self, with_respect_to = 0):
-    assert 0 <= with_respect_to < self.nInd
-    assert self.order[with_respect_to] > 1
+    if not(0 <= with_respect_to < self.nInd): raise ValueError("Invalid with_respect_to")
+    if not(self.order[with_respect_to] > 1): raise ValueError("Invalid with_respect_to")
 
     order = [*self.order]
     order[with_respect_to] -= 1
@@ -143,7 +143,7 @@ def dot(self, vector):
     if isinstance(vector, bspy.Spline):
         return self.multiply(vector, None, 'D')
     else:
-        assert len(vector) == self.nDep
+        if not(len(vector) == self.nDep): raise ValueError("Invalid vector")
 
         coefs = vector[0] * self.coefs[0]
         for i in range(1, self.nDep):
@@ -151,7 +151,7 @@ def dot(self, vector):
         return type(self)(self.nInd, 1, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
 
 def integrate(self, with_respect_to = 0):
-    assert 0 <= with_respect_to < self.nInd
+    if not(0 <= with_respect_to < self.nInd): raise ValueError("Invalid with_respect_to")
 
     order = [*self.order]
     degree = order[with_respect_to]
@@ -179,11 +179,11 @@ def integrate(self, with_respect_to = 0):
     return type(self)(self.nInd, self.nDep, order, nCoef, knots, newCoefs.swapaxes(0, with_respect_to + 1), self.accuracy, self.metadata)
 
 def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
-    assert productType == 'C' or productType == 'D' or productType == 'S', "productType must be 'C', 'D' or 'S'"
+    if not(productType == 'C' or productType == 'D' or productType == 'S'): raise ValueError("productType must be 'C', 'D' or 'S'")
 
-    assert productType != 'D' or self.nDep == other.nDep, "Mismatched dimensions"
-    assert productType != 'C' or (self.nDep == other.nDep and 2 <= self.nDep <= 3), "Mismatched dimensions"
-    assert productType != 'S' or self.nDep == 1 or other.nDep == 1, "Mismatched dimensions"
+    if not(productType != 'D' or self.nDep == other.nDep): raise ValueError("Mismatched dimensions")
+    if not(productType != 'C' or (self.nDep == other.nDep and 2 <= self.nDep <= 3)): raise ValueError("Mismatched dimensions")
+    if not(productType != 'S' or self.nDep == 1 or other.nDep == 1): raise ValueError("Mismatched dimensions")
 
     # Ensure scalar spline (if any) comes first (simplifies array processing).
     if other.nDep == 1 and self.nDep > 1:
@@ -311,7 +311,7 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
                 # 1) Use the combined knots from matching independent variables to divide the spline into segments.
 
                 # Compute the new order of the combined spline and its new knots array.
-                assert knots1[0] == knots2[0] and knots1[-1] == knots2[-1], f"self[{ind1}] domain doesn't match other[{ind2}]"
+                if not(knots1[0] == knots2[0] and knots1[-1] == knots2[-1]): raise ValueError(f"self[{ind1}] domain doesn't match other[{ind2}]")
                 newOrder = order1 + order2 - 1
                 newKnots = [knots1[0]] * newOrder
                 newMultiplicities = [newOrder]
@@ -343,7 +343,7 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
             knots[ind1] = np.array(newKnots, knots1.dtype)
             for i in range(len(indMap)):
                 i2 = indMap[i][1]
-                assert i2 != ind2, "You can't map the same independent variable to multiple others."
+                if not(i2 != ind2): raise ValueError("You can't map the same independent variable to multiple others.")
                 if i2 > ind2:
                     indMap[i] = (indMap[i][0], i2 - 1)
 
@@ -517,7 +517,7 @@ def scale(self, multiplier):
     if isinstance(multiplier, bspy.Spline):
         return self.multiply(multiplier, None, 'S')
     else:
-        assert np.isscalar(multiplier) or len(multiplier) == self.nDep
+        if not(np.isscalar(multiplier) or len(multiplier) == self.nDep): raise ValueError("Invalid multiplier")
 
         if np.isscalar(multiplier):
             accuracy = multiplier * self.accuracy
@@ -530,7 +530,7 @@ def scale(self, multiplier):
         return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, coefs, accuracy, self.metadata)
 
 def transform(self, matrix, maxSingularValue=None):
-    assert matrix.ndim == 2 and matrix.shape[1] == self.nDep
+    if not(matrix.ndim == 2 and matrix.shape[1] == self.nDep): raise ValueError("Invalid matrix")
 
     if maxSingularValue is None:
         maxSingularValue = np.linalg.svd(matrix, compute_uv=False)[0]
@@ -538,7 +538,7 @@ def transform(self, matrix, maxSingularValue=None):
     return type(self)(self.nInd, matrix.shape[0], self.order, self.nCoef, self.knots, matrix @ self.coefs, maxSingularValue * self.accuracy, self.metadata)
 
 def translate(self, translationVector):
-    assert len(translationVector) == self.nDep
+    if not(len(translationVector) == self.nDep): raise ValueError("Invalid translationVector")
 
     coefs = np.array(self.coefs)
     for i in range(self.nDep):

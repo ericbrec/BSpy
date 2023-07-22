@@ -3,17 +3,17 @@ import bspy.spline
 import math
 
 def least_squares(nInd, nDep, order, dataPoints, knotList = None, compression = 0, metadata = {}):
-    assert nInd >= 0, "nInd < 0"
-    assert nDep >= 0, "nDep < 0"
-    assert len(order) == nInd, "len(order) != nInd"
-    assert 0 <= compression < 100, "compression not between 0 and 99"
+    if not(nInd >= 0): raise ValueError("nInd < 0")
+    if not(nDep >= 0): raise ValueError("nDep < 0")
+    if not(len(order) == nInd): raise ValueError("len(order) != nInd")
+    if not(0 <= compression < 100): raise ValueError("compression not between 0 and 99")
     totalOrder = 1
     for ord in order:
         totalOrder *= ord
 
     totalDataPoints = len(dataPoints)
     for point in dataPoints:
-        assert len(point) == nInd + nDep or len(point) == nInd + nDep * (nInd + 1), f"Data points are not dimension {nInd + nDep}"
+        if not(len(point) == nInd + nDep or len(point) == nInd + nDep * (nInd + 1)): raise ValueError(f"Data points do not have {nInd + nDep} values")
         if len(point) == nInd + nDep * (nInd + 1):
             totalDataPoints += nInd
 
@@ -58,16 +58,16 @@ def least_squares(nInd, nDep, order, dataPoints, knotList = None, compression = 
             newKnotList.append(np.array(newKnots, knots.dtype))
         knotList = newKnotList
     else:
-        assert len(knotList) == nInd, "len(knots) != nInd" # The documented interface uses the argument 'knots' instead of 'knotList'
+        if not(len(knotList) == nInd): raise ValueError("len(knots) != nInd") # The documented interface uses the argument 'knots' instead of 'knotList'
         nCoef = [len(knotList[i]) - order[i] for i in range(nInd)]
         totalCoef = 1
         newKnotList = []
         for knots, ord, nCf in zip(knotList, order, nCoef):
             for i in range(nCf):
-                assert knots[i] <= knots[i + 1] and knots[i] < knots[i + ord], "Improperly ordered knot sequence"
+                if not(knots[i] <= knots[i + 1] and knots[i] < knots[i + ord]): raise ValueError("Improperly ordered knot sequence")
             totalCoef *= nCf
             newKnotList.append(np.array(knots))
-        assert totalCoef <= totalDataPoints, f"Insufficient number of data points. You need at least {totalCoef}."
+        if not(totalCoef <= totalDataPoints): raise ValueError(f"Insufficient number of data points. You need at least {totalCoef}.")
         knotList = newKnotList
     
     # Initialize A and b from the likely overdetermined equation, A x = b, where A contains the bspline values at the independent variables,
@@ -166,7 +166,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     order = 4
     degree = order - 1
     rhos = _legendre_polynomial_zeros[degree - 1 - 1]
-    assert len(knownXValues) >= 2, "There must be at least 2 known x values."
+    if not(len(knownXValues) >= 2): raise ValueError("There must be at least 2 known x values.")
     m = len(knownXValues) - 1
     nCoef = m * (degree - 1) + 2
     nUnknownCoefs = nCoef - 2
@@ -180,7 +180,8 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     nDep = knownXValues.shape[1]
     for knownXValue in knownXValues:
         FValues = F(knownXValue)
-        assert len(FValues) == nDep - 1 and np.linalg.norm(FValues) < evaluationEpsilon, f"F(known x) must be a zero vector of length {nDep - 1}."
+        if not(len(FValues) == nDep - 1 and np.linalg.norm(FValues) < evaluationEpsilon):
+            raise ValueError(f"F(known x) must be a zero vector of length {nDep - 1}.")
     coefsMin = knownXValues.min(axis=0)
     coefsMaxMinusMin = knownXValues.max(axis=0) - coefsMin
     coefsMaxMinusMin = np.where(coefsMaxMinusMin < 1.0, 1.0, coefsMaxMinusMin)
@@ -209,7 +210,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                     return (np.array(F(xShift)) - fLeft) / h2
                 dF.append(fDerivative)
     else:
-        assert len(dF) == nDep, f"Must provide {nDep} first derivatives."
+        if not(len(dF) == nDep): raise ValueError(f"Must provide {nDep} first derivatives.")
 
     # Construct knots, t values, and GSamples.
     tValues = np.empty(nUnknownCoefs, contourDtype)
@@ -220,7 +221,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     previousPoint = knownXValues[0]
     for point in knownXValues[1:]:
         dt = np.linalg.norm(point - previousPoint)
-        assert dt > epsilon, "Points must be separated by at least epsilon."
+        if not(dt > epsilon): raise ValueError("Points must be separated by at least epsilon.")
         for rho in reversed(rhos):
             tValues[i] = t + 0.5 * dt * (1.0 - rho)
             GSamples[i] = 0.5 * (previousPoint + point - rho * (point - previousPoint))

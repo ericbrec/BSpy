@@ -16,7 +16,7 @@ def common_basis(self, splines, indMap):
     orders = []
     splines = (self, *splines)
     for map in indMap:
-        assert len(map) == len(splines)
+        if not(len(map) == len(splines)): raise ValueError("Invalid map")
         order = 0
         for (spline, ind) in zip(splines, map):
             order = max(order, spline.order[ind])
@@ -30,8 +30,8 @@ def common_basis(self, splines, indMap):
         leftKnot = splines[0].knots[ind][splines[0].order[ind]-1]
         rightKnot = splines[0].knots[ind][splines[0].nCoef[ind]]
         for (spline, ind) in zip(splines, map):
-            assert spline.knots[ind][spline.order[ind]-1] == leftKnot
-            assert spline.knots[ind][spline.nCoef[ind]] == rightKnot
+            if not(spline.knots[ind][spline.order[ind]-1] == leftKnot): raise ValueError("Spline domains don't match")
+            if not(spline.knots[ind][spline.nCoef[ind]] == rightKnot): raise ValueError("Spline domains don't match")
             uniqueKnots, counts = np.unique(spline.knots[ind][spline.order[ind]-1:spline.nCoef[ind]+1], return_counts=True)
             match = 0 # Index of matching knot in the multiplicities list
             for (knot, count) in zip(uniqueKnots, counts):
@@ -73,13 +73,13 @@ def common_basis(self, splines, indMap):
     return tuple(alignedSplines)
 
 def elevate_and_insert_knots(self, m, newKnots):
-    assert len(m) == self.nInd
-    assert len(newKnots) == self.nInd
+    if not(len(m) == self.nInd): raise ValueError("Invalid m")
+    if not(len(newKnots) == self.nInd): raise ValueError("Invalid newKnots")
 
     # Check if any elevation or insertion is needed. If none, return self unchanged.
     impactedInd = []
     for ind in range(self.nInd):
-        assert m[ind] >= 0
+        if not(m[ind] >= 0): raise ValueError("Invalid m")
         if m[ind] + len(newKnots[ind]) > 0:
             impactedInd.append(ind)
     if len(impactedInd) == 0:
@@ -164,8 +164,8 @@ def elevate_and_insert_knots(self, m, newKnots):
     return type(self)(self.nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy, self.metadata)
 
 def extrapolate(self, newDomain, continuityOrder):
-    assert len(newDomain) == self.nInd
-    assert continuityOrder >= 0
+    if not(len(newDomain) == self.nInd): raise ValueError("Invalid newDomain")
+    if not(continuityOrder >= 0): raise ValueError("Invalid continuityOrder")
 
     # Check if any extrapolation is needed. If none, return self unchanged.
     # Also compute the new nCoef, new knots, coefficient slices, and left/right clamp variables.
@@ -177,11 +177,11 @@ def extrapolate(self, newDomain, continuityOrder):
     for ind, bounds in zip(range(self.nInd), newDomain):
         order = self.order[ind]
         degree = order - 1
-        assert len(bounds) == 2
+        if not(len(bounds) == 2): raise ValueError("Invalid bounds")
         # Add new knots to end first, so indexing isn't messed up at the beginning.
         if bounds[1] is not None and not np.isnan(bounds[1]):
             oldBound = self.knots[ind][self.nCoef[ind]]
-            assert bounds[1] > oldBound
+            if not(bounds[1] > oldBound): raise ValueError("Invalid bounds")
             knots[ind] = np.append(knots[ind], degree * [bounds[1]])
             nCoef[ind] += degree
             for i in range(self.nCoef[ind] + 1, self.nCoef[ind] + order):
@@ -190,7 +190,7 @@ def extrapolate(self, newDomain, continuityOrder):
         # Next, add knots to the beginning and set coefficient slice.
         if bounds[0] is not None and not np.isnan(bounds[0]):
             oldBound = self.knots[ind][degree]
-            assert bounds[0] < oldBound
+            if not(bounds[0] < oldBound): raise ValueError("Invalid bounds")
             knots[ind] = np.insert(knots[ind], 0, degree * [bounds[0]])
             nCoef[ind] += degree
             for i in range(degree, 2 * degree):
@@ -271,7 +271,7 @@ def extrapolate(self, newDomain, continuityOrder):
     return type(self)(self.nInd, self.nDep, self.order, nCoef, knots, dCoefs[0], self.accuracy, self.metadata)
 
 def fold(self, foldedInd):
-    assert 0 < len(foldedInd) < self.nInd
+    if not(0 < len(foldedInd) < self.nInd): raise ValueError("Invalid foldedInd")
     foldedOrder = []
     foldedNCoef = []
     foldedKnots = []
@@ -304,7 +304,7 @@ def fold(self, foldedInd):
     return foldedSpline, coefficientlessSpline
 
 def insert_knots(self, newKnots):
-    assert len(newKnots) == self.nInd
+    if not(len(newKnots) == self.nInd): raise ValueError("Invalid newKnots")
     knots = list(self.knots)
     coefs = self.coefs
     for ind in range(self.nInd):
@@ -330,7 +330,7 @@ def insert_knots(self, newKnots):
         return type(self)(self.nInd, self.nDep, self.order, coefs.shape[1:], knots, coefs, self.accuracy, self.metadata)
 
 def remove_knots(self, oldKnots=((),), maxRemovalsPerKnot=0, tolerance=None):
-    assert len(oldKnots) == self.nInd
+    if not(len(oldKnots) == self.nInd): raise ValueError("Invalid oldKnots")
     nCoef = [*self.nCoef]
     knotList = list(self.knots)
     coefs = self.coefs.copy()
@@ -483,14 +483,14 @@ def remove_knots(self, oldKnots=((),), maxRemovalsPerKnot=0, tolerance=None):
     return spline, totalRemoved, maxResidualError
 
 def reparametrize(self, newDomain):
-    assert len(newDomain) == self.nInd
+    if not(len(newDomain) == self.nInd): raise ValueError("Invalid newDomain")
     knotList = []
     for order, knots, d, nD in zip(self.order, self.knots, self.domain(), newDomain):
         if nD is not None:
             divisor = d[1] - d[0]
-            assert divisor > np.finfo(self.knots[0].dtype).eps
+            if not(divisor > np.finfo(self.knots[0].dtype).eps): raise ValueError("Invalid spline domain")
             slope = (nD[1] - nD[0]) / divisor
-            assert abs(slope) > 0.0
+            if not(abs(slope) > 0.0): raise ValueError("Invalid newDomain")
             intercept = (nD[0] * d[1] - nD[1] * d[0]) / divisor
             knots = knots * slope + intercept
             # Force domain to match exactly at its ends and knots to be non-decreasing.
@@ -505,18 +505,18 @@ def reparametrize(self, newDomain):
     return type(self)(self.nInd, self.nDep, self.order, self.nCoef, knotList, self.coefs, self.accuracy, self.metadata)   
 
 def trim(self, newDomain):
-    assert len(newDomain) == self.nInd
+    if not(len(newDomain) == self.nInd): raise ValueError("Invalid newDomain")
 
     # Step 1: Determine the knots to insert at the new domain bounds.
     newKnotsList = []
     for (order, knots, bounds) in zip(self.order, self.knots, newDomain):
-        assert len(bounds) == 2
+        if not(len(bounds) == 2): raise ValueError("Invalid newDomain")
         unique, counts = np.unique(knots, return_counts=True)
         leftBound = False # Do we have a left bound?
         newKnots = []
 
         if bounds[0] is not None and not np.isnan(bounds[0]):
-            assert knots[order - 1] <= bounds[0] <= knots[-order]
+            if not(knots[order - 1] <= bounds[0] <= knots[-order]): raise ValueError("Invalid newDomain")
             leftBound = True
             multiplicity = order
             i = np.searchsorted(unique, bounds[0])
@@ -525,9 +525,9 @@ def trim(self, newDomain):
             newKnots += multiplicity * [bounds[0]]
 
         if bounds[1] is not None and not np.isnan(bounds[1]):
-            assert knots[order - 1] <= bounds[1] <= knots[-order]
+            if not(knots[order - 1] <= bounds[1] <= knots[-order]): raise ValueError("Invalid newDomain")
             if leftBound:
-                assert bounds[0] < bounds[1]
+                if not(bounds[0] < bounds[1]): raise ValueError("Invalid newDomain")
             multiplicity = order
             i = np.searchsorted(unique, bounds[1])
             if unique[i] == bounds[1]:
@@ -554,7 +554,7 @@ def trim(self, newDomain):
     return type(spline)(spline.nInd, spline.nDep, spline.order, coefs.shape[1:], knotsList, coefs, spline.accuracy, spline.metadata)
 
 def unfold(self, foldedInd, coefficientlessSpline):
-    assert len(foldedInd) == coefficientlessSpline.nInd
+    if not(len(foldedInd) == coefficientlessSpline.nInd): raise ValueError("Invalid coefficientlessSpline")
     unfoldedOrder = []
     unfoldedNCoef = []
     unfoldedKnots = []

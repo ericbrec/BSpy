@@ -52,29 +52,29 @@ class Spline:
     """
     
     def __init__(self, nInd, nDep, order, nCoef, knots, coefs, accuracy = 0.0, metadata = {}):
-        assert nInd >= 0, "nInd < 0"
+        if not(nInd >= 0): raise ValueError("nInd < 0")
         self.nInd = int(nInd)
-        assert nDep >= 0, "nDep < 0"
+        if not(nDep >= 0): raise ValueError("nDep < 0")
         self.nDep = int(nDep)
-        assert len(order) == self.nInd, "len(order) != nInd"
+        if not(len(order) == self.nInd): raise ValueError("len(order) != nInd")
         self.order = tuple(int(x) for x in order)
-        assert len(nCoef) == self.nInd, "len(nCoef) != nInd"
+        if not(len(nCoef) == self.nInd): raise ValueError("len(nCoef) != nInd")
         self.nCoef = tuple(int(x) for x in nCoef)
-        assert len(knots) == nInd, "len(knots) != nInd"
+        if not(len(knots) == nInd): raise ValueError("len(knots) != nInd")
         for i in range(len(knots)):
             nKnots = self.order[i] + self.nCoef[i]
-            assert len(knots[i]) == nKnots, \
-                f"Knots array for variable {i} should have length {nKnots}"
+            if not(len(knots[i]) == nKnots):
+                raise ValueError(f"Knots array for variable {i} should have length {nKnots}")
         self.knots = tuple(np.array(kk) for kk in knots)
         for knots, order, nCoef in zip(self.knots, self.order, self.nCoef):
             for i in range(nCoef):
-                assert knots[i] <= knots[i + 1] and knots[i] < knots[i + order],\
-                       "Improperly ordered knot sequence"
+                if not(knots[i] <= knots[i + 1] and knots[i] < knots[i + order]):
+                       raise ValueError("Improperly ordered knot sequence")
         totalCoefs = 1
         for nCoef in self.nCoef:
             totalCoefs *= nCoef
-        assert len(coefs) == totalCoefs or len(coefs) == self.nDep, \
-            f"Length of coefs should be {totalCoefs} or {self.nDep}"
+        if not(len(coefs) == totalCoefs or len(coefs) == self.nDep):
+            raise ValueError(f"Length of coefs should be {totalCoefs} or {self.nDep}")
         self.coefs = np.array(coefs)
         if self.coefs.shape != (self.nDep, *self.nCoef):
             if len(self.coefs) == totalCoefs:
@@ -812,7 +812,7 @@ class Spline:
         The algorithm used to to find all intersection curves is from Grandine, Thomas A., and Frederick W. Klein IV. 
         "A new approach to the surface intersection problem." Computer Aided Geometric Design 14, no. 2 (1997): 111-134.
         """
-        assert self.nDep == other.nDep, "The number of dependent variables for both splines much match."
+        if not(self.nDep == other.nDep): raise ValueError("The number of dependent variables for both splines much match.")
         freeParameters = self.nInd + other.nInd - self.nDep
         if freeParameters == 0:
             return (self - other).zeros()
@@ -1207,7 +1207,7 @@ class Spline:
         For all higher dimensions, it implements the projected-polyhedron technique from Sherbrooke, Evan C., and Nicholas M. Patrikalakis. 
         "Computation of the solutions of nonlinear polynomial systems." Computer Aided Geometric Design 10, no. 5 (1993): 379-405.
         """
-        assert self.nInd == self.nDep, "The number of independent variables (nInd) must match the number of dependent variables (nDep)."
+        if not(self.nInd == self.nDep): raise ValueError("The number of independent variables (nInd) must match the number of dependent variables (nDep).")
         if self.nInd <= 1:
             return bspy._spline_intersection.zeros_using_interval_newton(self)
         else:

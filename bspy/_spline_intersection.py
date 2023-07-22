@@ -5,8 +5,8 @@ from collections import namedtuple
 from multiprocessing import Pool
 
 def zeros_using_interval_newton(self):
-    assert self.nInd == self.nDep, "The number of independent variables (nInd) must match the number of dependent variables (nDep)."
-    assert self.nInd == 1, "Only works for curves (nInd == 1)."
+    if not(self.nInd == self.nDep): raise ValueError("The number of independent variables (nInd) must match the number of dependent variables (nDep).")
+    if not(self.nInd == 1): raise ValueError("Only works for curves (nInd == 1).")
     epsilon = np.finfo(self.coefs.dtype).eps
 
     # Set initial spline and domain
@@ -89,7 +89,7 @@ def zeros_using_interval_newton(self):
 
 def _convex_hull_2D(xData, yData, epsilon = 1.0e-8, evaluationEpsilon = 1.0e-4, xInterval = None):
     # Allow xData to be repeated for longer yData, but only if yData is a multiple.
-    assert len(yData) % len(xData) == 0
+    if not(len(yData) % len(xData) == 0): raise ValueError("Size of xData does not divide evenly in size of yData")
 
     # Assign p0 to the leftmost lowest point. Also compute xMin, xMax, and yMax.
     xMin = xMax = x0 = xData[0]
@@ -272,7 +272,7 @@ def _refine_projected_polyhedron(interval):
     return (root, intervals)
 
 def zeros_using_projected_polyhedron(self, epsilon=None):
-    assert self.nInd == self.nDep, "The number of independent variables (nInd) must match the number of dependent variables (nDep)."
+    if not(self.nInd == self.nDep): raise ValueError("The number of independent variables (nInd) must match the number of dependent variables (nDep).")
     machineEpsilon = np.finfo(self.coefs.dtype).eps
     if epsilon is None:
         epsilon = self.accuracy
@@ -322,10 +322,10 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
     return roots
 
 def intersection_curves(self, other):
-    assert self.nDep == other.nDep, "The number of dependent variables for both splines much match."
-    assert self.nInd + other.nInd - self.nDep == 1, "The number of free variables (self.nInd + other.nInd - self.nDep) must be one."
-    assert self.nInd == 2, "Only surfaces are supported."
-    assert other.nInd == 2, "Only surfaces are supported."
+    if not(self.nDep == other.nDep): raise ValueError("The number of dependent variables for both splines much match.")
+    if not(self.nInd + other.nInd - self.nDep == 1): raise ValueError("The number of free variables (self.nInd + other.nInd - self.nDep) must be one.")
+    if not(self.nInd == 2): raise ValueError("Only surfaces are supported.")
+    if not(other.nInd == 2): raise ValueError("Only surfaces are supported.")
 
     FMinusG = self - other
     Fu = self.differentiate(0)
