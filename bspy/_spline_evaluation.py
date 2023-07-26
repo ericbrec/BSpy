@@ -121,6 +121,27 @@ def integral(self, with_respect_to, uvw1, uvw2, returnSpline = False):
     else:
         return value
 
+def normal(self, uvw, normalize=True):
+    if self.nInd + 1 != self.nDep: raise ValueError("The number of independent variables must be one less than the number of dependent variables.")
+
+    tangentSpace = np.empty((self.nInd, self.nDep), self.coefs.dtype)
+    with_respect_to = [0] * self.nInd
+    for i in range(self.nInd):
+        with_respect_to[i] = 1
+        tangentSpace[i] = self.derivative(with_respect_to, uvw)
+        with_respect_to[i] = 0
+    
+    normal = np.empty(self.nDep, self.coefs.dtype)
+    sign = 1
+    for i in range(self.nDep):
+        normal[i] = sign * np.linalg.det(np.delete(tangentSpace, i, 1))
+        sign *= -1
+    
+    if normalize:
+        normal /= np.linalg.norm(normal)
+    
+    return normal
+
 def range_bounds(self):
     # Assumes self.nDep is the first value in self.coefs.shape
     bounds = [[coefficient.min(), coefficient.max()] for coefficient in self.coefs]

@@ -628,3 +628,19 @@ def intersection_curves(self, other):
         splineContours.append(bspy.spline.Spline.contour(FMinusG, points[1:])) # Skip endPoint boolean at start of points list
     
     return splineContours
+
+def contours(self):
+    if self.nInd - self.nDep != 1: raise ValueError("The number of free variables (self.nInd - self.nDep) must be one.")
+
+    Point = namedtuple('Point', ('d', 'det', 'onBoundary', 'uvw'))
+    epsilon = np.sqrt(np.finfo(self.coefs.dtype).eps)
+    evaluationEpsilon = np.sqrt(epsilon)
+    theta = np.sqrt(2) # Arbitrary starting value for theta (picked one in [0, pi/2] unlikely to be a stationary point)
+    theta = (np.pi / 6) / 0.77 # Test case, TODO remove this line.
+    # Try different theta values until no border or turning points are degenerate.
+    while True:
+        points = []
+        theta *= 0.77
+        cosTheta = np.cos(theta)
+        sinTheta = np.sin(theta)
+        abort = False

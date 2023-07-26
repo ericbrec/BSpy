@@ -513,6 +513,48 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
 
     return type(self)(nInd, nDep, order, nCoef, knots, coefs, self.accuracy + other.accuracy, self.metadata)
 
+def normal_spline(self):
+    if self.nInd + 1 != self.nDep: raise ValueError("The number of independent variables must be one less than the number of dependent variables.")
+
+    # Construct order and knots for generalized cross product of the tangent space.
+    # We're multiplying all the tangents together. Each multiplication adds the order - 1 of each independent variable
+    # except for the first. However, one of the vectors will be order - 1 for its independent variable,
+    # because it's a derivative, so total order of each independent variable is nInd * (order - 1).
+    newOrder = []
+    newKnots = []
+    startUvw = []
+    endUvw = []
+    deltaUvw = []
+    totalCoefs = [1]
+    for order, knots in zip(self.order, self.knots):
+        offset = self.nInd * (order - 1) - order
+        newOrder.append(order + offset)
+        uniqueKnots, counts = np.unique(knots, return_counts=True)
+        counts += offset + 1 # Because we're multiplying all the first derivatives (tangents), the knot elevation is one more
+        counts[0] -= 1 # But not at the endpoints, which get reduced by one when taking the derivative
+        counts[-1] -= 1 # But not at the endpoints, which get reduced by one when taking the derivative
+        newKnots.append(np.repeat(uniqueKnots, counts))
+        # Also calculate the total number of coefficients, capturing how it progressively increases, and
+        # using that calculation to span uvw from the starting knot to the end for each variable.
+        nCoef = len(newKnots[-1]) - newOrder[-1]
+        totalCoefs.append(totalCoefs[-1] * nCoef)
+        startUvw.append(uniqueKnots[0])
+        endUvw.append(uniqueKnots[-1])
+        deltaUvw.append((uniqueKnots[-1] - uniqueKnots[0]) / (nCoef - 1))
+    
+    points = []
+    uvw = [*startUvw]
+    for i in range(totalCoefs[-1]):
+        points.append((*uvw, *self.normal(uvw, False)))
+        for j, nCoef, start, end, delta in zip(range(self.nInd), totalCoefs[:-1], startUvw, endUvw, deltaUvw):
+            if (i + 1) % nCoef == 0:
+                uvw[j] = min(uvw[j] + delta, end)
+                if j > 0:
+                    uvw[j - 1] = previousStart
+            previousStart = start
+    
+    return bspy.Spline.least_squares(self.nInd, self.nDep, newOrder, points, newKnots, 0, self.metadata)
+
 def scale(self, multiplier):
     if isinstance(multiplier, bspy.Spline):
         return self.multiply(multiplier, None, 'S')

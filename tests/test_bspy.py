@@ -862,6 +862,33 @@ def test_multiply():
             maxError = max(maxError, (xTest - x) ** 2)
     assert maxError <= np.finfo(float).eps
 
+def test_normal():
+    spline = bspy.Spline(2, 3, [3, 4], [4, 5], [[0,0,0,.5,1,1,1], [0,0,0,0,.5,1,1,1,1]],
+                        [[0, 0, 0, 0, 0, .3, .3, .3, .3, .3, .7, .7, .7, .7, .7, 1, 1, 1, 1, 1],
+                        [0, .25, .5, .75, 1, 0, .25, .5, .75, 1, 0, .25, .5, .75, 1, 0, .25, .5, .75, 1],
+                        [0, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 2, 1, 2, 0, 0, 0, 0, 0, 0]])
+    du = spline.differentiate(0)
+    dv = spline.differentiate(1)
+    normal = du.multiply(dv, (0, 1), 'C')
+    normal2 = spline.normal_spline()
+    for u in np.linspace(0.0, 1.0, 5):
+        for v in np.linspace(0.0, 1.0, 5):
+            n = spline.normal((u, v), False)
+            assert np.isclose(np.dot(du((u, v)), n), 0.0)
+            assert np.isclose(np.dot(dv((u, v)), n), 0.0)
+            assert np.allclose(n, normal((u, v)))
+            assert np.allclose(n, normal2((u, v)))
+            assert np.isclose(np.dot(spline.normal((u, v)), n), np.linalg.norm(n))
+    assert np.allclose(normal.coefs, normal2.coefs)
+
+    spline = bspy.Spline(1, 2, [4], [5], [[0,0,0,0,.5,1,1,1,1]], [[0, .3, .6, .7, 1], [0, .25, .5, .75, 1]])
+    du = spline.differentiate()
+    normal = spline.normal_spline()
+
+    for u in np.linspace(0.0, 1.0, 5):
+        assert np.isclose(np.dot(du((u,)), spline.normal((u,))), 0.0)
+        assert np.isclose(np.dot(du((u,)), normal((u,))), 0.0)
+
 def test_least_squares():
     # Replicate 1D spline using its knots. Should be precise to machine epsilon.
     spline = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0.2, 0.3, 0.4, 0.5, 0.5, 1, 1], float)], 
