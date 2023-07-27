@@ -514,7 +514,7 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
     return type(self)(nInd, nDep, order, nCoef, knots, coefs, self.accuracy + other.accuracy, self.metadata)
 
 def normal_spline(self):
-    if self.nInd + 1 != self.nDep: raise ValueError("The number of independent variables must be one less than the number of dependent variables.")
+    if abs(self.nInd - self.nDep) != 1: raise ValueError("The number of independent variables must be one different than the number of dependent variables.")
 
     # Construct order and knots for generalized cross product of the tangent space.
     # We're multiplying all the tangents together. Each multiplication adds the order - 1 of each independent variable
@@ -526,8 +526,9 @@ def normal_spline(self):
     endUvw = []
     deltaUvw = []
     totalCoefs = [1]
+    rank = min(self.nInd, self.nDep)
     for order, knots in zip(self.order, self.knots):
-        offset = self.nInd * (order - 1) - order
+        offset = rank * (order - 1) - order
         newOrder.append(order + offset)
         uniqueKnots, counts = np.unique(knots, return_counts=True)
         counts += offset + 1 # Because we're multiplying all the first derivatives (tangents), the knot elevation is one more
@@ -553,7 +554,7 @@ def normal_spline(self):
                     uvw[j - 1] = previousStart
             previousStart = start
     
-    return bspy.Spline.least_squares(self.nInd, self.nDep, newOrder, points, newKnots, 0, self.metadata)
+    return bspy.Spline.least_squares(self.nInd, max(self.nInd, self.nDep), newOrder, points, newKnots, 0, self.metadata)
 
 def scale(self, multiplier):
     if isinstance(multiplier, bspy.Spline):

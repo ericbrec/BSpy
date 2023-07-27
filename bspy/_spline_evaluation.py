@@ -122,8 +122,9 @@ def integral(self, with_respect_to, uvw1, uvw2, returnSpline = False):
         return value
 
 def normal(self, uvw, normalize=True):
-    if self.nInd + 1 != self.nDep: raise ValueError("The number of independent variables must be one less than the number of dependent variables.")
+    if abs(self.nInd - self.nDep) != 1: raise ValueError("The number of independent variables must be one different than the number of dependent variables.")
 
+    # Evaluate the tangents at the point.
     tangentSpace = np.empty((self.nInd, self.nDep), self.coefs.dtype)
     with_respect_to = [0] * self.nInd
     for i in range(self.nInd):
@@ -131,12 +132,20 @@ def normal(self, uvw, normalize=True):
         tangentSpace[i] = self.derivative(with_respect_to, uvw)
         with_respect_to[i] = 0
     
-    normal = np.empty(self.nDep, self.coefs.dtype)
+    # If self.nInd > self.nDep, transpose the tangent space and adjust the length of the normal.
+    nDep = self.nDep
+    if self.nInd > nDep:
+        tangentSpace = tangentSpace.T
+        nDep = self.nInd
+    
+    # Compute the normal using cofactors (determinants of subsets of the tangent space).
+    normal = np.empty(nDep, self.coefs.dtype)
     sign = 1
-    for i in range(self.nDep):
+    for i in range(nDep):
         normal[i] = sign * np.linalg.det(np.delete(tangentSpace, i, 1))
         sign *= -1
     
+    # Normalize the result as needed.
     if normalize:
         normal /= np.linalg.norm(normal)
     

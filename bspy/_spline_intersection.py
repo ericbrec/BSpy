@@ -635,6 +635,10 @@ def contours(self):
     Point = namedtuple('Point', ('d', 'det', 'onBoundary', 'uvw'))
     epsilon = np.sqrt(np.finfo(self.coefs.dtype).eps)
     evaluationEpsilon = np.sqrt(epsilon)
+    tangents = []
+    for nInd in range(self.nInd):
+        tangents.append(self.differentiate(nInd))
+
     theta = np.sqrt(2) # Arbitrary starting value for theta (picked one in [0, pi/2] unlikely to be a stationary point)
     theta = (np.pi / 6) / 0.77 # Test case, TODO remove this line.
     # Try different theta values until no border or turning points are degenerate.
@@ -644,3 +648,194 @@ def contours(self):
         cosTheta = np.cos(theta)
         sinTheta = np.sin(theta)
         abort = False
+
+        # Construct the turning point determinant.
+        normal = self.normal_spline()
+        turningPointDeterminant = normal.dot([cosTheta, sinTheta] + [0.0] * (self.nInd - 2))
+
+        # Find intersections with u and v boundaries.
+        def uvIntersections(nInd, boundary):
+            zeros = self.contract([None] * nInd + [boundary] + [None] * (self.nInd - nInd - 1)).zeros()
+            for zero in zeros:
+                if not isinstance(zero, np.ndarray):
+                    abort = True
+                    break
+                uvw = np.insert(zero, nInd, boundary)
+                d = uvw[0] * cosTheta + uvw[1] * sinTheta
+                det = (boundary - 0.5) * normal(uvw)[nInd] * turningPointDeterminant(uvw)
+                if abs(det) < epsilon:
+                    abort = True
+                    break
+                points.append(Point(d, det, True, uvst))
+            return abort
+        for nInd in range(2):
+            abort = uvIntersections(nInd, 0.0)
+            if abort:
+                break # Try a different theta
+            abort = uvIntersections(nInd, 1.0)
+            if abort:
+                break # Try a different theta
+        if abort:
+            continue # Try a different theta
+
+        # Find intersections with other boundaries.
+        def otherIntersections(nInd, boundary):
+            zeros = self.contract([None] * nInd + [boundary] + [None] * (self.nInd - nInd - 1)).zeros()
+            for zero in zeros:
+                if not isinstance(zero, np.ndarray):
+                    abort = True
+                    break
+                uvw = np.insert(zero, nInd, boundary)
+                d = uvw[0] * cosTheta + uvw[1] * sinTheta
+                columns = np.empty((self.nDep, self.nInd - 1))
+                i = 0
+                for j in range(self.nInd):
+                    if j != nInd:
+                        columns[:, i] = tangents[j](uvw)
+                        i += 1
+                duv = np.solve(columns, -tangents[nInd](uvw))
+                det = np.arctan2((0.5 - boundary) * (duv[0] * cosTheta + duv[1] * sinTheta), (0.5 - uvst[2]) * (duv[0] * cosTheta - duv[1] * sinTheta))
+                if abs(det) < epsilon:
+                    abort = True
+                    break
+                points.append(Point(d, det, True, uvst))
+            return abort
+        for nInd in range(2, self.nInd):
+            abort = otherIntersections(nInd, 0.0)
+            if abort:
+                break # Try a different theta
+            abort = otherIntersections(nInd, 1.0)
+            if abort:
+                break # Try a different theta
+        if abort:
+            continue # Try a different theta
+
+        # Find turning points by combining self and turningPointDeterminant into a system and processing its zeros.
+        systemSelf, systemTurningPointDeterminant = self.common_basis((turningPointDeterminant,), [(nInd, nInd) for nInd in range(self.nInd)])
+        system = type(systemSelf)(4, 4, systemSelf.order, systemSelf.nCoef, systemSelf.knots, \
+            np.concatenate((systemSelf.coefs, systemTurningPointDeterminant.coefs)), systemSelf.accuracy, systemSelf.metadata)
+        zeros = system.zeros()
+        for uvw in zeros:
+            if not isinstance(uvw, np.ndarray):
+                abort = True
+                break
+            d = uvw[0] * cosTheta + uvw[1] * sinTheta 
+            det = 0.0 # TODO: fill this in.
+            if abs(det) < epsilon:
+                abort = True
+                break
+            points.append(Point(d, det, False, uvst))
+        if not abort:
+            break # We're done!
+    
+    # We've got all the contour points, now we bucket them into individual contours using the algorithm 
+    # from Grandine, Thomas A., and Frederick W. Klein IV. "A new approach to the surface intersection problem." 
+    # Computer Aided Geometric Design 14, no. 2 (1997): 111-134.
+
+    # Before we sort, we're going to need a system to find all the contour points on 
+    # a panel boundary: u * cosTheta + v * sinTheta = d. Basically, we add this panel boundary plane
+    # to the contour condition. We'll define it for d = 0, and add the actual d later.
+    # We didn't construct the panel system earlier, because we didn't have theta.
+    panelCoefs = np.empty((self.nDep + 1, *self.coefs.shape[1:]), self.coefs.dtype) # Note that self.nDep + 1 == self.nInd
+    panelCoefs[:self.nDep] = self.coefs
+    # The following value should be -d. We're setting it for d = 0 to start.
+    panelCoefs[self.nDep, 0, 0, :, :] = 0.0 
+    degree = self.order[0] - 1
+    for i in range(1, self.nCoef[0]):
+        panelCoefs[self.nDep, i, 0, :, :] = panelCoefs[self.nDep, i - 1, 0, :, :] + ((self.knots[0][degree + i] - self.knots[0][i]) / degree) * cosTheta
+    degree = self.order[1] - 1
+    for i in range(1, self.nCoef[1]):
+        panelCoefs[self.nDep, :, i, :, :] = panelCoefs[self.nDep, :, i - 1, :, :] + ((self.knots[1][degree + i] - self.knots[1][i]) / degree) * sinTheta
+    panel = type(self)(self.nInd, self.nInd, self.order, self.nCoef, self.knots, panelCoefs, self.accuracy, self.metadata)
+
+    # Okay, we have everything we need to determine the contour topology and points along each contour.
+    # We've done the first two steps of Grandine and Klein's algorithm:
+    # (1) Choose theta and find all solutions to (1.6) (system)
+    # (2) Find all zeros of f on the boundary of [0, 1]^2
+
+    # Next, sort the edge and turning points by panel distance (d) and then by the determinant (det)
+    # (3) Take all the points found in Step (1) and Step (2) and order them by distance in the theta direction from the origin.
+    points.sort()
+
+    # (4) Initialize an ordered list of contours. No contours will be on the list at first.
+    currentContourPoints = [] # Holds contours currently being identified
+    contourPoints = [] # Hold contours already identified
+
+    # (5) If no points remain to be processed, stop. Otherwise, take the next closest point.
+    for point in points:
+        # If it is a boundary point, go to Step (6). Otherwise, go to Step (7).
+        if point.onBoundary:
+            # (6) Determine whether the point corresponds to a contour which is starting or ending
+            # at the given point. A point corresponds to a starting contour if it continues in the
+            # increasing panel direction, and it corresponds to an ending contour if it continues
+            # in the decreasing panel direction. If it is starting and the point is on the v = 0
+            # or u = 1 edge, add a new contour to the front of the ordered list of contours
+            # with the given point as an endpoint. If it is starting and the point is on the u = 0
+            # or v = 1 edge, add a new contour to the end of the ordered list. If it is an
+            # ending point, then delete a contour from either the beginning or the end of the
+            # list, depending upon which edge the point is on. Go back to Step (5).
+            if point.det > 0.0:
+                # Starting point
+                if abs(point.uvst[0] - 1.0) < epsilon or abs(point.uvst[1]) < epsilon:
+                    currentContourPoints.insert(0, [True, point.uvst]) # True indicates end point
+                else:
+                    currentContourPoints.append([True, point.uvst]) # True indicates end point
+            else:
+                # Ending point
+                if abs(point.uvst[0] - 1.0) < epsilon or abs(point.uvst[1]) < epsilon:
+                    i = 0
+                else:
+                    i = -1
+                fullList = currentContourPoints.pop(i) + [point.uvst]
+                endPoint = fullList[0]
+                if endPoint:
+                    contourPoints.append(fullList)
+                else:
+                    fullList.reverse() # The last two values will be a repeat turning point and the endPoint flag, we remove them on the next line
+                    currentContourPoints[i] = [True] + fullList[:-2] + currentContourPoints[i][1:]
+        else:
+            # (7) Determine whether two contours start or two contours end
+            # at the turning point. Locate the two contours in the list of contours by finding
+            # all points which lie on both the panel boundary and on the contour. The turning
+            # point will be one of these, and it will be well ordered with respect to the other
+            # points. Either insert two new contours in the list or delete two existing ones from
+            # the list. Go back to Step (5).
+            # First, construct panel, whose zeros lie along the panel boundary, u * cosTheta + v * sinTheta - d = 0.
+            panel.coefs[3] -= point.d
+            # Split panel below and above the known zero point.
+            # This avoids extra computation and the high-zero at the known zero point.
+            panelPoints = [point.uvst]
+            panelPoints += panel.trim(((point.uvst[0] + 2.0 * evaluationEpsilon, 1.0), (0.0, point.uvst[1] - 2.0 * evaluationEpsilon), (0.0, 1.0), (0.0, 1.0))).zeros()
+            panelPoints += panel.trim(((0.0, point.uvst[0] - 2.0 * evaluationEpsilon), (point.uvst[1] + 2.0 * evaluationEpsilon, 1.0), (0.0, 1.0), (0.0, 1.0))).zeros()
+            # Add d back to prepare for next turning point.
+            panel.coefs[3] += point.d 
+            # Sort zero points by their position along the panel boundary (using vector orthogonal to its normal).
+            panelPoints.sort(key=lambda uvst: uvst[1] * cosTheta - uvst[0] * sinTheta)
+            adjustment = 0 # Adjust index after a contour point is added or removed.
+            for i, uvst in zip(range(len(panelPoints)), panelPoints):
+                if np.allclose(point.uvst, uvst):
+                    if point.det < 0.0:
+                        # Insert the turning point twice (second one appears before the first one in the points list).
+                        currentContourPoints.insert(i, [True, point.uvst]) # True indicates end point
+                        currentContourPoints.insert(i, [False, point.uvst]) # False indicates continuation point
+                        adjustment = 1
+                    else:
+                        secondHalf = currentContourPoints.pop(i + 1)
+                        endPoint = secondHalf.pop(0)
+                        secondHalf.reverse()
+                        fullList = currentContourPoints.pop(i) + [point.uvst] + secondHalf
+                        if endPoint:
+                            contourPoints.append(fullList)
+                        else:
+                            currentContourPoints[i] = fullList + currentContourPoints[i][1:]
+                        adjustment = -1
+                else:
+                    currentContourPoints[i + adjustment].append(uvst)
+
+    # We've determined a bunch of points along all the contours, including starting and ending points.
+    # Now we just need to create splines for those contours using the Spline.contour method.
+    splineContours = []
+    for points in contourPoints:
+        splineContours.append(bspy.spline.Spline.contour(self, points[1:])) # Skip endPoint boolean at start of points list
+    
+    return splineContours

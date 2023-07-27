@@ -959,7 +959,7 @@ class Spline:
     def normal(self, uvw, normalize=True):
         """
         Compute the normal of the spline at given parameter values. The number of independent variables must be
-        one less than the number of dependent variables.
+        one different than the number of dependent variables.
 
         Parameters
         ----------
@@ -979,6 +979,12 @@ class Spline:
         --------
         `derivative` : Compute the derivative of the spline at a given parameter value.
         `normal_spline` : Compute a spline that evaluates to the normal of the given spline (not normalized).
+
+        Notes
+        -----
+        Attentive readers will notice that the number of independent variables could be one more than the number of 
+        dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of 
+        the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.
         """
         return bspy._spline_evaluation.normal(self, uvw, normalize)
 
@@ -986,7 +992,7 @@ class Spline:
         """
         Compute a spline that evaluates to the normal of the given spline. The length of the normal
         is the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).
-        The number of independent variables must be one less than the number of dependent variables.
+        The number of independent variables must be one different than the number of dependent variables.
 
         Returns
         -------
@@ -997,6 +1003,12 @@ class Spline:
         --------
         `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.
         `normal` : Compute the normal of the spline at given parameter values.
+
+        Notes
+        -----
+        Attentive readers will notice that the number of independent variables could be one more than the number of 
+        dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of 
+        the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.
         """
         return bspy._spline_operations.normal_spline(self)
 
