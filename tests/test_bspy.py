@@ -829,7 +829,7 @@ def test_intersect():
     plane = bspy.Spline.least_squares(2, 3, (order, order), points, (knots, knots))
 
     contours = [] # Uncomment the next line to run this lengthy test
-    #contours = spline.intersect(plane)
+    contours = spline.intersect(plane)
     for contour in contours:
         for t in np.linspace(0.0, 1.0, 11):
             uvst = contour((t,))

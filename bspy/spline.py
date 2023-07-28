@@ -838,8 +838,8 @@ class Spline:
         if freeParameters == 0:
             return (self - other).zeros()
         elif freeParameters == 1:
-            #return bspy._spline_intersection.intersection_curves(self, other)
-            return (self - other).contours()
+            return bspy._spline_intersection.intersection_curves(self, other)
+            #return (self - other).contours()
         else:
             return NotImplemented
 
@@ -956,7 +956,7 @@ class Spline:
             indMap = [(*(mapping if _isIterable(mapping) else (mapping, mapping)), False) for mapping in indMap]
         return bspy._spline_operations.multiplyAndConvolve(self, other, indMap, productType)
 
-    def normal(self, uvw, normalize=True):
+    def normal(self, uvw, normalize=True, indices=None):
         """
         Compute the normal of the spline at given parameter values. The number of independent variables must be
         one different than the number of dependent variables.
@@ -969,11 +969,15 @@ class Spline:
         normalize : `boolean`, optional
             If True the returned normal will have unit length (the default). Otherwise, the normal's length will
             be the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).
+        
+        indices : `iterable`, optional
+            An iterable of normal indices to calculate. For example, `indices=(0, 3)` will return a vector of length 2
+            with the first and fourth values of the normal. If `None`, all normal values are returned (the default).
 
         Returns
         -------
         normal : `numpy.array`
-            The value of the normal of the spline at the given parameter values.
+            The normal vector of the spline at the given parameter values.
 
         See Also
         --------
@@ -988,11 +992,17 @@ class Spline:
         """
         return bspy._spline_evaluation.normal(self, uvw, normalize)
 
-    def normal_spline(self):
+    def normal_spline(self, indices=None):
         """
         Compute a spline that evaluates to the normal of the given spline. The length of the normal
         is the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).
         The number of independent variables must be one different than the number of dependent variables.
+
+        Parameters
+        ----------
+        indices : `iterable`, optional
+            An iterable of normal indices to calculate. For example, `indices=(0, 3)` will make the returned spline compute a vector of length 2
+            with the first and fourth values of the normal. If `None`, all normal values are returned (the default).
 
         Returns
         -------
@@ -1001,8 +1011,8 @@ class Spline:
 
         See Also
         --------
-        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.
         `normal` : Compute the normal of the spline at given parameter values.
+        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.
 
         Notes
         -----
