@@ -513,26 +513,66 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
 
     return type(self)(nInd, nDep, order, nCoef, knots, coefs, self.accuracy + other.accuracy, self.metadata)
 
+# Return a matrix of booleans whose [i,j] value indicates if self's partial wrt variable i depends on variable j. 
+def _cross_correlation_matrix(self):
+    ccm = np.empty((self.nInd, self.nInd), bool)
+    for i in range(self.nInd - 1):
+        tangent = self.differentiate(i)
+        totalCoefs = tangent.coefs.size // tangent.nDep
+        ccm[i, i] = True
+        for j in range(i + 1, self.nInd):
+            coefs = np.moveaxis(tangent.coefs, (0, j + 1), (-1, -2))
+            coefs = coefs.reshape(totalCoefs // tangent.nCoef[j], tangent.nCoef[j], tangent.nDep)
+            match = True
+            for row in coefs:
+                first = row[0]
+                for point in row[1:]:
+                    match = np.allclose(point, first)
+                    if not match:
+                        break
+                if not match:
+                    break
+            ccm[i, j] = ccm[j, i] = not match
+
+    ccm[-1, -1] = True
+    return ccm
+
 def normal_spline(self, indices=None):
     if abs(self.nInd - self.nDep) != 1: raise ValueError("The number of independent variables must be one different than the number of dependent variables.")
 
     # Construct order and knots for generalized cross product of the tangent space.
-    # We're multiplying all the tangents together. Each multiplication adds the order - 1 of each independent variable
-    # except for the first. However, one of the vectors will be order - 1 for its independent variable,
-    # because it's a derivative, so total order of each independent variable is nInd * (order - 1).
     newOrder = []
     newKnots = []
     startUvw = []
     endUvw = []
     deltaUvw = []
     totalCoefs = [1]
-    maxOrder = 9
     rank = min(self.nInd, self.nDep)
-    for order, knots in zip(self.order, self.knots):
-        offset = max(rank * (order - 1), maxOrder) - order
-        newOrder.append(order + offset)
+    ccm = _cross_correlation_matrix(self)
+    for i, order, knots in zip(range(self.nInd), self.order, self.knots):
+        # First, calculate the order of the normal for this independent variable.
+        # Note that the total order will be one less than usual, because one of 
+        # the tangents is the derivative with respect to that independent variable.
+        newOrd = 0
+        if self.nInd < self.nDep:
+            # If this normal involves all tangents, simply add the degree of each,
+            # so long as that tangent contains the independent variable.  
+            for j in range(self.nInd):
+                newOrd += order - 1 if ccm[i, j] else 0
+        else:
+            # If this normal doesn't involve all tangents, find the max order of
+            # each returned combination (as defined by the indices).
+            for index in range(self.nInd) if indices is None else indices:
+                # The order will be one larger if this independent variable's tangent is excluded by the index.
+                ord = 0 if index != i else 1
+                # Add the degree of each tangent, so long as that tangent contains the 
+                # independent variable and is not excluded by the index.  
+                for j in range(self.nInd):
+                    ord += order - 1 if ccm[i, j] and index != j else 0
+                newOrd = max(newOrd, ord)
+        newOrder.append(newOrd)
         uniqueKnots, counts = np.unique(knots, return_counts=True)
-        counts += offset + 1 # Because we're multiplying all the first derivatives (tangents), the knot elevation is one more
+        counts += newOrd - order + 1 # Because we're multiplying all the tangents, the knot elevation is one more
         counts[0] -= 1 # But not at the endpoints, which get reduced by one when taking the derivative
         counts[-1] -= 1 # But not at the endpoints, which get reduced by one when taking the derivative
         newKnots.append(np.repeat(uniqueKnots, counts))
