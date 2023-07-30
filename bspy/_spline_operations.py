@@ -148,6 +148,8 @@ def dot(self, vector):
         coefs = vector[0] * self.coefs[0]
         for i in range(1, self.nDep):
             coefs += vector[i] * self.coefs[i]
+        if len(coefs.shape) == len(self.coefs.shape) - 1:
+            coefs = coefs.reshape(1, *coefs.shape)
         return type(self)(self.nInd, 1, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
 
 def integrate(self, with_respect_to = 0):
@@ -512,6 +514,91 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
             coefs = np.moveaxis(newCoefs[:nCoef[ind1]], 0, ind1 + 1)
 
     return type(self)(nInd, nDep, order, nCoef, knots, coefs, self.accuracy + other.accuracy, self.metadata)
+
+# Return a matrix of booleans whose [i,j] value indicates if self's partial wrt variable i depends on variable j. 
+def _cross_correlation_matrix(self):
+    ccm = np.empty((self.nInd, self.nInd), bool)
+    for i in range(self.nInd - 1):
+        tangent = self.differentiate(i)
+        totalCoefs = tangent.coefs.size // tangent.nDep
+        ccm[i, i] = True
+        for j in range(i + 1, self.nInd):
+            coefs = np.moveaxis(tangent.coefs, (0, j + 1), (-1, -2))
+            coefs = coefs.reshape(totalCoefs // tangent.nCoef[j], tangent.nCoef[j], tangent.nDep)
+            match = True
+            for row in coefs:
+                first = row[0]
+                for point in row[1:]:
+                    match = np.allclose(point, first)
+                    if not match:
+                        break
+                if not match:
+                    break
+            ccm[i, j] = ccm[j, i] = not match
+
+    ccm[-1, -1] = True
+    return ccm
+
+def normal_spline(self, indices=None):
+    if abs(self.nInd - self.nDep) != 1: raise ValueError("The number of independent variables must be one different than the number of dependent variables.")
+
+    # Construct order and knots for generalized cross product of the tangent space.
+    newOrder = []
+    newKnots = []
+    startUvw = []
+    endUvw = []
+    deltaUvw = []
+    totalCoefs = [1]
+    rank = min(self.nInd, self.nDep)
+    ccm = _cross_correlation_matrix(self)
+    for i, order, knots in zip(range(self.nInd), self.order, self.knots):
+        # First, calculate the order of the normal for this independent variable.
+        # Note that the total order will be one less than usual, because one of 
+        # the tangents is the derivative with respect to that independent variable.
+        newOrd = 0
+        if self.nInd < self.nDep:
+            # If this normal involves all tangents, simply add the degree of each,
+            # so long as that tangent contains the independent variable.  
+            for j in range(self.nInd):
+                newOrd += order - 1 if ccm[i, j] else 0
+        else:
+            # If this normal doesn't involve all tangents, find the max order of
+            # each returned combination (as defined by the indices).
+            for index in range(self.nInd) if indices is None else indices:
+                # The order will be one larger if this independent variable's tangent is excluded by the index.
+                ord = 0 if index != i else 1
+                # Add the degree of each tangent, so long as that tangent contains the 
+                # independent variable and is not excluded by the index.  
+                for j in range(self.nInd):
+                    ord += order - 1 if ccm[i, j] and index != j else 0
+                newOrd = max(newOrd, ord)
+        newOrder.append(newOrd)
+        uniqueKnots, counts = np.unique(knots, return_counts=True)
+        counts += newOrd - order + 1 # Because we're multiplying all the tangents, the knot elevation is one more
+        counts[0] -= 1 # But not at the endpoints, which get reduced by one when taking the derivative
+        counts[-1] -= 1 # But not at the endpoints, which get reduced by one when taking the derivative
+        newKnots.append(np.repeat(uniqueKnots, counts))
+        # Also calculate the total number of coefficients, capturing how it progressively increases, and
+        # using that calculation to span uvw from the starting knot to the end for each variable.
+        nCoef = len(newKnots[-1]) - newOrder[-1]
+        totalCoefs.append(totalCoefs[-1] * nCoef)
+        startUvw.append(uniqueKnots[0])
+        endUvw.append(uniqueKnots[-1])
+        deltaUvw.append((uniqueKnots[-1] - uniqueKnots[0]) / (nCoef - 1))
+    
+    points = []
+    uvw = [*startUvw]
+    for i in range(totalCoefs[-1]):
+        points.append((*uvw, *self.normal(uvw, False, indices)))
+        for j, nCoef, start, end, delta in zip(range(self.nInd), totalCoefs[:-1], startUvw, endUvw, deltaUvw):
+            if (i + 1) % nCoef == 0:
+                uvw[j] = min(uvw[j] + delta, end)
+                if j > 0:
+                    uvw[j - 1] = previousStart
+            previousStart = start
+    
+    nDep = max(self.nInd, self.nDep) if indices is None else len(indices)
+    return bspy.Spline.least_squares(self.nInd, nDep, newOrder, points, newKnots, 0, self.metadata)
 
 def scale(self, multiplier):
     if isinstance(multiplier, bspy.Spline):
