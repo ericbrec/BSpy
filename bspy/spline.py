@@ -838,8 +838,7 @@ class Spline:
         if freeParameters == 0:
             return (self - other).zeros()
         elif freeParameters == 1:
-            return bspy._spline_intersection.intersection_curves(self, other)
-            #return (self - other).contours()
+            return (self - other).contours()
         else:
             return NotImplemented
 

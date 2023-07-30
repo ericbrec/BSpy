@@ -148,6 +148,8 @@ def dot(self, vector):
         coefs = vector[0] * self.coefs[0]
         for i in range(1, self.nDep):
             coefs += vector[i] * self.coefs[i]
+        if len(coefs.shape) == len(self.coefs.shape) - 1:
+            coefs = coefs.reshape(1, *coefs.shape)
         return type(self)(self.nInd, 1, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
 
 def integrate(self, with_respect_to = 0):
