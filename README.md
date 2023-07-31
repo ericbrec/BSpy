@@ -3,10 +3,9 @@ Library for manipulating and rendering b-spline curves, surfaces, and multidimen
 
 The [Spline](https://ericbrec.github.io/bspy/bspy/spline.html) class has a method to fit multidimensional data for 
 scalar and vector functions of single and multiple variables. Other methods add, subtract, multiply, and linearly transform splines. 
-There are methods to evaluate spline values, derivatives, and integrals, as well as methods that return spline representations 
-of derivatives, integrals, and convolutions. In addition, there are methods to manipulate the domain of splines, including trim, 
-reparametrize, add and remove knots, elevate and extrapolate, and fold and unfold. Finally, there are methods to compute the zeros 
-of a spline and to intersect two splines.
+There are methods to evaluate spline values, derivatives, normals, and integrals, as well as methods that return spline representations 
+of derivatives, normals, integrals, and convolutions. In addition, there are methods to manipulate the domain of splines, including trim, 
+reparametrize, add and remove knots, elevate and extrapolate, and fold and unfold. Finally, there are methods to compute the zeros and contours of a spline and to intersect two splines.
 
 The [SplineOpenGLFrame](https://ericbrec.github.io/bspy/bspy/splineOpenGLFrame.html) class is an 
 [OpenGLFrame](https://pypi.org/project/pyopengltk/) with custom shaders to render spline curves and surfaces.

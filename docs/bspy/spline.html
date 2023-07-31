@@ -55,6 +55,9 @@
                                 <a class="function" href="#Spline.contour">contour</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.contours">contours</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.contract">contract</a>
                         </li>
                         <li>
@@ -110,6 +113,12 @@
                         </li>
                         <li>
                                 <a class="function" href="#Spline.multiply">multiply</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.normal">normal</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.normal_spline">normal_spline</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.range_bounds">range_bounds</a>
@@ -528,8 +537,7 @@
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
 <span class="sd">        `least_squares` : Fit a spline to an array of data points using the method of least squares.</span>
-<span class="sd">        `zeros` : Find the roots of a spline (nInd must match nDep).</span>
-<span class="sd">        `intersect` : Intersect two splines.</span>
+<span class="sd">        `contours` : Find all the contour curves of a spline.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -538,6 +546,30 @@
 <span class="sd">        &quot;Applications of contouring.&quot; Siam Review 42, no. 2 (2000): 297-316.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_fitting</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="n">knownXValues</span><span class="p">,</span> <span class="n">dF</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">contours</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find all the contour curves of a spline whose `nInd` is one larger than its `nDep`.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        curves : `iterable`</span>
+<span class="sd">            A collection of `Spline` curves, `u(t)`, each of whose domain is [0, 1], whose range is</span>
+<span class="sd">            in the parameter space of the given spline, and which satisfy `self(u(t)) = 0`. </span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `zeros` : Find the roots of a spline (nInd must match nDep).</span>
+<span class="sd">        `contour` : Fit a spline to the contour defined by `F(x) = 0`.</span>
+<span class="sd">        `intersect` : Intersect two splines.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Uses `zeros` to find all intersection points and `contour` to find individual intersection curves. </span>
+<span class="sd">        The algorithm used to to find all intersection curves is from Grandine, Thomas A., and Frederick W. Klein IV. </span>
+<span class="sd">        &quot;A new approach to the surface intersection problem.&quot; Computer Aided Geometric Design 14, no. 2 (1997): 111-134.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">contours</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -972,20 +1004,18 @@
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
 <span class="sd">        `zeros` : Find the roots of a spline (nInd must match nDep).</span>
-<span class="sd">        `contour` : Fit a spline to the contour defined by `F(x) = 0`.</span>
+<span class="sd">        `contours` : Find all the contour curves of a spline.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        Uses `zeros` to find all intersection points and `contour` to find individual intersection curves. </span>
-<span class="sd">        The algorithm used to to find all intersection curves is from Grandine, Thomas A., and Frederick W. Klein IV. </span>
-<span class="sd">        &quot;A new approach to the surface intersection problem.&quot; Computer Aided Geometric Design 14, no. 2 (1997): 111-134.</span>
+<span class="sd">        Uses `zeros` to find all intersection points and `contours` to find all the intersection curves.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nDep</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">nDep</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The number of dependent variables for both splines much match.&quot;</span><span class="p">)</span>
         <span class="n">freeParameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">nInd</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span>
         <span class="k">if</span> <span class="n">freeParameters</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">(</span><span class="bp">self</span> <span class="o">-</span> <span class="n">other</span><span class="p">)</span><span class="o">.</span><span class="n">zeros</span><span class="p">()</span>
         <span class="k">elif</span> <span class="n">freeParameters</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">intersection_curves</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span> <span class="o">-</span> <span class="n">other</span><span class="p">)</span><span class="o">.</span><span class="n">contours</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">NotImplemented</span>
 
@@ -1101,6 +1131,72 @@
         <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="p">(</span><span class="n">mapping</span> <span class="k">if</span> <span class="n">_isIterable</span><span class="p">(</span><span class="n">mapping</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="n">mapping</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)),</span> <span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">multiplyAndConvolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">,</span> <span class="n">productType</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">normal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">indices</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the normal of the spline at given parameter values. The number of independent variables must be</span>
+<span class="sd">        one different than the number of dependent variables.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        uvw : `iterable`</span>
+<span class="sd">            An iterable of length `nInd` that specifies the values of each independent variable (the parameter values).</span>
+<span class="sd">        </span>
+<span class="sd">        normalize : `boolean`, optional</span>
+<span class="sd">            If True the returned normal will have unit length (the default). Otherwise, the normal&#39;s length will</span>
+<span class="sd">            be the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).</span>
+<span class="sd">        </span>
+<span class="sd">        indices : `iterable`, optional</span>
+<span class="sd">            An iterable of normal indices to calculate. For example, `indices=(0, 3)` will return a vector of length 2</span>
+<span class="sd">            with the first and fourth values of the normal. If `None`, all normal values are returned (the default).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        normal : `numpy.array`</span>
+<span class="sd">            The normal vector of the spline at the given parameter values.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `derivative` : Compute the derivative of the spline at a given parameter value.</span>
+<span class="sd">        `normal_spline` : Compute a spline that evaluates to the normal of the given spline (not normalized).</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Attentive readers will notice that the number of independent variables could be one more than the number of </span>
+<span class="sd">        dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of </span>
+<span class="sd">        the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_evaluation</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">,</span> <span class="n">normalize</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">normal_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute a spline that evaluates to the normal of the given spline. The length of the normal</span>
+<span class="sd">        is the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).</span>
+<span class="sd">        The number of independent variables must be one different than the number of dependent variables.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        indices : `iterable`, optional</span>
+<span class="sd">            An iterable of normal indices to calculate. For example, `indices=(0, 3)` will make the returned spline compute a vector of length 2</span>
+<span class="sd">            with the first and fourth values of the normal. If `None`, all normal values are returned (the default).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The spline that evaluates to the normal of the given spline.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `normal` : Compute the normal of the spline at given parameter values.</span>
+<span class="sd">        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Attentive readers will notice that the number of independent variables could be one more than the number of </span>
+<span class="sd">        dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of </span>
+<span class="sd">        the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">normal_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">range_bounds</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -1742,8 +1838,7 @@
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
 <span class="sd">        `least_squares` : Fit a spline to an array of data points using the method of least squares.</span>
-<span class="sd">        `zeros` : Find the roots of a spline (nInd must match nDep).</span>
-<span class="sd">        `intersect` : Intersect two splines.</span>
+<span class="sd">        `contours` : Find all the contour curves of a spline.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -1752,6 +1847,30 @@
 <span class="sd">        &quot;Applications of contouring.&quot; Siam Review 42, no. 2 (2000): 297-316.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_fitting</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="n">knownXValues</span><span class="p">,</span> <span class="n">dF</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">contours</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find all the contour curves of a spline whose `nInd` is one larger than its `nDep`.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        curves : `iterable`</span>
+<span class="sd">            A collection of `Spline` curves, `u(t)`, each of whose domain is [0, 1], whose range is</span>
+<span class="sd">            in the parameter space of the given spline, and which satisfy `self(u(t)) = 0`. </span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `zeros` : Find the roots of a spline (nInd must match nDep).</span>
+<span class="sd">        `contour` : Fit a spline to the contour defined by `F(x) = 0`.</span>
+<span class="sd">        `intersect` : Intersect two splines.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Uses `zeros` to find all intersection points and `contour` to find individual intersection curves. </span>
+<span class="sd">        The algorithm used to to find all intersection curves is from Grandine, Thomas A., and Frederick W. Klein IV. </span>
+<span class="sd">        &quot;A new approach to the surface intersection problem.&quot; Computer Aided Geometric Design 14, no. 2 (1997): 111-134.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">contours</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -2186,20 +2305,18 @@
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
 <span class="sd">        `zeros` : Find the roots of a spline (nInd must match nDep).</span>
-<span class="sd">        `contour` : Fit a spline to the contour defined by `F(x) = 0`.</span>
+<span class="sd">        `contours` : Find all the contour curves of a spline.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        Uses `zeros` to find all intersection points and `contour` to find individual intersection curves. </span>
-<span class="sd">        The algorithm used to to find all intersection curves is from Grandine, Thomas A., and Frederick W. Klein IV. </span>
-<span class="sd">        &quot;A new approach to the surface intersection problem.&quot; Computer Aided Geometric Design 14, no. 2 (1997): 111-134.</span>
+<span class="sd">        Uses `zeros` to find all intersection points and `contours` to find all the intersection curves.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nDep</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">nDep</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The number of dependent variables for both splines much match.&quot;</span><span class="p">)</span>
         <span class="n">freeParameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">nInd</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span>
         <span class="k">if</span> <span class="n">freeParameters</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">(</span><span class="bp">self</span> <span class="o">-</span> <span class="n">other</span><span class="p">)</span><span class="o">.</span><span class="n">zeros</span><span class="p">()</span>
         <span class="k">elif</span> <span class="n">freeParameters</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">intersection_curves</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span> <span class="o">-</span> <span class="n">other</span><span class="p">)</span><span class="o">.</span><span class="n">contours</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">NotImplemented</span>
 
@@ -2315,6 +2432,72 @@
         <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="p">(</span><span class="n">mapping</span> <span class="k">if</span> <span class="n">_isIterable</span><span class="p">(</span><span class="n">mapping</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="n">mapping</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)),</span> <span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">multiplyAndConvolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">,</span> <span class="n">productType</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">normal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">indices</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the normal of the spline at given parameter values. The number of independent variables must be</span>
+<span class="sd">        one different than the number of dependent variables.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        uvw : `iterable`</span>
+<span class="sd">            An iterable of length `nInd` that specifies the values of each independent variable (the parameter values).</span>
+<span class="sd">        </span>
+<span class="sd">        normalize : `boolean`, optional</span>
+<span class="sd">            If True the returned normal will have unit length (the default). Otherwise, the normal&#39;s length will</span>
+<span class="sd">            be the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).</span>
+<span class="sd">        </span>
+<span class="sd">        indices : `iterable`, optional</span>
+<span class="sd">            An iterable of normal indices to calculate. For example, `indices=(0, 3)` will return a vector of length 2</span>
+<span class="sd">            with the first and fourth values of the normal. If `None`, all normal values are returned (the default).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        normal : `numpy.array`</span>
+<span class="sd">            The normal vector of the spline at the given parameter values.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `derivative` : Compute the derivative of the spline at a given parameter value.</span>
+<span class="sd">        `normal_spline` : Compute a spline that evaluates to the normal of the given spline (not normalized).</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Attentive readers will notice that the number of independent variables could be one more than the number of </span>
+<span class="sd">        dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of </span>
+<span class="sd">        the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_evaluation</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">,</span> <span class="n">normalize</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">normal_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute a spline that evaluates to the normal of the given spline. The length of the normal</span>
+<span class="sd">        is the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).</span>
+<span class="sd">        The number of independent variables must be one different than the number of dependent variables.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        indices : `iterable`, optional</span>
+<span class="sd">            An iterable of normal indices to calculate. For example, `indices=(0, 3)` will make the returned spline compute a vector of length 2</span>
+<span class="sd">            with the first and fourth values of the normal. If `None`, all normal values are returned (the default).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The spline that evaluates to the normal of the given spline.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `normal` : Compute the normal of the spline at given parameter values.</span>
+<span class="sd">        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Attentive readers will notice that the number of independent variables could be one more than the number of </span>
+<span class="sd">        dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of </span>
+<span class="sd">        the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">normal_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">range_bounds</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -3121,8 +3304,7 @@ The aligned collection of N splines.</li>
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
 <span class="sd">        `least_squares` : Fit a spline to an array of data points using the method of least squares.</span>
-<span class="sd">        `zeros` : Find the roots of a spline (nInd must match nDep).</span>
-<span class="sd">        `intersect` : Intersect two splines.</span>
+<span class="sd">        `contours` : Find all the contour curves of a spline.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -3173,14 +3355,75 @@ The spline contour, <code>x(t)</code>, with nInd == 1 and nDep == n.</li>
 <h6 id="see-also">See Also</h6>
 
 <p><code><a href="#Spline.least_squares">least_squares</a></code>:  Fit a spline to an array of data points using the method of least squares. <br />
-<code><a href="#Spline.zeros">zeros</a></code>:  Find the roots of a spline (nInd must match nDep). <br />
-<code><a href="#Spline.intersect">intersect</a></code>:  Intersect two splines.  </p>
+<code><a href="#Spline.contours">contours</a></code>:  Find all the contour curves of a spline.  </p>
 
 <h6 id="notes">Notes</h6>
 
 <p>The returned spline has constant parametric speed (the length of its derivative is constant). 
 Implements the algorithm described in section 7 of Grandine, Thomas A. 
 "Applications of contouring." Siam Review 42, no. 2 (2000): 297-316.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.contours" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#Spline.contours">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">contours</span><span class="signature">(self)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">contours</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find all the contour curves of a spline whose `nInd` is one larger than its `nDep`.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        curves : `iterable`</span>
+<span class="sd">            A collection of `Spline` curves, `u(t)`, each of whose domain is [0, 1], whose range is</span>
+<span class="sd">            in the parameter space of the given spline, and which satisfy `self(u(t)) = 0`. </span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `zeros` : Find the roots of a spline (nInd must match nDep).</span>
+<span class="sd">        `contour` : Fit a spline to the contour defined by `F(x) = 0`.</span>
+<span class="sd">        `intersect` : Intersect two splines.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Uses `zeros` to find all intersection points and `contour` to find individual intersection curves. </span>
+<span class="sd">        The algorithm used to to find all intersection curves is from Grandine, Thomas A., and Frederick W. Klein IV. </span>
+<span class="sd">        &quot;A new approach to the surface intersection problem.&quot; Computer Aided Geometric Design 14, no. 2 (1997): 111-134.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">contours</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Find all the contour curves of a spline whose <code>nInd</code> is one larger than its <code>nDep</code>.</p>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>curves</strong> (<code>iterable</code>):
+A collection of <code><a href="#Spline">Spline</a></code> curves, <code>u(t)</code>, each of whose domain is [0, 1], whose range is
+in the parameter space of the given spline, and which satisfy <code>self(u(t)) = 0</code>.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.zeros">zeros</a></code>:  Find the roots of a spline (nInd must match nDep). <br />
+<code><a href="#Spline.contour">contour</a></code>:  Fit a spline to the contour defined by <code>F(x) = 0</code>. <br />
+<code><a href="#Spline.intersect">intersect</a></code>:  Intersect two splines.  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>Uses <code><a href="#Spline.zeros">zeros</a></code> to find all intersection points and <code><a href="#Spline.contour">contour</a></code> to find individual intersection curves. 
+The algorithm used to to find all intersection curves is from Grandine, Thomas A., and Frederick W. Klein IV. 
+"A new approach to the surface intersection problem." Computer Aided Geometric Design 14, no. 2 (1997): 111-134.</p>
 </div>
 
 
@@ -4267,20 +4510,18 @@ The spline that results from integrating the original spline with respect to the
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
 <span class="sd">        `zeros` : Find the roots of a spline (nInd must match nDep).</span>
-<span class="sd">        `contour` : Fit a spline to the contour defined by `F(x) = 0`.</span>
+<span class="sd">        `contours` : Find all the contour curves of a spline.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        Uses `zeros` to find all intersection points and `contour` to find individual intersection curves. </span>
-<span class="sd">        The algorithm used to to find all intersection curves is from Grandine, Thomas A., and Frederick W. Klein IV. </span>
-<span class="sd">        &quot;A new approach to the surface intersection problem.&quot; Computer Aided Geometric Design 14, no. 2 (1997): 111-134.</span>
+<span class="sd">        Uses `zeros` to find all intersection points and `contours` to find all the intersection curves.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nDep</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">nDep</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The number of dependent variables for both splines much match.&quot;</span><span class="p">)</span>
         <span class="n">freeParameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">nInd</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span>
         <span class="k">if</span> <span class="n">freeParameters</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">(</span><span class="bp">self</span> <span class="o">-</span> <span class="n">other</span><span class="p">)</span><span class="o">.</span><span class="n">zeros</span><span class="p">()</span>
         <span class="k">elif</span> <span class="n">freeParameters</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">intersection_curves</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span> <span class="o">-</span> <span class="n">other</span><span class="p">)</span><span class="o">.</span><span class="n">contours</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">NotImplemented</span>
 </pre></div>
@@ -4310,13 +4551,11 @@ If <code>self.nInd + other.nInd - self.nDep</code> is &lt; 0 or &gt; 1, <code>No
 <h6 id="see-also">See Also</h6>
 
 <p><code><a href="#Spline.zeros">zeros</a></code>:  Find the roots of a spline (nInd must match nDep). <br />
-<code><a href="#Spline.contour">contour</a></code>:  Fit a spline to the contour defined by <code>F(x) = 0</code>.  </p>
+<code><a href="#Spline.contours">contours</a></code>:  Find all the contour curves of a spline.  </p>
 
 <h6 id="notes">Notes</h6>
 
-<p>Uses <code><a href="#Spline.zeros">zeros</a></code> to find all intersection points and <code><a href="#Spline.contour">contour</a></code> to find individual intersection curves. 
-The algorithm used to to find all intersection curves is from Grandine, Thomas A., and Frederick W. Klein IV. 
-"A new approach to the surface intersection problem." Computer Aided Geometric Design 14, no. 2 (1997): 111-134.</p>
+<p>Uses <code><a href="#Spline.zeros">zeros</a></code> to find all intersection points and <code><a href="#Spline.contours">contours</a></code> to find all the intersection curves.</p>
 </div>
 
 
@@ -4575,6 +4814,168 @@ The result of multiplying self and other.</li>
 
 <p>Taken in part from Lee, E. T. Y. "Computing a chain of blossoms, with application to products of splines." 
 Computer Aided Geometric Design 11, no. 6 (1994): 597-620.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.normal" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#Spline.normal">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">normal</span><span class="signature">(self, uvw, normalize=True, indices=None)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">normal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">indices</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the normal of the spline at given parameter values. The number of independent variables must be</span>
+<span class="sd">        one different than the number of dependent variables.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        uvw : `iterable`</span>
+<span class="sd">            An iterable of length `nInd` that specifies the values of each independent variable (the parameter values).</span>
+<span class="sd">        </span>
+<span class="sd">        normalize : `boolean`, optional</span>
+<span class="sd">            If True the returned normal will have unit length (the default). Otherwise, the normal&#39;s length will</span>
+<span class="sd">            be the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).</span>
+<span class="sd">        </span>
+<span class="sd">        indices : `iterable`, optional</span>
+<span class="sd">            An iterable of normal indices to calculate. For example, `indices=(0, 3)` will return a vector of length 2</span>
+<span class="sd">            with the first and fourth values of the normal. If `None`, all normal values are returned (the default).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        normal : `numpy.array`</span>
+<span class="sd">            The normal vector of the spline at the given parameter values.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `derivative` : Compute the derivative of the spline at a given parameter value.</span>
+<span class="sd">        `normal_spline` : Compute a spline that evaluates to the normal of the given spline (not normalized).</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Attentive readers will notice that the number of independent variables could be one more than the number of </span>
+<span class="sd">        dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of </span>
+<span class="sd">        the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_evaluation</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">,</span> <span class="n">normalize</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Compute the normal of the spline at given parameter values. The number of independent variables must be
+one different than the number of dependent variables.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>uvw</strong> (<code>iterable</code>):
+An iterable of length <code>nInd</code> that specifies the values of each independent variable (the parameter values).</li>
+<li><strong>normalize</strong> (<code>boolean</code>, optional):
+If True the returned normal will have unit length (the default). Otherwise, the normal's length will
+be the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).</li>
+<li><strong>indices</strong> (<code>iterable</code>, optional):
+An iterable of normal indices to calculate. For example, <code>indices=(0, 3)</code> will return a vector of length 2
+with the first and fourth values of the normal. If <code>None</code>, all normal values are returned (the default).</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>normal</strong> (<code>numpy.array</code>):
+The normal vector of the spline at the given parameter values.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.derivative">derivative</a></code>:  Compute the derivative of the spline at a given parameter value. <br />
+<code><a href="#Spline.normal_spline">normal_spline</a></code>:  Compute a spline that evaluates to the normal of the given spline (not normalized).  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>Attentive readers will notice that the number of independent variables could be one more than the number of 
+dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of 
+the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.normal_spline" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#Spline.normal_spline">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">normal_spline</span><span class="signature">(self, indices=None)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">normal_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute a spline that evaluates to the normal of the given spline. The length of the normal</span>
+<span class="sd">        is the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).</span>
+<span class="sd">        The number of independent variables must be one different than the number of dependent variables.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        indices : `iterable`, optional</span>
+<span class="sd">            An iterable of normal indices to calculate. For example, `indices=(0, 3)` will make the returned spline compute a vector of length 2</span>
+<span class="sd">            with the first and fourth values of the normal. If `None`, all normal values are returned (the default).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The spline that evaluates to the normal of the given spline.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `normal` : Compute the normal of the spline at given parameter values.</span>
+<span class="sd">        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Attentive readers will notice that the number of independent variables could be one more than the number of </span>
+<span class="sd">        dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of </span>
+<span class="sd">        the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">normal_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Compute a spline that evaluates to the normal of the given spline. The length of the normal
+is the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).
+The number of independent variables must be one different than the number of dependent variables.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>indices</strong> (<code>iterable</code>, optional):
+An iterable of normal indices to calculate. For example, <code>indices=(0, 3)</code> will make the returned spline compute a vector of length 2
+with the first and fourth values of the normal. If <code>None</code>, all normal values are returned (the default).</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+The spline that evaluates to the normal of the given spline.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.normal">normal</a></code>:  Compute the normal of the spline at given parameter values. <br />
+<code><a href="#Spline.differentiate">differentiate</a></code>:  Differentiate a spline with respect to one of its independent variables, returning the resulting spline.  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>Attentive readers will notice that the number of independent variables could be one more than the number of 
+dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of 
+the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.</p>
 </div>
 
 
