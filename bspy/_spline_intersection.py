@@ -333,7 +333,6 @@ def contours(self):
         tangents.append(self.differentiate(nInd))
 
     theta = np.sqrt(2) # Arbitrary starting value for theta (picked one in [0, pi/2] unlikely to be a stationary point)
-    theta = (np.pi / 6) / 0.77 # Test case, TODO remove this line.
     # Try different theta values until no border or turning points are degenerate.
     while True:
         points = []
@@ -506,13 +505,31 @@ def contours(self):
             # Split panel below and above the known zero point.
             # This avoids extra computation and the high-zero at the known zero point.
             panelPoints = [point.uvw]
-            offset = 10.0 * evaluationEpsilon
-            panelPoints += panel.trim(((point.uvw[0] + sinTheta * offset, 1.0), (0.0, point.uvw[1] - cosTheta * offset)) + ((None, None),) * (self.nInd - 2)).zeros()
-            panelPoints += panel.trim(((0.0, point.uvw[0] - sinTheta * offset), (point.uvw[1] + cosTheta * offset, 1.0)) + ((None, None),) * (self.nInd - 2)).zeros()
-            # Add d back to prepare for next turning point.
-            panel.coefs[self.nDep] += point.d 
+            # To split the panel, we need to determine the offset from the point.
+            # Since the objective function (self) is zero and its derivative is zero at the point,
+            # we use second derivatives to determine when the objective function will likely grow 
+            # evaluationEpsilon above zero again.
+            wrt = [0] * self.nInd
+            wrt[0] = 2
+            selfUU = self.derivative(wrt, point.uvw)
+            wrt[0] = 1
+            wrt[1] = 1
+            selfUV = self.derivative(wrt, point.uvw)
+            wrt[0] = 0
+            wrt[1] = 2
+            selfVV = self.derivative(wrt, point.uvw)
+            offset = np.sqrt(2.0 * evaluationEpsilon / \
+                np.linalg.norm(selfUU * sinTheta * sinTheta - 2.0 * selfUV * sinTheta * cosTheta + selfVV * cosTheta * cosTheta))
+            # Now, we can find the zeros of the split panel, checking to ensure each panel is within bounds first.
+            if point.uvw[0] + sinTheta * offset < 1.0 - epsilon and epsilon < point.uvw[1] - cosTheta * offset:
+                panelPoints += panel.trim(((point.uvw[0] + sinTheta * offset, 1.0), (0.0, point.uvw[1] - cosTheta * offset)) + ((None, None),) * (self.nInd - 2)).zeros()
+            if epsilon < point.uvw[0] - sinTheta * offset and point.uvw[1] + cosTheta * offset < 1.0 - epsilon:
+                panelPoints += panel.trim(((0.0, point.uvw[0] - sinTheta * offset), (point.uvw[1] + cosTheta * offset, 1.0)) + ((None, None),) * (self.nInd - 2)).zeros()
             # Sort zero points by their position along the panel boundary (using vector orthogonal to its normal).
             panelPoints.sort(key=lambda uvw: uvw[1] * cosTheta - uvw[0] * sinTheta)
+            # Add d back to prepare for next turning point.
+            panel.coefs[self.nDep] += point.d
+            # Go through panel points, adding them to existing contours, creating new ones, or closing old ones.
             adjustment = 0 # Adjust index after a contour point is added or removed.
             for i, uvw in zip(range(len(panelPoints)), panelPoints):
                 if np.allclose(point.uvw, uvw):

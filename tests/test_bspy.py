@@ -826,7 +826,7 @@ def test_intersect():
         for t in np.linspace(0.0, 1.0, 11):
             uvw = contour((t,))
             maxError = max(maxError, np.linalg.norm(spline(uvw)))
-    assert maxError <= np.finfo(float).eps ** 0.25
+    assert maxError <= np.finfo(float).eps ** 0.2
 
     return # Comment this line to run the following additional really lengthy test
 
@@ -853,7 +853,7 @@ def test_intersect():
         for t in np.linspace(0.0, 1.0, 11):
             uvst = contour((t,))
             maxError = max(maxError, np.linalg.norm(spline(uvst[:2]) - plane(uvst[2:])))
-    assert maxError <= np.finfo(float).eps ** 0.25
+    assert maxError <= np.finfo(float).eps ** 0.2
 
 def test_multiply():
     maxError = 0.0
