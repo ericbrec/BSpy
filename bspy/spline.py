@@ -52,29 +52,29 @@ class Spline:
     """
     
     def __init__(self, nInd, nDep, order, nCoef, knots, coefs, accuracy = 0.0, metadata = {}):
-        assert nInd >= 0, "nInd < 0"
+        if not(nInd >= 0): raise ValueError("nInd < 0")
         self.nInd = int(nInd)
-        assert nDep >= 0, "nDep < 0"
+        if not(nDep >= 0): raise ValueError("nDep < 0")
         self.nDep = int(nDep)
-        assert len(order) == self.nInd, "len(order) != nInd"
+        if not(len(order) == self.nInd): raise ValueError("len(order) != nInd")
         self.order = tuple(int(x) for x in order)
-        assert len(nCoef) == self.nInd, "len(nCoef) != nInd"
+        if not(len(nCoef) == self.nInd): raise ValueError("len(nCoef) != nInd")
         self.nCoef = tuple(int(x) for x in nCoef)
-        assert len(knots) == nInd, "len(knots) != nInd"
+        if not(len(knots) == nInd): raise ValueError("len(knots) != nInd")
         for i in range(len(knots)):
             nKnots = self.order[i] + self.nCoef[i]
-            assert len(knots[i]) == nKnots, \
-                f"Knots array for variable {i} should have length {nKnots}"
+            if not(len(knots[i]) == nKnots):
+                raise ValueError(f"Knots array for variable {i} should have length {nKnots}")
         self.knots = tuple(np.array(kk) for kk in knots)
         for knots, order, nCoef in zip(self.knots, self.order, self.nCoef):
             for i in range(nCoef):
-                assert knots[i] <= knots[i + 1] and knots[i] < knots[i + order],\
-                       "Improperly ordered knot sequence"
+                if not(knots[i] <= knots[i + 1] and knots[i] < knots[i + order]):
+                       raise ValueError("Improperly ordered knot sequence")
         totalCoefs = 1
         for nCoef in self.nCoef:
             totalCoefs *= nCoef
-        assert len(coefs) == totalCoefs or len(coefs) == self.nDep, \
-            f"Length of coefs should be {totalCoefs} or {self.nDep}"
+        if not(len(coefs) == totalCoefs or len(coefs) == self.nDep):
+            raise ValueError(f"Length of coefs should be {totalCoefs} or {self.nDep}")
         self.coefs = np.array(coefs)
         if self.coefs.shape != (self.nDep, *self.nCoef):
             if len(self.coefs) == totalCoefs:
@@ -360,7 +360,7 @@ class Spline:
         See Also
         --------
         `least_squares` : Fit a spline to an array of data points using the method of least squares.
-        `zeros` : Find the roots of a spline (nInd must match nDep).
+        `contours` : Find all the contour curves of a spline.
 
         Notes
         -----
@@ -369,6 +369,30 @@ class Spline:
         "Applications of contouring." Siam Review 42, no. 2 (2000): 297-316.
         """
         return bspy._spline_fitting.contour(F, knownXValues, dF, epsilon, metadata)
+
+    def contours(self):
+        """
+        Find all the contour curves of a spline whose `nInd` is one larger than its `nDep`.
+
+        Returns
+        -------
+        curves : `iterable`
+            A collection of `Spline` curves, `u(t)`, each of whose domain is [0, 1], whose range is
+            in the parameter space of the given spline, and which satisfy `self(u(t)) = 0`. 
+
+        See Also
+        --------
+        `zeros` : Find the roots of a spline (nInd must match nDep).
+        `contour` : Fit a spline to the contour defined by `F(x) = 0`.
+        `intersect` : Intersect two splines.
+
+        Notes
+        -----
+        Uses `zeros` to find all intersection points and `contour` to find individual intersection curves. 
+        The algorithm used to to find all intersection curves is from Grandine, Thomas A., and Frederick W. Klein IV. 
+        "A new approach to the surface intersection problem." Computer Aided Geometric Design 14, no. 2 (1997): 111-134.
+        """
+        return bspy._spline_intersection.contours(self)
 
     def contract(self, uvw):
         """
@@ -782,6 +806,42 @@ class Spline:
         """
         return bspy._spline_operations.integrate(self, with_respect_to)
 
+    def intersect(self, other):
+        """
+        Intersect two splines.
+
+        Parameters
+        ----------
+        other : `Spline`
+            The spline to intersect with self (`other.nDep` match match `self.nDep`).
+
+        Returns
+        -------
+        intersection : `iterable` or `NotImplemented`
+            If `self.nInd + other.nInd - self.nDep` is 0, returns an iterable of intersection points in the 
+            parameter space of the two splines (a vector of size `self.nInd + other.nInd`).
+            If `self.nInd + other.nInd - self.nDep` is 1, returns an iterable of `Spline` curves, each of whose domain is [0, 1] 
+            and each of whose range is in the parameter space of the two splines (a vector of size `self.nInd + other.nInd`).
+            If `self.nInd + other.nInd - self.nDep` is < 0 or > 1, `NotImplemented` is returned.
+        
+        See Also
+        --------
+        `zeros` : Find the roots of a spline (nInd must match nDep).
+        `contours` : Find all the contour curves of a spline.
+
+        Notes
+        -----
+        Uses `zeros` to find all intersection points and `contours` to find all the intersection curves.
+        """
+        if not(self.nDep == other.nDep): raise ValueError("The number of dependent variables for both splines much match.")
+        freeParameters = self.nInd + other.nInd - self.nDep
+        if freeParameters == 0:
+            return (self - other).zeros()
+        elif freeParameters == 1:
+            return (self - other).contours()
+        else:
+            return NotImplemented
+
     @staticmethod
     def least_squares(nInd, nDep, order, dataPoints, knots = None, compression = 0, metadata = {}):
         """
@@ -894,6 +954,72 @@ class Spline:
         if indMap is not None:
             indMap = [(*(mapping if _isIterable(mapping) else (mapping, mapping)), False) for mapping in indMap]
         return bspy._spline_operations.multiplyAndConvolve(self, other, indMap, productType)
+
+    def normal(self, uvw, normalize=True, indices=None):
+        """
+        Compute the normal of the spline at given parameter values. The number of independent variables must be
+        one different than the number of dependent variables.
+
+        Parameters
+        ----------
+        uvw : `iterable`
+            An iterable of length `nInd` that specifies the values of each independent variable (the parameter values).
+        
+        normalize : `boolean`, optional
+            If True the returned normal will have unit length (the default). Otherwise, the normal's length will
+            be the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).
+        
+        indices : `iterable`, optional
+            An iterable of normal indices to calculate. For example, `indices=(0, 3)` will return a vector of length 2
+            with the first and fourth values of the normal. If `None`, all normal values are returned (the default).
+
+        Returns
+        -------
+        normal : `numpy.array`
+            The normal vector of the spline at the given parameter values.
+
+        See Also
+        --------
+        `derivative` : Compute the derivative of the spline at a given parameter value.
+        `normal_spline` : Compute a spline that evaluates to the normal of the given spline (not normalized).
+
+        Notes
+        -----
+        Attentive readers will notice that the number of independent variables could be one more than the number of 
+        dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of 
+        the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.
+        """
+        return bspy._spline_evaluation.normal(self, uvw, normalize, indices)
+
+    def normal_spline(self, indices=None):
+        """
+        Compute a spline that evaluates to the normal of the given spline. The length of the normal
+        is the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).
+        The number of independent variables must be one different than the number of dependent variables.
+
+        Parameters
+        ----------
+        indices : `iterable`, optional
+            An iterable of normal indices to calculate. For example, `indices=(0, 3)` will make the returned spline compute a vector of length 2
+            with the first and fourth values of the normal. If `None`, all normal values are returned (the default).
+
+        Returns
+        -------
+        spline : `Spline`
+            The spline that evaluates to the normal of the given spline.
+
+        See Also
+        --------
+        `normal` : Compute the normal of the spline at given parameter values.
+        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.
+
+        Notes
+        -----
+        Attentive readers will notice that the number of independent variables could be one more than the number of 
+        dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of 
+        the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.
+        """
+        return bspy._spline_operations.normal_spline(self, indices)
 
     def range_bounds(self):
         """
@@ -1155,6 +1281,11 @@ class Spline:
             An iterable containing the roots of the spline. If the spline is 
             zero over an interval, that root will appear as a tuple of the interval. 
             For curves (nInd == 1), the roots are ordered.
+        
+        See Also
+        --------
+        `intersect` : Intersect two splines.
+        `contour` : Fit a spline to the contour defined by `F(x) = 0`.
 
         Notes
         -----
@@ -1163,7 +1294,7 @@ class Spline:
         For all higher dimensions, it implements the projected-polyhedron technique from Sherbrooke, Evan C., and Nicholas M. Patrikalakis. 
         "Computation of the solutions of nonlinear polynomial systems." Computer Aided Geometric Design 10, no. 5 (1993): 379-405.
         """
-        assert self.nInd == self.nDep, "The number of independent variables (nInd) must match the number of dependent variables (nDep)."
+        if not(self.nInd == self.nDep): raise ValueError("The number of independent variables (nInd) must match the number of dependent variables (nDep).")
         if self.nInd <= 1:
             return bspy._spline_intersection.zeros_using_interval_newton(self)
         else:

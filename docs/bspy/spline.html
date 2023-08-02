@@ -52,6 +52,12 @@
                                 <a class="function" href="#Spline.common_basis">common_basis</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.contour">contour</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.contours">contours</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.contract">contract</a>
                         </li>
                         <li>
@@ -97,6 +103,9 @@
                                 <a class="function" href="#Spline.integrate">integrate</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.intersect">intersect</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.least_squares">least_squares</a>
                         </li>
                         <li>
@@ -104,6 +113,12 @@
                         </li>
                         <li>
                                 <a class="function" href="#Spline.multiply">multiply</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.normal">normal</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.normal_spline">normal_spline</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.range_bounds">range_bounds</a>
@@ -214,29 +229,29 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">nCoef</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">coefs</span><span class="p">,</span> <span class="n">accuracy</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}):</span>
-        <span class="k">assert</span> <span class="n">nInd</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;nInd &lt; 0&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">nInd</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;nInd &lt; 0&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">nInd</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="n">nDep</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;nDep &lt; 0&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">nDep</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;nDep &lt; 0&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">nDep</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">order</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span><span class="p">,</span> <span class="s2">&quot;len(order) != nInd&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">order</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;len(order) != nInd&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">order</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">order</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">nCoef</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span><span class="p">,</span> <span class="s2">&quot;len(nCoef) != nInd&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">nCoef</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;len(nCoef) != nInd&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nCoef</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">nCoef</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">knots</span><span class="p">)</span> <span class="o">==</span> <span class="n">nInd</span><span class="p">,</span> <span class="s2">&quot;len(knots) != nInd&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">knots</span><span class="p">)</span> <span class="o">==</span> <span class="n">nInd</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;len(knots) != nInd&quot;</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">knots</span><span class="p">)):</span>
             <span class="n">nKnots</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">knots</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">==</span> <span class="n">nKnots</span><span class="p">,</span> \
-                <span class="sa">f</span><span class="s2">&quot;Knots array for variable </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> should have length </span><span class="si">{</span><span class="n">nKnots</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">knots</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">==</span> <span class="n">nKnots</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Knots array for variable </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> should have length </span><span class="si">{</span><span class="n">nKnots</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">knots</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">kk</span><span class="p">)</span> <span class="k">for</span> <span class="n">kk</span> <span class="ow">in</span> <span class="n">knots</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">knots</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">nCoef</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">knots</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nCoef</span><span class="p">):</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nCoef</span><span class="p">):</span>
-                <span class="k">assert</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="ow">and</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="n">order</span><span class="p">],</span>\
-                       <span class="s2">&quot;Improperly ordered knot sequence&quot;</span>
+                <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">knots</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="ow">and</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="n">order</span><span class="p">]):</span>
+                       <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Improperly ordered knot sequence&quot;</span><span class="p">)</span>
         <span class="n">totalCoefs</span> <span class="o">=</span> <span class="mi">1</span>
         <span class="k">for</span> <span class="n">nCoef</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nCoef</span><span class="p">:</span>
             <span class="n">totalCoefs</span> <span class="o">*=</span> <span class="n">nCoef</span>
-        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">coefs</span><span class="p">)</span> <span class="o">==</span> <span class="n">totalCoefs</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">coefs</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">,</span> \
-            <span class="sa">f</span><span class="s2">&quot;Length of coefs should be </span><span class="si">{</span><span class="n">totalCoefs</span><span class="si">}</span><span class="s2"> or </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">coefs</span><span class="p">)</span> <span class="o">==</span> <span class="n">totalCoefs</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">coefs</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Length of coefs should be </span><span class="si">{</span><span class="n">totalCoefs</span><span class="si">}</span><span class="s2"> or </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">coefs</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">nCoef</span><span class="p">):</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="p">)</span> <span class="o">==</span> <span class="n">totalCoefs</span><span class="p">:</span>
@@ -480,6 +495,81 @@
 <span class="sd">        Uses `elevate_and_insert_knots` to ensure mapped variables share the same order and knots. </span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_domain</span><span class="o">.</span><span class="n">common_basis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">splines</span><span class="p">,</span> <span class="n">indMap</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">contour</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="n">knownXValues</span><span class="p">,</span> <span class="n">dF</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">epsilon</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fit a spline to the contour defined by `F(x) = 0`, where `F` maps n dimensions to </span>
+<span class="sd">        n-1 dimensions. Thus, the solution, `x(t)`, is a contour curve (one degree of freedom) </span>
+<span class="sd">        returned in the form of a spline.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        F : function or `Spline`</span>
+<span class="sd">            A function or spline that takes an array-like argument of length `n` and returns an </span>
+<span class="sd">            array-like result of length `n - 1`.</span>
+
+<span class="sd">        knownXValues : `iterable` of array-like</span>
+<span class="sd">            An `iterable` of known x values (array-like) that lie on the desired contour. </span>
+<span class="sd">            The length of `knownXValues` must be at least 2 (for the two boundary conditions). </span>
+<span class="sd">            All x values must be length `n` and be listed in the order they appear on the contour.  </span>
+<span class="sd">            `F(x)` for all known x values must be a zero vector of length `n-1`.</span>
+
+<span class="sd">        dF : `iterable` or `None`, optional</span>
+<span class="sd">            An `iterable` of the `n` functions representing the `n` first derivatives of `F`. </span>
+<span class="sd">            If `dF` is `None` (the default), the first derivatives will be computed for you. </span>
+<span class="sd">            If `F` is not a spline, computing the first derivatives involves multiple calls to `F` </span>
+<span class="sd">            and can be numerically unstable. </span>
+
+<span class="sd">        epsilon : `float`, optional</span>
+<span class="sd">            Tolerance for contour precision. Evaluating `F` with contour values will be within epsilon </span>
+<span class="sd">            of zero. The default is square root of machine epsilon. The actual accuracy of the contour </span>
+<span class="sd">            is returned as `spline.accuracy`.</span>
+<span class="sd">            </span>
+<span class="sd">        metadata : `dict`, optional</span>
+<span class="sd">            A dictionary of ancillary data to store with the spline. Default is {}.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The spline contour, `x(t)`, with nInd == 1 and nDep == n.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `least_squares` : Fit a spline to an array of data points using the method of least squares.</span>
+<span class="sd">        `contours` : Find all the contour curves of a spline.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The returned spline has constant parametric speed (the length of its derivative is constant). </span>
+<span class="sd">        Implements the algorithm described in section 7 of Grandine, Thomas A. </span>
+<span class="sd">        &quot;Applications of contouring.&quot; Siam Review 42, no. 2 (2000): 297-316.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_fitting</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="n">knownXValues</span><span class="p">,</span> <span class="n">dF</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">contours</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find all the contour curves of a spline whose `nInd` is one larger than its `nDep`.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        curves : `iterable`</span>
+<span class="sd">            A collection of `Spline` curves, `u(t)`, each of whose domain is [0, 1], whose range is</span>
+<span class="sd">            in the parameter space of the given spline, and which satisfy `self(u(t)) = 0`. </span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `zeros` : Find the roots of a spline (nInd must match nDep).</span>
+<span class="sd">        `contour` : Fit a spline to the contour defined by `F(x) = 0`.</span>
+<span class="sd">        `intersect` : Intersect two splines.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Uses `zeros` to find all intersection points and `contour` to find individual intersection curves. </span>
+<span class="sd">        The algorithm used to to find all intersection curves is from Grandine, Thomas A., and Frederick W. Klein IV. </span>
+<span class="sd">        &quot;A new approach to the surface intersection problem.&quot; Computer Aided Geometric Design 14, no. 2 (1997): 111-134.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">contours</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -893,6 +983,42 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span><span class="p">)</span>
 
+    <span class="k">def</span> <span class="nf">intersect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Intersect two splines.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : `Spline`</span>
+<span class="sd">            The spline to intersect with self (`other.nDep` match match `self.nDep`).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        intersection : `iterable` or `NotImplemented`</span>
+<span class="sd">            If `self.nInd + other.nInd - self.nDep` is 0, returns an iterable of intersection points in the </span>
+<span class="sd">            parameter space of the two splines (a vector of size `self.nInd + other.nInd`).</span>
+<span class="sd">            If `self.nInd + other.nInd - self.nDep` is 1, returns an iterable of `Spline` curves, each of whose domain is [0, 1] </span>
+<span class="sd">            and each of whose range is in the parameter space of the two splines (a vector of size `self.nInd + other.nInd`).</span>
+<span class="sd">            If `self.nInd + other.nInd - self.nDep` is &lt; 0 or &gt; 1, `NotImplemented` is returned.</span>
+<span class="sd">        </span>
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `zeros` : Find the roots of a spline (nInd must match nDep).</span>
+<span class="sd">        `contours` : Find all the contour curves of a spline.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Uses `zeros` to find all intersection points and `contours` to find all the intersection curves.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nDep</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">nDep</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The number of dependent variables for both splines much match.&quot;</span><span class="p">)</span>
+        <span class="n">freeParameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">nInd</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span>
+        <span class="k">if</span> <span class="n">freeParameters</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span> <span class="o">-</span> <span class="n">other</span><span class="p">)</span><span class="o">.</span><span class="n">zeros</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">freeParameters</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span> <span class="o">-</span> <span class="n">other</span><span class="p">)</span><span class="o">.</span><span class="n">contours</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">least_squares</span><span class="p">(</span><span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">dataPoints</span><span class="p">,</span> <span class="n">knots</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">compression</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -1005,6 +1131,72 @@
         <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="p">(</span><span class="n">mapping</span> <span class="k">if</span> <span class="n">_isIterable</span><span class="p">(</span><span class="n">mapping</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="n">mapping</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)),</span> <span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">multiplyAndConvolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">,</span> <span class="n">productType</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">normal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">indices</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the normal of the spline at given parameter values. The number of independent variables must be</span>
+<span class="sd">        one different than the number of dependent variables.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        uvw : `iterable`</span>
+<span class="sd">            An iterable of length `nInd` that specifies the values of each independent variable (the parameter values).</span>
+<span class="sd">        </span>
+<span class="sd">        normalize : `boolean`, optional</span>
+<span class="sd">            If True the returned normal will have unit length (the default). Otherwise, the normal&#39;s length will</span>
+<span class="sd">            be the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).</span>
+<span class="sd">        </span>
+<span class="sd">        indices : `iterable`, optional</span>
+<span class="sd">            An iterable of normal indices to calculate. For example, `indices=(0, 3)` will return a vector of length 2</span>
+<span class="sd">            with the first and fourth values of the normal. If `None`, all normal values are returned (the default).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        normal : `numpy.array`</span>
+<span class="sd">            The normal vector of the spline at the given parameter values.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `derivative` : Compute the derivative of the spline at a given parameter value.</span>
+<span class="sd">        `normal_spline` : Compute a spline that evaluates to the normal of the given spline (not normalized).</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Attentive readers will notice that the number of independent variables could be one more than the number of </span>
+<span class="sd">        dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of </span>
+<span class="sd">        the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_evaluation</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">,</span> <span class="n">normalize</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">normal_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute a spline that evaluates to the normal of the given spline. The length of the normal</span>
+<span class="sd">        is the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).</span>
+<span class="sd">        The number of independent variables must be one different than the number of dependent variables.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        indices : `iterable`, optional</span>
+<span class="sd">            An iterable of normal indices to calculate. For example, `indices=(0, 3)` will make the returned spline compute a vector of length 2</span>
+<span class="sd">            with the first and fourth values of the normal. If `None`, all normal values are returned (the default).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The spline that evaluates to the normal of the given spline.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `normal` : Compute the normal of the spline at given parameter values.</span>
+<span class="sd">        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Attentive readers will notice that the number of independent variables could be one more than the number of </span>
+<span class="sd">        dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of </span>
+<span class="sd">        the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">normal_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">range_bounds</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -1266,6 +1458,11 @@
 <span class="sd">            An iterable containing the roots of the spline. If the spline is </span>
 <span class="sd">            zero over an interval, that root will appear as a tuple of the interval. </span>
 <span class="sd">            For curves (nInd == 1), the roots are ordered.</span>
+<span class="sd">        </span>
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `intersect` : Intersect two splines.</span>
+<span class="sd">        `contour` : Fit a spline to the contour defined by `F(x) = 0`.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -1274,9 +1471,9 @@
 <span class="sd">        For all higher dimensions, it implements the projected-polyhedron technique from Sherbrooke, Evan C., and Nicholas M. Patrikalakis. </span>
 <span class="sd">        &quot;Computation of the solutions of nonlinear polynomial systems.&quot; Computer Aided Geometric Design 10, no. 5 (1993): 379-405.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">,</span> <span class="s2">&quot;The number of independent variables (nInd) must match the number of dependent variables (nDep).&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The number of independent variables (nInd) must match the number of dependent variables (nDep).&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">zeros_using_interval_newton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">zeros_using_interval_newton</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">zeros_using_projected_polyhedron</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
 </pre></div>
@@ -1333,29 +1530,29 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">nCoef</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">coefs</span><span class="p">,</span> <span class="n">accuracy</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}):</span>
-        <span class="k">assert</span> <span class="n">nInd</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;nInd &lt; 0&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">nInd</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;nInd &lt; 0&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">nInd</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="n">nDep</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;nDep &lt; 0&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">nDep</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;nDep &lt; 0&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">nDep</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">order</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span><span class="p">,</span> <span class="s2">&quot;len(order) != nInd&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">order</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;len(order) != nInd&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">order</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">order</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">nCoef</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span><span class="p">,</span> <span class="s2">&quot;len(nCoef) != nInd&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">nCoef</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;len(nCoef) != nInd&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nCoef</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">nCoef</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">knots</span><span class="p">)</span> <span class="o">==</span> <span class="n">nInd</span><span class="p">,</span> <span class="s2">&quot;len(knots) != nInd&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">knots</span><span class="p">)</span> <span class="o">==</span> <span class="n">nInd</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;len(knots) != nInd&quot;</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">knots</span><span class="p">)):</span>
             <span class="n">nKnots</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">knots</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">==</span> <span class="n">nKnots</span><span class="p">,</span> \
-                <span class="sa">f</span><span class="s2">&quot;Knots array for variable </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> should have length </span><span class="si">{</span><span class="n">nKnots</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">knots</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">==</span> <span class="n">nKnots</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Knots array for variable </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> should have length </span><span class="si">{</span><span class="n">nKnots</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">knots</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">kk</span><span class="p">)</span> <span class="k">for</span> <span class="n">kk</span> <span class="ow">in</span> <span class="n">knots</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">knots</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">nCoef</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">knots</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nCoef</span><span class="p">):</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nCoef</span><span class="p">):</span>
-                <span class="k">assert</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="ow">and</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="n">order</span><span class="p">],</span>\
-                       <span class="s2">&quot;Improperly ordered knot sequence&quot;</span>
+                <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">knots</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="ow">and</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="n">order</span><span class="p">]):</span>
+                       <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Improperly ordered knot sequence&quot;</span><span class="p">)</span>
         <span class="n">totalCoefs</span> <span class="o">=</span> <span class="mi">1</span>
         <span class="k">for</span> <span class="n">nCoef</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nCoef</span><span class="p">:</span>
             <span class="n">totalCoefs</span> <span class="o">*=</span> <span class="n">nCoef</span>
-        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">coefs</span><span class="p">)</span> <span class="o">==</span> <span class="n">totalCoefs</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">coefs</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">,</span> \
-            <span class="sa">f</span><span class="s2">&quot;Length of coefs should be </span><span class="si">{</span><span class="n">totalCoefs</span><span class="si">}</span><span class="s2"> or </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">coefs</span><span class="p">)</span> <span class="o">==</span> <span class="n">totalCoefs</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">coefs</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Length of coefs should be </span><span class="si">{</span><span class="n">totalCoefs</span><span class="si">}</span><span class="s2"> or </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">coefs</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">nCoef</span><span class="p">):</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="p">)</span> <span class="o">==</span> <span class="n">totalCoefs</span><span class="p">:</span>
@@ -1599,6 +1796,81 @@
 <span class="sd">        Uses `elevate_and_insert_knots` to ensure mapped variables share the same order and knots. </span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_domain</span><span class="o">.</span><span class="n">common_basis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">splines</span><span class="p">,</span> <span class="n">indMap</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">contour</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="n">knownXValues</span><span class="p">,</span> <span class="n">dF</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">epsilon</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fit a spline to the contour defined by `F(x) = 0`, where `F` maps n dimensions to </span>
+<span class="sd">        n-1 dimensions. Thus, the solution, `x(t)`, is a contour curve (one degree of freedom) </span>
+<span class="sd">        returned in the form of a spline.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        F : function or `Spline`</span>
+<span class="sd">            A function or spline that takes an array-like argument of length `n` and returns an </span>
+<span class="sd">            array-like result of length `n - 1`.</span>
+
+<span class="sd">        knownXValues : `iterable` of array-like</span>
+<span class="sd">            An `iterable` of known x values (array-like) that lie on the desired contour. </span>
+<span class="sd">            The length of `knownXValues` must be at least 2 (for the two boundary conditions). </span>
+<span class="sd">            All x values must be length `n` and be listed in the order they appear on the contour.  </span>
+<span class="sd">            `F(x)` for all known x values must be a zero vector of length `n-1`.</span>
+
+<span class="sd">        dF : `iterable` or `None`, optional</span>
+<span class="sd">            An `iterable` of the `n` functions representing the `n` first derivatives of `F`. </span>
+<span class="sd">            If `dF` is `None` (the default), the first derivatives will be computed for you. </span>
+<span class="sd">            If `F` is not a spline, computing the first derivatives involves multiple calls to `F` </span>
+<span class="sd">            and can be numerically unstable. </span>
+
+<span class="sd">        epsilon : `float`, optional</span>
+<span class="sd">            Tolerance for contour precision. Evaluating `F` with contour values will be within epsilon </span>
+<span class="sd">            of zero. The default is square root of machine epsilon. The actual accuracy of the contour </span>
+<span class="sd">            is returned as `spline.accuracy`.</span>
+<span class="sd">            </span>
+<span class="sd">        metadata : `dict`, optional</span>
+<span class="sd">            A dictionary of ancillary data to store with the spline. Default is {}.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The spline contour, `x(t)`, with nInd == 1 and nDep == n.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `least_squares` : Fit a spline to an array of data points using the method of least squares.</span>
+<span class="sd">        `contours` : Find all the contour curves of a spline.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The returned spline has constant parametric speed (the length of its derivative is constant). </span>
+<span class="sd">        Implements the algorithm described in section 7 of Grandine, Thomas A. </span>
+<span class="sd">        &quot;Applications of contouring.&quot; Siam Review 42, no. 2 (2000): 297-316.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_fitting</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="n">knownXValues</span><span class="p">,</span> <span class="n">dF</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">contours</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find all the contour curves of a spline whose `nInd` is one larger than its `nDep`.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        curves : `iterable`</span>
+<span class="sd">            A collection of `Spline` curves, `u(t)`, each of whose domain is [0, 1], whose range is</span>
+<span class="sd">            in the parameter space of the given spline, and which satisfy `self(u(t)) = 0`. </span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `zeros` : Find the roots of a spline (nInd must match nDep).</span>
+<span class="sd">        `contour` : Fit a spline to the contour defined by `F(x) = 0`.</span>
+<span class="sd">        `intersect` : Intersect two splines.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Uses `zeros` to find all intersection points and `contour` to find individual intersection curves. </span>
+<span class="sd">        The algorithm used to to find all intersection curves is from Grandine, Thomas A., and Frederick W. Klein IV. </span>
+<span class="sd">        &quot;A new approach to the surface intersection problem.&quot; Computer Aided Geometric Design 14, no. 2 (1997): 111-134.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">contours</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -2012,6 +2284,42 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_respect_to</span><span class="p">)</span>
 
+    <span class="k">def</span> <span class="nf">intersect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Intersect two splines.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : `Spline`</span>
+<span class="sd">            The spline to intersect with self (`other.nDep` match match `self.nDep`).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        intersection : `iterable` or `NotImplemented`</span>
+<span class="sd">            If `self.nInd + other.nInd - self.nDep` is 0, returns an iterable of intersection points in the </span>
+<span class="sd">            parameter space of the two splines (a vector of size `self.nInd + other.nInd`).</span>
+<span class="sd">            If `self.nInd + other.nInd - self.nDep` is 1, returns an iterable of `Spline` curves, each of whose domain is [0, 1] </span>
+<span class="sd">            and each of whose range is in the parameter space of the two splines (a vector of size `self.nInd + other.nInd`).</span>
+<span class="sd">            If `self.nInd + other.nInd - self.nDep` is &lt; 0 or &gt; 1, `NotImplemented` is returned.</span>
+<span class="sd">        </span>
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `zeros` : Find the roots of a spline (nInd must match nDep).</span>
+<span class="sd">        `contours` : Find all the contour curves of a spline.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Uses `zeros` to find all intersection points and `contours` to find all the intersection curves.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nDep</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">nDep</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The number of dependent variables for both splines much match.&quot;</span><span class="p">)</span>
+        <span class="n">freeParameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">nInd</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span>
+        <span class="k">if</span> <span class="n">freeParameters</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span> <span class="o">-</span> <span class="n">other</span><span class="p">)</span><span class="o">.</span><span class="n">zeros</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">freeParameters</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span> <span class="o">-</span> <span class="n">other</span><span class="p">)</span><span class="o">.</span><span class="n">contours</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">least_squares</span><span class="p">(</span><span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">dataPoints</span><span class="p">,</span> <span class="n">knots</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">compression</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -2124,6 +2432,72 @@
         <span class="k">if</span> <span class="n">indMap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">indMap</span> <span class="o">=</span> <span class="p">[(</span><span class="o">*</span><span class="p">(</span><span class="n">mapping</span> <span class="k">if</span> <span class="n">_isIterable</span><span class="p">(</span><span class="n">mapping</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="n">mapping</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)),</span> <span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">indMap</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">multiplyAndConvolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">indMap</span><span class="p">,</span> <span class="n">productType</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">normal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">indices</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the normal of the spline at given parameter values. The number of independent variables must be</span>
+<span class="sd">        one different than the number of dependent variables.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        uvw : `iterable`</span>
+<span class="sd">            An iterable of length `nInd` that specifies the values of each independent variable (the parameter values).</span>
+<span class="sd">        </span>
+<span class="sd">        normalize : `boolean`, optional</span>
+<span class="sd">            If True the returned normal will have unit length (the default). Otherwise, the normal&#39;s length will</span>
+<span class="sd">            be the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).</span>
+<span class="sd">        </span>
+<span class="sd">        indices : `iterable`, optional</span>
+<span class="sd">            An iterable of normal indices to calculate. For example, `indices=(0, 3)` will return a vector of length 2</span>
+<span class="sd">            with the first and fourth values of the normal. If `None`, all normal values are returned (the default).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        normal : `numpy.array`</span>
+<span class="sd">            The normal vector of the spline at the given parameter values.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `derivative` : Compute the derivative of the spline at a given parameter value.</span>
+<span class="sd">        `normal_spline` : Compute a spline that evaluates to the normal of the given spline (not normalized).</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Attentive readers will notice that the number of independent variables could be one more than the number of </span>
+<span class="sd">        dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of </span>
+<span class="sd">        the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_evaluation</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">,</span> <span class="n">normalize</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">normal_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute a spline that evaluates to the normal of the given spline. The length of the normal</span>
+<span class="sd">        is the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).</span>
+<span class="sd">        The number of independent variables must be one different than the number of dependent variables.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        indices : `iterable`, optional</span>
+<span class="sd">            An iterable of normal indices to calculate. For example, `indices=(0, 3)` will make the returned spline compute a vector of length 2</span>
+<span class="sd">            with the first and fourth values of the normal. If `None`, all normal values are returned (the default).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The spline that evaluates to the normal of the given spline.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `normal` : Compute the normal of the spline at given parameter values.</span>
+<span class="sd">        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Attentive readers will notice that the number of independent variables could be one more than the number of </span>
+<span class="sd">        dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of </span>
+<span class="sd">        the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">normal_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">range_bounds</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -2385,6 +2759,11 @@
 <span class="sd">            An iterable containing the roots of the spline. If the spline is </span>
 <span class="sd">            zero over an interval, that root will appear as a tuple of the interval. </span>
 <span class="sd">            For curves (nInd == 1), the roots are ordered.</span>
+<span class="sd">        </span>
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `intersect` : Intersect two splines.</span>
+<span class="sd">        `contour` : Fit a spline to the contour defined by `F(x) = 0`.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -2393,9 +2772,9 @@
 <span class="sd">        For all higher dimensions, it implements the projected-polyhedron technique from Sherbrooke, Evan C., and Nicholas M. Patrikalakis. </span>
 <span class="sd">        &quot;Computation of the solutions of nonlinear polynomial systems.&quot; Computer Aided Geometric Design 10, no. 5 (1993): 379-405.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">,</span> <span class="s2">&quot;The number of independent variables (nInd) must match the number of dependent variables (nDep).&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The number of independent variables (nInd) must match the number of dependent variables (nDep).&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">zeros_using_interval_newton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">zeros_using_interval_newton</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">zeros_using_projected_polyhedron</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
 </pre></div>
@@ -2443,29 +2822,29 @@ A dictionary of ancillary data to store with the spline. Default is {}.</li>
             <details>
             <summary>View Source</summary>
             <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nInd</span><span class="p">,</span> <span class="n">nDep</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">nCoef</span><span class="p">,</span> <span class="n">knots</span><span class="p">,</span> <span class="n">coefs</span><span class="p">,</span> <span class="n">accuracy</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}):</span>
-        <span class="k">assert</span> <span class="n">nInd</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;nInd &lt; 0&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">nInd</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;nInd &lt; 0&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">nInd</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="n">nDep</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;nDep &lt; 0&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">nDep</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;nDep &lt; 0&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">nDep</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">order</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span><span class="p">,</span> <span class="s2">&quot;len(order) != nInd&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">order</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;len(order) != nInd&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">order</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">order</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">nCoef</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span><span class="p">,</span> <span class="s2">&quot;len(nCoef) != nInd&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">nCoef</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;len(nCoef) != nInd&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nCoef</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">nCoef</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">knots</span><span class="p">)</span> <span class="o">==</span> <span class="n">nInd</span><span class="p">,</span> <span class="s2">&quot;len(knots) != nInd&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">knots</span><span class="p">)</span> <span class="o">==</span> <span class="n">nInd</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;len(knots) != nInd&quot;</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">knots</span><span class="p">)):</span>
             <span class="n">nKnots</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">nCoef</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">knots</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">==</span> <span class="n">nKnots</span><span class="p">,</span> \
-                <span class="sa">f</span><span class="s2">&quot;Knots array for variable </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> should have length </span><span class="si">{</span><span class="n">nKnots</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">knots</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">==</span> <span class="n">nKnots</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Knots array for variable </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> should have length </span><span class="si">{</span><span class="n">nKnots</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">knots</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">kk</span><span class="p">)</span> <span class="k">for</span> <span class="n">kk</span> <span class="ow">in</span> <span class="n">knots</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">knots</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">nCoef</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">knots</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nCoef</span><span class="p">):</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nCoef</span><span class="p">):</span>
-                <span class="k">assert</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="ow">and</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="n">order</span><span class="p">],</span>\
-                       <span class="s2">&quot;Improperly ordered knot sequence&quot;</span>
+                <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">knots</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="ow">and</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">knots</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="n">order</span><span class="p">]):</span>
+                       <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Improperly ordered knot sequence&quot;</span><span class="p">)</span>
         <span class="n">totalCoefs</span> <span class="o">=</span> <span class="mi">1</span>
         <span class="k">for</span> <span class="n">nCoef</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nCoef</span><span class="p">:</span>
             <span class="n">totalCoefs</span> <span class="o">*=</span> <span class="n">nCoef</span>
-        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">coefs</span><span class="p">)</span> <span class="o">==</span> <span class="n">totalCoefs</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">coefs</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">,</span> \
-            <span class="sa">f</span><span class="s2">&quot;Length of coefs should be </span><span class="si">{</span><span class="n">totalCoefs</span><span class="si">}</span><span class="s2"> or </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">coefs</span><span class="p">)</span> <span class="o">==</span> <span class="n">totalCoefs</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">coefs</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Length of coefs should be </span><span class="si">{</span><span class="n">totalCoefs</span><span class="si">}</span><span class="s2"> or </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">coefs</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">nCoef</span><span class="p">):</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="p">)</span> <span class="o">==</span> <span class="n">totalCoefs</span><span class="p">:</span>
@@ -2869,6 +3248,182 @@ The aligned collection of N splines.</li>
 <h6 id="notes">Notes</h6>
 
 <p>Uses <code><a href="#Spline.elevate_and_insert_knots">elevate_and_insert_knots</a></code> to ensure mapped variables share the same order and knots.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.contour" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#Spline.contour">#&nbsp;&nbsp</a>
+
+                <div class="decorator">@staticmethod</div>
+
+            <span class="def">def</span>
+            <span class="name">contour</span><span class="signature">(F, knownXValues, dF=None, epsilon=None, metadata={})</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">contour</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="n">knownXValues</span><span class="p">,</span> <span class="n">dF</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">epsilon</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fit a spline to the contour defined by `F(x) = 0`, where `F` maps n dimensions to </span>
+<span class="sd">        n-1 dimensions. Thus, the solution, `x(t)`, is a contour curve (one degree of freedom) </span>
+<span class="sd">        returned in the form of a spline.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        F : function or `Spline`</span>
+<span class="sd">            A function or spline that takes an array-like argument of length `n` and returns an </span>
+<span class="sd">            array-like result of length `n - 1`.</span>
+
+<span class="sd">        knownXValues : `iterable` of array-like</span>
+<span class="sd">            An `iterable` of known x values (array-like) that lie on the desired contour. </span>
+<span class="sd">            The length of `knownXValues` must be at least 2 (for the two boundary conditions). </span>
+<span class="sd">            All x values must be length `n` and be listed in the order they appear on the contour.  </span>
+<span class="sd">            `F(x)` for all known x values must be a zero vector of length `n-1`.</span>
+
+<span class="sd">        dF : `iterable` or `None`, optional</span>
+<span class="sd">            An `iterable` of the `n` functions representing the `n` first derivatives of `F`. </span>
+<span class="sd">            If `dF` is `None` (the default), the first derivatives will be computed for you. </span>
+<span class="sd">            If `F` is not a spline, computing the first derivatives involves multiple calls to `F` </span>
+<span class="sd">            and can be numerically unstable. </span>
+
+<span class="sd">        epsilon : `float`, optional</span>
+<span class="sd">            Tolerance for contour precision. Evaluating `F` with contour values will be within epsilon </span>
+<span class="sd">            of zero. The default is square root of machine epsilon. The actual accuracy of the contour </span>
+<span class="sd">            is returned as `spline.accuracy`.</span>
+<span class="sd">            </span>
+<span class="sd">        metadata : `dict`, optional</span>
+<span class="sd">            A dictionary of ancillary data to store with the spline. Default is {}.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The spline contour, `x(t)`, with nInd == 1 and nDep == n.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `least_squares` : Fit a spline to an array of data points using the method of least squares.</span>
+<span class="sd">        `contours` : Find all the contour curves of a spline.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The returned spline has constant parametric speed (the length of its derivative is constant). </span>
+<span class="sd">        Implements the algorithm described in section 7 of Grandine, Thomas A. </span>
+<span class="sd">        &quot;Applications of contouring.&quot; Siam Review 42, no. 2 (2000): 297-316.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_fitting</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="n">knownXValues</span><span class="p">,</span> <span class="n">dF</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Fit a spline to the contour defined by <code>F(x) = 0</code>, where <code>F</code> maps n dimensions to 
+n-1 dimensions. Thus, the solution, <code>x(t)</code>, is a contour curve (one degree of freedom) 
+returned in the form of a spline.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>F</strong> (function or <code><a href="#Spline">Spline</a></code>):
+A function or spline that takes an array-like argument of length <code>n</code> and returns an 
+array-like result of length <code>n - 1</code>.</li>
+<li><strong>knownXValues</strong> (<code>iterable</code> of array-like):
+An <code>iterable</code> of known x values (array-like) that lie on the desired contour. 
+The length of <code>knownXValues</code> must be at least 2 (for the two boundary conditions). 
+All x values must be length <code>n</code> and be listed in the order they appear on the contour. <br />
+<code>F(x)</code> for all known x values must be a zero vector of length <code>n-1</code>.</li>
+<li><strong>dF</strong> (<code>iterable</code> or <code>None</code>, optional):
+An <code>iterable</code> of the <code>n</code> functions representing the <code>n</code> first derivatives of <code>F</code>. 
+If <code>dF</code> is <code>None</code> (the default), the first derivatives will be computed for you. 
+If <code>F</code> is not a spline, computing the first derivatives involves multiple calls to <code>F</code> 
+and can be numerically unstable.</li>
+<li><strong>epsilon</strong> (<code>float</code>, optional):
+Tolerance for contour precision. Evaluating <code>F</code> with contour values will be within epsilon 
+of zero. The default is square root of machine epsilon. The actual accuracy of the contour 
+is returned as <code>spline.accuracy</code>.</li>
+<li><strong>metadata</strong> (<code>dict</code>, optional):
+A dictionary of ancillary data to store with the spline. Default is {}.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+The spline contour, <code>x(t)</code>, with nInd == 1 and nDep == n.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.least_squares">least_squares</a></code>:  Fit a spline to an array of data points using the method of least squares. <br />
+<code><a href="#Spline.contours">contours</a></code>:  Find all the contour curves of a spline.  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>The returned spline has constant parametric speed (the length of its derivative is constant). 
+Implements the algorithm described in section 7 of Grandine, Thomas A. 
+"Applications of contouring." Siam Review 42, no. 2 (2000): 297-316.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.contours" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#Spline.contours">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">contours</span><span class="signature">(self)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">contours</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find all the contour curves of a spline whose `nInd` is one larger than its `nDep`.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        curves : `iterable`</span>
+<span class="sd">            A collection of `Spline` curves, `u(t)`, each of whose domain is [0, 1], whose range is</span>
+<span class="sd">            in the parameter space of the given spline, and which satisfy `self(u(t)) = 0`. </span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `zeros` : Find the roots of a spline (nInd must match nDep).</span>
+<span class="sd">        `contour` : Fit a spline to the contour defined by `F(x) = 0`.</span>
+<span class="sd">        `intersect` : Intersect two splines.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Uses `zeros` to find all intersection points and `contour` to find individual intersection curves. </span>
+<span class="sd">        The algorithm used to to find all intersection curves is from Grandine, Thomas A., and Frederick W. Klein IV. </span>
+<span class="sd">        &quot;A new approach to the surface intersection problem.&quot; Computer Aided Geometric Design 14, no. 2 (1997): 111-134.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">contours</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Find all the contour curves of a spline whose <code>nInd</code> is one larger than its <code>nDep</code>.</p>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>curves</strong> (<code>iterable</code>):
+A collection of <code><a href="#Spline">Spline</a></code> curves, <code>u(t)</code>, each of whose domain is [0, 1], whose range is
+in the parameter space of the given spline, and which satisfy <code>self(u(t)) = 0</code>.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.zeros">zeros</a></code>:  Find the roots of a spline (nInd must match nDep). <br />
+<code><a href="#Spline.contour">contour</a></code>:  Fit a spline to the contour defined by <code>F(x) = 0</code>. <br />
+<code><a href="#Spline.intersect">intersect</a></code>:  Intersect two splines.  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>Uses <code><a href="#Spline.zeros">zeros</a></code> to find all intersection points and <code><a href="#Spline.contour">contour</a></code> to find individual intersection curves. 
+The algorithm used to to find all intersection curves is from Grandine, Thomas A., and Frederick W. Klein IV. 
+"A new approach to the surface intersection problem." Computer Aided Geometric Design 14, no. 2 (1997): 111-134.</p>
 </div>
 
 
@@ -3924,6 +4479,87 @@ The spline that results from integrating the original spline with respect to the
 
 
                             </div>
+                            <div id="Spline.intersect" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#Spline.intersect">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">intersect</span><span class="signature">(self, other)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">intersect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Intersect two splines.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : `Spline`</span>
+<span class="sd">            The spline to intersect with self (`other.nDep` match match `self.nDep`).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        intersection : `iterable` or `NotImplemented`</span>
+<span class="sd">            If `self.nInd + other.nInd - self.nDep` is 0, returns an iterable of intersection points in the </span>
+<span class="sd">            parameter space of the two splines (a vector of size `self.nInd + other.nInd`).</span>
+<span class="sd">            If `self.nInd + other.nInd - self.nDep` is 1, returns an iterable of `Spline` curves, each of whose domain is [0, 1] </span>
+<span class="sd">            and each of whose range is in the parameter space of the two splines (a vector of size `self.nInd + other.nInd`).</span>
+<span class="sd">            If `self.nInd + other.nInd - self.nDep` is &lt; 0 or &gt; 1, `NotImplemented` is returned.</span>
+<span class="sd">        </span>
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `zeros` : Find the roots of a spline (nInd must match nDep).</span>
+<span class="sd">        `contours` : Find all the contour curves of a spline.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Uses `zeros` to find all intersection points and `contours` to find all the intersection curves.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nDep</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">nDep</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The number of dependent variables for both splines much match.&quot;</span><span class="p">)</span>
+        <span class="n">freeParameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">nInd</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span>
+        <span class="k">if</span> <span class="n">freeParameters</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span> <span class="o">-</span> <span class="n">other</span><span class="p">)</span><span class="o">.</span><span class="n">zeros</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">freeParameters</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span> <span class="o">-</span> <span class="n">other</span><span class="p">)</span><span class="o">.</span><span class="n">contours</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Intersect two splines.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>other</strong> (<code><a href="#Spline">Spline</a></code>):
+The spline to intersect with self (<code>other.nDep</code> match match <code>self.nDep</code>).</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>intersection</strong> (<code>iterable</code> or <code>NotImplemented</code>):
+If <code>self.nInd + other.nInd - self.nDep</code> is 0, returns an iterable of intersection points in the 
+parameter space of the two splines (a vector of size <code>self.nInd + other.nInd</code>).
+If <code>self.nInd + other.nInd - self.nDep</code> is 1, returns an iterable of <code><a href="#Spline">Spline</a></code> curves, each of whose domain is [0, 1] 
+and each of whose range is in the parameter space of the two splines (a vector of size <code>self.nInd + other.nInd</code>).
+If <code>self.nInd + other.nInd - self.nDep</code> is &lt; 0 or &gt; 1, <code>NotImplemented</code> is returned.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.zeros">zeros</a></code>:  Find the roots of a spline (nInd must match nDep). <br />
+<code><a href="#Spline.contours">contours</a></code>:  Find all the contour curves of a spline.  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>Uses <code><a href="#Spline.zeros">zeros</a></code> to find all intersection points and <code><a href="#Spline.contours">contours</a></code> to find all the intersection curves.</p>
+</div>
+
+
+                            </div>
                             <div id="Spline.least_squares" class="classattr">
                                         <div class="attr function"><a class="headerlink" href="#Spline.least_squares">#&nbsp;&nbsp</a>
 
@@ -4178,6 +4814,168 @@ The result of multiplying self and other.</li>
 
 <p>Taken in part from Lee, E. T. Y. "Computing a chain of blossoms, with application to products of splines." 
 Computer Aided Geometric Design 11, no. 6 (1994): 597-620.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.normal" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#Spline.normal">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">normal</span><span class="signature">(self, uvw, normalize=True, indices=None)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">normal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">indices</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the normal of the spline at given parameter values. The number of independent variables must be</span>
+<span class="sd">        one different than the number of dependent variables.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        uvw : `iterable`</span>
+<span class="sd">            An iterable of length `nInd` that specifies the values of each independent variable (the parameter values).</span>
+<span class="sd">        </span>
+<span class="sd">        normalize : `boolean`, optional</span>
+<span class="sd">            If True the returned normal will have unit length (the default). Otherwise, the normal&#39;s length will</span>
+<span class="sd">            be the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).</span>
+<span class="sd">        </span>
+<span class="sd">        indices : `iterable`, optional</span>
+<span class="sd">            An iterable of normal indices to calculate. For example, `indices=(0, 3)` will return a vector of length 2</span>
+<span class="sd">            with the first and fourth values of the normal. If `None`, all normal values are returned (the default).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        normal : `numpy.array`</span>
+<span class="sd">            The normal vector of the spline at the given parameter values.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `derivative` : Compute the derivative of the spline at a given parameter value.</span>
+<span class="sd">        `normal_spline` : Compute a spline that evaluates to the normal of the given spline (not normalized).</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Attentive readers will notice that the number of independent variables could be one more than the number of </span>
+<span class="sd">        dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of </span>
+<span class="sd">        the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_evaluation</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uvw</span><span class="p">,</span> <span class="n">normalize</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Compute the normal of the spline at given parameter values. The number of independent variables must be
+one different than the number of dependent variables.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>uvw</strong> (<code>iterable</code>):
+An iterable of length <code>nInd</code> that specifies the values of each independent variable (the parameter values).</li>
+<li><strong>normalize</strong> (<code>boolean</code>, optional):
+If True the returned normal will have unit length (the default). Otherwise, the normal's length will
+be the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).</li>
+<li><strong>indices</strong> (<code>iterable</code>, optional):
+An iterable of normal indices to calculate. For example, <code>indices=(0, 3)</code> will return a vector of length 2
+with the first and fourth values of the normal. If <code>None</code>, all normal values are returned (the default).</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>normal</strong> (<code>numpy.array</code>):
+The normal vector of the spline at the given parameter values.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.derivative">derivative</a></code>:  Compute the derivative of the spline at a given parameter value. <br />
+<code><a href="#Spline.normal_spline">normal_spline</a></code>:  Compute a spline that evaluates to the normal of the given spline (not normalized).  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>Attentive readers will notice that the number of independent variables could be one more than the number of 
+dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of 
+the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.normal_spline" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#Spline.normal_spline">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">normal_spline</span><span class="signature">(self, indices=None)</span>:
+    </div>
+
+            <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">normal_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute a spline that evaluates to the normal of the given spline. The length of the normal</span>
+<span class="sd">        is the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).</span>
+<span class="sd">        The number of independent variables must be one different than the number of dependent variables.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        indices : `iterable`, optional</span>
+<span class="sd">            An iterable of normal indices to calculate. For example, `indices=(0, 3)` will make the returned spline compute a vector of length 2</span>
+<span class="sd">            with the first and fourth values of the normal. If `None`, all normal values are returned (the default).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        spline : `Spline`</span>
+<span class="sd">            The spline that evaluates to the normal of the given spline.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `normal` : Compute the normal of the spline at given parameter values.</span>
+<span class="sd">        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Attentive readers will notice that the number of independent variables could be one more than the number of </span>
+<span class="sd">        dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of </span>
+<span class="sd">        the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_operations</span><span class="o">.</span><span class="n">normal_spline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Compute a spline that evaluates to the normal of the given spline. The length of the normal
+is the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).
+The number of independent variables must be one different than the number of dependent variables.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>indices</strong> (<code>iterable</code>, optional):
+An iterable of normal indices to calculate. For example, <code>indices=(0, 3)</code> will make the returned spline compute a vector of length 2
+with the first and fourth values of the normal. If <code>None</code>, all normal values are returned (the default).</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+The spline that evaluates to the normal of the given spline.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.normal">normal</a></code>:  Compute the normal of the spline at given parameter values. <br />
+<code><a href="#Spline.differentiate">differentiate</a></code>:  Differentiate a spline with respect to one of its independent variables, returning the resulting spline.  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>Attentive readers will notice that the number of independent variables could be one more than the number of 
+dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of 
+the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.</p>
 </div>
 
 
@@ -4835,6 +5633,11 @@ so long as unfold unscrambles things in the corresponding way.  The second splin
 <span class="sd">            An iterable containing the roots of the spline. If the spline is </span>
 <span class="sd">            zero over an interval, that root will appear as a tuple of the interval. </span>
 <span class="sd">            For curves (nInd == 1), the roots are ordered.</span>
+<span class="sd">        </span>
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `intersect` : Intersect two splines.</span>
+<span class="sd">        `contour` : Fit a spline to the contour defined by `F(x) = 0`.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -4843,9 +5646,9 @@ so long as unfold unscrambles things in the corresponding way.  The second splin
 <span class="sd">        For all higher dimensions, it implements the projected-polyhedron technique from Sherbrooke, Evan C., and Nicholas M. Patrikalakis. </span>
 <span class="sd">        &quot;Computation of the solutions of nonlinear polynomial systems.&quot; Computer Aided Geometric Design 10, no. 5 (1993): 379-405.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">,</span> <span class="s2">&quot;The number of independent variables (nInd) must match the number of dependent variables (nDep).&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nDep</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The number of independent variables (nInd) must match the number of dependent variables (nDep).&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nInd</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">zeros_using_interval_newton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">zeros_using_interval_newton</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">bspy</span><span class="o">.</span><span class="n">_spline_intersection</span><span class="o">.</span><span class="n">zeros_using_projected_polyhedron</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
 </pre></div>
@@ -4870,6 +5673,11 @@ An iterable containing the roots of the spline. If the spline is
 zero over an interval, that root will appear as a tuple of the interval. 
 For curves (nInd == 1), the roots are ordered.</li>
 </ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.intersect">intersect</a></code>:  Intersect two splines. <br />
+<code><a href="#Spline.contour">contour</a></code>:  Fit a spline to the contour defined by <code>F(x) = 0</code>.  </p>
 
 <h6 id="notes">Notes</h6>
 

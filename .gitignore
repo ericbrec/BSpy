@@ -112,6 +112,7 @@ venv.bak/
 
 # VSCode
 .vscode/
+.VSCodeCounter/
 
 # Spyder project settings
 .spyderproject

@@ -143,14 +143,14 @@ class DrawableSpline(Spline):
             floatCount = 0
             coefficientCount = 1
             for i in range(self.nInd):
-                assert self.order[i] <= self.maxOrder
+                if not(self.order[i] <= self.maxOrder): raise ValueError(f"order larger than {self.maxOrder}")
                 floatCount += 2 + self.order[i] + self.nCoef[i]
                 coefficientCount *= self.nCoef[i]
-            assert self.nDep == 4 # Coefficients are all 4-vectors (homogeneous coordinates)
-            assert floatCount + 4 * coefficientCount <= self._maxFloats
+            if not(self.nDep == 4): raise ValueError("nDep must be 4") # Coefficients are all 4-vectors (homogeneous coordinates)
+            if not(floatCount + 4 * coefficientCount <= self._maxFloats): raise ValueError("Spline to large to draw")
             for knotArray in self.knots:
-                assert knotArray.dtype == np.float32
-            assert self.coefs.dtype == np.float32
+                if not(knotArray.dtype == np.float32): raise ValueError("Must use 32-bit floats")
+            if not(self.coefs.dtype == np.float32): raise ValueError("Must use 32-bit floats")
 
             self.metadata["fillColor"] = np.array((0.0, 1.0, 0.0, 1.0), np.float32)
             self.metadata["lineColor"] = np.array((0.0, 0.0, 0.0, 1.0) if self.nInd > 1 else (1.0, 1.0, 1.0, 1.0), np.float32)
@@ -169,7 +169,7 @@ class DrawableSpline(Spline):
         """
         if isinstance(spline, DrawableSpline):
             return spline
-        assert isinstance(spline, Spline)
+        if not(isinstance(spline, Spline)): raise ValueError("Invalid spline")
         
         knotList = [knots.astype(np.float32, copy=False) for knots in spline.knots]
         coefs = np.zeros((4, *spline.nCoef), np.float32)
