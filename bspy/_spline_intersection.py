@@ -14,78 +14,99 @@ def zeros_using_interval_newton(self):
     spline = self
     (domain,) = spline.domain()
 
+    # Make sure this works for weird intervals of definition
+
+    if domain[0] != 0.0 or domain[1] != 1.0:
+        spline = spline.reparametrize([[0.0, 1.0]])
+        myZeros = spline.zeros()
+        fixedZeros = []
+        for thisZero in myZeros:
+            if type(thisZero) is type((1.0, 2.0),):
+                newLeft = (1.0 - thisZero[0]) * domain[0] + thisZero[0] * domain[1]
+                newRight = (1.0 - thisZero[1]) * domain[0] + thisZero[1] * domain[1]
+                fixedZeros += [(newLeft, newRight),]
+            else:
+                fixedZeros += [(1.0 - thisZero) * domain[0] + thisZero * domain[1]]
+        return fixedZeros
+
     # Perform an interval Newton step
 
-    def refine(spline, intervalSize, maxFunc):
-        (bbox,) = spline.range_bounds()
-        if bbox[0] * bbox[1] > epsilon:
+    def refine(spline, intervalSize, functionMax):
+        (boundingBox,) = spline.range_bounds()
+        if boundingBox[0] * boundingBox[1] > epsilon:
             return []
-        scalefactor = max(abs(bbox[0]), abs(bbox[1]))
-        scalespl = spline.scale(1.0 / scalefactor)
-        (mydomain,) = scalespl.domain()
-        intervalSize *= mydomain[1] - mydomain[0]
-        maxFunc *= scalefactor
-        myspline = scalespl.reparametrize([[0.0, 1.0]])
+        scaleFactor = max(abs(boundingBox[0]), abs(boundingBox[1]))
+        scaledSpline = spline.scale(1.0 / scaleFactor)
+        (myDomain,) = scaledSpline.domain()
+        intervalSize *= myDomain[1] - myDomain[0]
+        functionMax *= scaleFactor
+        mySpline = scaledSpline.reparametrize([[0.0, 1.0]])
         midPoint = 0.5
-        [fval] = myspline([midPoint])
+        [functionValue] = mySpline([midPoint])
 
         # Root found
 
-        if intervalSize < epsilon: # or abs(fval) * maxFunc < epsilon:
-            return [0.5 * (mydomain[0] + mydomain[1])]
-    
+        if intervalSize < epsilon or abs(functionValue) * functionMax < epsilon:
+            if intervalSize < epsilon ** 0.25:
+                return [0.5 * (myDomain[0] + myDomain[1])]
+            else:
+                myZeros = refine(mySpline.trim(((0.0, midPoint - np.sqrt(epsilon)),)), intervalSize, functionMax)
+                myZeros += [0.5 * (myDomain[0] + myDomain[1])]
+                myZeros += refine(mySpline.trim(((midPoint + np.sqrt(epsilon), 1.0),)), intervalSize, functionMax)
+                return myZeros
+
         # Calculate Newton update
 
-        (fder,) = myspline.differentiate().range_bounds()
-        if fder[0] == 0.0:
-            fder[0] = epsilon
-        if fder[1] == 0.0:
-            fder[1] = -epsilon
-        xleft = midPoint - fval / fder[0]
-        xright = midPoint - fval / fder[1]
-        dleft = min(xleft, xright) - 0.5 * epsilon
-        dright = max(xleft, xright) + 0.5 * epsilon
-        if fder[0] * fder[1] >= 0.0:    # Refine interval
-           xnewleft = max(0.0, dleft)
-           xnewright = min(1.0, dright)
-           if xnewleft <= xnewright:
-               trimspl = myspline.trim(((xnewleft, xnewright),))
-               myzeros = refine(trimspl, intervalSize, maxFunc)
+        (derivativeBounds,) = mySpline.differentiate().range_bounds()
+        if derivativeBounds[0] == 0.0:
+            derivativeBounds[0] = epsilon
+        if derivativeBounds[1] == 0.0:
+            derivativeBounds[1] = -epsilon
+        leftNewtonStep = midPoint - functionValue / derivativeBounds[0]
+        rightNewtonStep = midPoint - functionValue / derivativeBounds[1]
+        adjustedLeftStep = min(leftNewtonStep, rightNewtonStep) - 0.5 * epsilon
+        adjustedRightStep = max(leftNewtonStep, rightNewtonStep) + 0.5 * epsilon
+        if derivativeBounds[0] * derivativeBounds[1] >= 0.0:    # Refine interval
+           projectedLeftStep = max(0.0, adjustedLeftStep)
+           projectedRightStep = min(1.0, adjustedRightStep)
+           if projectedLeftStep <= projectedRightStep:
+               trimmedSpline = mySpline.trim(((projectedLeftStep, projectedRightStep),))
+               myZeros = refine(trimmedSpline, intervalSize, functionMax)
            else:
                return []
         else:                           # . . . or split as needed
-            myzeros = []
-            if dleft > 0.0:
-                trimspl = myspline.trim(((0.0, dleft),))
-                myzeros += refine(trimspl, intervalSize, maxFunc)
-            if dright < 1.0:
-                trimspl = myspline.trim(((dright, 1.0),))
-                myzeros += refine(trimspl, intervalSize, maxFunc)
-        return [(1.0 - thiszero) * mydomain[0] + thiszero * mydomain[1] for thiszero in myzeros]
+            myZeros = []
+            if adjustedLeftStep > 0.0:
+                trimmedSpline = mySpline.trim(((0.0, adjustedLeftStep),))
+                myZeros += refine(trimmedSpline, intervalSize, functionMax)
+            if adjustedRightStep < 1.0:
+                trimmedSpline = mySpline.trim(((adjustedRightStep, 1.0),))
+                myZeros += refine(trimmedSpline, intervalSize, functionMax)
+        return [(1.0 - thisZero) * myDomain[0] + thisZero * myDomain[1] for thisZero in myZeros]
 
     # See if there are any zero intervals
 
-    (bbox,) = spline.range_bounds()
-    scalefactor = max(abs(bbox[0]), abs(bbox[1]))
-    mysolution = []
+    (boundingBox,) = spline.range_bounds()
+    scaleFactor = max(abs(boundingBox[0]), abs(boundingBox[1]))
+    mySolution = []
     for interval in range(spline.nCoef[0] - spline.order[0] + 1):
-        maxFunc = max(np.abs(spline.coefs[0][interval:interval + spline.order[0]]))
-        if maxFunc < scalefactor * epsilon:     # Found an interval of zeros
-            intExtend = spline.nCoef[0] - spline.order[0] - interval
-            for ix in range(intExtend):         # Attempt to extend the interval to more than one polynomial piece
-                if abs(spline.coefs[0][interval + ix + spline.order[0]]) >= scalefactor * epsilon:
-                    intExtend = ix
+        functionMax = max(np.abs(spline.coefs[0][interval:interval + spline.order[0]]))
+        if functionMax < scaleFactor * epsilon: # Found an interval of zeros
+            intervalExtend = spline.nCoef[0] - spline.order[0] - interval
+            for ix in range(intervalExtend):    # Attempt to extend the interval to more than one polynomial piece
+                if abs(spline.coefs[0][interval + ix + spline.order[0]]) >= scaleFactor * epsilon:
+                    intervalExtend = ix
                     break
-            leftend = spline.knots[0][interval + spline.order[0] - 1]
-            rightend = spline.knots[0][interval + spline.order[0] + intExtend]
-            if domain[0] != leftend:            # Compute zeros from left of the interval
-                mysolution = refine(spline.trim(((domain[0], leftend - np.sqrt(epsilon)),)),
-                                    max (1.0, 1.0 / (leftend - domain[0])), 1.0)
-            mysolution += [(leftend, rightend)] # Add the interval of zeros
-            if rightend != domain[1]:           # Add the zeros from right of the interval
-                mysolution += spline.trim(((rightend + np.sqrt(epsilon), domain[1]),)).zeros()
-            return mysolution
-    return refine(spline, max (1.0, 1.0 / (domain[1] - domain[0])), 1.0)
+            leftEnd = spline.knots[0][interval + spline.order[0] - 1]
+            rightEnd = spline.knots[0][interval + spline.order[0] + intervalExtend]
+            if domain[0] != leftEnd:            # Compute zeros from left of the interval
+                mySolution = refine(spline.trim(((domain[0], leftEnd - np.sqrt(epsilon)),)),
+                                    max (1.0, 1.0 / (leftEnd - domain[0])), 1.0)
+            mySolution += [(leftEnd, rightEnd)] # Add the interval of zeros
+            if rightEnd != domain[1]:           # Add the zeros from right of the interval
+                mySolution += spline.trim(((rightEnd + np.sqrt(epsilon), domain[1]),)).zeros()
+            return mySolution
+    return refine(spline, 1.0, 1.0)
 
 def _convex_hull_2D(xData, yData, epsilon = 1.0e-8, evaluationEpsilon = 1.0e-4, xInterval = None):
     # Allow xData to be repeated for longer yData, but only if yData is a multiple.
