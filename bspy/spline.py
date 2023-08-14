@@ -457,6 +457,22 @@ class Spline:
             indMap = [(*(mapping if _isIterable(mapping) else (mapping, mapping)), True) for mapping in indMap]
         return bspy._spline_operations.multiplyAndConvolve(self, other, indMap, productType)
 
+    def copy(self, metadata={}):
+        """
+        Create a copy of a spline.
+
+        Parameters
+        ----------
+        metadata : `dict`, optional
+            A dictionary of ancillary data to store with the spline. Default is {}.
+        
+        Returns
+        -------
+        spline : `Spline`
+            The spline copy.
+        """
+        return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, self.coefs, self.accuracy, metadata)
+
     def cross(self, vector):
         """
         Cross product a spline with `nDep` of 2 or 3 by the given vector.
@@ -898,6 +914,30 @@ class Spline:
 
     @staticmethod
     def load(fileName, splineType=None):
+        """
+        Load a spline from the specified filename (full path).
+
+        Parameters
+        ----------
+        fileName : `string`
+            The full path to the file containing the spline. Can be a relative path.
+        
+        splineType : `type`, optional
+            The class type that should be created. It must be an instance of Spline (the default).
+        
+        Returns
+        -------
+        spline : `Spline`
+            The loaded spline.
+
+        See Also
+        --------
+        `save` : Save a spline to the specified filename (full path).
+
+        Notes
+        -----
+        Uses numpy's load function.
+        """
         kw = np.load(fileName)
         order = kw["order"]
         nInd = len(order)
@@ -1094,6 +1134,22 @@ class Spline:
         return bspy._spline_domain.reparametrize(self, newDomain)
 
     def save(self, fileName):
+        """
+        Save a spline to the specified filename (full path).
+
+        Parameters
+        ----------
+        fileName : `string`
+            The full path to the file containing the spline. Can be a relative path.
+        
+        See Also
+        --------
+        `load` : Load a spline from the specified filename (full path).
+
+        Notes
+        -----
+        Uses numpy's savez function. Accuracy and metadata are not saved.
+        """
         kw = {}
         kw["order"] = order=np.array(self.order, np.int32)
         for i in range(len(self.knots)):

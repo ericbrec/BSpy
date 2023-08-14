@@ -206,7 +206,16 @@ def _refine_projected_polyhedron(interval):
     machineEpsilon = np.finfo(interval.spline.coefs.dtype).eps
     root = None
     intervals = []
-    scale = np.abs(interval.spline.range_bounds()).max()
+    scale = 0.0
+    # Go through each nDep of the spline, checking bounds.
+    for coefs in interval.spline.coefs:
+        coefsMin = coefs.min()
+        coefsMax = coefs.max()
+        if coefsMax < -evaluationEpsilon or coefsMin > evaluationEpsilon:
+            # No roots in this interval.
+            return root, intervals
+        scale = max(scale, abs(coefsMin), abs(coefsMax))
+    
     if scale < epsilon:
         # Return the bounds of the interval within which the spline is zero.
         root = (interval.intercept, interval.slope + interval.intercept)
@@ -349,6 +358,15 @@ def contours(self):
     Point = namedtuple('Point', ('d', 'det', 'onBoundary', 'uvw'))
     epsilon = np.sqrt(np.finfo(self.coefs.dtype).eps)
     evaluationEpsilon = np.sqrt(epsilon)
+
+    # Go through each nDep of the spline, checking bounds.
+    for coefs in self.coefs:
+        coefsMin = coefs.min()
+        coefsMax = coefs.max()
+        if coefsMax < -evaluationEpsilon or coefsMin > evaluationEpsilon:
+            # No contours for this spline.
+            return []
+
     tangents = []
     for nInd in range(self.nInd):
         tangents.append(self.differentiate(nInd))
