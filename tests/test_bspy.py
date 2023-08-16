@@ -1064,6 +1064,11 @@ def test_zeros():
 
     tolerance = 1.0e-14
 
+    spline = bspy.Spline(1, 1, (3,), (3,), [[0., 0., 0., 1., 1., 1.]], [[-1.2, -0.2,  0.8]], 0.0, {})
+    expectedRoots = (0.6,)
+    roots = spline.zeros()
+    check_1D_roots(expectedRoots, roots, tolerance)
+
     spline = bspy.Spline(1, 1, (4,), (4,), ((0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0),), ((1.0, -2.0, -2.0, 1.0),))
     expectedRoots = (0.12732200375003502, 0.8726779962499649)
     roots = spline.zeros()
