@@ -370,9 +370,15 @@ def contours(self):
             # No contours for this spline.
             return []
 
+    # Record self's original domain and then reparametrize self's domain to [0, 1]^nInd.
+    domain = self.domain().T
+    self = self.reparametrize(((0.0, 1.0),) * self.nInd)
+    
+    # Construct self's tangents and normal.
     tangents = []
     for nInd in range(self.nInd):
         tangents.append(self.differentiate(nInd))
+    normal = self.normal_spline((0, 1)) # We only need the first two indices
 
     theta = np.sqrt(2) # Arbitrary starting value for theta (picked one in [0, pi/2] unlikely to be a stationary point)
     # Try different theta values until no border or turning points are degenerate.
@@ -384,7 +390,6 @@ def contours(self):
         abort = False
 
         # Construct the turning point determinant.
-        normal = self.normal_spline((0, 1)) # We only need the first two indices
         turningPointDeterminant = normal.dot((cosTheta, sinTheta))
 
         # Find intersections with u and v boundaries.
@@ -597,6 +602,9 @@ def contours(self):
     # Now we just need to create splines for those contours using the Spline.contour method.
     splineContours = []
     for points in contourPoints:
-        splineContours.append(bspy.spline.Spline.contour(self, points[1:])) # Skip endPoint boolean at start of points list
+        contour = bspy.spline.Spline.contour(self, points[1:]) # Skip endPoint boolean at start of points list
+        # Transform the contour to self's original domain.
+        contour.coefs = (contour.coefs.T * (domain[1] - domain[0]) + domain[0]).T
+        splineContours.append(contour)
     
     return splineContours
