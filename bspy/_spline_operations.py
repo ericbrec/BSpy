@@ -573,10 +573,10 @@ def normal_spline(self, indices=None):
                     ord += order - 1 if ccm[i, j] and index != j else 0
                 newOrd = max(newOrd, ord)
         newOrder.append(newOrd)
-        uniqueKnots, counts = np.unique(knots, return_counts=True)
+        uniqueKnots, counts = np.unique(knots[order - 1:self.nCoef[i] + 1], return_counts=True)
         counts += newOrd - order + 1 # Because we're multiplying all the tangents, the knot elevation is one more
-        counts[0] -= 1 # But not at the endpoints, which get reduced by one when taking the derivative
-        counts[-1] -= 1 # But not at the endpoints, which get reduced by one when taking the derivative
+        counts[0] = newOrd # But not at the endpoints, which are full order as usual
+        counts[-1] = newOrd # But not at the endpoints, which are full order as usual
         newKnots.append(np.repeat(uniqueKnots, counts))
         # Also calculate the total number of coefficients, capturing how it progressively increases, and
         # using that calculation to span uvw from the starting knot to the end for each variable.

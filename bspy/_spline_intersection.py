@@ -67,12 +67,15 @@ def zeros_using_interval_newton(self):
         adjustedLeftStep = min(leftNewtonStep, rightNewtonStep) - 0.5 * epsilon
         adjustedRightStep = max(leftNewtonStep, rightNewtonStep) + 0.5 * epsilon
         if derivativeBounds[0] * derivativeBounds[1] >= 0.0:    # Refine interval
-           projectedLeftStep = max(0.0, adjustedLeftStep)
-           projectedRightStep = min(1.0, adjustedRightStep)
-           if projectedLeftStep <= projectedRightStep:
-               trimmedSpline = mySpline.trim(((projectedLeftStep, projectedRightStep),))
-               myZeros = refine(trimmedSpline, intervalSize, functionMax)
-           else:
+            projectedLeftStep = max(0.0, adjustedLeftStep)
+            projectedRightStep = min(1.0, adjustedRightStep)
+            if projectedLeftStep <= projectedRightStep:
+                if projectedRightStep - projectedLeftStep <= epsilon:
+                    myZeros = [0.5 * (projectedLeftStep + projectedRightStep)]
+                else:
+                    trimmedSpline = mySpline.trim(((projectedLeftStep, projectedRightStep),))
+                    myZeros = refine(trimmedSpline, intervalSize, functionMax)
+            else:
                return []
         else:                           # . . . or split as needed
             myZeros = []
@@ -367,9 +370,15 @@ def contours(self):
             # No contours for this spline.
             return []
 
+    # Record self's original domain and then reparametrize self's domain to [0, 1]^nInd.
+    domain = self.domain().T
+    self = self.reparametrize(((0.0, 1.0),) * self.nInd)
+    
+    # Construct self's tangents and normal.
     tangents = []
     for nInd in range(self.nInd):
         tangents.append(self.differentiate(nInd))
+    normal = self.normal_spline((0, 1)) # We only need the first two indices
 
     theta = np.sqrt(2) # Arbitrary starting value for theta (picked one in [0, pi/2] unlikely to be a stationary point)
     # Try different theta values until no border or turning points are degenerate.
@@ -381,7 +390,6 @@ def contours(self):
         abort = False
 
         # Construct the turning point determinant.
-        normal = self.normal_spline((0, 1)) # We only need the first two indices
         turningPointDeterminant = normal.dot((cosTheta, sinTheta))
 
         # Find intersections with u and v boundaries.
@@ -496,6 +504,20 @@ def contours(self):
     # (3) Take all the points found in Step (1) and Step (2) and order them by distance in the theta direction from the origin.
     points.sort()
 
+    # Extra step not in the paper: Add a panel between two consecutive turning points to uniquely determine contours between them.
+    if len(points) > 1:
+        i = 0
+        previousPoint = points[i]
+        while i < len(points) - 1:
+            i += 1
+            point = points[i]
+            if not previousPoint.onBoundary and not point.onBoundary and point.d - previousPoint.d > epsilon:
+                # We have two consecutive turning points on separate panels.
+                # Insert a panel in between them, with the uvw value of None, since there is no zero associated.
+                points.insert(i, Point(0.5 * (previousPoint.d + point.d), 0.0, False, None))
+                i += 1
+            previousPoint = point
+
     # (4) Initialize an ordered list of contours. No contours will be on the list at first.
     currentContourPoints = [] # Holds contours currently being identified
     contourPoints = [] # Hold contours already identified
@@ -541,29 +563,34 @@ def contours(self):
             # the list. Go back to Step (5).
             # First, construct panel, whose zeros lie along the panel boundary, u * cosTheta + v * sinTheta - d = 0.
             panel.coefs[self.nDep] -= point.d
-            # Split panel below and above the known zero point.
-            # This avoids extra computation and the high-zero at the known zero point.
-            panelPoints = [point.uvw]
-            # To split the panel, we need to determine the offset from the point.
-            # Since the objective function (self) is zero and its derivative is zero at the point,
-            # we use second derivatives to determine when the objective function will likely grow 
-            # evaluationEpsilon above zero again.
-            wrt = [0] * self.nInd
-            wrt[0] = 2
-            selfUU = self.derivative(wrt, point.uvw)
-            wrt[0] = 1
-            wrt[1] = 1
-            selfUV = self.derivative(wrt, point.uvw)
-            wrt[0] = 0
-            wrt[1] = 2
-            selfVV = self.derivative(wrt, point.uvw)
-            offset = np.sqrt(2.0 * evaluationEpsilon / \
-                np.linalg.norm(selfUU * sinTheta * sinTheta - 2.0 * selfUV * sinTheta * cosTheta + selfVV * cosTheta * cosTheta))
-            # Now, we can find the zeros of the split panel, checking to ensure each panel is within bounds first.
-            if point.uvw[0] + sinTheta * offset < 1.0 - epsilon and epsilon < point.uvw[1] - cosTheta * offset:
-                panelPoints += panel.trim(((point.uvw[0] + sinTheta * offset, 1.0), (0.0, point.uvw[1] - cosTheta * offset)) + ((None, None),) * (self.nInd - 2)).zeros()
-            if epsilon < point.uvw[0] - sinTheta * offset and point.uvw[1] + cosTheta * offset < 1.0 - epsilon:
-                panelPoints += panel.trim(((0.0, point.uvw[0] - sinTheta * offset), (point.uvw[1] + cosTheta * offset, 1.0)) + ((None, None),) * (self.nInd - 2)).zeros()
+
+            if point.uvw is None:
+                # For an inserted panel between two consecutive turning points, just find zeros along the panel.
+                panelPoints = panel.zeros()
+            else:
+                # Split panel below and above the known zero point.
+                # This avoids extra computation and the high-zero at the known zero point.
+                panelPoints = [point.uvw]
+                # To split the panel, we need to determine the offset from the point.
+                # Since the objective function (self) is zero and its derivative is zero at the point,
+                # we use second derivatives to determine when the objective function will likely grow 
+                # evaluationEpsilon above zero again.
+                wrt = [0] * self.nInd
+                wrt[0] = 2
+                selfUU = self.derivative(wrt, point.uvw)
+                wrt[0] = 1
+                wrt[1] = 1
+                selfUV = self.derivative(wrt, point.uvw)
+                wrt[0] = 0
+                wrt[1] = 2
+                selfVV = self.derivative(wrt, point.uvw)
+                offset = np.sqrt(2.0 * evaluationEpsilon / \
+                    np.linalg.norm(selfUU * sinTheta * sinTheta - 2.0 * selfUV * sinTheta * cosTheta + selfVV * cosTheta * cosTheta))
+                # Now, we can find the zeros of the split panel, checking to ensure each panel is within bounds first.
+                if point.uvw[0] + sinTheta * offset < 1.0 - epsilon and epsilon < point.uvw[1] - cosTheta * offset:
+                    panelPoints += panel.trim(((point.uvw[0] + sinTheta * offset, 1.0), (0.0, point.uvw[1] - cosTheta * offset)) + ((None, None),) * (self.nInd - 2)).zeros()
+                if epsilon < point.uvw[0] - sinTheta * offset and point.uvw[1] + cosTheta * offset < 1.0 - epsilon:
+                    panelPoints += panel.trim(((0.0, point.uvw[0] - sinTheta * offset), (point.uvw[1] + cosTheta * offset, 1.0)) + ((None, None),) * (self.nInd - 2)).zeros()
             # Sort zero points by their position along the panel boundary (using vector orthogonal to its normal).
             panelPoints.sort(key=lambda uvw: uvw[1] * cosTheta - uvw[0] * sinTheta)
             # Add d back to prepare for next turning point.
@@ -571,7 +598,7 @@ def contours(self):
             # Go through panel points, adding them to existing contours, creating new ones, or closing old ones.
             adjustment = 0 # Adjust index after a contour point is added or removed.
             for i, uvw in zip(range(len(panelPoints)), panelPoints):
-                if np.allclose(point.uvw, uvw):
+                if point.uvw is not None and np.allclose(point.uvw, uvw):
                     if point.det > 0.0:
                         # Insert the turning point twice (second one appears before the first one in the points list).
                         currentContourPoints.insert(i, [True, point.uvw]) # True indicates end point
@@ -594,6 +621,9 @@ def contours(self):
     # Now we just need to create splines for those contours using the Spline.contour method.
     splineContours = []
     for points in contourPoints:
-        splineContours.append(bspy.spline.Spline.contour(self, points[1:])) # Skip endPoint boolean at start of points list
+        contour = bspy.spline.Spline.contour(self, points[1:]) # Skip endPoint boolean at start of points list
+        # Transform the contour to self's original domain.
+        contour.coefs = (contour.coefs.T * (domain[1] - domain[0]) + domain[0]).T
+        splineContours.append(contour)
     
     return splineContours
