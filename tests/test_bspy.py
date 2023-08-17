@@ -592,13 +592,48 @@ def test_blossom():
         maxError = max(maxError, np.linalg.norm(myCurve.coefs[:,i] - coef))
     assert maxError <= np.finfo(float).eps
 
-def test_contour():
+def test_contours():
     maxError = 0.0
     F = lambda x: (x[0] - x[2], x[1] - x[3], x[0]*x[0] + x[1]*x[1]/9.0 - 1.0 + x[2]*x[2] + x[3]*x[3]/9.0 - 1.0)
     spline = bspy.Spline.contour(F, ((1.0, 0.0, 1.0, 0.0), (0.0, 3.0, 0.0, 3.0)))
     for t in np.linspace(0.0, 1.0, 21):
         x = spline((t,))
         maxError = max(maxError, np.linalg.norm(F(x)))
+    assert maxError <= 0.05
+
+    maxError = 0.0
+    order = 3
+    knots = [0.0] * order + [1.0] * order
+    nCoef = len(knots) - order
+    spline = bspy.Spline(2, 1, (order, order), (nCoef, nCoef), (knots, knots), \
+        (((1.0, 0.0, 1.0), (0.0, -5.0, 0.0), (1.0, 0.0, 1.0)),))
+    contours = spline.contours()
+    for contour in contours:
+        for t in np.linspace(0.0, 1.0, 11):
+            uvw = contour((t,))
+            maxError = max(maxError, np.linalg.norm(spline(uvw)))
+    assert maxError <= 0.05
+
+    return # Comment this line to run the following lengthy test
+
+    maxError = 0.0
+    F = lambda u , v : (u ** 2 + (v - 3/4) ** 2 - 1/25) * \
+        ((u - 2/5) ** 2 + (v - 3/5) ** 2 - 1/25) * \
+        (u ** 2 + (v - 3/2) ** 2 - 25/16) * \
+        ((u - 1) ** 2 + (v - 3/10) ** 2 - 1/25)
+    order = 9
+    knots = [0.0] * order + [1.0] * order
+    nCoef = order
+    points = []
+    for u in np.linspace(0.0, 1.0, nCoef):
+        for v in np.linspace(0.0, 1.0, nCoef):
+            points.append((u, v, F(u, v)))
+    spline = bspy.Spline.least_squares(2, 1, (order, order), points, (knots, knots))
+    contours = spline.contours()
+    for contour in contours:
+        for t in np.linspace(0.0, 1.0, 11):
+            uvw = contour((t,))
+            maxError = max(maxError, np.linalg.norm(spline(uvw)))
     assert maxError <= 0.05
 
 def test_contract():
@@ -804,29 +839,6 @@ def test_integral():
     assert maxError <= np.finfo(float).eps
 
 def test_intersect():
-    maxError = 0.0
-    F = lambda u , v : (u ** 2 + (v - 3/4) ** 2 - 1/25) * \
-        ((u - 2/5) ** 2 + (v - 3/5) ** 2 - 1/25) * \
-        (u ** 2 + (v - 3/2) ** 2 - 25/16) * \
-        ((u - 1) ** 2 + (v - 3/10) ** 2 - 1/25)
-
-    order = 9
-    knots = [0.0] * order + [1.0] * order
-    nCoef = order
-    points = []
-    for u in np.linspace(0.0, 1.0, nCoef):
-        for v in np.linspace(0.0, 1.0, nCoef):
-            points.append((u, v, F(u, v)))
-    spline = bspy.Spline.least_squares(2, 1, (order, order), points, (knots, knots))
-
-    return # Comment this line to run the following lengthy test
-
-    contours = spline.contours()
-    for contour in contours:
-        for t in np.linspace(0.0, 1.0, 11):
-            uvw = contour((t,))
-            maxError = max(maxError, np.linalg.norm(spline(uvw)))
-    assert maxError <= np.finfo(float).eps ** 0.2
 
     return # Comment this line to run the following additional really lengthy test
 
