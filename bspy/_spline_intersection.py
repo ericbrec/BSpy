@@ -371,7 +371,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
     for i in range(len(roots)):
         iRoot = roots[i]
         # If interval is small, just return a single value (not an interval).
-        if True or np.linalg.norm(iRoot[1] - iRoot[0]) < 2.0 * epsilon:
+        if True: # Skip small interval test, since it's typically a shallow point, not a flat section. np.linalg.norm(iRoot[1] - iRoot[0]) < 2.0 * epsilon:
             roots[i] = 0.5 * (iRoot[0] + iRoot[1])
 
     # Sort roots if there's only one dimension.
