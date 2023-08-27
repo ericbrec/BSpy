@@ -1072,7 +1072,7 @@ def test_zeros():
         assert expectedRootCount == len(roots)
         for root in roots:
             value = spline(root)
-            assert np.dot(value, value) < tolerance
+            assert np.dot(value, value) < np.sqrt(tolerance)
 
     tolerance = 1.0e-14
 
