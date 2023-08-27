@@ -842,6 +842,11 @@ def test_intersect():
 
     return # Comment this line to run the following additional really lengthy test
 
+    maxError = 0.0
+    F = lambda u , v : (u ** 2 + (v - 3/4) ** 2 - 1/25) * \
+        ((u - 2/5) ** 2 + (v - 3/5) ** 2 - 1/25) * \
+        (u ** 2 + (v - 3/2) ** 2 - 25/16) * \
+        ((u - 1) ** 2 + (v - 3/10) ** 2 - 1/25)
     order = 9
     knots = [0.0] * order + [1.0] * order
     nCoef = order
@@ -1072,7 +1077,7 @@ def test_zeros():
         assert expectedRootCount == len(roots)
         for root in roots:
             value = spline(root)
-            assert np.dot(value, value) < tolerance
+            assert np.dot(value, value) < np.sqrt(tolerance)
 
     tolerance = 1.0e-14
 

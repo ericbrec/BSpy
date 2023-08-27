@@ -218,8 +218,9 @@ def _refine_projected_polyhedron(interval):
             # No roots in this interval.
             return root, intervals
         scale = max(scale, abs(coefsMin), abs(coefsMax))
-    
-    if scale < epsilon:
+    newScale = scale * interval.scale
+
+    if newScale < evaluationEpsilon:
         # Return the bounds of the interval within which the spline is zero.
         root = (interval.intercept, interval.slope + interval.intercept)
     else:
@@ -265,7 +266,6 @@ def _refine_projected_polyhedron(interval):
                 domain.append(xInterval)
         
         if domain is not None:
-            newScale = scale * interval.scale
             domain = np.array(domain).T
             width = domain[1] - domain[0]
             newSlope = np.multiply(width, interval.slope)
@@ -273,10 +273,9 @@ def _refine_projected_polyhedron(interval):
             # one iteration past being less than sqrt(machineEpsilon) or simply less than epsilon.
             if interval.atMachineEpsilon or newSlope.max() < epsilon:
                 newIntercept = np.multiply(domain[0], interval.slope) + interval.intercept
-                root = newIntercept + 0.5 * newSlope
                 # Double-check that we're at an actual zero (avoids boundary case).
-                if newScale * np.linalg.norm(spline(0.5 * (domain[0] + domain[1]))) >= evaluationEpsilon:
-                    root = None
+                if newScale * np.linalg.norm(spline(0.5 * (domain[0] + domain[1]))) < evaluationEpsilon:
+                    root = (newIntercept, newIntercept + newSlope)
             else:
                 # Split domain in dimensions that aren't decreasing in width sufficiently.
                 domains = [domain]
@@ -299,7 +298,10 @@ def _refine_projected_polyhedron(interval):
                     newIntercept = np.multiply(domain[0], interval.slope) + interval.intercept
                     for i, w in zip(range(spline.nInd), width):
                         if w < machineEpsilon:
-                            domain[1, i] = domain[0, i] + machineEpsilon
+                            if domain[0, i] > machineEpsilon:
+                                domain[0, i] = domain[1, i] - machineEpsilon
+                            else:
+                                domain[1, i] = domain[0, i] + machineEpsilon
                     newDomain = [None if s < epsilon else (0.0, 1.0) for s in newSlope]
                     intervals.append(Interval(spline.trim(domain.T).reparametrize(newDomain), newScale, newSlope, newIntercept, epsilon, np.dot(newSlope, newSlope) < machineEpsilon))
   
@@ -333,25 +335,48 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
                 nextIntervals += newIntervals
         intervals = nextIntervals
             
-    # Check for duplicate roots. We test for a distance between roots of 2*epsilon to account for a left vs. right sided limit.
-    i = 0
-    rootCount = len(roots)
-    while i < rootCount:
-        root = roots[i]
-        j = i + 1
-        while j < rootCount:
-            if np.linalg.norm(root - roots[j]) < 2.0 * epsilon:
-                # For a duplicate root, return the average value.
-                roots[i] = 0.5 * (root + roots[j])
-                roots.pop(j)
-                rootCount -= 1
-            else:
-                j += 1
-        i += 1
+    # Connect intervals of zeros that overlap.
+    gotOverlap = True
+    while gotOverlap:
+        gotOverlap = False
+        i = 0
+        rootCount = len(roots)
+        while i < rootCount:
+            iRoot = roots[i]
+            root = (iRoot[0].copy(), iRoot[1].copy()) # Temporary storage for expanded interval
+            j = i + 1
+            # Check for overlap with other intervals.
+            while j < rootCount:
+                jRoot = roots[j]
+                overlapped = True
+                for d in range(self.nInd):
+                    if iRoot[0][d] < jRoot[1][d] + epsilon and jRoot[0][d] < iRoot[1][d] + epsilon:
+                        root[0][d] = min(iRoot[0][d], jRoot[0][d])
+                        root[1][d] = max(iRoot[1][d], jRoot[1][d])
+                    else:
+                        overlapped = False
+                        break
+                if overlapped:
+                    # For an overlapped interval, expand original interval and toss overlapping interval.
+                    iRoot[0][:] = root[0]
+                    iRoot[1][:] = root[1]
+                    roots.pop(j)
+                    rootCount -= 1
+                    gotOverlap = True
+                else:
+                    j += 1
+            i += 1
+    
+    # Collapse intervals to points as appropriate.
+    for i in range(len(roots)):
+        iRoot = roots[i]
+        # If interval is small, just return a single value (not an interval).
+        if True: # Skip small interval test, since it's typically a shallow point, not a flat section. np.linalg.norm(iRoot[1] - iRoot[0]) < 2.0 * epsilon:
+            roots[i] = 0.5 * (iRoot[0] + iRoot[1])
 
     # Sort roots if there's only one dimension.
     if self.nInd == 1:
-        roots.sort(key=lambda root: root[0] if type(root) is tuple else root)
+        roots.sort(key=lambda root: root[0] if isinstance(root, tuple) else root)
 
     return roots
 
