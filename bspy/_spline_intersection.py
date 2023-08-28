@@ -336,21 +336,22 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
         intervals = nextIntervals
             
     # Connect intervals of zeros that overlap.
-    gotOverlap = True
+    rootCount = len(roots)
+    gotOverlap = rootCount > 1 # Potential overlap if we've got at least 2 roots
     while gotOverlap:
         gotOverlap = False
         i = 0
-        rootCount = len(roots)
-        while i < rootCount:
+        while i < rootCount - 1:
             iRoot = roots[i]
             root = (iRoot[0].copy(), iRoot[1].copy()) # Temporary storage for expanded interval
+            separation = max(np.linalg.norm(iRoot[1] - iRoot[0]), epsilon)
             j = i + 1
             # Check for overlap with other intervals.
             while j < rootCount:
                 jRoot = roots[j]
                 overlapped = True
                 for d in range(self.nInd):
-                    if iRoot[0][d] < jRoot[1][d] + epsilon and jRoot[0][d] < iRoot[1][d] + epsilon:
+                    if iRoot[0][d] < jRoot[1][d] + separation and jRoot[0][d] < iRoot[1][d] + separation:
                         root[0][d] = min(iRoot[0][d], jRoot[0][d])
                         root[1][d] = max(iRoot[1][d], jRoot[1][d])
                     else:
@@ -360,16 +361,16 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
                     # For an overlapped interval, expand original interval and toss overlapping interval.
                     iRoot[0][:] = root[0]
                     iRoot[1][:] = root[1]
+                    separation = max(np.linalg.norm(iRoot[1] - iRoot[0]), epsilon)
                     roots.pop(j)
                     rootCount -= 1
-                    gotOverlap = True
+                    gotOverlap = rootCount > 1 # Potential overlap if we've got at least 2 roots
                 else:
                     j += 1
             i += 1
     
     # Collapse intervals to points as appropriate.
-    for i in range(len(roots)):
-        iRoot = roots[i]
+    for i, iRoot in zip(range(len(roots)), roots):
         # If interval is small, just return a single value (not an interval).
         if True: # Skip small interval test, since it's typically a shallow point, not a flat section. np.linalg.norm(iRoot[1] - iRoot[0]) < 2.0 * epsilon:
             roots[i] = 0.5 * (iRoot[0] + iRoot[1])
@@ -459,7 +460,7 @@ def contours(self):
                     if j != nInd:
                         columns[:, i] = tangents[j](uvw)
                         i += 1
-                duv = np.solve(columns, -tangents[nInd](uvw))
+                duv = np.linalg.solve(columns, -tangents[nInd](uvw))
                 det = np.arctan2((0.5 - boundary) * (duv[0] * cosTheta + duv[1] * sinTheta), (0.5 - boundary) * (duv[0] * cosTheta - duv[1] * sinTheta))
                 if abs(det) < epsilon:
                     abort = True
@@ -544,8 +545,8 @@ def contours(self):
             previousPoint = point
 
     # (4) Initialize an ordered list of contours. No contours will be on the list at first.
-    currentContourPoints = [] # Holds contours currently being identified
-    contourPoints = [] # Hold contours already identified
+    currentContourPoints = [] # Holds contours (point lists) currently being identified
+    contourPoints = [] # Hold contours (point lists) already identified
 
     # (5) If no points remain to be processed, stop. Otherwise, take the next closest point.
     for point in points:
@@ -596,26 +597,28 @@ def contours(self):
                 # Split panel below and above the known zero point.
                 # This avoids extra computation and the high-zero at the known zero point.
                 panelPoints = [point.uvw]
-                # To split the panel, we need to determine the offset from the point.
-                # Since the objective function (self) is zero and its derivative is zero at the point,
-                # we use second derivatives to determine when the objective function will likely grow 
-                # evaluationEpsilon above zero again.
-                wrt = [0] * self.nInd
-                wrt[0] = 2
-                selfUU = self.derivative(wrt, point.uvw)
-                wrt[0] = 1
-                wrt[1] = 1
-                selfUV = self.derivative(wrt, point.uvw)
-                wrt[0] = 0
-                wrt[1] = 2
-                selfVV = self.derivative(wrt, point.uvw)
-                offset = np.sqrt(2.0 * evaluationEpsilon / \
-                    np.linalg.norm(selfUU * sinTheta * sinTheta - 2.0 * selfUV * sinTheta * cosTheta + selfVV * cosTheta * cosTheta))
-                # Now, we can find the zeros of the split panel, checking to ensure each panel is within bounds first.
-                if point.uvw[0] + sinTheta * offset < 1.0 - epsilon and epsilon < point.uvw[1] - cosTheta * offset:
-                    panelPoints += panel.trim(((point.uvw[0] + sinTheta * offset, 1.0), (0.0, point.uvw[1] - cosTheta * offset)) + ((None, None),) * (self.nInd - 2)).zeros()
-                if epsilon < point.uvw[0] - sinTheta * offset and point.uvw[1] + cosTheta * offset < 1.0 - epsilon:
-                    panelPoints += panel.trim(((0.0, point.uvw[0] - sinTheta * offset), (point.uvw[1] + cosTheta * offset, 1.0)) + ((None, None),) * (self.nInd - 2)).zeros()
+                # Only split the panel looking for other points if any are expected (> 0 for starting turning point, > 2 for ending one).
+                if len(currentContourPoints) > (0 if point.det > 0.0 else 2):
+                    # To split the panel, we need to determine the offset from the point.
+                    # Since the objective function (self) is zero and its derivative is zero at the point,
+                    # we use second derivatives to determine when the objective function will likely grow 
+                    # evaluationEpsilon above zero again.
+                    wrt = [0] * self.nInd
+                    wrt[0] = 2
+                    selfUU = self.derivative(wrt, point.uvw)
+                    wrt[0] = 1
+                    wrt[1] = 1
+                    selfUV = self.derivative(wrt, point.uvw)
+                    wrt[0] = 0
+                    wrt[1] = 2
+                    selfVV = self.derivative(wrt, point.uvw)
+                    offset = np.sqrt(2.0 * evaluationEpsilon / \
+                        np.linalg.norm(selfUU * sinTheta * sinTheta - 2.0 * selfUV * sinTheta * cosTheta + selfVV * cosTheta * cosTheta))
+                    # Now, we can find the zeros of the split panel, checking to ensure each panel is within bounds first.
+                    if point.uvw[0] + sinTheta * offset < 1.0 - epsilon and epsilon < point.uvw[1] - cosTheta * offset:
+                        panelPoints += panel.trim(((point.uvw[0] + sinTheta * offset, 1.0), (0.0, point.uvw[1] - cosTheta * offset)) + ((None, None),) * (self.nInd - 2)).zeros()
+                    if epsilon < point.uvw[0] - sinTheta * offset and point.uvw[1] + cosTheta * offset < 1.0 - epsilon:
+                        panelPoints += panel.trim(((0.0, point.uvw[0] - sinTheta * offset), (point.uvw[1] + cosTheta * offset, 1.0)) + ((None, None),) * (self.nInd - 2)).zeros()
             # Sort zero points by their position along the panel boundary (using vector orthogonal to its normal).
             panelPoints.sort(key=lambda uvw: uvw[1] * cosTheta - uvw[0] * sinTheta)
             # Add d back to prepare for next turning point.
@@ -630,10 +633,12 @@ def contours(self):
                         currentContourPoints.insert(i, [False, point.uvw]) # False indicates continuation point
                         adjustment = 1
                     else:
+                        # Join contours that connect through the turning point.
                         secondHalf = currentContourPoints.pop(i + 1)
                         endPoint = secondHalf.pop(0)
-                        secondHalf.reverse()
+                        secondHalf.reverse() # Second half of contour points go backwards, so reverse them
                         fullList = currentContourPoints.pop(i) + [point.uvw] + secondHalf
+                        # If the contour has arrived at an endpoint, add it to final list, otherwise it extends the next contour point.
                         if endPoint:
                             contourPoints.append(fullList)
                         else:
