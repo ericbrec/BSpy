@@ -595,10 +595,11 @@ def contours(self):
                 panelPoints = panel.zeros()
             elif point.turningPoint:
                 # Split panel below and above the known zero point.
-                # This avoids extra computation and the high-zero at the known zero point.
+                # This avoids extra computation and the high-zero at the known zero point, while ensuring we match the turning point.
                 panelPoints = [point.uvw]
                 # Only split the panel looking for other points if any are expected (> 0 for starting turning point, > 2 for ending one).
-                if len(currentContourPoints) > (0 if point.det > 0.0 else 2):
+                expectedPanelPoints = len(currentContourPoints) - (0 if point.det > 0.0 else 2)
+                if expectedPanelPoints > 0:
                     # To split the panel, we need to determine the offset from the point.
                     # Since the objective function (self) is zero and its derivative is zero at the point,
                     # we use second derivatives to determine when the objective function will likely grow 
@@ -614,14 +615,23 @@ def contours(self):
                     # Now, we can find the zeros of the split panel, checking to ensure each panel is within bounds first.
                     if point.uvw[0] + sinTheta * offset < 1.0 - epsilon and epsilon < point.uvw[1] - cosTheta * offset:
                         panelPoints += panel.trim(((point.uvw[0] + sinTheta * offset, 1.0), (0.0, point.uvw[1] - cosTheta * offset)) + ((None, None),) * (self.nInd - 2)).zeros()
-                    if epsilon < point.uvw[0] - sinTheta * offset and point.uvw[1] + cosTheta * offset < 1.0 - epsilon:
+                        expectedPanelPoints -= len(panelPoints) - 1 # Discount the turning point itself
+                    if expectedPanelPoints > 0 and epsilon < point.uvw[0] - sinTheta * offset and point.uvw[1] + cosTheta * offset < 1.0 - epsilon:
                         panelPoints += panel.trim(((0.0, point.uvw[0] - sinTheta * offset), (point.uvw[1] + cosTheta * offset, 1.0)) + ((None, None),) * (self.nInd - 2)).zeros()
-            else: # It's an other boundary point.
-                # Only find zeros if extra points are expected (> 0 for starting point, > 1 for ending one).
-                if len(currentContourPoints) > (0 if point.det > 0.0 else 1):
-                    panelPoints = panel.zeros()
-                else:
-                    panelPoints = [point.uvw]
+            else: # It's an other-boundary point.
+                # Split panel below and above the known zero point.
+                # This avoids extra computation and ensures a match for the boundary point.
+                panelPoints = [point.uvw]
+                # Only split the panel if any are expected (> 0 for starting point, > 1 for ending one).
+                expectedPanelPoints = len(currentContourPoints) - (0 if point.det > 0.0 else 1)
+                if expectedPanelPoints > 0:
+                    offset = evaluationEpsilon
+                    # Now, we can find the zeros of the split panel, checking to ensure each panel is within bounds first.
+                    if point.uvw[0] + sinTheta * offset < 1.0 - epsilon and epsilon < point.uvw[1] - cosTheta * offset:
+                        panelPoints += panel.trim(((point.uvw[0] + sinTheta * offset, 1.0), (0.0, point.uvw[1] - cosTheta * offset)) + ((None, None),) * (self.nInd - 2)).zeros()
+                        expectedPanelPoints -= len(panelPoints) - 1 # Discount the boundary point itself
+                    if expectedPanelPoints > 0 and epsilon < point.uvw[0] - sinTheta * offset and point.uvw[1] + cosTheta * offset < 1.0 - epsilon:
+                        panelPoints += panel.trim(((0.0, point.uvw[0] - sinTheta * offset), (point.uvw[1] + cosTheta * offset, 1.0)) + ((None, None),) * (self.nInd - 2)).zeros()
 
             # Add d back to prepare for next turning point.
             panel.coefs[self.nDep] += point.d
@@ -652,7 +662,7 @@ def contours(self):
                             adjustment = -1
                         else: 
                             # It's an ending point on an other boundary (same steps are uv boundary).
-                            fullList = currentContourPoints.pop(i) + [point.uvw] + secondHalf
+                            fullList = currentContourPoints.pop(i) + [point.uvw]
                             endPoint = fullList[0]
                             if endPoint:
                                 contourPoints.append(fullList)
