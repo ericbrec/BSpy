@@ -564,9 +564,9 @@ def contours(self):
             if point.det > 0.0:
                 # Starting point
                 if abs(point.uvw[0] - 1.0) < epsilon or abs(point.uvw[1]) < epsilon:
-                    currentContourPoints.insert(0, [True, point.uvw]) # True indicates end point
+                    currentContourPoints.insert(0, [0, point.uvw]) # 0 indicates no connected contours
                 else:
-                    currentContourPoints.append([True, point.uvw]) # True indicates end point
+                    currentContourPoints.append([0, point.uvw]) # 0 indicates no connected contours
             else:
                 # Ending point
                 if abs(point.uvw[0] - 1.0) < epsilon or abs(point.uvw[1]) < epsilon:
@@ -574,12 +574,13 @@ def contours(self):
                 else:
                     i = -1
                 fullList = currentContourPoints.pop(i) + [point.uvw]
-                endPoint = fullList[0]
-                if endPoint:
+                connection = fullList[0]
+                if connection == 0:
                     contourPoints.append(fullList)
                 else:
-                    fullList.reverse() # The last two values will be a repeat turning point and the endPoint flag, we remove them on the next line
-                    currentContourPoints[i] = [True] + fullList[:-2] + currentContourPoints[i][1:]
+                    index = i if connection == -1 else i - 1
+                    fullList.reverse() # The last two values will be a repeat connection point and the connection indicator, we remove them on the next line
+                    currentContourPoints[index] = [0] + fullList[:-2] + currentContourPoints[index][1:]
         else:
             # (7) Determine whether two contours start or two contours end
             # at the turning point. Locate the two contours in the list of contours by finding
@@ -642,23 +643,35 @@ def contours(self):
             for i, uvw in zip(range(len(panelPoints)), panelPoints):
                 if point.uvw is not None and np.allclose(point.uvw, uvw):
                     if point.det > 0.0:
-                        currentContourPoints.insert(i, [True, point.uvw]) # True indicates end point
                         if point.turningPoint:
                             # Insert the turning point twice (second one appears before the first one in the points list).
-                            currentContourPoints.insert(i, [False, point.uvw]) # False indicates continuation point
+                            currentContourPoints.insert(i, [1, point.uvw]) # 1 indicates higher connection point
+                            currentContourPoints.insert(i, [-1, point.uvw]) # -1 indicates lower connection point
                             adjustment = 1
+                        else:
+                            # Insert the other-boundary point once.
+                            currentContourPoints.insert(i, [0, point.uvw]) # 0 indicates no connected contours
                     else:
                         if point.turningPoint:
                             # Join contours that connect through the turning point.
-                            secondHalf = currentContourPoints.pop(i + 1)
-                            endPoint = secondHalf.pop(0)
-                            secondHalf.reverse() # Second half of contour points go backwards, so reverse them
-                            fullList = currentContourPoints.pop(i) + [point.uvw] + secondHalf
-                            # If the contour has arrived at an endpoint, add it to final list, otherwise it extends the next contour point.
-                            if endPoint:
-                                contourPoints.append(fullList)
+                            upperHalf = currentContourPoints.pop(i + 1)
+                            upperConnection = upperHalf.pop(0)
+                            lowerHalf = currentContourPoints.pop(i)
+                            lowerConnection = lowerHalf.pop(0)
+                            if upperConnection == 0 and lowerConnection == 0:
+                                contourPoints.append([0] + lowerHalf + [point.uvw] + upperHalf)
+                            elif upperConnection == 0 and lowerConnection != 0:
+                                assert lowerConnection == 1
+                                index = i if lowerConnection == -1 else i - 1
+                                lowerHalf.reverse()
+                                currentContourPoints[index] = [0] + upperHalf + [point.uvw] + lowerHalf + currentContourPoints[index][2:]
+                            elif upperConnection != 0 and lowerConnection == 0:
+                                assert upperConnection == -1
+                                index = i if upperConnection == -1 else i - 1
+                                upperHalf.reverse()
+                                currentContourPoints[index] = [0] + lowerHalf + [point.uvw] + upperHalf + currentContourPoints[index][2:]
                             else:
-                                currentContourPoints[i] = fullList + currentContourPoints[i][1:]
+                                pass
                             adjustment = -1
                         else: 
                             # It's an ending point on an other boundary (same steps are uv boundary).
@@ -667,7 +680,7 @@ def contours(self):
                             if endPoint:
                                 contourPoints.append(fullList)
                             else:
-                                fullList.reverse() # The last two values will be a repeat turning point and the endPoint flag, we remove them on the next line
+                                fullList.reverse() # The last two values will be a repeat turning point and the connection flag, we remove them on the next line
                                 currentContourPoints[i] = [True] + fullList[:-2] + currentContourPoints[i][1:]
                 else:
                     currentContourPoints[i + adjustment].append(uvw)
