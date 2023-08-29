@@ -384,7 +384,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
 def contours(self):
     if self.nInd - self.nDep != 1: raise ValueError("The number of free variables (self.nInd - self.nDep) must be one.")
 
-    Point = namedtuple('Point', ('d', 'det', 'onBoundary', 'uvw'))
+    Point = namedtuple('Point', ('d', 'det', 'onUVBoundary', 'turningPoint', 'uvw'))
     epsilon = np.sqrt(np.finfo(self.coefs.dtype).eps)
     evaluationEpsilon = np.sqrt(epsilon)
 
@@ -432,7 +432,7 @@ def contours(self):
                 if abs(det) < epsilon:
                     abort = True
                     break
-                points.append(Point(d, det, True, uvw))
+                points.append(Point(d, det, True, False, uvw))
             return abort
         for nInd in range(2):
             abort = uvIntersections(nInd, 0.0)
@@ -465,7 +465,7 @@ def contours(self):
                 if abs(det) < epsilon:
                     abort = True
                     break
-                points.append(Point(d, det, True, uvw))
+                points.append(Point(d, det, False, False, uvw))
             return abort
         for nInd in range(2, self.nInd):
             abort = otherIntersections(nInd, 0.0)
@@ -497,7 +497,7 @@ def contours(self):
             if abs(det) < epsilon:
                 abort = True
                 break
-            points.append(Point(d, det, False, uvw))
+            points.append(Point(d, det, False, True, uvw))
         if not abort:
             break # We're done!
     
@@ -537,10 +537,10 @@ def contours(self):
         while i < len(points) - 1:
             i += 1
             point = points[i]
-            if not previousPoint.onBoundary and not point.onBoundary and point.d - previousPoint.d > epsilon:
+            if previousPoint.turningPoint and point.turningPoint and point.d - previousPoint.d > epsilon:
                 # We have two consecutive turning points on separate panels.
                 # Insert a panel in between them, with the uvw value of None, since there is no zero associated.
-                points.insert(i, Point(0.5 * (previousPoint.d + point.d), 0.0, False, None))
+                points.insert(i, Point(0.5 * (previousPoint.d + point.d), 0.0, False, True, None))
                 i += 1
             previousPoint = point
 
@@ -551,7 +551,7 @@ def contours(self):
     # (5) If no points remain to be processed, stop. Otherwise, take the next closest point.
     for point in points:
         # If it is a boundary point, go to Step (6). Otherwise, go to Step (7).
-        if point.onBoundary:
+        if point.onUVBoundary:
             # (6) Determine whether the point corresponds to a contour which is starting or ending
             # at the given point. A point corresponds to a starting contour if it continues in the
             # increasing panel direction, and it corresponds to an ending contour if it continues
@@ -590,10 +590,10 @@ def contours(self):
             # First, construct panel, whose zeros lie along the panel boundary, u * cosTheta + v * sinTheta - d = 0.
             panel.coefs[self.nDep] -= point.d
 
-            if point.uvw is None:
+            if point.turningPoint and point.uvw is None:
                 # For an inserted panel between two consecutive turning points, just find zeros along the panel.
                 panelPoints = panel.zeros()
-            else:
+            elif point.turningPoint:
                 # Split panel below and above the known zero point.
                 # This avoids extra computation and the high-zero at the known zero point.
                 panelPoints = [point.uvw]
@@ -603,14 +603,11 @@ def contours(self):
                     # Since the objective function (self) is zero and its derivative is zero at the point,
                     # we use second derivatives to determine when the objective function will likely grow 
                     # evaluationEpsilon above zero again.
-                    wrt = [0] * self.nInd
-                    wrt[0] = 2
+                    wrt = [0] * self.nInd; wrt[0] = 2
                     selfUU = self.derivative(wrt, point.uvw)
-                    wrt[0] = 1
-                    wrt[1] = 1
+                    wrt[0] = 1; wrt[1] = 1
                     selfUV = self.derivative(wrt, point.uvw)
-                    wrt[0] = 0
-                    wrt[1] = 2
+                    wrt[0] = 0; wrt[1] = 2
                     selfVV = self.derivative(wrt, point.uvw)
                     offset = np.sqrt(2.0 * evaluationEpsilon / \
                         np.linalg.norm(selfUU * sinTheta * sinTheta - 2.0 * selfUV * sinTheta * cosTheta + selfVV * cosTheta * cosTheta))
@@ -619,31 +616,49 @@ def contours(self):
                         panelPoints += panel.trim(((point.uvw[0] + sinTheta * offset, 1.0), (0.0, point.uvw[1] - cosTheta * offset)) + ((None, None),) * (self.nInd - 2)).zeros()
                     if epsilon < point.uvw[0] - sinTheta * offset and point.uvw[1] + cosTheta * offset < 1.0 - epsilon:
                         panelPoints += panel.trim(((0.0, point.uvw[0] - sinTheta * offset), (point.uvw[1] + cosTheta * offset, 1.0)) + ((None, None),) * (self.nInd - 2)).zeros()
-            # Sort zero points by their position along the panel boundary (using vector orthogonal to its normal).
-            panelPoints.sort(key=lambda uvw: uvw[1] * cosTheta - uvw[0] * sinTheta)
+            else: # It's an other boundary point.
+                # Only find zeros if extra points are expected (> 0 for starting point, > 1 for ending one).
+                if len(currentContourPoints) > (0 if point.det > 0.0 else 1):
+                    panelPoints = panel.zeros()
+                else:
+                    panelPoints = [point.uvw]
+
             # Add d back to prepare for next turning point.
             panel.coefs[self.nDep] += point.d
+            # Sort zero points by their position along the panel boundary (using vector orthogonal to its normal).
+            panelPoints.sort(key=lambda uvw: uvw[1] * cosTheta - uvw[0] * sinTheta)
             # Go through panel points, adding them to existing contours, creating new ones, or closing old ones.
             adjustment = 0 # Adjust index after a contour point is added or removed.
             for i, uvw in zip(range(len(panelPoints)), panelPoints):
                 if point.uvw is not None and np.allclose(point.uvw, uvw):
                     if point.det > 0.0:
-                        # Insert the turning point twice (second one appears before the first one in the points list).
                         currentContourPoints.insert(i, [True, point.uvw]) # True indicates end point
-                        currentContourPoints.insert(i, [False, point.uvw]) # False indicates continuation point
-                        adjustment = 1
+                        if point.turningPoint:
+                            # Insert the turning point twice (second one appears before the first one in the points list).
+                            currentContourPoints.insert(i, [False, point.uvw]) # False indicates continuation point
+                            adjustment = 1
                     else:
-                        # Join contours that connect through the turning point.
-                        secondHalf = currentContourPoints.pop(i + 1)
-                        endPoint = secondHalf.pop(0)
-                        secondHalf.reverse() # Second half of contour points go backwards, so reverse them
-                        fullList = currentContourPoints.pop(i) + [point.uvw] + secondHalf
-                        # If the contour has arrived at an endpoint, add it to final list, otherwise it extends the next contour point.
-                        if endPoint:
-                            contourPoints.append(fullList)
-                        else:
-                            currentContourPoints[i] = fullList + currentContourPoints[i][1:]
-                        adjustment = -1
+                        if point.turningPoint:
+                            # Join contours that connect through the turning point.
+                            secondHalf = currentContourPoints.pop(i + 1)
+                            endPoint = secondHalf.pop(0)
+                            secondHalf.reverse() # Second half of contour points go backwards, so reverse them
+                            fullList = currentContourPoints.pop(i) + [point.uvw] + secondHalf
+                            # If the contour has arrived at an endpoint, add it to final list, otherwise it extends the next contour point.
+                            if endPoint:
+                                contourPoints.append(fullList)
+                            else:
+                                currentContourPoints[i] = fullList + currentContourPoints[i][1:]
+                            adjustment = -1
+                        else: 
+                            # It's an ending point on an other boundary (same steps are uv boundary).
+                            fullList = currentContourPoints.pop(i) + [point.uvw] + secondHalf
+                            endPoint = fullList[0]
+                            if endPoint:
+                                contourPoints.append(fullList)
+                            else:
+                                fullList.reverse() # The last two values will be a repeat turning point and the endPoint flag, we remove them on the next line
+                                currentContourPoints[i] = [True] + fullList[:-2] + currentContourPoints[i][1:]
                 else:
                     currentContourPoints[i + adjustment].append(uvw)
 
