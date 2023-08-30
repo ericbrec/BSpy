@@ -574,13 +574,13 @@ def contours(self):
                 else:
                     i = -1
                 fullList = currentContourPoints.pop(i) + [point.uvw]
-                connection = fullList[0]
+                connection = fullList.pop(0)
                 if connection == 0:
                     contourPoints.append(fullList)
                 else:
                     index = i if connection == -1 else i - 1
-                    fullList.reverse() # The last two values will be a repeat connection point and the connection indicator, we remove them on the next line
-                    currentContourPoints[index] = [0] + fullList[:-2] + currentContourPoints[index][1:]
+                    fullList.reverse()
+                    currentContourPoints[index] = [0] + fullList + currentContourPoints[index][2:]
         else:
             # (7) Determine whether two contours start or two contours end
             # at the turning point. Locate the two contours in the list of contours by finding
@@ -658,30 +658,54 @@ def contours(self):
                             upperConnection = upperHalf.pop(0)
                             lowerHalf = currentContourPoints.pop(i)
                             lowerConnection = lowerHalf.pop(0)
+                            adjustment = -1
                             if upperConnection == 0 and lowerConnection == 0:
-                                contourPoints.append([0] + lowerHalf + [point.uvw] + upperHalf)
+                                # U shape rotated left 90 degrees
+                                upperHalf.reverse()
+                                contourPoints.append(lowerHalf + [point.uvw] + upperHalf)
                             elif upperConnection == 0 and lowerConnection != 0:
+                                # 2 shape, upper portion
                                 assert lowerConnection == 1
                                 index = i if lowerConnection == -1 else i - 1
                                 lowerHalf.reverse()
-                                currentContourPoints[index] = [0] + upperHalf + [point.uvw] + lowerHalf + currentContourPoints[index][2:]
+                                currentContourPoints[index] = [upperConnection] + upperHalf + [point.uvw] + lowerHalf + currentContourPoints[index][2:]
                             elif upperConnection != 0 and lowerConnection == 0:
+                                # S shape, lower portion
                                 assert upperConnection == -1
                                 index = i if upperConnection == -1 else i - 1
                                 upperHalf.reverse()
-                                currentContourPoints[index] = [0] + lowerHalf + [point.uvw] + upperHalf + currentContourPoints[index][2:]
-                            else:
-                                pass
-                            adjustment = -1
+                                currentContourPoints[index] = [lowerConnection] + lowerHalf + [point.uvw] + upperHalf + currentContourPoints[index][2:]
+                            elif upperConnection == 1 and lowerConnection == -1:
+                                # O shape
+                                upperHalf.reverse()
+                                contourPoints.append(lowerHalf + [point.uvw] + upperHalf)
+                            elif upperConnection == 1 and lowerConnection == 1:
+                                # C shape, upper portion
+                                index = i if lowerConnection == -1 else i - 1
+                                lowerHalf.reverse()
+                                currentContourPoints[index] = [upperConnection] + upperHalf + [point.uvw] + lowerHalf + currentContourPoints[index][2:]
+                            elif upperConnection == -1 and lowerConnection == -1:
+                                # C shape, lower portion
+                                index = i if upperConnection == -1 else i - 1
+                                upperHalf.reverse()
+                                currentContourPoints[index] = [lowerConnection] + lowerHalf + [point.uvw] + upperHalf + currentContourPoints[index][2:]
+                            else: # upperConnection == -1 and lowerConnection == 1
+                                # M shape rotated left 90 degrees
+                                assert upperConnection == -1
+                                assert lowerConnection == 1
+                                index = i if lowerConnection == -1 else i - 1
+                                lowerHalf.reverse()
+                                currentContourPoints[index] = [upperConnection] + upperHalf + [point.uvw] + lowerHalf + currentContourPoints[index][2:]
                         else: 
-                            # It's an ending point on an other boundary (same steps are uv boundary).
+                            # It's an ending point on an other boundary (same steps as uv boundary).
                             fullList = currentContourPoints.pop(i) + [point.uvw]
-                            endPoint = fullList[0]
-                            if endPoint:
+                            connection = fullList.pop(0)
+                            if connection == 0:
                                 contourPoints.append(fullList)
                             else:
-                                fullList.reverse() # The last two values will be a repeat turning point and the connection flag, we remove them on the next line
-                                currentContourPoints[i] = [True] + fullList[:-2] + currentContourPoints[i][1:]
+                                index = i if connection == -1 else i - 1
+                                fullList.reverse()
+                                currentContourPoints[index] = [0] + fullList + currentContourPoints[index][2:]
                 else:
                     currentContourPoints[i + adjustment].append(uvw)
 
@@ -689,7 +713,7 @@ def contours(self):
     # Now we just need to create splines for those contours using the Spline.contour method.
     splineContours = []
     for points in contourPoints:
-        contour = bspy.spline.Spline.contour(self, points[1:]) # Skip endPoint boolean at start of points list
+        contour = bspy.spline.Spline.contour(self, points)
         # Transform the contour to self's original domain.
         contour.coefs = (contour.coefs.T * (domain[1] - domain[0]) + domain[0]).T
         splineContours.append(contour)
