@@ -572,7 +572,7 @@ def contours(self):
                 if abs(point.uvw[0] - 1.0) < epsilon or abs(point.uvw[1]) < epsilon:
                     i = 0
                 else:
-                    i = -1
+                    i = len(currentContourPoints) - 1 # Can't use -1, because we manipulate the index below
                 fullList = currentContourPoints.pop(i) + [point.uvw]
                 connection = fullList.pop(0)
                 if connection == 0:
@@ -659,33 +659,34 @@ def contours(self):
                             lowerHalf = currentContourPoints.pop(i)
                             lowerConnection = lowerHalf.pop(0)
                             adjustment = -1
+                            # Handle all the shape possibilities.
                             if upperConnection == 0 and lowerConnection == 0:
-                                # U shape rotated left 90 degrees
+                                # U shape rotated left 90 degrees.
                                 upperHalf.reverse()
                                 contourPoints.append(lowerHalf + [point.uvw] + upperHalf)
                             elif upperConnection == 0 and lowerConnection != 0:
-                                # 2 shape, upper portion
+                                # 2 shape, upper portion.
                                 assert lowerConnection == 1
                                 index = i if lowerConnection == -1 else i - 1
                                 lowerHalf.reverse()
                                 currentContourPoints[index] = [upperConnection] + upperHalf + [point.uvw] + lowerHalf + currentContourPoints[index][2:]
                             elif upperConnection != 0 and lowerConnection == 0:
-                                # S shape, lower portion
+                                # S shape, lower portion.
                                 assert upperConnection == -1
                                 index = i if upperConnection == -1 else i - 1
                                 upperHalf.reverse()
                                 currentContourPoints[index] = [lowerConnection] + lowerHalf + [point.uvw] + upperHalf + currentContourPoints[index][2:]
                             elif upperConnection == 1 and lowerConnection == -1:
-                                # O shape
+                                # O shape.
                                 upperHalf.reverse()
                                 contourPoints.append(lowerHalf + [point.uvw] + upperHalf)
                             elif upperConnection == 1 and lowerConnection == 1:
-                                # C shape, upper portion
+                                # C shape, upper portion.
                                 index = i if lowerConnection == -1 else i - 1
                                 lowerHalf.reverse()
                                 currentContourPoints[index] = [upperConnection] + upperHalf + [point.uvw] + lowerHalf + currentContourPoints[index][2:]
                             elif upperConnection == -1 and lowerConnection == -1:
-                                # C shape, lower portion
+                                # C shape, lower portion.
                                 index = i if upperConnection == -1 else i - 1
                                 upperHalf.reverse()
                                 currentContourPoints[index] = [lowerConnection] + lowerHalf + [point.uvw] + upperHalf + currentContourPoints[index][2:]
