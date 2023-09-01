@@ -407,13 +407,15 @@ def contours(self):
     normal = self.normal_spline((0, 1)) # We only need the first two indices
 
     theta = np.sqrt(2) # Arbitrary starting value for theta (picked one in [0, pi/2] unlikely to be a stationary point)
-    # Try different theta values until no border or turning points are degenerate.
-    while True:
+    # Try different theta values until no border or turning points are degenerate or we run out of attempts.
+    attempts = 3
+    while attempts > 0:
         points = []
-        theta *= 0.77
+        theta *= 0.607
         cosTheta = np.cos(theta)
         sinTheta = np.sin(theta)
         abort = False
+        attempts -=1
 
         # Construct the turning point determinant.
         turningPointDeterminant = normal.dot((cosTheta, sinTheta))
@@ -500,6 +502,9 @@ def contours(self):
             points.append(Point(d, det, False, True, uvw))
         if not abort:
             break # We're done!
+    
+    if attempts <= 0:
+        raise ValueError("No contours. Degenerate equations.")
     
     # We've got all the contour points, now we bucket them into individual contours using the algorithm 
     # from Grandine, Thomas A., and Frederick W. Klein IV. "A new approach to the surface intersection problem." 
@@ -620,19 +625,16 @@ def contours(self):
                     if expectedPanelPoints > 0 and epsilon < point.uvw[0] - sinTheta * offset and point.uvw[1] + cosTheta * offset < 1.0 - epsilon:
                         panelPoints += panel.trim(((0.0, point.uvw[0] - sinTheta * offset), (point.uvw[1] + cosTheta * offset, 1.0)) + ((None, None),) * (self.nInd - 2)).zeros()
             else: # It's an other-boundary point.
-                # Split panel below and above the known zero point.
-                # This avoids extra computation and ensures a match for the boundary point.
-                panelPoints = [point.uvw]
-                # Only split the panel if any are expected (> 0 for starting point, > 1 for ending one).
+                # Only find extra zeros along the panel if any are expected (> 0 for starting point, > 1 for ending one).
                 expectedPanelPoints = len(currentContourPoints) - (0 if point.det > 0.0 else 1)
                 if expectedPanelPoints > 0:
-                    offset = evaluationEpsilon
-                    # Now, we can find the zeros of the split panel, checking to ensure each panel is within bounds first.
-                    if point.uvw[0] + sinTheta * offset < 1.0 - epsilon and epsilon < point.uvw[1] - cosTheta * offset:
-                        panelPoints += panel.trim(((point.uvw[0] + sinTheta * offset, 1.0), (0.0, point.uvw[1] - cosTheta * offset)) + ((None, None),) * (self.nInd - 2)).zeros()
-                        expectedPanelPoints -= len(panelPoints) - 1 # Discount the boundary point itself
-                    if expectedPanelPoints > 0 and epsilon < point.uvw[0] - sinTheta * offset and point.uvw[1] + cosTheta * offset < 1.0 - epsilon:
-                        panelPoints += panel.trim(((0.0, point.uvw[0] - sinTheta * offset), (point.uvw[1] + cosTheta * offset, 1.0)) + ((None, None),) * (self.nInd - 2)).zeros()
+                    panelPoints = panel.zeros()
+                    panelPoints.sort(key=lambda uvw: np.linalg.norm(point.uvw - uvw)) # Sort by distance from boundary point
+                    while len(panelPoints) > expectedPanelPoints:
+                        panelPoints.pop(0) # Drop points closest to the boundary point
+                    panelPoints.append(point.uvw)
+                else:
+                    panelPoints = [point.uvw]
 
             # Add d back to prepare for next turning point.
             panel.coefs[self.nDep] += point.d
