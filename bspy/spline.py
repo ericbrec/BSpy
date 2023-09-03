@@ -319,6 +319,34 @@ class Spline:
         """
         return bspy._spline_domain.common_basis(self, splines, indMap)
 
+    def confine(self, range_bounds):
+        """
+        Confine the range of a curve to the given bounds.
+
+        Parameters
+        ----------
+        range_bounds : `iterable`
+            The collection of `nDep` tuples that specify the lower and upper bounds for the curve.
+
+        Returns
+        -------
+        spline : `Spline`
+            The confined spline. 
+
+        See Also
+        --------
+        `range_bounds` : Return the range of a spline as lower and upper bounds.
+        `contour` : Fit a spline to the contour defined by `F(x) = 0`.
+
+        Notes
+        -----
+        Only works for curves (`nInd == 1`). Portions of the curve that lie outside the bounds 
+        become lines along the boundary. If the range of the curve does not intersect 
+        the bounds, the curve is left unchanged, even if the curve lies entirely outside 
+        the bounds.
+        """
+        return bspy._spline_operations.confine(self, range_bounds)
+
     @staticmethod
     def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         """
@@ -361,10 +389,12 @@ class Spline:
         --------
         `least_squares` : Fit a spline to an array of data points using the method of least squares.
         `contours` : Find all the contour curves of a spline.
+        `confine` : Confine the range of a curve to the given bounds.
 
         Notes
         -----
         The returned spline has constant parametric speed (the length of its derivative is constant). 
+        If `F` is a `Spline`, then the range of the returned contour is confined to the domain of `F`. 
         Implements the algorithm described in section 7 of Grandine, Thomas A. 
         "Applications of contouring." Siam Review 42, no. 2 (2000): 297-316.
         """
@@ -1063,7 +1093,7 @@ class Spline:
 
     def range_bounds(self):
         """
-        Return the range of a spline as upper and lower bounds on each of the
+        Return the range of a spline as lower and upper bounds on each of the
         dependent variables
         """
         return bspy._spline_evaluation.range_bounds(self)
