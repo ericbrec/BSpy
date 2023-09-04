@@ -341,9 +341,7 @@ class Spline:
         Notes
         -----
         Only works for curves (`nInd == 1`). Portions of the curve that lie outside the bounds 
-        become lines along the boundary. If the range of the curve does not intersect 
-        the bounds, the curve is left unchanged, even if the curve lies entirely outside 
-        the bounds.
+        become lines along the boundary.
         """
         return bspy._spline_operations.confine(self, range_bounds)
 
