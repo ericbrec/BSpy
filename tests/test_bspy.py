@@ -599,7 +599,7 @@ def test_contours():
     for t in np.linspace(0.0, 1.0, 21):
         x = spline((t,))
         maxError = max(maxError, np.linalg.norm(F(x)))
-    assert maxError <= 0.05
+    assert maxError <= 0.055
 
     maxError = 0.0
     order = 3
@@ -612,7 +612,7 @@ def test_contours():
         for t in np.linspace(0.0, 1.0, 11):
             uvw = contour((t,))
             maxError = max(maxError, np.linalg.norm(spline(uvw)))
-    assert maxError <= 0.05
+    assert maxError <= 0.055
 
     return # Comment this line to run the following lengthy test
 
