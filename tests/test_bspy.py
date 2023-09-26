@@ -855,6 +855,49 @@ def test_intersect():
             maxError = max(maxError, np.linalg.norm(spline(uvst[:2]) - plane(uvst[2:])))
     assert maxError <= np.finfo(float).eps ** 0.2
 
+def test_matmul():
+    myspline = bspy.Spline(1, 1, (4,), (4,), ((0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0),), ((1.0, 2.0, 3.0, 4.0),))
+    try:
+        prodspline = [2.0] @ myspline
+        assert prodspline.coefs[0][1] == 4.0, "Wrong dot product computed"
+    except:
+        return NotImplementedError
+    try:
+        prodspline = np.array([3.0]) @ myspline
+        assert prodspline.coefs[0][2] == 9.0, "Wrong dot product computed"
+    except:
+        pass    # Currently dispatches to numpy __matmul__ and fails
+    try:
+        prodspline = myspline @ [4.0]
+        assert prodspline.coefs[0][3] == 16.0, "Wrong dot product computed"
+    except:
+        return NotImplementedError
+    try:
+        prodspline = myspline @ np.array([5.0])
+        assert prodspline.coefs[0][0] == 5.0, "Wrong dot product computed"
+    except:
+        return NotImplementedError
+    try:
+        prodspline = [[1.0], [2.0]] @ myspline
+        assert prodspline.coefs[1][1] == 4.0, "Wrong dot product computed"
+    except:
+        return NotImplementedError
+    try:
+        prodspline = np.array([[1.0], [2.0]]) @ myspline
+        assert prodspline.coefs[1][2] == 6.0, "Wrong dot product computed"
+    except:
+        pass    # Currently dispatches to numpy __matmul__ and fails
+    try:
+        prodspline = myspline @ [[1.0, 2.0]]
+        assert prodspline.coefs[1][3] == 8.0, "Wrong dot product computed"
+    except:
+        return NotImplementedError
+    try:
+        prodspline = myspline @ np.array([[1.0, 2.0]])
+        assert prodspline.coefs[1][0] == 2.0, "Wrong dot product computed"
+    except:
+        return NotImplementedError
+
 def test_multiply():
     maxError = 0.0
     spline1 = bspy.Spline(1, 2, (5,), (5,), [np.array([0, 0, 0, 0, 0.2, 0.5, 0.5, 1, 1, 1], float)], 
@@ -963,13 +1006,30 @@ def test_least_squares():
     assert maxError <= fit.accuracy
 
 def test_remove_knots():
+    # This is the existing test.  It works only because remove_knots returns such a large number for error.
     maxError = 0.0
     slimmed, removed, error = myCurve.remove_knots()
     assert removed == 1
     for [u, x, y] in truthCurve:
-        [xTest, yTest] = slimmed.evaluate([u])
+        [xTest, yTest] = slimmed.evaluate(u)
         maxError = max(maxError, np.sqrt((xTest - x) ** 2 + (yTest - y) ** 2))
     assert maxError <= error
+
+    # Here is a better test.  It starts by computing the spline that remove_knots should be returning.
+    maxError = 0.0
+    a = np.array([[0.3, 0.0], [0.7, 0.3], [0.0, 0.7]])
+    rhs = np.array([[0.3, 0.5, 0.4], [1.0, 0.0, -0.8]]).T
+    newCoefs, residuals, rank, sigmas = np.linalg.lstsq(a, rhs)
+    correctSlimmed = bspy.Spline(1, 2, [4], [4], [[0.0,0,0,0,1,1,1,1]], [[0, 0], newCoefs[0], newCoefs[1], [1, 1]])
+    for u in np.linspace(0.0, 1.0, 101):
+        approxPoint = correctSlimmed(u)
+        correctPoint = myCurve(u)
+        maxError = max(maxError, np.linalg.norm(approxPoint - correctPoint))
+    assert maxError <= np.linalg.norm(residuals)
+
+def test_reverse():
+    mySpline = myCurve.reverse()
+    assert np.linalg.norm(myCurve(0.43) - mySpline(0.57)) < np.finfo(float).eps
 
 def test_reparametrize():
     maxError = 0.0
@@ -993,6 +1053,42 @@ def test_scale():
         [xTest, yTest] = scaledCurve.evaluate([u])
         maxError = max(maxError, (xTest - 3.0 * x) ** 2 + (yTest - 3.0 * y) ** 2)
     assert maxError <= np.finfo(float).eps
+
+def test_section():
+    def expTest(t):
+        x = t
+        xp = 1.0
+        xpp = 0.0
+        y = math.exp(t)
+        yp = y
+        ypp = y
+        theta = 180.0 * math.atan2(yp, xp) / math.pi
+        kappa = (xp * ypp - yp * xpp) / (xp ** 2 + yp ** 2) ** 1.5
+        return (x, y, theta, kappa)
+    def circleTest(u):
+        theta = u * math.pi / 2.0
+        cosTheta = math.cos(theta)
+        sinTheta = math.sin(theta)
+        return (sinTheta, cosTheta, -90 * u, -1.0)
+    for testFunc in [expTest, circleTest]:
+        testPoints = [testFunc(x) for x in np.linspace(0.0, 1.0, 9)]
+        gridTest = [bspy.Spline.section([testPoints[i] for i in [0, 8]]),
+                    bspy.Spline.section([testPoints[i] for i in [0, 4, 8]]),
+                    bspy.Spline.section([testPoints[i] for i in [0, 2, 4, 6, 8]]),
+                    bspy.Spline.section(testPoints)]
+        maxErrors = []
+        for spl in gridTest:
+            errors = []
+            for xval in np.linspace(0.0, 1.0, 38)[1:-1]:
+                if testFunc == circleTest:
+                    errors.append(np.abs(np.linalg.norm(spl(xval)) - 1.0))
+                else:
+                    [tval] = ([1, 0] @ spl - [xval]).zeros()
+                    errors.append(np.linalg.norm(testFunc(xval)[:2] - spl(tval)))
+            maxErrors.append(max(errors))
+        rate = [0]
+        for i in range(3):
+            rate.append(math.log2(maxErrors[i] / maxErrors[i + 1]))
 
 def test_subtract():
     maxError = 0.0

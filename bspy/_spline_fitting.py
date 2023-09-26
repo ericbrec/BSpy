@@ -386,3 +386,73 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     # Rescale x(t) back to original data points.
     coefs = (coefsMin + coefs.T * coefsMaxMinusMin).T
     return bspy.Spline(1, nDep, (order,), (nCoef,), (knots,), coefs, epsilon, metadata)
+
+def section(xytk):    
+    def twoPointSection(startPointX, startPointY, startAngle, startKappa, endPointX, endPointY, endAngle, endKappa):
+        # Check validity of curvatures
+        if startKappa * endKappa < 0.0:  raise ValueError("startKappa and endKappa have different signs")
+
+        # Compute unit tangent directions
+        startRadians = math.pi * startAngle / 180.0
+        startTangent = np.array([math.cos(startRadians), math.sin(startRadians)])
+        endRadians = math.pi * endAngle / 180.0
+        endTangent = np.array([math.cos(endRadians), math.sin(endRadians)])
+        startPoint = np.array([startPointX, startPointY])
+        endPoint = np.array([endPointX, endPointY])
+        pointDiff = endPoint - startPoint
+        crossTangents = startTangent[0] * endTangent[1] - startTangent[1] * endTangent[0]
+        dotTangents = startTangent @ endTangent
+        theta = math.atan2(crossTangents, dotTangents)
+
+        # Check data consistency
+        crossCheck = startTangent[0] * pointDiff[1] - startTangent[1] * pointDiff[0]
+        if crossCheck * startKappa < 0.0 or crossCheck * endKappa < 0.0:  raise ValueError("Inconsistent start angle")
+        if crossTangents * startKappa < 0.0 or crossTangents * endKappa < 0.0:  raise ValueError("Inconsistent tangent directions")
+        crossCheck = pointDiff[0] * endTangent[1] - pointDiff[1] * endTangent[0]
+        if crossCheck * startKappa < 0.0 or crossCheck * endKappa < 0.0:  raise ValueError("Inconsistent end angle")
+ 
+        # Compute intersection point of tangent directions
+        tangentDistances = np.linalg.solve(np.array([startTangent, endTangent]).T, pointDiff)
+        frustrum = startPoint + tangentDistances[0] * startTangent
+
+        # Compute critical values for section algorithm
+        onePlusCosTheta = 1.0 + math.cos(theta)
+        r0 = 4.0 * startKappa * tangentDistances[0] ** 2 / (3.0 * tangentDistances[1] * crossTangents)
+        r1 = 4.0 * endKappa * tangentDistances[1] ** 2 / (3.0 * tangentDistances[0] * crossTangents)
+        rhoCrit = (math.sqrt(1.0 + 4.0 * (r0 + r1)) - 1.0) / (2.0 * (r0 + r1))
+        rhoCritOfTheta = 3.0 * (math.sqrt(1.0 + 32.0 / (3.0 * onePlusCosTheta)) - 1.0) * onePlusCosTheta / 16.0
+
+        # Determine quadratic polynomial
+        sqrtTerm = math.sqrt(2.0 * onePlusCosTheta)
+        a = sqrtTerm + 8.0 / onePlusCosTheta
+        b = -3.0 * sqrtTerm
+        c = 9.0 * sqrtTerm / 4.0 - 3.0
+        root1 = (-b + math.sqrt(b ** 2 - 4 * a * c)) / (2.0 * a)
+        root2 = (-b - math.sqrt(b ** 2 - 4 * a * c)) / (2.0 * a)
+        rhoOpt = max(root1, root2)
+
+        # Determine optimal value of rho and values of alpha0 and alpha1
+        rho = rhoCrit * rhoOpt / rhoCritOfTheta
+        alpha0 = r1 * rho ** 2 / (1.0 - rho)
+        alpha1 = r0 * rho ** 2 / (1.0 - rho)
+
+        # Generate the quartic section which interpolates the data
+        pt0 = startPoint
+        pt1 = (1.0 - rho) * startPoint + rho * frustrum
+        pt3 = (1.0 - rho) * endPoint + rho * frustrum
+        pt4 = endPoint
+        pt2 = alpha0 * pt1 + alpha1 * pt3 + (1.0 - alpha0 - alpha1) * frustrum
+        return bspy.Spline(1, 2, (5,), (5,), ((0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0),), (pt0, pt1, pt2, pt3, pt4))
+
+    # Check that the input data is the right size and shape
+    if len(xytk) < 2:  raise ValueError("Must specify at least two points")
+    for pt in xytk:
+        if len(pt) != 4:  raise ValueError("Each point should be a 4-tuple:  (x, y, theta, kappa)")
+    
+    # Loop through each pair of points building a section
+    mySections = []
+    for i in range(len(xytk) - 1):
+        mySections.append(twoPointSection(*xytk[i], *xytk[i + 1]))
+    
+    # Join the pieces together and return
+    return bspy.Spline.join(mySections)
