@@ -917,7 +917,7 @@ class Spline:
                 
         Notes
         -----
-        Currently only works for univariates splines.
+        Currently only works for univariate splines.
         """
         return bspy._spline_domain.join(splineList)
        

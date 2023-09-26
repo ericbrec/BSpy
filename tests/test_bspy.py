@@ -873,45 +873,45 @@ def test_intersect():
     assert maxError <= np.finfo(float).eps ** 0.2
 
 def test_matmul():
-    myspline = bspy.Spline(1, 1, (4,), (4,), ((0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0),), ((1.0, 2.0, 3.0, 4.0),))
+    mySpline = bspy.Spline(1, 1, (4,), (4,), ((0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0),), ((1.0, 2.0, 3.0, 4.0),))
     try:
-        prodspline = [2.0] @ myspline
-        assert prodspline.coefs[0][1] == 4.0, "Wrong dot product computed"
+        prodSpline = [2.0] @ mySpline
+        assert prodSpline.coefs[0][1] == 4.0, "Wrong dot product computed"
     except:
         return NotImplementedError
     try:
-        prodspline = np.array([3.0]) @ myspline
-        assert prodspline.coefs[0][2] == 9.0, "Wrong dot product computed"
+        prodSpline = np.array([3.0]) @ mySpline
+        assert prodSpline.coefs[0][2] == 9.0, "Wrong dot product computed"
     except:
         pass    # Currently dispatches to numpy __matmul__ and fails
     try:
-        prodspline = myspline @ [4.0]
-        assert prodspline.coefs[0][3] == 16.0, "Wrong dot product computed"
+        prodSpline = mySpline @ [4.0]
+        assert prodSpline.coefs[0][3] == 16.0, "Wrong dot product computed"
     except:
         return NotImplementedError
     try:
-        prodspline = myspline @ np.array([5.0])
-        assert prodspline.coefs[0][0] == 5.0, "Wrong dot product computed"
+        prodSpline = mySpline @ np.array([5.0])
+        assert prodSpline.coefs[0][0] == 5.0, "Wrong dot product computed"
     except:
         return NotImplementedError
     try:
-        prodspline = [[1.0], [2.0]] @ myspline
-        assert prodspline.coefs[1][1] == 4.0, "Wrong dot product computed"
+        prodSpline = [[1.0], [2.0]] @ mySpline
+        assert prodSpline.coefs[1][1] == 4.0, "Wrong dot product computed"
     except:
         return NotImplementedError
     try:
-        prodspline = np.array([[1.0], [2.0]]) @ myspline
-        assert prodspline.coefs[1][2] == 6.0, "Wrong dot product computed"
+        prodSpline = np.array([[1.0], [2.0]]) @ mySpline
+        assert prodSpline.coefs[1][2] == 6.0, "Wrong dot product computed"
     except:
         pass    # Currently dispatches to numpy __matmul__ and fails
     try:
-        prodspline = myspline @ [[1.0, 2.0]]
-        assert prodspline.coefs[1][3] == 8.0, "Wrong dot product computed"
+        prodSpline = mySpline @ [[1.0, 2.0]]
+        assert prodSpline.coefs[1][3] == 8.0, "Wrong dot product computed"
     except:
         return NotImplementedError
     try:
-        prodspline = myspline @ np.array([[1.0, 2.0]])
-        assert prodspline.coefs[1][0] == 2.0, "Wrong dot product computed"
+        prodSpline = mySpline @ np.array([[1.0, 2.0]])
+        assert prodSpline.coefs[1][0] == 2.0, "Wrong dot product computed"
     except:
         return NotImplementedError
 
@@ -1096,12 +1096,12 @@ def test_section():
         maxErrors = []
         for spl in gridTest:
             errors = []
-            for xval in np.linspace(0.0, 1.0, 38)[1:-1]:
+            for xValue in np.linspace(0.0, 1.0, 38)[1:-1]:
                 if testFunc == circleTest:
-                    errors.append(np.abs(np.linalg.norm(spl(xval)) - 1.0))
+                    errors.append(np.abs(np.linalg.norm(spl(xValue)) - 1.0))
                 else:
-                    [tval] = ([1, 0] @ spl - [xval]).zeros()
-                    errors.append(np.linalg.norm(testFunc(xval)[:2] - spl(tval)))
+                    [tValue] = ([1, 0] @ spl - [xValue]).zeros()
+                    errors.append(np.linalg.norm(testFunc(xValue)[:2] - spl(tValue)))
             maxErrors.append(max(errors))
         rate = [0]
         for i in range(3):
