@@ -702,7 +702,7 @@ def scale(self, multiplier):
         if not(np.isscalar(multiplier) or len(multiplier) == self.nDep): raise ValueError("Invalid multiplier")
 
         if np.isscalar(multiplier):
-            accuracy = multiplier * self.accuracy
+            accuracy = abs(multiplier) * self.accuracy
             coefs = multiplier * self.coefs
         else:
             accuracy = np.linalg.norm(multiplier) * self.accuracy

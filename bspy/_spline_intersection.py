@@ -311,7 +311,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
     if not(self.nInd == self.nDep): raise ValueError("The number of independent variables (nInd) must match the number of dependent variables (nDep).")
     machineEpsilon = np.finfo(self.coefs.dtype).eps
     if epsilon is None:
-        epsilon = self.accuracy
+        epsilon = 0.0
     epsilon = max(epsilon, np.sqrt(machineEpsilon))
     roots = []
 
