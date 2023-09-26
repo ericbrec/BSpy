@@ -13,6 +13,9 @@ def blossom(self, uvw):
                 b += 1
         return basis
 
+    # Make work for scalar valued functions
+    uvw = np.atleast_1d(uvw)
+
     # Check for evaluation point inside domain
     dom = self.domain()
     for ix in range(self.nInd):
@@ -54,6 +57,9 @@ def bspline_values(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs
     return basis
 
 def derivative(self, with_respect_to, uvw):
+    # Make work for scalar valued functions
+    uvw = np.atleast_1d(uvw)
+
     # Check for evaluation point inside domain
     dom = self.domain()
     for ix in range(self.nInd):
@@ -80,6 +86,9 @@ def domain(self):
     return np.array(dom)
 
 def evaluate(self, uvw):
+    # Make work for scalar valued functions
+    uvw = np.atleast_1d(uvw)
+
     # Check for evaluation point inside domain
     dom = self.domain()
     for ix in range(self.nInd):
@@ -101,6 +110,10 @@ def evaluate(self, uvw):
     return myCoefs
 
 def integral(self, with_respect_to, uvw1, uvw2, returnSpline = False):
+    # Make work for scalar valued functions
+    uvw1 = np.atleast_1d(uvw1)
+    uvw2 = np.atleast_1d(uvw2)
+
     # Check for evaluation point inside domain
     dom = self.domain()
     for ix in range(self.nInd):
@@ -122,6 +135,9 @@ def integral(self, with_respect_to, uvw1, uvw2, returnSpline = False):
         return value
 
 def normal(self, uvw, normalize=True, indices=None):
+    # Make work for scalar valued functions
+    uvw = np.atleast_1d(uvw)
+
     if abs(self.nInd - self.nDep) != 1: raise ValueError("The number of independent variables must be one different than the number of dependent variables.")
 
     # Evaluate the tangents at the point.

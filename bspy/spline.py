@@ -108,9 +108,22 @@ class Spline:
         else:
             return NotImplemented
 
-    def __rmatmul__ (self, other):
+    def __matmul__(self, other):
         if _isIterable(other):
-            if isinstance(other, np.ndarray) and len(other.shape) == 2:
+            if not isinstance(other, np.ndarray):
+                other = np.array(other)
+            if len(other.shape) == 2:
+                return self.transform(other.T)
+            else:
+                return self.dot(other)
+        else:
+            return NotImplemented
+
+    def __rmatmul__(self, other):
+        if _isIterable(other):
+            if not isinstance(other, np.ndarray):
+                other = np.array(other)
+            if len(other.shape) == 2:
                 return self.transform(other)
             else:
                 return self.dot(other)
@@ -887,6 +900,28 @@ class Spline:
             return NotImplemented
 
     @staticmethod
+    def join(splineList):
+        """
+        Join a list of splines together into a single spline.
+
+        Parameters
+        ----------
+        splineList : `iterable`
+            The list of splines to join together.  All must have the same number of dependent variables.
+
+        Returns
+        -------
+        joinedSpline : `Spline`
+            A single spline whose image is the union of all the images of the input splines.  The resulting spline
+            is parametrized over the unit cube.
+                
+        Notes
+        -----
+        Currently only works for univariates splines.
+        """
+        return bspy._spline_domain.join(splineList)
+       
+    @staticmethod
     def least_squares(nInd, nDep, order, dataPoints, knots = None, compression = 0, metadata = {}):
         """
         Fit a spline to an array of data points using the method of least squares.
@@ -1161,6 +1196,26 @@ class Spline:
         """
         return bspy._spline_domain.reparametrize(self, newDomain)
 
+    def reverse(self, variable = 0):
+        """
+        Reverse the direction of a spline along one of the independent variables
+
+        Parameters
+        ----------
+        variable : integer
+            index of the independent variable to reverse the direction of.
+        
+        Returns
+        -------
+        spline : `Spline`
+            Reparametrized (i.e. reversed) spline.
+        
+        See Also
+        --------
+        `reparametrize` : Reparametrize a spline
+        """
+        return bspy._spline_domain.reverse(self, variable)
+
     def save(self, fileName):
         """
         Save a spline to the specified filename (full path).
@@ -1206,6 +1261,34 @@ class Spline:
         `translate` : Translate a spline by the given translation vector.
         """
         return bspy._spline_operations.scale(self, multiplier)
+    
+    @staticmethod
+    def section(xytk):
+        """
+        Fit a planar section to the list of 4-tuples of data.
+
+        Parameters
+        ----------
+        xytk : array-like
+            A list of points to fit an interpolating spline to.  Each point in the list contains
+            four values.  The first two are x and y coordinates of the point.  The third value is the
+            angle that the tangent makes as the desired section passes through that point (in degrees).
+            The fourth value is the desired curvature at that point
+
+        Returns
+        -------
+        spline : `Spline`
+            A quartic spline which interpolates the given values.
+
+        Notes
+        -----
+        The spline is shape-preserving.  Each consecutive pair of data points must describe a convex or
+        concave curve.  In particular, if it is impossible for a differentiable curve to interpolate two
+        consecutive data points without passing through an intermediate inflection point (i.e. a point which
+        has zero curvature and at which the sign of the curvature changes), then this method will fail
+        with an error.
+        """
+        return bspy._spline_fitting.section(xytk)
 
     def subtract(self, other, indMap = None):
         """

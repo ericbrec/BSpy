@@ -271,7 +271,7 @@ def extrapolate(self, newDomain, continuityOrder):
     return type(self)(self.nInd, self.nDep, self.order, nCoef, knots, dCoefs[0], self.accuracy, self.metadata)
 
 def fold(self, foldedInd):
-    if not(0 < len(foldedInd) < self.nInd): raise ValueError("Invalid foldedInd")
+    if not(0 <= len(foldedInd) < self.nInd): raise ValueError("Invalid foldedInd")
     foldedOrder = []
     foldedNCoef = []
     foldedKnots = []
@@ -328,6 +328,45 @@ def insert_knots(self, newKnots):
         return self
     else: 
         return type(self)(self.nInd, self.nDep, self.order, coefs.shape[1:], knots, coefs, self.accuracy, self.metadata)
+
+def join(splineList):
+    # Make sure all the splines in the list are curves
+    if len(splineList) < 1:  raise ValueError("Not enough splines in list")
+    for spl in splineList:
+        if spl.nInd != 1:  raise NotImplementedError("Method needs to be extended to multivariate splines")
+    
+    # Make sure all splines have the same number of dependent variables
+    numDep = splineList[0].nDep
+    for spl in splineList[1:]:
+        if spl.nDep != numDep:  raise ValueError("Inconsistent number of dependent variables")
+    
+    # Go through all of the splines in turn
+    workingSpline = splineList[0]
+    for spl in splineList[1:]:
+        workingDomain = workingSpline.domain()[0]
+        start1 = workingSpline(workingDomain[0])
+        end1 = workingSpline(workingDomain[1])
+        splDomain = spl.domain()[0]
+        start2 = spl(splDomain[0])
+        end2 = spl(splDomain[1])
+        gaps = [np.linalg.norm(vecDiff) for vecDiff in [start1 - start2, start1 - end2, end1 - start2, end1 - end2]]
+        minDist = min(*gaps)
+        if minDist == gaps[0] or minDist == gaps[1]:
+            workingSpline = workingSpline.reverse()
+        if minDist == gaps[1] or minDist == gaps[3]:
+            spl = spl.reverse()
+        maxOrder = max(workingSpline.order[0], spl.order[0])
+        workingSpline = workingSpline.elevate([maxOrder - workingSpline.order[0]])
+        spl = spl.elevate([maxOrder - spl.order[0]])
+        speed1 = np.linalg.norm(workingSpline.derivative([1], workingDomain[1]))
+        speed2 = np.linalg.norm(spl.derivative([1], splDomain[0]))
+        spl = spl.reparametrize([[workingDomain[1], workingDomain[1] + speed2 * (splDomain[1] - splDomain[0]) / speed1]])
+        newKnots = [list(workingSpline.knots[0][:-1]) + list(spl.knots[0][maxOrder:])]
+        newCoefs = [list(workingCoefs) + list(splCoefs)[1:] for workingCoefs, splCoefs in zip(workingSpline.coefs, spl.coefs)]
+        workingSpline = type(workingSpline)(1, numDep, workingSpline.order, [workingSpline.nCoef[0] + spl.nCoef[0] - 1],
+                                            newKnots, newCoefs, max(workingSpline.accuracy, spl.accuracy), workingSpline.metadata)
+#    workingSpline, numRemoved, error = workingSpline.remove_knots()    # Add this back in once remove_knots is fixed
+    return workingSpline.reparametrize([[0.0, 1.0]])
 
 def remove_knots(self, oldKnots=((),), maxRemovalsPerKnot=0, tolerance=None):
     if not(len(oldKnots) == self.nInd): raise ValueError("Invalid oldKnots")
@@ -503,6 +542,25 @@ def reparametrize(self, newDomain):
         knotList.append(knots)
     
     return type(self)(self.nInd, self.nDep, self.order, self.nCoef, knotList, self.coefs, self.accuracy, self.metadata)   
+
+def reverse(self, variable = 0):
+    # Check to make sure variable is in range
+    if variable < 0 or variable >= self.nInd:  raise ValueError("Improper independent variable index")
+
+    # Create a new spline with only the indicated independent variable
+    myIndices = [ix for ix in range(self.nInd) if ix != variable ]
+    folded, basisInfo = self.fold(myIndices)
+
+    # Create a new spline with the parametrization reversed
+    knots = folded.knots[0]
+    firstKnot = knots[0]
+    lastKnot = knots[-1]
+    newKnots = [firstKnot + lastKnot - knot for knot in knots[::-1]]
+    newCoefs = []
+    for iDep in range(folded.nDep):
+        newCoefs.append(self.coefs[iDep][::-1])
+    newfolded = type(self)(folded.nInd, folded.nDep, folded.order, folded.nCoef, (newKnots,), newCoefs, folded.accuracy, folded.metadata)
+    return newfolded.unfold(myIndices, basisInfo)
 
 def trim(self, newDomain):
     if not(len(newDomain) == self.nInd): raise ValueError("Invalid newDomain")
