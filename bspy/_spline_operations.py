@@ -59,6 +59,101 @@ def add(self, other, indMap = None):
     
     return type(self)(nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy + other.accuracy, self.metadata)
 
+def confine(self, range_bounds):
+    if self.nInd != 1: raise ValueError("Confine only works on curves (nInd == 1)")
+    if len(range_bounds) != self.nDep: raise ValueError("len(range_bounds) must equal nDep")
+    spline = self.clamp((0,), (0,))
+    order = spline.order[0]
+    degree = order - 1
+    domain = spline.domain()
+    unique, counts = np.unique(spline.knots[0], return_counts=True)
+    machineEpsilon = 10.0 * np.finfo(self.coefs.dtype).eps
+    epsilon = np.sqrt(machineEpsilon)
+    intersections = [] # List of tuples (u, boundaryPoint, headingOutside)
+
+    def addIntersection(u, headedOutside = False):
+        boundaryPoint = spline(np.atleast_1d(u))
+        for i in range(spline.nDep):
+            if boundaryPoint[i] < range_bounds[i][0] + machineEpsilon:
+                headedOutside = True if boundaryPoint[i] < range_bounds[i][0] - epsilon else headedOutside
+                boundaryPoint[i] = range_bounds[i][0] + machineEpsilon # Avoids error in spline evaluation
+            if boundaryPoint[i] > range_bounds[i][1] - machineEpsilon:
+                headedOutside = True if boundaryPoint[i] > range_bounds[i][1] + epsilon else headedOutside
+                boundaryPoint[i] = range_bounds[i][1] - machineEpsilon # Avoids error in spline evaluation
+        intersections.append((u, boundaryPoint, headedOutside))
+
+    def intersectBoundary(i, j):
+        zeros = type(spline)(1, 1, spline.order, spline.nCoef, spline.knots, (spline.coefs[i] - range_bounds[i][j],)).zeros()
+        for zero in zeros:
+            if isinstance(zero, tuple):
+                headedOutside = (-1 if j == 0 else 1) * spline.derivative((1,), np.atleast_1d(zero[0]))[i] > epsilon
+                addIntersection(zero[0], headedOutside)
+                headedOutside = (-1 if j == 0 else 1) * spline.derivative((1,), np.atleast_1d(zero[1]))[i] > epsilon
+                addIntersection(zero[1], headedOutside)
+            else:
+                headedOutside = (-1 if j == 0 else 1) * spline.derivative((1,), np.atleast_1d(zero))[i] > epsilon
+                addIntersection(zero, headedOutside)
+
+    addIntersection(domain[0][0]) # Confine starting point
+    addIntersection(domain[0][1]) # Confine ending point
+    # Confine points between start and end.
+    for i in range(spline.nDep):
+        intersectBoundary(i, 0)
+        intersectBoundary(i, 1)
+
+    # Insert order-1 knots at each intersection point.
+    for (knot, boundaryPoint, headedOutside) in intersections:
+        ix = np.searchsorted(unique, knot)
+        if unique[ix] == knot:
+            count = (order - 1) - counts[ix]
+            if count > 0:
+                spline = spline.insert_knots(([knot] * count,))
+        else:
+            spline = spline.insert_knots(([knot] * (order - 1),))
+    
+    # Put the intersection points in order.
+    intersections.sort(key=lambda intersection: intersection[0])
+
+    # Go through the boundary points, assigning boundary coefficients, interpolating between boundary points, 
+    # and removing knots and coefficients where the curve stalls.
+    nCoef = spline.nCoef[0]
+    knots = spline.knots[0]
+    coefs = spline.coefs
+    previousKnot, previousBoundaryPoint, previousHeadedOutside = intersections[0]
+    previousIx = 0
+    coefs[:, previousIx] = previousBoundaryPoint
+    knotAdjustment = 0.0
+    for knot, boundaryPoint, headedOutside in intersections[1:]:
+        knot += knotAdjustment
+        ix = np.searchsorted(knots, knot, 'right') - order
+        ix = min(ix, nCoef - 1)
+        coefs[:, ix] = boundaryPoint # Assign boundary coefficients
+        if previousHeadedOutside and np.linalg.norm(boundaryPoint - previousBoundaryPoint) < epsilon:
+            # Curve has stalled, so remove intervening knots and coefficients, and adjust knot values.
+            nCoef -= ix - previousIx
+            knots = np.delete(knots, slice(previousIx + 1, ix + 1))
+            knots[previousIx + 1:] -= knot - previousKnot
+            knotAdjustment -= knot - previousKnot
+            coefs = np.delete(coefs, slice(previousIx, ix), axis=1)
+            previousHeadedOutside = headedOutside # The previous knot is unchanged, but inherits the new headedOutside value
+        else:
+            if previousHeadedOutside:
+                # If we were outside, linearly interpolate between the previous and current boundary points.
+                slope = (boundaryPoint - previousBoundaryPoint) / (knot - previousKnot)
+                for i in range(previousIx + 1, ix):
+                    coefs[:, i] = coefs[:, i - 1] + ((knots[i + degree] - knots[i]) / degree) * slope
+
+            # Update previous knot
+            previousKnot = knot
+            previousBoundaryPoint = boundaryPoint
+            previousHeadedOutside = headedOutside
+            previousIx = ix
+    
+    spline.nCoef = (nCoef,)
+    spline.knots = (knots,)
+    spline.coefs = coefs
+    return spline.reparametrize(domain) # Return the spline adjusted back to the original domain
+
 def contract(self, uvw):
     nInd = self.nInd
     order = [*self.order]
@@ -573,10 +668,10 @@ def normal_spline(self, indices=None):
                     ord += order - 1 if ccm[i, j] and index != j else 0
                 newOrd = max(newOrd, ord)
         newOrder.append(newOrd)
-        uniqueKnots, counts = np.unique(knots, return_counts=True)
+        uniqueKnots, counts = np.unique(knots[order - 1:self.nCoef[i] + 1], return_counts=True)
         counts += newOrd - order + 1 # Because we're multiplying all the tangents, the knot elevation is one more
-        counts[0] -= 1 # But not at the endpoints, which get reduced by one when taking the derivative
-        counts[-1] -= 1 # But not at the endpoints, which get reduced by one when taking the derivative
+        counts[0] = newOrd # But not at the endpoints, which are full order as usual
+        counts[-1] = newOrd # But not at the endpoints, which are full order as usual
         newKnots.append(np.repeat(uniqueKnots, counts))
         # Also calculate the total number of coefficients, capturing how it progressively increases, and
         # using that calculation to span uvw from the starting knot to the end for each variable.

@@ -385,7 +385,10 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
 
     # Rescale x(t) back to original data points.
     coefs = (coefsMin + coefs.T * coefsMaxMinusMin).T
-    return bspy.Spline(1, nDep, (order,), (nCoef,), (knots,), coefs, epsilon, metadata)
+    spline = bspy.Spline(1, nDep, (order,), (nCoef,), (knots,), coefs, epsilon, metadata)
+    if isinstance(F, bspy.Spline):
+        spline = spline.confine(F.domain())
+    return spline
 
 def section(xytk):    
     def twoPointSection(startPointX, startPointY, startAngle, startKappa, endPointX, endPointY, endAngle, endKappa):
@@ -456,3 +459,4 @@ def section(xytk):
     
     # Join the pieces together and return
     return bspy.Spline.join(mySections)
+

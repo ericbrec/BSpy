@@ -332,6 +332,32 @@ class Spline:
         """
         return bspy._spline_domain.common_basis(self, splines, indMap)
 
+    def confine(self, range_bounds):
+        """
+        Confine the range of a curve to the given bounds.
+
+        Parameters
+        ----------
+        range_bounds : `iterable`
+            The collection of `nDep` tuples that specify the lower and upper bounds for the curve.
+
+        Returns
+        -------
+        spline : `Spline`
+            The confined spline. 
+
+        See Also
+        --------
+        `range_bounds` : Return the range of a spline as lower and upper bounds.
+        `contour` : Fit a spline to the contour defined by `F(x) = 0`.
+
+        Notes
+        -----
+        Only works for curves (`nInd == 1`). Portions of the curve that lie outside the bounds 
+        become lines along the boundary.
+        """
+        return bspy._spline_operations.confine(self, range_bounds)
+
     @staticmethod
     def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         """
@@ -374,10 +400,12 @@ class Spline:
         --------
         `least_squares` : Fit a spline to an array of data points using the method of least squares.
         `contours` : Find all the contour curves of a spline.
+        `confine` : Confine the range of a curve to the given bounds.
 
         Notes
         -----
         The returned spline has constant parametric speed (the length of its derivative is constant). 
+        If `F` is a `Spline`, then the range of the returned contour is confined to the domain of `F`. 
         Implements the algorithm described in section 7 of Grandine, Thomas A. 
         "Applications of contouring." Siam Review 42, no. 2 (2000): 297-316.
         """
@@ -469,6 +497,22 @@ class Spline:
         if indMap is not None:
             indMap = [(*(mapping if _isIterable(mapping) else (mapping, mapping)), True) for mapping in indMap]
         return bspy._spline_operations.multiplyAndConvolve(self, other, indMap, productType)
+
+    def copy(self, metadata={}):
+        """
+        Create a copy of a spline.
+
+        Parameters
+        ----------
+        metadata : `dict`, optional
+            A dictionary of ancillary data to store with the spline. Default is {}.
+        
+        Returns
+        -------
+        spline : `Spline`
+            The spline copy.
+        """
+        return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, self.coefs, self.accuracy, metadata)
 
     def cross(self, vector):
         """
@@ -933,6 +977,30 @@ class Spline:
 
     @staticmethod
     def load(fileName, splineType=None):
+        """
+        Load a spline from the specified filename (full path).
+
+        Parameters
+        ----------
+        fileName : `string`
+            The full path to the file containing the spline. Can be a relative path.
+        
+        splineType : `type`, optional
+            The class type that should be created. It must be an instance of Spline (the default).
+        
+        Returns
+        -------
+        spline : `Spline`
+            The loaded spline.
+
+        See Also
+        --------
+        `save` : Save a spline to the specified filename (full path).
+
+        Notes
+        -----
+        Uses numpy's load function.
+        """
         kw = np.load(fileName)
         order = kw["order"]
         nInd = len(order)
@@ -1058,7 +1126,7 @@ class Spline:
 
     def range_bounds(self):
         """
-        Return the range of a spline as upper and lower bounds on each of the
+        Return the range of a spline as lower and upper bounds on each of the
         dependent variables
         """
         return bspy._spline_evaluation.range_bounds(self)
@@ -1149,6 +1217,22 @@ class Spline:
         return bspy._spline_domain.reverse(self, variable)
 
     def save(self, fileName):
+        """
+        Save a spline to the specified filename (full path).
+
+        Parameters
+        ----------
+        fileName : `string`
+            The full path to the file containing the spline. Can be a relative path.
+        
+        See Also
+        --------
+        `load` : Load a spline from the specified filename (full path).
+
+        Notes
+        -----
+        Uses numpy's savez function. Accuracy and metadata are not saved.
+        """
         kw = {}
         kw["order"] = order=np.array(self.order, np.int32)
         for i in range(len(self.knots)):
