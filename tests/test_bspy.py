@@ -696,8 +696,8 @@ def test_derivative():
     maxError = 0.0
     myDerivative = myCurve.differentiate()
     for [u, x, y] in truthCurve:
-        [xTest, yTest] = myCurve.derivative([1], [u])
-        [x, y] = myDerivative.evaluate([u])
+        [xTest, yTest] = myCurve.derivative([1], u)
+        [x, y] = myDerivative.evaluate(u)
         maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
     assert maxError <= np.finfo(float).eps
 
