@@ -22,8 +22,6 @@ You'll likely want to use a virtual environment (.venv) for the bspy project so 
 	* Type: `Python: Create Environment…` (you don't need to type the whole thing, just select it when it comes up)
 	* Select `Venv`
 	* Select the Microsoft store version of Python
-* You'll also want to create a "`.env`" file in the root directory of the bspy repo next to the .gitignore file
-	* It's content should be "`PYTHONPATH=.`" (no quotes, but do include the dot at the end)
 
 bpsy depends on a few Python packages (found on PyPi.org). You’ll want to pip install them.
 
