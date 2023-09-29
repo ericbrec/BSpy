@@ -1216,6 +1216,10 @@ class Spline:
         """
         return bspy._spline_domain.reverse(self, variable)
 
+    @staticmethod
+    def ruled_surface(spline1, spline2):
+       return bspy._spline_fitting.ruled_surface(spline1, spline2)
+    
     def save(self, fileName):
         """
         Save a spline to the specified filename (full path).

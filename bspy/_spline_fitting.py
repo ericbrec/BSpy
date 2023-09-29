@@ -390,6 +390,18 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         spline = spline.confine(F.domain())
     return spline
 
+def ruled_surface(curve1, curve2):
+    # Ensure that the splines are compatible
+    if curve1.nInd != curve2.nInd:  raise ValueError("Splines must have the same number of independent variables")
+    if curve1.nDep != curve2.nDep:  raise ValueError("Splines must have the same number of dependent variables")
+    [newCurve1, newCurve2] = curve1.common_basis([curve2], ((0, 0),))
+
+    # Generate the ruled spline between them
+    return bspy.Spline(curve1.nInd + 1, curve1.nDep, list(newCurve1.order) + [2],
+                       list(newCurve1.nCoef) + [2], list(newCurve1.knots) + [[0.0, 0.0, 1.0, 1.0]],
+                       [np.array([coef1, coef2]).T for coef1, coef2 in zip(newCurve1.coefs, newCurve2.coefs)],
+                       accuracy = max(newCurve1.accuracy, newCurve2.accuracy))
+
 def section(xytk):    
     def twoPointSection(startPointX, startPointY, startAngle, startKappa, endPointX, endPointY, endAngle, endKappa):
         # Check validity of curvatures
