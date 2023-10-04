@@ -42,6 +42,8 @@ cubic.metadata = dict(Name = 'cubic_curve')
 if __name__=='__main__':
     app = bspy.bspyApp()
     app.show(wingLoft)
+    app.show([[1.0, 0, 0], [0.0, 0, 1]] @ rootFoil)
+    app.show(tipFoil)
     app.show(road)
     app.show(controlPgon)
     app.show(cubic)
