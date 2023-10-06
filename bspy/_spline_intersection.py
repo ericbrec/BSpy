@@ -209,24 +209,34 @@ def _refine_projected_polyhedron(interval):
     machineEpsilon = np.finfo(interval.spline.coefs.dtype).eps
     roots = []
     intervals = []
-    scale = 0.0
-    # Go through each nDep of the spline, checking bounds.
-    for coefs in interval.spline.coefs:
-        coefsMin = coefs.min()
-        coefsMax = coefs.max()
+
+    # Remove dependent variables that are near zero and compute newScale.
+    newScale = 0.0
+    nDep = 0
+    coefs = interval.spline.coefs
+    while nDep < len(coefs):
+        coefsMin = coefs[nDep].min() * interval.scale
+        coefsMax = coefs[nDep].max() * interval.scale
         if coefsMax < -evaluationEpsilon or coefsMin > evaluationEpsilon:
             # No roots in this interval.
             return roots, intervals
-        scale = max(scale, abs(coefsMin), abs(coefsMax))
-    newScale = scale * interval.scale
+        if -evaluationEpsilon < coefsMin and coefsMax < evaluationEpsilon:
+            coefs = np.delete(coefs, nDep, axis = 0)
+        else:
+            nDep += 1
+            newScale = max(newScale, abs(coefsMin), abs(coefsMax))
 
-    if newScale < evaluationEpsilon:
+    if nDep == 0:
         # Return the bounds of the interval within which the spline is zero.
         roots.append((interval.intercept, interval.slope + interval.intercept))
         return roots, intervals
 
     # Rescale the spline to max 1.0.
-    spline = interval.spline.scale(1.0 / scale)
+    spline = interval.spline
+    spline.nDep = nDep
+    spline.coefs = coefs
+    spline = spline.scale(interval.scale / newScale)
+    
     # Loop through each independent variable to determine a tighter domain around roots.
     domain = []
     for nInd, order, knots, nCoef, s in zip(range(spline.nInd), spline.order, spline.knots, spline.nCoef, interval.slope):
@@ -283,6 +293,21 @@ def _refine_projected_polyhedron(interval):
 
     # Contract spline as needed.
     spline = spline.contract(uvw)
+
+    # Use interval newton for one-dimensional splines.
+    if spline.nInd == 1 and spline.nDep == 1:
+        i = newUnknowns[0]
+        for root in zeros_using_interval_newton(spline):
+            if not isinstance(root, tuple):
+                root = (root, root)
+            w = root[1] - root[0]
+            slope = newSlope.copy()
+            intercept = newIntercept.copy()
+            slope[i] = w * interval.slope[i]
+            intercept[i] = root[0] * interval.slope[i] + interval.intercept[i]
+            roots.append((intercept, intercept + slope))
+        
+        return roots, intervals
 
     # Split domain in dimensions that aren't decreasing in width sufficiently.
     width = newDomain[1] - newDomain[0]
