@@ -211,16 +211,17 @@ def _refine_projected_polyhedron(interval):
     intervals = []
 
     # Remove dependent variables that are near zero and compute newScale.
+    spline = interval.spline.copy()
+    coefs = spline.coefs
     newScale = 0.0
     nDep = 0
-    coefs = interval.spline.coefs
     while nDep < len(coefs):
         coefsMin = coefs[nDep].min() * interval.scale
         coefsMax = coefs[nDep].max() * interval.scale
-        if coefsMax < -evaluationEpsilon or coefsMin > evaluationEpsilon:
+        if coefsMax < -epsilon or coefsMin > epsilon:
             # No roots in this interval.
             return roots, intervals
-        if -evaluationEpsilon < coefsMin and coefsMax < evaluationEpsilon:
+        if -epsilon < coefsMin and coefsMax < epsilon:
             coefs = np.delete(coefs, nDep, axis = 0)
         else:
             nDep += 1
@@ -232,10 +233,9 @@ def _refine_projected_polyhedron(interval):
         return roots, intervals
 
     # Rescale the spline to max 1.0.
-    spline = interval.spline
     spline.nDep = nDep
+    coefs *= interval.scale / newScale
     spline.coefs = coefs
-    spline = spline.scale(interval.scale / newScale)
     
     # Loop through each independent variable to determine a tighter domain around roots.
     domain = []
@@ -368,50 +368,45 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
                         roots.append(root)
                 nextIntervals += newIntervals
         intervals = nextIntervals
-            
-    # Connect intervals of zeros that overlap.
-    rootCount = len(roots)
-    gotOverlap = rootCount > 1 # Potential overlap if we've got at least 2 roots
-    while gotOverlap:
-        gotOverlap = False
-        i = 0
-        while i < rootCount - 1:
-            iRoot = roots[i]
-            root = (iRoot[0].copy(), iRoot[1].copy()) # Temporary storage for expanded interval
-            separation = max(np.linalg.norm(iRoot[1] - iRoot[0]), epsilon)
-            j = i + 1
-            # Check for overlap with other intervals.
-            while j < rootCount:
-                jRoot = roots[j]
+    
+    # Return sorted roots if there's only one dimension.
+    if self.nInd == 1:
+        roots.sort(key=lambda root: root[0] if isinstance(root, tuple) else root)
+        return roots
+
+    # Otherwise, collect overlapping intervals in regions.
+    regions = []
+    for root in roots:
+        firstRegion = None
+        for region in regions:
+            for r in region:
                 overlapped = True
-                for d in range(self.nInd):
-                    if iRoot[0][d] < jRoot[1][d] + separation and jRoot[0][d] < iRoot[1][d] + separation:
-                        root[0][d] = min(iRoot[0][d], jRoot[0][d])
-                        root[1][d] = max(iRoot[1][d], jRoot[1][d])
-                    else:
+                for i in range(self.nInd):
+                    if root[0][i] > r[1][i] + epsilon or r[0][i] > root[1][i] + epsilon:
                         overlapped = False
                         break
                 if overlapped:
-                    # For an overlapped interval, expand original interval and toss overlapping interval.
-                    iRoot[0][:] = root[0]
-                    iRoot[1][:] = root[1]
-                    separation = max(np.linalg.norm(iRoot[1] - iRoot[0]), epsilon)
-                    roots.pop(j)
-                    rootCount -= 1
-                    gotOverlap = rootCount > 1 # Potential overlap if we've got at least 2 roots
-                else:
-                    j += 1
-            i += 1
-    
-    # Collapse intervals to points as appropriate.
-    for i, iRoot in zip(range(len(roots)), roots):
-        # If interval is small, just return a single value (not an interval).
-        if True: # Skip small interval test, since it's typically a shallow point, not a flat section. np.linalg.norm(iRoot[1] - iRoot[0]) < 2.0 * epsilon:
-            roots[i] = 0.5 * (iRoot[0] + iRoot[1])
+                    if firstRegion is None:
+                        region.append(root)
+                        firstRegion = region
+                    else:
+                        firstRegion += region
+                        region.clear()
+                    break
+        if firstRegion is None:
+            regions.append([root])
 
-    # Sort roots if there's only one dimension.
-    if self.nInd == 1:
-        roots.sort(key=lambda root: root[0] if isinstance(root, tuple) else root)
+    # Return centroids of regions.
+    roots = []
+    for region in regions:
+        if region:
+            n = 0
+            root = np.zeros(self.nInd, self.coefs.dtype)
+            for r in region:
+                root += r[0] + r[1]
+                n += 2
+            root *= 1.0 / n
+            roots.append(root) 
 
     return roots
 
