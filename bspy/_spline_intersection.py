@@ -381,9 +381,8 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
     separation = 2.0 * epsilon
     for root in roots:
         firstRegion = None
-        isIsolated = len(root) == 3
         for region in regions:
-            for r in region[1:]:
+            for r in region:
                 overlapped = True
                 for i in range(self.nInd):
                     if root[0][i] > r[1][i] + separation or r[0][i] > root[1][i] + separation:
@@ -392,17 +391,13 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
                 if overlapped:
                     if firstRegion is None:
                         region.append(root)
-                        if isIsolated:
-                            region[0] = True
                         firstRegion = region
                     else:
-                        if region[0]:
-                            firstRegion[0] = True
-                        firstRegion += region[1:]
+                        firstRegion += region
                         region.clear()
                     break
         if firstRegion is None:
-            regions.append([isIsolated, root])
+            regions.append([root])
 
     # Return centroids of regions.
     roots = []
@@ -410,11 +405,16 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
         if region:
             n = 0
             root = np.zeros(self.nInd, self.coefs.dtype)
-            isIsolated = region[0]
-            for r in region[1:]:
-                if not isIsolated:
-                    root += r[0] + r[1]
-                    n += 2
+            isNotIsolated = True
+            for r in region:
+                if isNotIsolated:
+                    if len(r) == 3:
+                        isNotIsolated = False
+                        root[:] = r[2]
+                        n = 1
+                    else:
+                        root += r[0] + r[1]
+                        n += 2
                 elif len(r) == 3:
                     root += r[2]
                     n += 1
