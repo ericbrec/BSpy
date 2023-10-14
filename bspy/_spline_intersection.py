@@ -288,7 +288,8 @@ def _refine_projected_polyhedron(interval):
     # Iteration is complete if the interval actual width (slope) is either
     # one iteration past being less than sqrt(machineEpsilon) or there are no remaining unknowns.
     if interval.atMachineEpsilon or len(newUnknowns) == 0:
-        roots.append((newIntercept, newIntercept + newSlope))
+        # Return the interval bounds and the isolated root.
+        roots.append((interval.intercept, interval.slope + interval.intercept, newIntercept + 0.5 * newSlope))
         return roots, intervals
 
     # Contract spline as needed.
@@ -305,7 +306,8 @@ def _refine_projected_polyhedron(interval):
             intercept = newIntercept.copy()
             slope[i] = w * interval.slope[i]
             intercept[i] = root[0] * interval.slope[i] + interval.intercept[i]
-            roots.append((intercept, intercept + slope))
+            # Return the interval bounds and the isolated root.
+            roots.append((interval.intercept, interval.slope + interval.intercept, intercept + 0.5 * slope))
         
         return roots, intervals
 
@@ -349,22 +351,22 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
     domain = self.domain().T
     intervals = [Interval(self.trim(domain.T).reparametrize(((0.0, 1.0),) * self.nInd), [*range(self.nInd)], 1.0, domain[1] - domain[0], domain[0], epsilon, False)]
     chunkSize = 8
-    pool = Pool() # Pool size matches CPU count
+    #pool = Pool() # Pool size matches CPU count
 
     while intervals:
         nextIntervals = []
-        if len(intervals) > chunkSize:
+        if False and len(intervals) > chunkSize:
             for (newRoots, newIntervals) in pool.imap_unordered(_refine_projected_polyhedron, intervals, chunkSize):
                 for root in newRoots:
                     # Double-check that we're at an actual zero (avoids boundary case).
-                    if np.linalg.norm(self(0.5 * (root[0] + root[1]))) < evaluationEpsilon:
+                    if np.linalg.norm(self(0.5 * (root[0] + root[1]) if len(root) == 2 else root[2])) < evaluationEpsilon:
                         roots.append(root)
                 nextIntervals += newIntervals
         else:
             for (newRoots, newIntervals) in map(_refine_projected_polyhedron, intervals):
                 for root in newRoots:
                     # Double-check that we're at an actual zero (avoids boundary case).
-                    if np.linalg.norm(self(0.5 * (root[0] + root[1]))) < evaluationEpsilon:
+                    if np.linalg.norm(self(0.5 * (root[0] + root[1]) if len(root) == 2 else root[2])) < evaluationEpsilon:
                         roots.append(root)
                 nextIntervals += newIntervals
         intervals = nextIntervals
@@ -376,25 +378,31 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
 
     # Otherwise, collect overlapping intervals in regions.
     regions = []
+    separation = 2.0 * epsilon
     for root in roots:
         firstRegion = None
+        isIsolated = len(root) == 3
         for region in regions:
-            for r in region:
+            for r in region[1:]:
                 overlapped = True
                 for i in range(self.nInd):
-                    if root[0][i] > r[1][i] + epsilon or r[0][i] > root[1][i] + epsilon:
+                    if root[0][i] > r[1][i] + separation or r[0][i] > root[1][i] + separation:
                         overlapped = False
                         break
                 if overlapped:
                     if firstRegion is None:
                         region.append(root)
+                        if isIsolated:
+                            region[0] = True
                         firstRegion = region
                     else:
-                        firstRegion += region
+                        if region[0]:
+                            firstRegion[0] = True
+                        firstRegion += region[1:]
                         region.clear()
                     break
         if firstRegion is None:
-            regions.append([root])
+            regions.append([isIsolated, root])
 
     # Return centroids of regions.
     roots = []
@@ -402,9 +410,15 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
         if region:
             n = 0
             root = np.zeros(self.nInd, self.coefs.dtype)
-            for r in region:
-                root += r[0] + r[1]
-                n += 2
+            isIsolated = region[0]
+            for r in region[1:]:
+                if not isIsolated:
+                    root += r[0] + r[1]
+                    n += 2
+                elif len(r) == 3:
+                    root += r[2]
+                    n += 1
+
             root *= 1.0 / n
             roots.append(root) 
 
