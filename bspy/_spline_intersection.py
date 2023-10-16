@@ -194,10 +194,10 @@ def _intersect_convex_hull_with_x_interval(hullPoints, epsilon, xInterval):
                 xMax = max(xMax, point[0])
         previousPoint = point
 
-    if xMin > xInterval[1] or xMax < xInterval[0]:
+    if xMin - epsilon > xInterval[1] or xMax + epsilon < xInterval[0]:
         return None
     else:
-        return (max(xMin, xInterval[0]), min(xMax, xInterval[1]))
+        return (min(max(xMin, xInterval[0]), xInterval[1]), max(min(xMax, xInterval[1]), xInterval[0]))
 
 Interval = namedtuple('Interval', ('spline', 'unknowns', 'scale', 'slope', 'intercept', 'epsilon', 'atMachineEpsilon'))
 

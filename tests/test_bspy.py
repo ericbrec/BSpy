@@ -607,7 +607,7 @@ def test_contours():
     nCoef = len(knots) - order
     spline = bspy.Spline(2, 1, (order, order), (nCoef, nCoef), (knots, knots), \
         (((1.0, 0.0, 1.0), (0.0, -5.0, 0.0), (1.0, 0.0, 1.0)),))
-    contours = [] #spline.contours()
+    contours = spline.contours()
     for contour in contours:
         for t in np.linspace(0.0, 1.0, 11):
             uvw = contour((t,))
