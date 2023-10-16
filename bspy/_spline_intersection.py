@@ -399,7 +399,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
         if firstRegion is None:
             regions.append([root])
 
-    # Return centroids of regions.
+    # Return centroids of regions, or better yet, the isolated roots of regions.
     roots = []
     for region in regions:
         if region:
@@ -578,15 +578,18 @@ def contours(self):
     # (3) Take all the points found in Step (1) and Step (2) and order them by distance in the theta direction from the origin.
     points.sort()
 
-    # Extra step not in the paper: Add a panel between two consecutive turning points to uniquely determine contours between them.
+    # Extra step not in the paper:
+    # Add a panel between two consecutive open/close turning points to uniquely determine contours between them.
     if len(points) > 1:
         i = 0
         previousPoint = points[i]
         while i < len(points) - 1:
             i += 1
             point = points[i]
-            if previousPoint.turningPoint and point.turningPoint and point.d - previousPoint.d > epsilon:
-                # We have two consecutive turning points on separate panels.
+            if previousPoint.turningPoint and previousPoint.det > 0.0 and \
+                point.turningPoint and point.det < 0.0 and \
+                point.d - previousPoint.d > epsilon:
+                # We have two consecutive open/close turning points on separate panels.
                 # Insert a panel in between them, with the uvw value of None, since there is no zero associated.
                 points.insert(i, Point(0.5 * (previousPoint.d + point.d), 0.0, False, True, None))
                 i += 1
