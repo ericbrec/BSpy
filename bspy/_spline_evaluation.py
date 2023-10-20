@@ -134,6 +134,16 @@ def integral(self, with_respect_to, uvw1, uvw2, returnSpline = False):
     else:
         return value
 
+def jacobian(self, uvw):
+    value = np.empty((self.nDep, self.nInd), self.coefs.dtype)
+    wrt = [0] * self.nInd
+    for i in range(self.nInd):
+        wrt[i] = 1
+        value[:, i] = self.derivative(wrt, uvw)
+        wrt[i] = 0
+    
+    return value
+
 def normal(self, uvw, normalize=True, indices=None):
     # Make work for scalar valued functions
     uvw = np.atleast_1d(uvw)

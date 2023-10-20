@@ -289,7 +289,7 @@ def _refine_projected_polyhedron(interval):
     # one iteration past being less than sqrt(machineEpsilon) or there are no remaining unknowns.
     if interval.atMachineEpsilon or len(newUnknowns) == 0:
         # Return the interval bounds and the isolated root.
-        roots.append((newIntercept, newIntercept + newSlope, 0.5 * np.linalg.norm(newSlope)))
+        roots.append((newIntercept, newIntercept + newSlope, epsilon))
         return roots, intervals
 
     # Contract spline as needed.
@@ -307,7 +307,7 @@ def _refine_projected_polyhedron(interval):
             slope[i] = w * interval.slope[i]
             intercept[i] = root[0] * interval.slope[i] + interval.intercept[i]
             # Return the interval bounds and the isolated root.
-            roots.append((intercept, intercept + slope, 0.5 * np.linalg.norm(slope)))
+            roots.append((intercept, intercept + slope, epsilon))
         
         return roots, intervals
 
@@ -338,6 +338,12 @@ def _refine_projected_polyhedron(interval):
   
     return roots, intervals
 
+class _Region:
+    def __init__(self, radius, center, count):
+        self.radius = radius
+        self.center = center
+        self.count = count
+
 def zeros_using_projected_polyhedron(self, epsilon=None):
     if not(self.nInd == self.nDep): raise ValueError("The number of independent variables (nInd) must match the number of dependent variables (nDep).")
     machineEpsilon = np.finfo(self.coefs.dtype).eps
@@ -353,58 +359,67 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
     chunkSize = 8
     #pool = Pool() # Pool size matches CPU count
 
+    # Refine all the intervals, collecting roots as we go.
     while intervals:
         nextIntervals = []
         if False and len(intervals) > chunkSize:
             for (newRoots, newIntervals) in pool.imap_unordered(_refine_projected_polyhedron, intervals, chunkSize):
-                for root in newRoots:
-                    # Double-check that we're at an actual zero (avoids boundary case).
-                    if np.linalg.norm(self(0.5 * (root[0] + root[1]))) < evaluationEpsilon:
-                        roots.append(root)
+                roots += newRoots
                 nextIntervals += newIntervals
         else:
             for (newRoots, newIntervals) in map(_refine_projected_polyhedron, intervals):
-                for root in newRoots:
-                    # Double-check that we're at an actual zero (avoids boundary case).
-                    if np.linalg.norm(self(0.5 * (root[0] + root[1]))) < evaluationEpsilon:
-                        roots.append(root)
+                roots += newRoots
                 nextIntervals += newIntervals
         intervals = nextIntervals
-    
-    # Return sorted roots if there's only one dimension.
-    if self.nInd == 1:
-        roots.sort(key=lambda root: root[0])
-        return [0.5 * (root[0] + root[1]) if root[2] < epsilon else root[:1] for root in roots]
 
-    # Otherwise, collect overlapping intervals in regions.
-    Region = namedtuple('Region', ('radius', 'center', 'count'))
+    # Combine overlapping roots into regions.
     regions = []
     roots.sort(key=lambda root: -root[2]) # Sort widest roots to the front
     for root in roots:
         rootRadius = root[2]
         rootCenter = 0.5 * (root[0] + root[1])
+
+        # Ensure we have a real root (not a boundary special case).
+        if np.linalg.norm(self(rootCenter)) >= evaluationEpsilon:
+            continue
+
+        # Expand the radius of the root based on the approximate distance from the center needed
+        # to raise the value of the spline above evaluationEpsilon.
+        jacobianNorm = np.linalg.norm(self.jacobian(rootCenter))
+        if jacobianNorm > epsilon:
+            rootRadius = max(rootRadius, evaluationEpsilon / jacobianNorm)
+        
+        # Intersect this root with the existing regions, expanding and combining them as appropriate.
         firstRegion = None
         for region in regions:
+            if region.count == 0:
+                continue
             separation = np.linalg.norm(rootCenter - region.center)
             if separation < rootRadius + region.radius + epsilon:
                 if firstRegion is None:
                     firstRegion = region
                     firstRegion.center = (region.count * region.center + rootCenter) / (region.count + 1)
-                    firstRegion.radius = max(region.radius + separation / (region.count + 1), \
-                        rootRadius + separation * region.count / (region.count + 1))
+                    firstRegion.radius = max(region.radius + separation, \
+                        rootRadius + separation * region.count) / (region.count + 1)
                     firstRegion.count += 1
                 else:
                     separation = np.linalg.norm(firstRegion.center - region.center)
                     firstRegion.center = (firstRegion.count * firstRegion.center + region.count * region.center) / (firstRegion.count + region.count)
-                    firstRegion.radius = max(region.radius + separation * firstRegion.count / (firstRegion.count + region.count), \
-                        firstRegion.radius + separation * region.count / (firstRegion.count + region.count))
+                    firstRegion.radius = max(region.radius + separation * firstRegion.count, \
+                        firstRegion.radius + separation * region.count) / (firstRegion.count + region.count)
                     firstRegion.count += region.count
-                    region.clear()
+                    region.count = 0
         if firstRegion is None:
-            regions.append([rootRadius, rootCenter, 1])
+            regions.append(_Region(rootRadius, rootCenter, 1))
 
-    # Return centroids of regions.
-    return [region.center for region in regions]
+    # Reconstitute the list of roots from the remaining region centers.
+    roots = [region.center for region in regions if region.count > 0]
+
+    # Sort roots if there's only one dimension.
+    if self.nInd == 1:
+        roots.sort()
+
+    return roots
 
 def contours(self):
     if self.nInd - self.nDep != 1: raise ValueError("The number of free variables (self.nInd - self.nDep) must be one.")
