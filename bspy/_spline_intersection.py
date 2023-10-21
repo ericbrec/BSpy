@@ -385,9 +385,10 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
 
         # Expand the radius of the root based on the approximate distance from the center needed
         # to raise the value of the spline above evaluationEpsilon.
-        jacobianNorm = np.linalg.norm(self.jacobian(rootCenter))
-        if jacobianNorm > epsilon:
-            rootRadius = max(rootRadius, evaluationEpsilon / jacobianNorm)
+        jacobian = self.jacobian(rootCenter)
+        minEigenvalue = np.sqrt(np.linalg.eigvalsh(jacobian.T @ jacobian)[0])
+        if minEigenvalue > epsilon:
+            rootRadius = max(rootRadius, evaluationEpsilon / minEigenvalue)
         
         # Intersect this root with the existing regions, expanding and combining them as appropriate.
         firstRegion = None
