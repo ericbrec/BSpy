@@ -222,14 +222,15 @@ def _refine_projected_polyhedron(interval):
             # No roots in this interval.
             return roots, intervals
         if -epsilon < coefsMin and coefsMax < epsilon:
+            # Near zero along this axis for entire interval.
             coefs = np.delete(coefs, nDep, axis = 0)
         else:
             nDep += 1
             newScale = max(newScale, abs(coefsMin), abs(coefsMax))
 
     if nDep == 0:
-        # Return the bounds of the interval within which the spline is zero.
-        roots.append((interval.intercept, interval.intercept + interval.slope, 0.5 * np.linalg.norm(interval.slope)))
+        # Return the interval center and radius.
+        roots.append((interval.intercept + 0.5 * interval.slope, 0.5 * np.linalg.norm(interval.slope)))
         return roots, intervals
 
     # Rescale the spline to max 1.0.
@@ -288,8 +289,8 @@ def _refine_projected_polyhedron(interval):
     # Iteration is complete if the interval actual width (slope) is either
     # one iteration past being less than sqrt(machineEpsilon) or there are no remaining unknowns.
     if interval.atMachineEpsilon or len(newUnknowns) == 0:
-        # Return the interval bounds and the isolated root.
-        roots.append((newIntercept, newIntercept + newSlope, epsilon))
+        # Return the interval center and radius.
+        roots.append((newIntercept + 0.5 * newSlope, epsilon))
         return roots, intervals
 
     # Contract spline as needed.
@@ -306,8 +307,8 @@ def _refine_projected_polyhedron(interval):
             intercept = newIntercept.copy()
             slope[i] = w * interval.slope[i]
             intercept[i] = root[0] * interval.slope[i] + interval.intercept[i]
-            # Return the interval bounds and the isolated root.
-            roots.append((intercept, intercept + slope, epsilon))
+            # Return the interval center and radius.
+            roots.append((intercept + 0.5 * slope, epsilon))
         
         return roots, intervals
 
@@ -339,9 +340,9 @@ def _refine_projected_polyhedron(interval):
     return roots, intervals
 
 class _Region:
-    def __init__(self, radius, center, count):
-        self.radius = radius
+    def __init__(self, center, radius, count):
         self.center = center
+        self.radius = radius
         self.count = count
 
 def zeros_using_projected_polyhedron(self, epsilon=None):
@@ -374,10 +375,10 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
 
     # Combine overlapping roots into regions.
     regions = []
-    roots.sort(key=lambda root: -root[2]) # Sort widest roots to the front
+    roots.sort(key=lambda root: -root[1]) # Sort widest roots to the front
     for root in roots:
-        rootRadius = root[2]
-        rootCenter = 0.5 * (root[0] + root[1])
+        rootCenter = root[0]
+        rootRadius = root[1]
 
         # Ensure we have a real root (not a boundary special case).
         if np.linalg.norm(self(rootCenter)) >= evaluationEpsilon:
@@ -411,7 +412,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
                     firstRegion.count += region.count
                     region.count = 0
         if firstRegion is None:
-            regions.append(_Region(rootRadius, rootCenter, 1))
+            regions.append(_Region(rootCenter, rootRadius, 1))
 
     # Reconstitute the list of roots from the remaining region centers.
     roots = [region.center for region in regions if region.count > 0]
