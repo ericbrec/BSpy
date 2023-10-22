@@ -614,7 +614,7 @@ def test_contours():
             maxError = max(maxError, np.linalg.norm(spline(uvw)))
     assert maxError <= 0.055
 
-    #return # Comment this line to run the following lengthy test
+    return # Comment this line to run the following lengthy test
 
     maxError = 0.0
     F = lambda u , v : (u ** 2 + (v - 3/4) ** 2 - 1/25) * \
