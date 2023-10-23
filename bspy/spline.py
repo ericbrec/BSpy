@@ -899,6 +899,31 @@ class Spline:
         else:
             return NotImplemented
 
+    def jacobian(self, uvw):
+        """
+        Compute the value of the spline's Jacobian at given parameter values.
+
+        Parameters
+        ----------
+        uvw : `iterable`
+            An iterable of length `nInd` that specifies the values of each independent variable (the parameter values).
+
+        Returns
+        -------
+        value : `numpy.array`
+            The value of the spline's Jacobian at the given parameter values. The shape of the return value is (nDep, nInd).
+
+        See Also
+        --------
+        `evaluate` : Compute the value of the spline at given parameter values.
+        `derivative` : Compute the derivative of the spline at given parameter values.
+
+        Notes
+        -----
+        Calls `derivative` nInd times.
+        """
+        return bspy._spline_evaluation.jacobian(self, uvw)
+
     @staticmethod
     def join(splineList):
         """

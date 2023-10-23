@@ -155,13 +155,10 @@ def confine(self, range_bounds):
     return spline.reparametrize(domain) # Return the spline adjusted back to the original domain
 
 def contract(self, uvw):
-    nInd = self.nInd
-    order = [*self.order]
-    nCoef = [*self.nCoef]
-    knots = [*self.knots]
     domain = self.domain()
     section = [slice(None)]
     indices = []
+    contracting = False
     for iv in range(self.nInd):
         if uvw[iv] is not None:
             if uvw[iv] < domain[iv][0] or uvw[iv] > domain[iv][1]:
@@ -172,9 +169,17 @@ def contract(self, uvw):
             ix = min(ix, self.nCoef[iv])
             indices.append(ix)
             section.append(slice(ix - self.order[iv], ix))
+            contracting = True
         else:
             section.append(slice(None))
 
+    if not contracting:
+        return self
+
+    nInd = self.nInd
+    order = [*self.order]
+    nCoef = [*self.nCoef]
+    knots = [*self.knots]
     coefs = self.coefs[tuple(section)]
     ix = 0
     for iv in range(self.nInd):
