@@ -368,6 +368,60 @@ def join(splineList):
 #    workingSpline, numRemoved, error = workingSpline.remove_knots()    # Add this back in once remove_knots is fixed
     return workingSpline.reparametrize([[0.0, 1.0]])
 
+def remove_one_knot(self, iKnot):
+    if self.nInd != 1:  raise ValueError("Must have one independent variable")
+    myOrder = self.order[0]
+    if iKnot < myOrder or iKnot >= self.nCoef[0]:  raise ValueError("Must specify interior knots for removal")
+    diag0 = []
+    diag1 = []
+    rhs = []
+    myKnots = self.knots[0]
+    thisKnot = myKnots[iKnot]
+
+    # Form the bidiagonal system
+    for ix in range(1, myOrder):
+        alpha = (myKnots[iKnot + ix] - thisKnot) / (myKnots[iKnot + ix] - myKnots[iKnot + ix - myOrder])
+        diag0.append(alpha)
+        diag1.append(1.0 - alpha)
+        rhs.append(np.ndarray.copy(self.coefs[:, iKnot - myOrder + ix]))
+    
+    # Adjust right hand side because first and last coefficients are known
+    rhs = np.array(rhs)
+    rhs[0] -= diag0[0] * self.coefs[:, iKnot - myOrder]
+    rhs[-1] -= diag1[-1] * self.coefs[:, iKnot]
+
+    # Use Givens rotations to factor the matrix and track right hand side
+    for ix in range(1, myOrder - 1):
+        cos = diag1[ix - 1]
+        sin = diag0[ix]
+        denom = np.sqrt(cos ** 2 + sin ** 2)
+        cos /= denom
+        sin /= denom
+        diag1[ix - 1] = denom
+        diag0[ix - 1] = sin * diag1[ix]
+        diag1[ix] *= cos
+        tempRow = cos * rhs[ix - 1] + sin * rhs[ix]
+        rhs[ix] = cos * rhs[ix] - sin * rhs[ix - 1]
+        rhs[ix - 1] = tempRow
+    
+    # Perform back substitution
+    rhs[-2] /= diag1[-2] 
+    for ix in range(1, myOrder - 2):
+        rhs[-ix - 2] = (rhs[-ix - 2] - diag0[-ix - 2] * rhs[-ix - 1]) / diag1[-ix - 2]
+    
+    # Create new spline
+    newNCoef = [self.nCoef[0] - 1]
+    newKnots = [list(self.knots[0][:iKnot]) + list(self.knots[0][iKnot + 1:])]
+    newCoefs = []
+    for ix in range(self.nDep):
+        oldCoefs = self.coefs[ix]
+        firstCoefs = oldCoefs[:iKnot - self.order[0] + 1]
+        lastCoefs = oldCoefs[iKnot:]
+        middleCoefs = rhs[:-1,ix]
+        newCoefs.append(list(firstCoefs) + list(middleCoefs) + list(lastCoefs))
+    withoutKnot = type(self)(self.nInd, self.nDep, self.order, newNCoef, newKnots, newCoefs)
+    return withoutKnot, abs(rhs[-1])
+
 def remove_knots(self, oldKnots=((),), maxRemovalsPerKnot=0, tolerance=None):
     if not(len(oldKnots) == self.nInd): raise ValueError("Invalid oldKnots")
     nCoef = [*self.nCoef]

@@ -1038,6 +1038,7 @@ def test_remove_knots():
     rhs = np.array([[0.3, 0.5, 0.4], [1.0, 0.0, -0.8]]).T
     newCoefs, residuals, rank, sigmas = np.linalg.lstsq(a, rhs)
     correctSlimmed = bspy.Spline(1, 2, [4], [4], [[0.0,0,0,0,1,1,1,1]], [[0, 0], newCoefs[0], newCoefs[1], [1, 1]])
+    attempt, residuals = bspy._spline_domain.remove_one_knot(myCurve, 4)
     for u in np.linspace(0.0, 1.0, 101):
         approxPoint = correctSlimmed(u)
         correctPoint = myCurve(u)
