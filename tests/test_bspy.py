@@ -1022,7 +1022,7 @@ def test_least_squares():
         maxError = max(maxError, np.sqrt(xyz @ xyz))
     assert maxError <= fit.accuracy
 
-def test_remove_knots():
+def test_remove_one_knot():
     noDiff = 1.0e-15
     a = np.array([[0.3, 0.0], [0.7, 0.3], [0.0, 0.7]])
     rhs = np.array([[0.3, 0.5, 0.4], [1.0, 0.0, -0.8]]).T
