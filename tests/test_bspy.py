@@ -1023,27 +1023,18 @@ def test_least_squares():
     assert maxError <= fit.accuracy
 
 def test_remove_knots():
-    # This is the existing test.  It works only because remove_knots returns such a large number for error.
-    maxError = 0.0
-    slimmed, removed, error = myCurve.remove_knots()
-    assert removed == 1
-    for [u, x, y] in truthCurve:
-        [xTest, yTest] = slimmed.evaluate(u)
-        maxError = max(maxError, np.sqrt((xTest - x) ** 2 + (yTest - y) ** 2))
-    assert maxError <= error
-
-    # Here is a better test.  It starts by computing the spline that remove_knots should be returning.
-    maxError = 0.0
+    noDiff = 1.0e-15
     a = np.array([[0.3, 0.0], [0.7, 0.3], [0.0, 0.7]])
     rhs = np.array([[0.3, 0.5, 0.4], [1.0, 0.0, -0.8]]).T
-    newCoefs, residuals, rank, sigmas = np.linalg.lstsq(a, rhs)
+    newCoefs, residuals, rank, sigmas = np.linalg.lstsq(a, rhs, rcond = None)
     correctSlimmed = bspy.Spline(1, 2, [4], [4], [[0.0,0,0,0,1,1,1,1]], [[0, 0], newCoefs[0], newCoefs[1], [1, 1]])
-    attempt, residuals = bspy._spline_domain.remove_one_knot(myCurve, 4)
-    for u in np.linspace(0.0, 1.0, 101):
-        approxPoint = correctSlimmed(u)
-        correctPoint = myCurve(u)
-        maxError = max(maxError, np.linalg.norm(approxPoint - correctPoint))
-    assert maxError <= np.linalg.norm(residuals)
+    attempt, residuals = myCurve.remove_one_knot(4)
+    coefDiff = correctSlimmed.coefs - attempt.coefs
+    assert np.linalg.norm(coefDiff) < noDiff
+
+    newCurve = myCurve.insert_knots([[0.43, 0.57]])
+    coefDiff = myCurve.coefs - newCurve.remove_one_knot(5)[0].remove_one_knot(5)[0].coefs
+    assert np.linalg.norm(coefDiff) < noDiff
 
 def test_reverse():
     mySpline = myCurve.reverse()

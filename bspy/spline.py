@@ -1173,7 +1173,33 @@ class Spline:
         Implements a variation of the algorithms from Tiller, Wayne. "Knot-removal algorithms for NURBS curves and surfaces." Computer-Aided Design 24, no. 8 (1992): 445-453.
         """
         return bspy._spline_domain.remove_knots(self, oldKnots, maxRemovalsPerKnot, tolerance)
-
+    
+    def remove_one_knot(self, iKnot):
+        """
+        Remove a single knot from a univariate spline.
+        
+        Parameters
+        ----------
+        iKnot : integer
+            index of the knot to remove from the spline
+        
+        Returns
+        -------
+        spline : `Spline`
+            New spline with the specified knot removed
+        residual : array-like
+            A vector containing the least squares residuals for each dependent variable
+        
+        See Also
+        --------
+        `remove_knots`
+        
+        Notes
+        -----
+        Solves a simple least squares problem
+        """
+        return bspy._spline_domain.remove_one_knot(self, iKnot)
+    
     def reparametrize(self, newDomain):
         """
         Reparametrize a spline to match new domain bounds. The spline's number of knots and its coefficients remain unchanged.
