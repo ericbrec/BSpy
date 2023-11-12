@@ -563,7 +563,7 @@ def test_add():
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
     
     # Add with shared independent variable.
-    added = spline1.add(spline2, [0])
+    added = spline1 + spline2
     maxError = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
         [x, y] = spline1.evaluate([u]) + spline2.evaluate([u])
@@ -572,7 +572,7 @@ def test_add():
     assert maxError <= np.finfo(float).eps
 
     # Add with completely independent variables.
-    added = spline1 + spline2
+    added = spline1.add(spline2)
     maxError = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 21):
         for v in np.linspace(spline2.knots[0][spline2.order[0]-1], spline2.knots[0][spline2.nCoef[0]], 21):
@@ -923,21 +923,21 @@ def test_multiply():
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
     
     # Multiply with shared independent variable.
-    multiplied = spline1.multiply(spline2, [0], 'D')
+    multiplied = spline1 * spline2
     maxError = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
-        x = np.dot(spline1.evaluate([u]), spline2.evaluate([u]))
-        xTest = multiplied.evaluate([u])
+        x = np.dot(spline1(u), spline2(u))
+        xTest = multiplied(u)[0]
         maxError = max(maxError, (xTest - x) ** 2)
     assert maxError <= np.finfo(float).eps
 
     # Multiply with completely independent variables.
-    multiplied = spline1 * spline2
+    multiplied = spline1.multiply(spline2, None, 'D')
     maxError = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 21):
         for v in np.linspace(spline2.knots[0][spline2.order[0]-1], spline2.knots[0][spline2.nCoef[0]], 21):
-            x = np.dot(spline1.evaluate([u]), spline2.evaluate([v]))
-            xTest = multiplied.evaluate([u,v])
+            x = np.dot(spline1(u), spline2(v))
+            xTest = multiplied([u, v])[0]
             maxError = max(maxError, (xTest - x) ** 2)
     assert maxError <= np.finfo(float).eps
 
@@ -1107,7 +1107,7 @@ def test_subtract():
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
     
     # Subtract with shared independent variable.
-    subtracted = spline1.subtract(spline2, [[0, 0]])
+    subtracted = spline1 - spline2
     maxError = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
         [x, y] = spline1.evaluate([u]) - spline2.evaluate([u])
@@ -1116,7 +1116,7 @@ def test_subtract():
     assert maxError <= np.finfo(float).eps
 
     # Subtract with completely independent variables.
-    subtracted = spline1 - spline2
+    subtracted = spline1.subtract(spline2)
     maxError = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 21):
         for v in np.linspace(spline2.knots[0][spline2.order[0]-1], spline2.knots[0][spline2.nCoef[0]], 21):

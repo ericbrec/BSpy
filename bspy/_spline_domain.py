@@ -361,12 +361,11 @@ def join(splineList):
         speed1 = np.linalg.norm(workingSpline.derivative([1], workingDomain[1]))
         speed2 = np.linalg.norm(spl.derivative([1], splDomain[0]))
         spl = spl.reparametrize([[workingDomain[1], workingDomain[1] + speed2 * (splDomain[1] - splDomain[0]) / speed1]])
-        newKnots = [list(workingSpline.knots[0][:-1]) + list(spl.knots[0][maxOrder:])]
-        newCoefs = [list(workingCoefs) + list(splCoefs)[1:] for workingCoefs, splCoefs in zip(workingSpline.coefs, spl.coefs)]
-        workingSpline = type(workingSpline)(1, numDep, workingSpline.order, [workingSpline.nCoef[0] + spl.nCoef[0] - 1],
+        newKnots = [list(workingSpline.knots[0]) + list(spl.knots[0][maxOrder:])]
+        newCoefs = [list(workingCoefs) + list(splCoefs) for workingCoefs, splCoefs in zip(workingSpline.coefs, spl.coefs)]
+        workingSpline = type(workingSpline)(1, numDep, workingSpline.order, [workingSpline.nCoef[0] + spl.nCoef[0]],
                                             newKnots, newCoefs, max(workingSpline.accuracy, spl.accuracy), workingSpline.metadata)
-#    workingSpline, numRemoved, error = workingSpline.remove_knots()    # Add this back in once remove_knots is fixed
-    return workingSpline.reparametrize([[0.0, 1.0]])
+    return workingSpline.reparametrize([[0.0, 1.0]]).remove_knots()
 
 def remove_one_knot(self, iKnot):
     if self.nInd != 1:  raise ValueError("Must have one independent variable")
@@ -422,158 +421,31 @@ def remove_one_knot(self, iKnot):
     withoutKnot = type(self)(self.nInd, self.nDep, self.order, newNCoef, newKnots, newCoefs)
     return withoutKnot, abs(rhs[-1])
 
-def remove_knots(self, oldKnots=((),), maxRemovalsPerKnot=0, tolerance=None):
-    if not(len(oldKnots) == self.nInd): raise ValueError("Invalid oldKnots")
-    nCoef = [*self.nCoef]
-    knotList = list(self.knots)
-    coefs = self.coefs.copy()
-    temp = np.empty_like(coefs)
-    totalRemoved = 0
-    maxResidualError = 0.0
-    for ind in range(self.nInd):
-        order = self.order[ind]
-        highSpan = nCoef[ind] - 1
-        if highSpan < order:
-            continue # no interior knots
-
-        removeAll = len(oldKnots[ind]) == 0
-        degree = order - 1
-        knots = knotList[ind].copy()
-        highU = knots[highSpan]
-        gap = 0 # size of the gap
-        u = knots[order]
-        knotIndex = order
-        while u == knots[knotIndex + 1]:
-            knotIndex += 1
-        multiplicity = knotIndex - degree
-        firstCoefOut = (2 * knotIndex - degree - multiplicity) // 2 # first control point out
-        last = knotIndex - multiplicity
-        first = multiplicity
-        beforeGap = knotIndex # control-point index before gap
-        afterGap = beforeGap + 1 # control-point index after gap
-        # Move the independent variable to the front of coefs and temp. We'll move it back at later.
-        coefs = coefs.swapaxes(0, ind + 1)
-        temp = temp.swapaxes(0, ind + 1)
-
-        # Loop thru knots, stop after we process highU.
-        while True: 
-            # Compute how many times to remove knot.
-            removed = 0
-            if removeAll or u in oldKnots[ind]:
-                if maxRemovalsPerKnot > 0:
-                    maxRemovals = min(multiplicity, maxRemovalsPerKnot)
-                else:
-                    maxRemovals = multiplicity
-            else:
-                maxRemovals = 0
-
-            while removed < maxRemovals:
-                offset = first - 1  # diff in index of temp and coefs
-                temp[0] = coefs[offset]
-                temp[last + 1 - offset] = coefs[last + 1]
-                i = first
-                j = last
-                ii = first - offset
-                jj = last - offset
-
-                # Compute new coefficients for 1 removal step.
-                while j - i > removed:
-                    alphaI = (u - knots[i]) / (knots[i + order + gap + removed] - knots[i])
-                    alphaJ = (u - knots[j - removed]) / (knots[j + order + gap] - knots[j - removed])
-                    temp[ii] = (coefs[i] - (1.0 - alphaI) * temp[ii - 1]) / alphaI
-                    temp[jj] = (coefs[j] - alphaJ * temp[jj + 1])/ (1.0 - alphaJ)
-                    i += 1
-                    ii += 1
-                    j -= 1
-                    j -= 1
-
-                # Compute residual error.
-                if j - i < removed:
-                    residualError = np.linalg.norm(temp[ii - 1] - temp[jj + 1], axis=ind).max()
-                else:
-                    alphaI = (u - knots[i]) / (knots[i + order + gap + removed] - knots[i])
-                    residualError = np.linalg.norm(alphaI * temp[ii + removed + 1] + (1.0 - alphaI) * temp[ii - 1] - coefs[i], axis=ind).max()
-
-                # Check if knot is removable.
-                if tolerance is None or residualError <= tolerance:
-                    # Successful removal. Save new coefficients.
-                    maxResidualError = max(residualError, maxResidualError)
-                    i = first
-                    j = last
-                    while j - i > removed:
-                        coefs[i] = temp[i - offset]
-                        coefs[j] = temp[j - offset]
-                        i += 1
-                        j -= 1
-                else:
-                    break # Get out of removed < maxRemovals while-loop
-                
-                first -= 1
-                last += 1
-                removed += 1
-                # End of removed < maxRemovals while-loop.
-            
-            if removed > 0:
-                # Knots removed. Shift coefficients down.
-                j = firstCoefOut
-                i = j
-                # Pj thru Pi will be overwritten.
-                for k in range(1, removed):
-                    if k % 2 == 1:
-                        i += 1
-                    else:
-                        j -= 1
-                for k in range(i + 1, beforeGap):
-                    coefs[j] = coefs[k] # shift
-                    j += 1
-            else:
-                j = beforeGap + 1
-
-            if u >= highU:
-                gap += removed # No more knots, get out of endless while-loop
-                break
-            else:
-                # Go to next knot, shift knots and coefficients down, and reset gaps.
-                k1 = knotIndex - removed + 1
-                k = knotIndex + gap + 1
-                i = k1
-                u = knots[k]
-                while u == knots[k]:
-                    knots[i] = knots[k]
-                    i += 1
-                    k += 1
-                multiplicity = i - k1
-                knotIndex = i - 1
-                gap += removed
-                for k in range(0, multiplicity):
-                    coefs[j] = coefs[afterGap]
-                    j += 1
-                    afterGap += 1
-                beforeGap = j - 1
-                firstCoefOut = (2 * knotIndex - degree - multiplicity) // 2
-                last = knotIndex - multiplicity
-                first = knotIndex - degree
-            # End of endless while-loop
-
-        # Shift remaining knots.
-        i = highSpan + 1
-        k = i - gap
-        for j in range(1, order + 1):
-            knots[k] = knots[i] 
-            k += 1
-            i += 1
-        
-        # Update totalRemoved, nCoef, knots, and coefs.
-        totalRemoved += gap
-        nCoef[ind] -= gap
-        knotList[ind] = knots[:order + nCoef[ind]]
-        coefs = coefs[:nCoef[ind]]
-        coefs = coefs.swapaxes(0, ind + 1)
-        temp = temp.swapaxes(0, ind + 1)
-        # End of ind loop
+def remove_knots(self, tolerance):
+    scaleDep = [max(np.abs(bound[0]), np.abs(bound[1])) for bound in self.range_bounds()]
+    scaleDep = np.array([1.0 if factor == 0.0 else factor for factor in scaleDep])
+    # Remove knots one at a time until done
+    currentSpline = self
+    while True:
+        bestError = np.finfo(scaleDep[0].dtype).max
+        for ix in range(currentSpline.order[0], currentSpline.nCoef[0]):
+            newSpline, residual = currentSpline.remove_one_knot(ix)
+            error = np.max(residual / scaleDep)
+            if error < bestError:
+                bestError = error
+                bestSpline = newSpline
+        if bestError > tolerance:
+            break
+        errorSpline = self.subtract(bestSpline, indMap = [0])
+        maxError = [max(np.abs(bound[0]), np.abs(bound[1])) for bound in errorSpline.range_bounds()]
+        if np.max(maxError / scaleDep) > tolerance:
+            break
+        else:
+            currentSpline = bestSpline
+    return currentSpline
     
-    spline = type(self)(self.nInd, self.nDep, self.order, nCoef, knotList, coefs, self.accuracy + maxResidualError, self.metadata)   
-    return spline, totalRemoved, maxResidualError
+    testKnots.sort(key = lambda v: v[1])
+    return self
 
 def reparametrize(self, newDomain):
     if not(len(newDomain) == self.nInd): raise ValueError("Invalid newDomain")
@@ -594,7 +466,6 @@ def reparametrize(self, newDomain):
             for i in range(1-order, 0):
                 knots[i] = max(knots[i], nD[1])
         knotList.append(knots)
-    
     return type(self)(self.nInd, self.nDep, self.order, self.nCoef, knotList, self.coefs, self.accuracy, self.metadata)   
 
 def reverse(self, variable = 0):
