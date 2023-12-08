@@ -1079,7 +1079,8 @@ def test_section():
         cosTheta = math.cos(theta)
         sinTheta = math.sin(theta)
         return (sinTheta, cosTheta, -90 * u, -1.0)
-    for testFunc in [expTest, circleTest]:
+    for testFunc, desiredTol in zip([expTest, circleTest],
+                        [[2.0e-5, 4.0e-7, 7.0e-9, 2.0e-10], [2.0e-5, 5.0e-8, 2.0e-10, 7.0e-13]]):
         testPoints = [testFunc(x) for x in np.linspace(0.0, 1.0, 9)]
         gridTest = [bspy.Spline.section([testPoints[i] for i in [0, 8]]),
                     bspy.Spline.section([testPoints[i] for i in [0, 4, 8]]),
@@ -1095,6 +1096,8 @@ def test_section():
                     [tValue] = ([1, 0] @ spl - [xValue]).zeros()
                     errors.append(np.linalg.norm(testFunc(xValue)[:2] - spl(tValue)))
             maxErrors.append(max(errors))
+        for myError, intended in zip(maxErrors, desiredTol):
+            assert myError <= intended
         rate = [0]
         for i in range(3):
             rate.append(math.log2(maxErrors[i] / maxErrors[i + 1]))
