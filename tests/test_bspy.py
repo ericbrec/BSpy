@@ -1022,18 +1022,18 @@ def test_least_squares():
         maxError = max(maxError, np.sqrt(xyz @ xyz))
     assert maxError <= fit.accuracy
 
-def test_remove_one_knot():
+def test_remove_knot():
     noDiff = 1.0e-15
     a = np.array([[0.3, 0.0], [0.7, 0.3], [0.0, 0.7]])
     rhs = np.array([[0.3, 0.5, 0.4], [1.0, 0.0, -0.8]]).T
     newCoefs, residuals, rank, sigmas = np.linalg.lstsq(a, rhs, rcond = None)
     correctSlimmed = bspy.Spline(1, 2, [4], [4], [[0.0,0,0,0,1,1,1,1]], [[0, 0], newCoefs[0], newCoefs[1], [1, 1]])
-    attempt, residuals = myCurve.remove_one_knot(4)
+    attempt, residuals = myCurve.remove_knot(4)
     coefDiff = correctSlimmed.coefs - attempt.coefs
     assert np.linalg.norm(coefDiff) < noDiff
 
     newCurve = myCurve.insert_knots([[0.43, 0.57]])
-    coefDiff = myCurve.coefs - newCurve.remove_one_knot(5)[0].remove_one_knot(5)[0].coefs
+    coefDiff = myCurve.coefs - newCurve.remove_knot(5)[0].remove_knot(5)[0].coefs
     assert np.linalg.norm(coefDiff) < noDiff
 
 def test_reverse():

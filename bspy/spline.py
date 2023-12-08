@@ -1130,35 +1130,7 @@ class Spline:
         """
         return bspy._spline_evaluation.range_bounds(self)
 
-    def remove_knots(self, tolerance = 1.0e-14):
-        """
-        Remove interior knots from a spline.
-
-        Parameters
-        ----------
-        tolerance : `float`, optional
-            The maximum pointwise relative error permitted after removing all the knots. Knots will be
-            removed until removal of the next knot would put the pointwise error above the threshold.
-            The default is 1.0e-14 which is relative to the size of each of the dependent variables.
-
-        Returns
-        -------
-        spline : `Spline`
-            A spline with the knots removed.
-
-        See Also
-        --------
-        `insert_knots` : Insert new knots into a spline.
-        `remove_one_knot` : Remove an indicated knot from a spline.
-        `trim` : Trim the domain of a spline.
-
-        Notes
-        -----
-        Calls `remove_one_knot` repeatedly until no longer possible.
-        """
-        return bspy._spline_domain.remove_knots(self, tolerance)
-    
-    def remove_one_knot(self, iKnot):
+    def remove_knot(self, iKnot):
         """
         Remove a single knot from a univariate spline.
         
@@ -1182,7 +1154,35 @@ class Spline:
         -----
         Solves a simple least squares problem
         """
-        return bspy._spline_domain.remove_one_knot(self, iKnot)
+        return bspy._spline_domain.remove_knot(self, iKnot)
+    
+    def remove_knots(self, tolerance = 1.0e-14):
+        """
+        Remove interior knots from a spline.
+
+        Parameters
+        ----------
+        tolerance : `float`, optional
+            The maximum pointwise relative error permitted after removing all the knots. Knots will be
+            removed until removal of the next knot would put the pointwise error above the threshold.
+            The default is 1.0e-14 which is relative to the size of each of the dependent variables.
+
+        Returns
+        -------
+        spline : `Spline`
+            A spline with the knots removed.
+
+        See Also
+        --------
+        `insert_knots` : Insert new knots into a spline.
+        `remove_knot` : Remove an indicated knot from a spline.
+        `trim` : Trim the domain of a spline.
+
+        Notes
+        -----
+        Calls `remove_knot` repeatedly until no longer possible.
+        """
+        return bspy._spline_domain.remove_knots(self, tolerance)
     
     def reparametrize(self, newDomain):
         """

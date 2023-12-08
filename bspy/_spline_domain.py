@@ -367,7 +367,7 @@ def join(splineList):
                                             newKnots, newCoefs, max(workingSpline.accuracy, spl.accuracy), workingSpline.metadata)
     return workingSpline.reparametrize([[0.0, 1.0]]).remove_knots()
 
-def remove_one_knot(self, iKnot):
+def remove_knot(self, iKnot):
     if self.nInd != 1:  raise ValueError("Must have one independent variable")
     myOrder = self.order[0]
     if iKnot < myOrder or iKnot >= self.nCoef[0]:  raise ValueError("Must specify interior knots for removal")
@@ -433,7 +433,7 @@ def remove_knots(self, tolerance):
         while True:
             bestError = np.finfo(scaleDep[0].dtype).max
             for ix in range(currentFold.order[0], currentFold.nCoef[0]):
-                newSpline, residual = currentFold.remove_one_knot(ix)
+                newSpline, residual = currentFold.remove_knot(ix)
                 error = np.max(residual / scaleDep)
                 if error < bestError:
                     bestError = error
