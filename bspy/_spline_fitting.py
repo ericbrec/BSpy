@@ -436,6 +436,10 @@ def section(xytk):
         dotTangents = startTangent @ endTangent
         theta = math.atan2(crossTangents, dotTangents)
 
+        # Make sure angle is less than 180 degrees
+        if theta * startKappa < 0.0 or theta * endKappa < 0.0 or abs(theta) == math.pi:
+            raise ValueError("Angle >= 180 degrees for two point section")
+        
         # Check data consistency
         crossCheck = startTangent[0] * pointDiff[1] - startTangent[1] * pointDiff[0]
         if crossCheck * startKappa < 0.0 or crossCheck * endKappa < 0.0:  raise ValueError("Inconsistent start angle")
