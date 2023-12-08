@@ -426,22 +426,27 @@ def remove_knots(self, tolerance):
     scaleDep = np.array([1.0 if factor == 0.0 else factor for factor in scaleDep])
     # Remove knots one at a time until done
     currentSpline = self
-    while True:
-        bestError = np.finfo(scaleDep[0].dtype).max
-        for ix in range(currentSpline.order[0], currentSpline.nCoef[0]):
-            newSpline, residual = currentSpline.remove_one_knot(ix)
-            error = np.max(residual / scaleDep)
-            if error < bestError:
-                bestError = error
-                bestSpline = newSpline
-        if bestError > tolerance:
-            break
-        errorSpline = self.subtract(bestSpline, indMap = [0])
-        maxError = [max(np.abs(bound[0]), np.abs(bound[1])) for bound in errorSpline.range_bounds()]
-        if np.max(maxError / scaleDep) > tolerance:
-            break
-        else:
-            currentSpline = bestSpline
+    indIndex = list(range(currentSpline.nInd))
+    for id in indIndex:
+        foldedIndices = list(filter(lambda x: x != id, indIndex))
+        currentFold, foldedBasis = currentSpline.fold(foldedIndices)
+        while True:
+            bestError = np.finfo(scaleDep[0].dtype).max
+            for ix in range(currentFold.order[0], currentFold.nCoef[0]):
+                newSpline, residual = currentFold.remove_one_knot(ix)
+                error = np.max(residual / scaleDep)
+                if error < bestError:
+                    bestError = error
+                    bestSpline = newSpline
+            if bestError > tolerance:
+                break
+            errorSpline = self - bestSpline.unfold(foldedIndices, foldedBasis)
+            maxError = [max(np.abs(bound[0]), np.abs(bound[1])) for bound in errorSpline.range_bounds()]
+            if np.max(maxError / scaleDep) > tolerance:
+                break
+            else:
+                currentFold = bestSpline
+        currentSpline = currentFold.unfold(foldedIndices, foldedBasis)
     return currentSpline
     
     testKnots.sort(key = lambda v: v[1])
