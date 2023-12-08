@@ -154,7 +154,6 @@ def _legendre_polynomial_zeros(degree):
         return p, pd
     zval = 1.0
     z = []
-    w = []
     for iRoot in range(degree // 2):
         done = False
         while True:
@@ -169,15 +168,14 @@ def _legendre_polynomial_zeros(degree):
             if dz < 1.0e-10:
                 done = True
         z.append(zval)
-        p, pd = legendre(degree, zval)
-        w.append(2.0 / ((1.0 - zval ** 2) * pd[-1] ** 2))
         zval -= 0.001
     if degree % 2 == 1:
         z.append(0.0)
-        p, pd = legendre(degree, 0.0)
-        w.append(2.0 / (pd[-1] ** 2))
     z.reverse()
-    w.reverse()
+    w = []
+    for zval in z:
+        p, pd = legendre(degree, zval)
+        w.append(2.0 / ((1.0 - zval ** 2) * pd[-1] ** 2))
     return z, w
 
 def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
