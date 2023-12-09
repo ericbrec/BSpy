@@ -449,7 +449,7 @@ def section(xytk):
  
         # Compute intersection point of tangent directions
         tangentDistances = np.linalg.solve(np.array([startTangent, endTangent]).T, pointDiff)
-        frustrum = startPoint + tangentDistances[0] * startTangent
+        frustum = startPoint + tangentDistances[0] * startTangent
 
         # Compute critical values for section algorithm
         onePlusCosTheta = 1.0 + math.cos(theta)
@@ -474,10 +474,10 @@ def section(xytk):
 
         # Generate the quartic section which interpolates the data
         pt0 = startPoint
-        pt1 = (1.0 - rho) * startPoint + rho * frustrum
-        pt3 = (1.0 - rho) * endPoint + rho * frustrum
+        pt1 = (1.0 - rho) * startPoint + rho * frustum
+        pt3 = (1.0 - rho) * endPoint + rho * frustum
         pt4 = endPoint
-        pt2 = alpha0 * pt1 + alpha1 * pt3 + (1.0 - alpha0 - alpha1) * frustrum
+        pt2 = alpha0 * pt1 + alpha1 * pt3 + (1.0 - alpha0 - alpha1) * frustum
         return bspy.Spline(1, 2, (5,), (5,), ((0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0),), (pt0, pt1, pt2, pt3, pt4))
 
     # Check that the input data is the right size and shape

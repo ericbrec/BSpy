@@ -892,9 +892,9 @@ class Spline:
         if not(self.nDep == other.nDep): raise ValueError("The number of dependent variables for both splines much match.")
         freeParameters = self.nInd + other.nInd - self.nDep
         if freeParameters == 0:
-            return (self - other).zeros()
+            return self.subtract(other).zeros()
         elif freeParameters == 1:
-            return (self - other).contours()
+            return self.subtract(other).contours()
         else:
             return NotImplemented
 
