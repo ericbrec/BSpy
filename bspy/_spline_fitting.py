@@ -140,32 +140,49 @@ def least_squares(nInd, nDep, order, dataPoints, knotList = None, compression = 
         maxError = max(maxError, residuals.sum())
     return bspy.Spline(nInd, nDep, order, nCoef, knotList, coefs, np.sqrt(maxError), metadata)
 
-# From Lowan, Arnold N., Norman Davids, and Arthur Levenson. "Table of the zeros of the Legendre polynomials of 
-# order 1-16 and the weight coefficients for Gauss' mechanical quadrature formula." (1942): 739-743.
-_legendre_polynomial_zeros = [
-    [0.000000000000000],
-    [0.577350269189626],
-    [0.000000000000000,0.774596669241483],
-    [0.339981043584856,0.861136311594053],
-    [0.000000000000000,0.538469310105683,0.906179845938664],
-    [0.238619186083197,0.661209386466265,0.932469514203152],
-    [0.000000000000000,0.405845151377397,0.741531185599394,0.949107912342759],
-    [0.183434642495650,0.525532409916329,0.796666477413627,0.960289856497536],
-    [0.000000000000000,0.324253423403809,0.613371432700590,0.836031107326636,0.968160239507626],
-    [0.148874338981631,0.433395394129247,0.679409568299024,0.865063366688985,0.973906528517172],
-    [0.000000000000000,0.269543155952345,0.519096129110681,0.730152005574049,0.887062599768095,0.978228658146057],
-    [0.125333408511469,0.367831498918180,0.587317954286617,0.769902674194305,0.904117256370475,0.981560634246719],
-    [0.000000000000000,0.230458315955135,0.448492751036447,0.642349339440340,0.801578090733310,0.917598399222978,0.984183054718588],
-    [0.108054948707344,0.319112368927890,0.515248636358154,0.687292904811685,0.827201315069765,0.928434883663574,0.986283808696812],
-    [0.000000000000000,0.201194093997435,0.394151347077563,0.570972172608539,0.724417731360170,0.848206583410427,0.937273392400706,0.987992518020485],
-    [0.095012509837637,0.281603550779259,0.458016777657227,0.617876244402644,0.755404408355003,0.865631202387832,0.944575023073233,0.989400934991650],
-    ]
+# Courtesy of Michael Epton - Translated from his F77 code lgnzro
+
+def _legendre_polynomial_zeros(degree):
+    def legendre(degree, x):
+        p = [1.0, x]
+        pd = [0.0, 1.0]
+        for n in range(2, degree + 1):
+            alfa = (2 * n - 1) / n
+            beta = (n - 1) / n
+            pd.append(alfa * (p[-1] + x * pd[-1]) - beta * pd[-2])
+            p.append(alfa * x * p[-1] - beta * p[-2])
+        return p, pd
+    zval = 1.0
+    z = []
+    for iRoot in range(degree // 2):
+        done = False
+        while True:
+            p, pd = legendre(degree, zval)
+            sum = 0.0
+            for zRoot in z:
+                sum += 1.0 / (zval - zRoot)
+            dz = p[-1] / (pd[-1] - sum * p[-1])
+            zval -= dz
+            if done:
+                break
+            if dz < 1.0e-10:
+                done = True
+        z.append(zval)
+        zval -= 0.001
+    if degree % 2 == 1:
+        z.append(0.0)
+    z.reverse()
+    w = []
+    for zval in z:
+        p, pd = legendre(degree, zval)
+        w.append(2.0 / ((1.0 - zval ** 2) * pd[-1] ** 2))
+    return z, w
 
 def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     # Set up parameters for initial guess of x(t) and validate arguments.
     order = 4
     degree = order - 1
-    rhos = _legendre_polynomial_zeros[degree - 1 - 1]
+    rhos, gaussWeights = _legendre_polynomial_zeros(degree - 1)
     if not(len(knownXValues) >= 2): raise ValueError("There must be at least 2 known x values.")
     m = len(knownXValues) - 1
     nCoef = m * (degree - 1) + 2
@@ -419,6 +436,10 @@ def section(xytk):
         dotTangents = startTangent @ endTangent
         theta = math.atan2(crossTangents, dotTangents)
 
+        # Make sure angle is less than 180 degrees
+        if theta * startKappa < 0.0 or theta * endKappa < 0.0 or abs(theta) == math.pi:
+            raise ValueError("Angle >= 180 degrees for two point section")
+        
         # Check data consistency
         crossCheck = startTangent[0] * pointDiff[1] - startTangent[1] * pointDiff[0]
         if crossCheck * startKappa < 0.0 or crossCheck * endKappa < 0.0:  raise ValueError("Inconsistent start angle")

@@ -563,7 +563,7 @@ def test_add():
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
     
     # Add with shared independent variable.
-    added = spline1.add(spline2, [0])
+    added = spline1 + spline2
     maxError = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
         [x, y] = spline1.evaluate([u]) + spline2.evaluate([u])
@@ -572,7 +572,7 @@ def test_add():
     assert maxError <= np.finfo(float).eps
 
     # Add with completely independent variables.
-    added = spline1 + spline2
+    added = spline1.add(spline2)
     maxError = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 21):
         for v in np.linspace(spline2.knots[0][spline2.order[0]-1], spline2.knots[0][spline2.nCoef[0]], 21):
@@ -923,21 +923,21 @@ def test_multiply():
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
     
     # Multiply with shared independent variable.
-    multiplied = spline1.multiply(spline2, [0], 'D')
+    multiplied = spline1 * spline2
     maxError = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
-        x = np.dot(spline1.evaluate([u]), spline2.evaluate([u]))
-        xTest = multiplied.evaluate([u])
+        x = np.dot(spline1(u), spline2(u))
+        xTest = multiplied(u)[0]
         maxError = max(maxError, (xTest - x) ** 2)
     assert maxError <= np.finfo(float).eps
 
     # Multiply with completely independent variables.
-    multiplied = spline1 * spline2
+    multiplied = spline1.multiply(spline2, None, 'D')
     maxError = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 21):
         for v in np.linspace(spline2.knots[0][spline2.order[0]-1], spline2.knots[0][spline2.nCoef[0]], 21):
-            x = np.dot(spline1.evaluate([u]), spline2.evaluate([v]))
-            xTest = multiplied.evaluate([u,v])
+            x = np.dot(spline1(u), spline2(v))
+            xTest = multiplied([u, v])[0]
             maxError = max(maxError, (xTest - x) ** 2)
     assert maxError <= np.finfo(float).eps
 
@@ -1022,27 +1022,25 @@ def test_least_squares():
         maxError = max(maxError, np.sqrt(xyz @ xyz))
     assert maxError <= fit.accuracy
 
-def test_remove_knots():
-    # This is the existing test.  It works only because remove_knots returns such a large number for error.
-    maxError = 0.0
-    slimmed, removed, error = myCurve.remove_knots()
-    assert removed == 1
-    for [u, x, y] in truthCurve:
-        [xTest, yTest] = slimmed.evaluate(u)
-        maxError = max(maxError, np.sqrt((xTest - x) ** 2 + (yTest - y) ** 2))
-    assert maxError <= error
-
-    # Here is a better test.  It starts by computing the spline that remove_knots should be returning.
-    maxError = 0.0
+def test_remove_knot():
+    noDiff = 1.0e-15
     a = np.array([[0.3, 0.0], [0.7, 0.3], [0.0, 0.7]])
     rhs = np.array([[0.3, 0.5, 0.4], [1.0, 0.0, -0.8]]).T
-    newCoefs, residuals, rank, sigmas = np.linalg.lstsq(a, rhs)
+    newCoefs, residuals, rank, sigmas = np.linalg.lstsq(a, rhs, rcond = None)
     correctSlimmed = bspy.Spline(1, 2, [4], [4], [[0.0,0,0,0,1,1,1,1]], [[0, 0], newCoefs[0], newCoefs[1], [1, 1]])
-    for u in np.linspace(0.0, 1.0, 101):
-        approxPoint = correctSlimmed(u)
-        correctPoint = myCurve(u)
-        maxError = max(maxError, np.linalg.norm(approxPoint - correctPoint))
-    assert maxError <= np.linalg.norm(residuals)
+    attempt, residuals = myCurve.remove_knot(4)
+    coefDiff = correctSlimmed.coefs - attempt.coefs
+    assert np.linalg.norm(coefDiff) < noDiff
+
+    newCurve = myCurve.insert_knots([[0.43, 0.57]])
+    coefDiff = myCurve.coefs - newCurve.remove_knot(5)[0].remove_knot(5)[0].coefs
+    assert np.linalg.norm(coefDiff) < noDiff
+
+def test_remove_knots():
+    neededAccuracy = 1.0e-12
+    newSurf = mySurface.insert_knots([[0.1, 0.3, 0.7, 0.9], [0.25, 0.75]])
+    simplified = mySurface - newSurf.remove_knots(neededAccuracy)
+    assert np.linalg.norm(simplified.coefs) < neededAccuracy
 
 def test_reverse():
     mySpline = myCurve.reverse()
@@ -1087,7 +1085,8 @@ def test_section():
         cosTheta = math.cos(theta)
         sinTheta = math.sin(theta)
         return (sinTheta, cosTheta, -90 * u, -1.0)
-    for testFunc in [expTest, circleTest]:
+    for testFunc, desiredTol in zip([expTest, circleTest],
+                        [[2.0e-5, 4.0e-7, 7.0e-9, 2.0e-10], [2.0e-5, 5.0e-8, 2.0e-10, 7.0e-13]]):
         testPoints = [testFunc(x) for x in np.linspace(0.0, 1.0, 9)]
         gridTest = [bspy.Spline.section([testPoints[i] for i in [0, 8]]),
                     bspy.Spline.section([testPoints[i] for i in [0, 4, 8]]),
@@ -1103,6 +1102,8 @@ def test_section():
                     [tValue] = ([1, 0] @ spl - [xValue]).zeros()
                     errors.append(np.linalg.norm(testFunc(xValue)[:2] - spl(tValue)))
             maxErrors.append(max(errors))
+        for myError, intended in zip(maxErrors, desiredTol):
+            assert myError <= intended
         rate = [0]
         for i in range(3):
             rate.append(math.log2(maxErrors[i] / maxErrors[i + 1]))
@@ -1115,7 +1116,7 @@ def test_subtract():
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
     
     # Subtract with shared independent variable.
-    subtracted = spline1.subtract(spline2, [[0, 0]])
+    subtracted = spline1 - spline2
     maxError = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
         [x, y] = spline1.evaluate([u]) - spline2.evaluate([u])
@@ -1124,7 +1125,7 @@ def test_subtract():
     assert maxError <= np.finfo(float).eps
 
     # Subtract with completely independent variables.
-    subtracted = spline1 - spline2
+    subtracted = spline1.subtract(spline2)
     maxError = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 21):
         for v in np.linspace(spline2.knots[0][spline2.order[0]-1], spline2.knots[0][spline2.nCoef[0]], 21):

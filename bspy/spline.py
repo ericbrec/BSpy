@@ -94,7 +94,7 @@ class Spline:
 
     def __add__(self, other):
         if isinstance(other, Spline):
-            return self.add(other)
+            return self.add(other, [(ix, ix) for ix in range(min(self.nInd, other.nInd))])
         elif _isIterable(other):
             return self.translate(other)
         else:
@@ -102,7 +102,7 @@ class Spline:
 
     def __radd__(self, other):
         if isinstance(other, Spline):
-            return other.add(self)
+            return other.add(self, [(ix, ix) for ix in range(min(self.nInd, other.nInd))])
         elif _isIterable(other):
             return self.translate(other)
         else:
@@ -133,9 +133,9 @@ class Spline:
     def __mul__(self, other):
         if isinstance(other, Spline):
             if self.nDep == 1 or other.nDep == 1:
-                return self.multiply(other, None, 'S')
+                return self.multiply(other, [(ix, ix) for ix in range(min(self.nInd, other.nInd))], 'S')
             else:
-                return self.multiply(other, None, 'D')
+                return self.multiply(other, [(ix, ix) for ix in range(min(self.nInd, other.nInd))], 'D')
         elif np.isscalar(other) or _isIterable(other):
             return self.scale(other)
         else:
@@ -144,10 +144,9 @@ class Spline:
     def __rmul__(self, other):
         if isinstance(other, Spline):
             if self.nDep == 1 or other.nDep == 1:
-                return other.multiply(self, None, 'S')
+                return other.multiply(self, [(ix, ix) for ix in range(min(self.nInd, other.nInd))], 'S')
             else:
-                return other.multiply(self, None, 'D')
-            return other.multiply(self)
+                return other.multiply(self, [(ix, ix) for ix in range(min(self.nInd, other.nInd))], 'D')
         elif np.isscalar(other) or _isIterable(other):
             return self.scale(other)
         else:
@@ -155,7 +154,7 @@ class Spline:
 
     def __sub__(self, other):
         if isinstance(other, Spline):
-            return self.subtract(other)
+            return self.subtract(other, [(ix, ix) for ix in range(min(self.nInd, other.nInd))])
         elif _isIterable(other):
             return self.translate(-np.array(other))
         else:
@@ -163,7 +162,7 @@ class Spline:
 
     def __rsub__(self, other):
         if isinstance(other, Spline):
-            return other.subtract(self)
+            return other.subtract(self, [(ix, ix) for ix in range(min(self.nInd, other.nInd))])
         elif _isIterable(other):
             spline = self.scale(-1.0)
             return spline.translate(other)
@@ -1156,49 +1155,60 @@ class Spline:
         """
         return bspy._spline_evaluation.range_bounds(self)
 
-    def remove_knots(self, oldKnots=((),), maxRemovalsPerKnot=0, tolerance=None):
+    def remove_knot(self, iKnot):
+        """
+        Remove a single knot from a univariate spline.
+        
+        Parameters
+        ----------
+        iKnot : integer
+            index of the knot to remove from the spline
+        
+        Returns
+        -------
+        spline : `Spline`
+            New spline with the specified knot removed
+        residual : array-like
+            A vector containing the least squares residuals for each dependent variable
+        
+        See Also
+        --------
+        `remove_knots`
+        
+        Notes
+        -----
+        Solves a simple least squares problem
+        """
+        return bspy._spline_domain.remove_knot(self, iKnot)
+    
+    def remove_knots(self, tolerance = 1.0e-14):
         """
         Remove interior knots from a spline.
 
         Parameters
         ----------
-        oldKnots : `iterable` of length `nInd`, optional
-            An iterable that specifies the knots that can be removed from each independent variable's interior knots. 
-            len(newKnots[ind]) == 0 if all interior knots can be removed for the `ind` independent variable (the default). 
-            Knots that don't appear in the independent variable's interior knots are ignored.
-        
-        maxRemovalsPerKnot : `int`, optional
-            A non-zero count of the largest number of times a knot can be removed. For example, one means that 
-            only one instance of each knot can be removed. (Zero means each knot can be removed completely, 
-            which is the default.)
-        
-        tolerance : `float` or `None`, optional
-            The maximum residual error permitted after removing a knot. Knots will not be removed if the 
-            resulting residual error is above this threshold. Default is `None`, meaning all specified knots 
-            will be removed up to `maxRemovalsPerKnot`.
+        tolerance : `float`, optional
+            The maximum pointwise relative error permitted after removing all the knots. Knots will be
+            removed until removal of the next knot would put the pointwise error above the threshold.
+            The default is 1.0e-14 which is relative to the size of each of the dependent variables.
 
         Returns
         -------
         spline : `Spline`
             A spline with the knots removed.
-        
-        totalRemoved : `int`
-            The total number of knots removed.
-        
-        residualError : `float`
-            The residual error relative to the old spline. (The returned spline's accuracy is also adjusted accordingly.)
 
         See Also
         --------
         `insert_knots` : Insert new knots into a spline.
+        `remove_knot` : Remove an indicated knot from a spline.
         `trim` : Trim the domain of a spline.
 
         Notes
         -----
-        Implements a variation of the algorithms from Tiller, Wayne. "Knot-removal algorithms for NURBS curves and surfaces." Computer-Aided Design 24, no. 8 (1992): 445-453.
+        Calls `remove_knot` repeatedly until no longer possible.
         """
-        return bspy._spline_domain.remove_knots(self, oldKnots, maxRemovalsPerKnot, tolerance)
-
+        return bspy._spline_domain.remove_knots(self, tolerance)
+    
     def reparametrize(self, newDomain):
         """
         Reparametrize a spline to match new domain bounds. The spline's number of knots and its coefficients remain unchanged.
