@@ -1036,6 +1036,12 @@ def test_remove_knot():
     coefDiff = myCurve.coefs - newCurve.remove_knot(5)[0].remove_knot(5)[0].coefs
     assert np.linalg.norm(coefDiff) < noDiff
 
+def test_remove_knots():
+    neededAccuracy = 1.0e-12
+    newSurf = mySurface.insert_knots([[0.1, 0.3, 0.7, 0.9], [0.25, 0.75]])
+    simplified = mySurface - newSurf.remove_knots(neededAccuracy)
+    assert np.linalg.norm(simplified.coefs) < neededAccuracy
+
 def test_reverse():
     mySpline = myCurve.reverse()
     assert np.linalg.norm(myCurve(0.43) - mySpline(0.57)) < np.finfo(float).eps

@@ -49,9 +49,9 @@ def common_basis(self, splines, indMap):
 
     # Step 3: Elevate and insert missing knots to each spline accordingly.
     alignedSplines = []
-    for (spline, i) in zip(splines, range(len(splines))):
+    for i, spline in enumerate(splines):
         m = spline.nInd * [0]
-        newKnots = spline.nInd * [[]]
+        newKnots = [[] for ix in range(spline.nInd)]
         for (map, order, multiplicities) in zip(indMap, orders, knots):
             ind = map[i]
             m[ind] = order - spline.order[ind]
@@ -423,9 +423,11 @@ def remove_knot(self, iKnot):
 
 def remove_knots(self, tolerance):
     scaleDep = [max(np.abs(bound[0]), np.abs(bound[1])) for bound in self.range_bounds()]
-    scaleDep = np.array([1.0 if factor == 0.0 else factor for factor in scaleDep])
+    scaleDep = [1.0 if factor == 0.0 else factor for factor in scaleDep]
+    rScaleDep = np.array([1.0 / factor for factor in scaleDep])
     # Remove knots one at a time until done
-    currentSpline = self
+    currentSpline = self.scale(rScaleDep)
+    truthSpline = currentSpline
     indIndex = list(range(currentSpline.nInd))
     for id in indIndex:
         foldedIndices = list(filter(lambda x: x != id, indIndex))
@@ -434,23 +436,20 @@ def remove_knots(self, tolerance):
             bestError = np.finfo(scaleDep[0].dtype).max
             for ix in range(currentFold.order[0], currentFold.nCoef[0]):
                 newSpline, residual = currentFold.remove_knot(ix)
-                error = np.max(residual / scaleDep)
+                error = np.max(residual)
                 if error < bestError:
                     bestError = error
                     bestSpline = newSpline
             if bestError > tolerance:
                 break
-            errorSpline = self - bestSpline.unfold(foldedIndices, foldedBasis)
+            errorSpline = truthSpline - bestSpline.unfold(foldedIndices, foldedBasis)
             maxError = [max(np.abs(bound[0]), np.abs(bound[1])) for bound in errorSpline.range_bounds()]
-            if np.max(maxError / scaleDep) > tolerance:
+            if np.max(maxError) > tolerance:
                 break
             else:
                 currentFold = bestSpline
         currentSpline = currentFold.unfold(foldedIndices, foldedBasis)
-    return currentSpline
-    
-    testKnots.sort(key = lambda v: v[1])
-    return self
+    return currentSpline.scale(scaleDep)
 
 def reparametrize(self, newDomain):
     if not(len(newDomain) == self.nInd): raise ValueError("Invalid newDomain")
