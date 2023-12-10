@@ -109,7 +109,9 @@ class Spline:
             return NotImplemented
 
     def __matmul__(self, other):
-        if _isIterable(other):
+        if isinstance(other, Spline):
+            return self.multiply(other, [(ix, ix) for ix in range(min(self.nInd, other.nInd))], 'D')
+        elif _isIterable(other):
             if not isinstance(other, np.ndarray):
                 other = np.array(other)
             if len(other.shape) == 2:
@@ -120,7 +122,9 @@ class Spline:
             return NotImplemented
 
     def __rmatmul__(self, other):
-        if _isIterable(other):
+        if isinstance(other, Spline):
+            return other.multiply(self, [(ix, ix) for ix in range(min(self.nInd, other.nInd))], 'D')
+        elif _isIterable(other):
             if not isinstance(other, np.ndarray):
                 other = np.array(other)
             if len(other.shape) == 2:
@@ -132,10 +136,7 @@ class Spline:
 
     def __mul__(self, other):
         if isinstance(other, Spline):
-            if self.nDep == 1 or other.nDep == 1:
-                return self.multiply(other, [(ix, ix) for ix in range(min(self.nInd, other.nInd))], 'S')
-            else:
-                return self.multiply(other, [(ix, ix) for ix in range(min(self.nInd, other.nInd))], 'D')
+            return self.multiply(other, [(ix, ix) for ix in range(min(self.nInd, other.nInd))], 'S')
         elif np.isscalar(other) or _isIterable(other):
             return self.scale(other)
         else:
@@ -143,10 +144,7 @@ class Spline:
 
     def __rmul__(self, other):
         if isinstance(other, Spline):
-            if self.nDep == 1 or other.nDep == 1:
-                return other.multiply(self, [(ix, ix) for ix in range(min(self.nInd, other.nInd))], 'S')
-            else:
-                return other.multiply(self, [(ix, ix) for ix in range(min(self.nInd, other.nInd))], 'D')
+            return other.multiply(self, [(ix, ix) for ix in range(min(self.nInd, other.nInd))], 'S')
         elif np.isscalar(other) or _isIterable(other):
             return self.scale(other)
         else:
@@ -200,6 +198,8 @@ class Spline:
 
         Notes
         -----
+        Equivalent to spline1 + spline2 with indMap = range(min(spline1.nInd, spline2.nInd)).
+        
         Uses `common_basis` to ensure mapped variables share the same order and knots. 
         """
         if indMap is not None:
@@ -502,7 +502,7 @@ class Spline:
             The type of product to perform on the dependent variables (default is 'S').
                 'C' is for a cross product, self x other (nDep must be 2 or 3).
                 'D' is for a dot product (nDep must match).
-                'S' is for a scalar product (nDep must be 1 for one of the splines).
+                'S' is for a scalar product (nDep must match or be 1 for one of the splines).
         
         Returns
         -------
@@ -648,6 +648,10 @@ class Spline:
         See Also
         --------
         `multiply` : Multiply two splines (cross, dot, or scalar product).
+
+        Notes
+        -----
+        Equivalent to spline @ vector.
         """
         return bspy._spline_operations.dot(self, vector)
 
@@ -1086,7 +1090,7 @@ class Spline:
             The type of product to perform on the dependent variables (default is 'S').
                 'C' is for a cross product, self x other (nDep must be 2 or 3).
                 'D' is for a dot product (nDep must match).
-                'S' is for a scalar product (nDep must be 1 for one of the splines).
+                'S' is for a scalar product (nDep must match or be 1 for one of the splines).
         
         Returns
         -------
@@ -1101,6 +1105,8 @@ class Spline:
 
         Notes
         -----
+        Equivalent to spline1 * spline2 with indMap = range(min(spline1.nInd, spline2.nInd)) and productType = 'S'.
+        
         Taken in part from Lee, E. T. Y. "Computing a chain of blossoms, with application to products of splines." 
         Computer Aided Geometric Design 11, no. 6 (1994): 597-620.
         """
@@ -1324,6 +1330,10 @@ class Spline:
         `multiply` : Multiply two splines (cross, dot, or scalar product).
         `transform` : Transform a spline by the given matrix.
         `translate` : Translate a spline by the given translation vector.
+
+        Notes
+        -----
+        Equivalent to spline * multiplier.
         """
         return bspy._spline_operations.scale(self, multiplier)
     
@@ -1390,6 +1400,8 @@ class Spline:
 
         Notes
         -----
+        Equivalent to spline1 - spline2 with indMap = range(min(spline1.nInd, spline2.nInd)).
+        
         Uses `common_basis` to ensure mapped variables share the same order and knots. 
         """
         if indMap is not None:
@@ -1418,6 +1430,10 @@ class Spline:
         --------
         `scale` : Scale a spline by the given scalar or scale vector.
         `translate` : Translate a spline by the given translation vector.
+
+        Notes
+        -----
+        Equivalent to spline @ matrix.
         """
         return bspy._spline_operations.transform(self, matrix, maxSingularValue)
 
@@ -1439,6 +1455,10 @@ class Spline:
         --------
         `scale` : Scale a spline by the given scalar or scale vector.
         `transform` : Transform a spline by the given matrix.
+        
+        Notes
+        -----
+        Equivalent to spline + translationVector.
         """
         return bspy._spline_operations.translate(self, translationVector)
 

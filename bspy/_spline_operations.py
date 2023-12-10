@@ -198,7 +198,7 @@ def contract(self, uvw):
 
 def cross(self, vector):
     if isinstance(vector, bspy.Spline):
-        return self.multiply(vector, None, 'C')
+        return self.multiply(vector, [(ix, ix) for ix in range(min(self.nInd, vector.nInd))], 'C')
     elif self.nDep == 3:
         if not(len(vector) == self.nDep): raise ValueError("Invalid vector")
 
@@ -241,7 +241,7 @@ def differentiate(self, with_respect_to = 0):
 
 def dot(self, vector):
     if isinstance(vector, bspy.Spline):
-        return self.multiply(vector, None, 'D')
+        return self.multiply(vector, [(ix, ix) for ix in range(min(self.nInd, vector.nInd))], 'D')
     else:
         if not(len(vector) == self.nDep): raise ValueError("Invalid vector")
 
@@ -285,7 +285,7 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
 
     if not(productType != 'D' or self.nDep == other.nDep): raise ValueError("Mismatched dimensions")
     if not(productType != 'C' or (self.nDep == other.nDep and 2 <= self.nDep <= 3)): raise ValueError("Mismatched dimensions")
-    if not(productType != 'S' or self.nDep == 1 or other.nDep == 1): raise ValueError("Mismatched dimensions")
+    if not(productType != 'S' or self.nDep == 1 or other.nDep == 1 or self.nDep == other.nDep): raise ValueError("Mismatched dimensions")
 
     # Ensure scalar spline (if any) comes first (simplifies array processing).
     if other.nDep == 1 and self.nDep > 1:
@@ -321,8 +321,11 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
             coefs += outer[i,i]
         coefs = np.expand_dims(coefs, axis=0)
         nDep = 1
-    else: # Scalar product, where self is the scalar
-        coefs = outer[0]
+    else: # Scalar product
+        coefs = outer
+        for i in range(1, self.nDep):
+            coefs[0,i] = coefs[i,i]
+        coefs = coefs[0]
 
     if indMap is not None:
         indMap = indMap.copy() # Make a copy, since we change the list as we combine independent variables
@@ -702,19 +705,27 @@ def normal_spline(self, indices=None):
 
 def scale(self, multiplier):
     if isinstance(multiplier, bspy.Spline):
-        return self.multiply(multiplier, None, 'S')
+        return self.multiply(multiplier, [(ix, ix) for ix in range(min(self.nInd, multiplier.nInd))], 'S')
     else:
-        if not(np.isscalar(multiplier) or len(multiplier) == self.nDep): raise ValueError("Invalid multiplier")
-
         if np.isscalar(multiplier):
             accuracy = abs(multiplier) * self.accuracy
+            nDep = self.nDep
             coefs = multiplier * self.coefs
-        else:
+        elif len(multiplier) == self.nDep:
             accuracy = np.linalg.norm(multiplier) * self.accuracy
+            nDep = self.nDep
             coefs = np.array(self.coefs)
-            for i in range(self.nDep):
+            for i in range(nDep):
                 coefs[i] *= multiplier[i]
-        return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, coefs, accuracy, self.metadata)
+        elif self.nDep == 1:
+            accuracy = np.linalg.norm(multiplier) * self.accuracy
+            nDep = len(multiplier)
+            coefs = np.empty((nDep, *self.coefs.shape[1:]), self.coefs.dtype)
+            for i in range(nDep):
+                coefs[i] = multiplier[i] * self.coefs[0]
+        else:
+            raise ValueError("Invalid multiplier")
+        return type(self)(self.nInd, nDep, self.order, self.nCoef, self.knots, coefs, accuracy, self.metadata)
 
 def transform(self, matrix, maxSingularValue=None):
     if not(matrix.ndim == 2 and matrix.shape[1] == self.nDep): raise ValueError("Invalid matrix")

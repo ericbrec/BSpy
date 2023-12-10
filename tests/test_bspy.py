@@ -936,10 +936,10 @@ def test_multiply():
     multiplied = spline1 * spline2
     maxError = 0.0
     for u in np.linspace(spline1.knots[0][spline1.order[0]-1], spline1.knots[0][spline1.nCoef[0]], 100):
-        x = np.dot(spline1(u), spline2(u))
-        xTest = multiplied(u)[0]
-        maxError = max(maxError, (xTest - x) ** 2)
-    assert maxError <= np.finfo(float).eps
+        x = spline1(u) * spline2(u)
+        xTest = multiplied(u)
+        maxError = max(maxError, np.linalg.norm(x - xTest))
+    assert maxError <= np.sqrt(np.finfo(float).eps)
 
     # Multiply with completely independent variables.
     multiplied = spline1.multiply(spline2, None, 'D')
@@ -1077,6 +1077,13 @@ def test_scale():
     for [u, x, y] in truthCurve:
         [xTest, yTest] = scaledCurve.evaluate([u])
         maxError = max(maxError, (xTest - 3.0 * x) ** 2 + (yTest - 3.0 * y) ** 2)
+    assert maxError <= np.finfo(float).eps
+
+    maxError = 0.0
+    scaledCurve = (1, 2, 3) * myCurve.dot((1.0, 0.0))
+    for [u, x, y] in truthCurve:
+        (xTest, yTest, zTest) = scaledCurve.evaluate(u)
+        maxError = max(maxError, (xTest - 1.0 * x) ** 2 + (yTest - 2.0 * x) ** 2 + (zTest - 3.0 * x) ** 2)
     assert maxError <= np.finfo(float).eps
 
 def test_section():
