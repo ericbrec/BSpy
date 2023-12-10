@@ -592,6 +592,16 @@ def test_blossom():
         maxError = max(maxError, np.linalg.norm(myCurve.coefs[:,i] - coef))
     assert maxError <= np.finfo(float).eps
 
+def test_circular_arc():
+    maxError = 0.0
+    radius = 3.0
+    angle = 360
+    tolerance = 1.0e-8
+    spline = bspy.Spline.circular_arc(radius, angle, tolerance)
+    for t in np.linspace(0.0, 1.0, 65):
+        maxError = max(maxError, np.abs(np.linalg.norm(spline(t)) - radius))
+    assert maxError < tolerance
+
 def test_contours():
     maxError = 0.0
     F = lambda x: (x[0] - x[2], x[1] - x[3], x[0]*x[0] + x[1]*x[1]/9.0 - 1.0 + x[2]*x[2] + x[3]*x[3]/9.0 - 1.0)

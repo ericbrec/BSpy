@@ -273,6 +273,32 @@ class Spline:
         """
         return bspy._spline_evaluation.bspline_values(knot, knots, splineOrder, u, derivativeOrder, taylorCoefs)
 
+    @staticmethod
+    def circular_arc(radius, angle, tolerance):
+        """
+        Create a 2D circular arc for a given radius and angle accurate to within a given tolerance.
+
+        Parameters
+        ----------
+        radius : `float`
+            The radius of the circular arc.
+
+        angle : `float`
+            The angle of the circular arc measured in degrees starting at the x-axis rotating counterclockwise.
+
+        tolerance : `float`
+            The maximum allowed error in the circular arc.
+
+        Returns
+        -------
+        spline : `Spline`
+            A spline curve for the circular arc (domain from 0 to 1).
+
+        See Also
+        --------
+        `section` : Fit a planar section to the list of 4-tuples of data.
+        """
+        return bspy._spline_fitting.circular_arc(radius, angle, tolerance)
 
     def clamp(self, left, right):
         """
@@ -1326,6 +1352,10 @@ class Spline:
         consecutive data points without passing through an intermediate inflection point (i.e. a point which
         has zero curvature and at which the sign of the curvature changes), then this method will fail
         with an error.
+
+        See Also
+        --------
+        `circular_arc` : Create a 2D circular arc for a given radius and angle accurate to within a given tolerance.
         """
         return bspy._spline_fitting.section(xytk)
 
