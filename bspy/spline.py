@@ -297,6 +297,7 @@ class Spline:
         See Also
         --------
         `section` : Fit a planar section to the list of 4-tuples of data.
+        `revolve` : Rotate the spline to create a surface of revolution.
         """
         return bspy._spline_fitting.circular_arc(radius, angle, tolerance)
 
@@ -1283,9 +1284,46 @@ class Spline:
         """
         return bspy._spline_domain.reverse(self, variable)
 
+    def revolve(self, angle):
+        """
+        Rotate the spline to create a surface of revolution (nDep must equal 2, 
+        first dimension provides the radius for x and y, second dimension provides the z).
+
+        Parameters
+        ----------
+        angle : `float`
+            The angle of the circular arc measured in degrees starting at the x-axis rotating counterclockwise.
+
+        Returns
+        -------
+        spline : `Spline`
+            Surface of revolution (first independent variable sweeps the arc from 0 to 1).
+
+        See Also
+        --------
+        `circular_arc` : Create a 2D circular arc for a given radius and angle accurate to within a given tolerance.
+        """
+        return bspy._spline_fitting.revolve(self, angle)
+
     @staticmethod
     def ruled_surface(spline1, spline2):
-       return bspy._spline_fitting.ruled_surface(spline1, spline2)
+        """
+        Create a ruled surface between two splines.
+
+        Parameters
+        ----------
+        spline1 : `Spline`
+            The first spline (must have the same nInd and nDep as the second spline).
+
+        spline2 : `Spline`
+            The second spline (must have the same nInd and nDep as the first spline).
+        
+        Returns
+        -------
+        spline : `Spline`
+            Ruled surface between spline1 and spline2.
+        """
+        return bspy._spline_fitting.ruled_surface(spline1, spline2)
     
     def save(self, fileName):
         """

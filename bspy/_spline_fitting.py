@@ -412,6 +412,18 @@ def least_squares(nInd, nDep, order, dataPoints, knotList = None, compression = 
         maxError = max(maxError, residuals.sum())
     return bspy.Spline(nInd, nDep, order, nCoef, knotList, coefs, np.sqrt(maxError), metadata)
 
+def revolve(self, angle):
+    if self.nDep != 2: raise ValueError("Spline must have 2 dependent variables")
+
+    maxRadius = max(abs(self.coefs[0].min()), self.coefs[0].max())
+    arc = ((1.0 / maxRadius, 0.0),
+            (0.0, 1.0 / maxRadius),
+            (0.0, 0.0)) @ bspy.Spline.circular_arc(maxRadius, angle, np.finfo(self.coefs.dtype).eps) + (0.0, 0.0, 1.0)
+    radiusHeight = ((1.0, 0.0),
+            (1.0, 0.0),
+            (0.0, 1.0)) @ self
+    return arc.multiply(radiusHeight)
+
 def ruled_surface(curve1, curve2):
     # Ensure that the splines are compatible
     if curve1.nInd != curve2.nInd:  raise ValueError("Splines must have the same number of independent variables")
