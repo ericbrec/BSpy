@@ -695,11 +695,9 @@ def test_cross():
     crossSurface = mySurface.cross(mySurface)
     for v in np.linspace(0, 1, 5):
         for u in np.linspace(0, 1, 5):
-            for t in np.linspace(0, 1, 5):
-                for s in np.linspace(0, 1, 5):
-                    xyz1 = np.cross(mySurface([u, v]), mySurface([s, t])) 
-                    xyz = xyz1 - crossSurface([u , v, s, t])
-                    maxError = max(maxError, np.sqrt(xyz @ xyz))
+            xyz1 = np.cross(mySurface([u, v]), mySurface([u, v])) 
+            xyz = xyz1 - crossSurface([u , v])
+            maxError = max(maxError, np.sqrt(xyz @ xyz))
     assert maxError <= np.sqrt(np.finfo(float).eps)
 
 def test_derivative():

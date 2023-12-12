@@ -70,6 +70,9 @@
                                 <a class="function" href="#Spline.bspline_values">bspline_values</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.circular_arc">circular_arc</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.clamp">clamp</a>
                         </li>
                         <li>
@@ -160,6 +163,9 @@
                                 <a class="function" href="#Spline.range_bounds">range_bounds</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.remove_knot">remove_knot</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.remove_knots">remove_knots</a>
                         </li>
                         <li>
@@ -167,6 +173,9 @@
                         </li>
                         <li>
                                 <a class="function" href="#Spline.reverse">reverse</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.revolve">revolve</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.ruled_surface">ruled_surface</a>
@@ -405,6 +414,8 @@ The result of adding self and other.</li>
 
 <h6 id="notes">Notes</h6>
 
+<p>Equivalent to spline1 + spline2 with indMap = range(min(spline1.nInd, spline2.nInd)).</p>
+
 <p>Uses <code><a href="#Spline.common_basis">common_basis</a></code> to ensure mapped variables share the same order and knots.</p>
 </div>
 
@@ -494,6 +505,45 @@ The value of the bspline or its derivative at the given parameter.</li>
 <h6 id="notes">Notes</h6>
 
 <p>This method does not check parameter values. It is used by other evaluation methods. It uses the de Boor recurrence relations for a B-spline.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.circular_arc" class="classattr">
+                                <div class="attr function">
+                    <div class="decorator">@staticmethod</div>
+
+        <span class="def">def</span>
+        <span class="name">circular_arc</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">radius</span>, </span><span class="param"><span class="n">angle</span>, </span><span class="param"><span class="n">tolerance</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.circular_arc"></a>
+    
+            <div class="docstring"><p>Create a 2D circular arc for a given radius and angle accurate to within a given tolerance.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>radius</strong> (<code>float</code>):
+The radius of the circular arc.</li>
+<li><strong>angle</strong> (<code>float</code>):
+The angle of the circular arc measured in degrees starting at the x-axis rotating counterclockwise.</li>
+<li><strong>tolerance</strong> (<code>float</code>):
+The maximum allowed error in the circular arc.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+A spline curve for the circular arc (domain from 0 to 1).</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.section">section</a></code>:  Fit a planar section to the list of 4-tuples of data. <br />
+<code><a href="#Spline.revolve">revolve</a></code>:  Rotate the spline to create a surface of revolution.  </p>
 </div>
 
 
@@ -777,7 +827,7 @@ An independent variable can map to no more than one other independent variable.<
 The type of product to perform on the dependent variables (default is 'S').
     'C' is for a cross product, self x other (nDep must be 2 or 3).
     'D' is for a dot product (nDep must match).
-    'S' is for a scalar product (nDep must be 1 for one of the splines).</li>
+    'S' is for a scalar product (nDep must match or be 1 for one of the splines).</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -999,6 +1049,10 @@ The dotted spline.</li>
 <h6 id="see-also">See Also</h6>
 
 <p><code><a href="#Spline.multiply">multiply</a></code>:  Multiply two splines (cross, dot, or scalar product).  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>Equivalent to spline @ vector.</p>
 </div>
 
 
@@ -1583,7 +1637,7 @@ An independent variable can map to no more than one other independent variable.<
 The type of product to perform on the dependent variables (default is 'S').
     'C' is for a cross product, self x other (nDep must be 2 or 3).
     'D' is for a dot product (nDep must match).
-    'S' is for a scalar product (nDep must be 1 for one of the splines).</li>
+    'S' is for a scalar product (nDep must match or be 1 for one of the splines).</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -1600,6 +1654,8 @@ The result of multiplying self and other.</li>
 <code><a href="#Spline.convolve">convolve</a></code>:  Convolve two splines (cross, dot, or scalar product).  </p>
 
 <h6 id="notes">Notes</h6>
+
+<p>Equivalent to spline1 * spline2 with indMap = range(min(spline1.nInd, spline2.nInd)) and productType = 'S'.</p>
 
 <p>Taken in part from Lee, E. T. Y. "Computing a chain of blossoms, with application to products of splines." 
 Computer Aided Geometric Design 11, no. 6 (1994): 597-620.</p>
@@ -1713,11 +1769,50 @@ dependent variables</p>
 
 
                             </div>
+                            <div id="Spline.remove_knot" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">remove_knot</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">iKnot</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.remove_knot"></a>
+    
+            <div class="docstring"><p>Remove a single knot from a univariate spline.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>iKnot</strong> (integer):
+index of the knot to remove from the spline</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+New spline with the specified knot removed</li>
+<li><strong>residual</strong> (array-like):
+A vector containing the least squares residuals for each dependent variable</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.remove_knots">remove_knots</a></code>  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>Solves a simple least squares problem</p>
+</div>
+
+
+                            </div>
                             <div id="Spline.remove_knots" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">remove_knots</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">oldKnots</span><span class="o">=</span><span class="p">((),)</span>, </span><span class="param"><span class="n">maxRemovalsPerKnot</span><span class="o">=</span><span class="mi">0</span>, </span><span class="param"><span class="n">tolerance</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+        <span class="name">remove_knots</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-14</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -1728,18 +1823,10 @@ dependent variables</p>
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>oldKnots</strong> (<code>iterable</code> of length <code><a href="#Spline.nInd">nInd</a></code>, optional):
-An iterable that specifies the knots that can be removed from each independent variable's interior knots. 
-len(newKnots[ind]) == 0 if all interior knots can be removed for the <code>ind</code> independent variable (the default). 
-Knots that don't appear in the independent variable's interior knots are ignored.</li>
-<li><strong>maxRemovalsPerKnot</strong> (<code>int</code>, optional):
-A non-zero count of the largest number of times a knot can be removed. For example, one means that 
-only one instance of each knot can be removed. (Zero means each knot can be removed completely, 
-which is the default.)</li>
-<li><strong>tolerance</strong> (<code>float</code> or <code>None</code>, optional):
-The maximum residual error permitted after removing a knot. Knots will not be removed if the 
-resulting residual error is above this threshold. Default is <code>None</code>, meaning all specified knots 
-will be removed up to <code>maxRemovalsPerKnot</code>.</li>
+<li><strong>tolerance</strong> (<code>float</code>, optional):
+The maximum pointwise relative error permitted after removing all the knots. Knots will be
+removed until removal of the next knot would put the pointwise error above the threshold.
+The default is 1.0e-14 which is relative to the size of each of the dependent variables.</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -1747,20 +1834,17 @@ will be removed up to <code>maxRemovalsPerKnot</code>.</li>
 <ul>
 <li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
 A spline with the knots removed.</li>
-<li><strong>totalRemoved</strong> (<code>int</code>):
-The total number of knots removed.</li>
-<li><strong>residualError</strong> (<code>float</code>):
-The residual error relative to the old spline. (The returned spline's accuracy is also adjusted accordingly.)</li>
 </ul>
 
 <h6 id="see-also">See Also</h6>
 
 <p><code><a href="#Spline.insert_knots">insert_knots</a></code>:  Insert new knots into a spline. <br />
+<code><a href="#Spline.remove_knot">remove_knot</a></code>:  Remove an indicated knot from a spline. <br />
 <code><a href="#Spline.trim">trim</a></code>:  Trim the domain of a spline.  </p>
 
 <h6 id="notes">Notes</h6>
 
-<p>Implements a variation of the algorithms from Tiller, Wayne. "Knot-removal algorithms for NURBS curves and surfaces." Computer-Aided Design 24, no. 8 (1992): 445-453.</p>
+<p>Calls <code><a href="#Spline.remove_knot">remove_knot</a></code> repeatedly until no longer possible.</p>
 </div>
 
 
@@ -1833,6 +1917,40 @@ Reparametrized (i.e. reversed) spline.</li>
 
 
                             </div>
+                            <div id="Spline.revolve" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">revolve</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">angle</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.revolve"></a>
+    
+            <div class="docstring"><p>Rotate the spline to create a surface of revolution (nDep must equal 2, 
+first dimension provides the radius for x and y, second dimension provides the z).</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>angle</strong> (<code>float</code>):
+The angle of the circular arc measured in degrees starting at the x-axis rotating counterclockwise.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+Surface of revolution (first independent variable sweeps the arc from 0 to 1).</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.circular_arc">circular_arc</a></code>:  Create a 2D circular arc for a given radius and angle accurate to within a given tolerance.  </p>
+</div>
+
+
+                            </div>
                             <div id="Spline.ruled_surface" class="classattr">
                                 <div class="attr function">
                     <div class="decorator">@staticmethod</div>
@@ -1844,7 +1962,25 @@ Reparametrized (i.e. reversed) spline.</li>
     </div>
     <a class="headerlink" href="#Spline.ruled_surface"></a>
     
-    
+            <div class="docstring"><p>Create a ruled surface between two splines.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>spline1</strong> (<code><a href="#Spline">Spline</a></code>):
+The first spline (must have the same nInd and nDep as the second spline).</li>
+<li><strong>spline2</strong> (<code><a href="#Spline">Spline</a></code>):
+The second spline (must have the same nInd and nDep as the first spline).</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+Ruled surface between spline1 and spline2.</li>
+</ul>
+</div>
+
 
                             </div>
                             <div id="Spline.save" class="classattr">
@@ -1908,6 +2044,10 @@ The scaled spline.</li>
 <p><code><a href="#Spline.multiply">multiply</a></code>:  Multiply two splines (cross, dot, or scalar product). <br />
 <code><a href="#Spline.transform">transform</a></code>:  Transform a spline by the given matrix. <br />
 <code><a href="#Spline.translate">translate</a></code>:  Translate a spline by the given translation vector.  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>Equivalent to spline * multiplier.</p>
 </div>
 
 
@@ -1949,6 +2089,10 @@ concave curve.  In particular, if it is impossible for a differentiable curve to
 consecutive data points without passing through an intermediate inflection point (i.e. a point which
 has zero curvature and at which the sign of the curvature changes), then this method will fail
 with an error.</p>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.circular_arc">circular_arc</a></code>:  Create a 2D circular arc for a given radius and angle accurate to within a given tolerance.  </p>
 </div>
 
 
@@ -1995,6 +2139,8 @@ The result of subtracting other from self.</li>
 
 <h6 id="notes">Notes</h6>
 
+<p>Equivalent to spline1 - spline2 with indMap = range(min(spline1.nInd, spline2.nInd)).</p>
+
 <p>Uses <code><a href="#Spline.common_basis">common_basis</a></code> to ensure mapped variables share the same order and knots.</p>
 </div>
 
@@ -2033,6 +2179,10 @@ The transformed spline.</li>
 
 <p><code><a href="#Spline.scale">scale</a></code>:  Scale a spline by the given scalar or scale vector. <br />
 <code><a href="#Spline.translate">translate</a></code>:  Translate a spline by the given translation vector.  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>Equivalent to spline @ matrix.</p>
 </div>
 
 
@@ -2067,6 +2217,10 @@ The translated spline.</li>
 
 <p><code><a href="#Spline.scale">scale</a></code>:  Scale a spline by the given scalar or scale vector. <br />
 <code><a href="#Spline.transform">transform</a></code>:  Transform a spline by the given matrix.  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>Equivalent to spline + translationVector.</p>
 </div>
 
 
