@@ -736,6 +736,7 @@ def transform(self, matrix, maxSingularValue=None):
     return type(self)(self.nInd, matrix.shape[0], self.order, self.nCoef, self.knots, matrix @ self.coefs, maxSingularValue * self.accuracy, self.metadata)
 
 def translate(self, translationVector):
+    translationVector = np.atleast_1d(translationVector)
     if not(len(translationVector) == self.nDep): raise ValueError("Invalid translationVector")
 
     coefs = np.array(self.coefs)

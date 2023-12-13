@@ -6,14 +6,6 @@ import bspy._spline_intersection
 import bspy._spline_fitting
 import bspy._spline_operations
 
-def _isIterable(object):
-    result = True
-    try:
-        iterator = iter(object)
-    except TypeError:
-        result = False
-    return result
-
 class Spline:
     """
     A class to model, represent, and process piecewise polynomial tensor product
@@ -84,8 +76,8 @@ class Spline:
         self.accuracy = accuracy
         self.metadata = dict(metadata)
 
-    def __call__(self, *args, **kwargs):
-        return self.evaluate(*args, **kwargs)
+    def __call__(self, *uvw, **kwargs):
+        return self.evaluate(*uvw, **kwargs)
 
     def __repr__(self):
         return f"Spline({self.nInd}, {self.nDep}, {self.order}, " + \
@@ -95,77 +87,59 @@ class Spline:
     def __add__(self, other):
         if isinstance(other, Spline):
             return self.add(other, [(ix, ix) for ix in range(min(self.nInd, other.nInd))])
-        elif _isIterable(other):
-            return self.translate(other)
         else:
-            return NotImplemented
+            return self.translate(other)
 
     def __radd__(self, other):
         if isinstance(other, Spline):
             return other.add(self, [(ix, ix) for ix in range(min(self.nInd, other.nInd))])
-        elif _isIterable(other):
-            return self.translate(other)
         else:
-            return NotImplemented
+            return self.translate(other)
 
     def __matmul__(self, other):
         if isinstance(other, Spline):
             return self.multiply(other, [(ix, ix) for ix in range(min(self.nInd, other.nInd))], 'D')
-        elif _isIterable(other):
-            if not isinstance(other, np.ndarray):
-                other = np.array(other)
-            if len(other.shape) == 2:
+        else:
+            other = np.atleast_1d(other)
+            if len(other.shape) > 1:
                 return self.transform(other.T)
             else:
                 return self.dot(other)
-        else:
-            return NotImplemented
 
     def __rmatmul__(self, other):
         if isinstance(other, Spline):
             return other.multiply(self, [(ix, ix) for ix in range(min(self.nInd, other.nInd))], 'D')
-        elif _isIterable(other):
-            if not isinstance(other, np.ndarray):
-                other = np.array(other)
-            if len(other.shape) == 2:
+        else:
+            other = np.atleast_1d(other)
+            if len(other.shape) > 1:
                 return self.transform(other)
             else:
                 return self.dot(other)
-        else:
-            return NotImplemented
 
     def __mul__(self, other):
         if isinstance(other, Spline):
             return self.multiply(other, [(ix, ix) for ix in range(min(self.nInd, other.nInd))], 'S')
-        elif np.isscalar(other) or _isIterable(other):
-            return self.scale(other)
         else:
-            return NotImplemented
+            return self.scale(other)
 
     def __rmul__(self, other):
         if isinstance(other, Spline):
             return other.multiply(self, [(ix, ix) for ix in range(min(self.nInd, other.nInd))], 'S')
-        elif np.isscalar(other) or _isIterable(other):
-            return self.scale(other)
         else:
-            return NotImplemented
+            return self.scale(other)
 
     def __sub__(self, other):
         if isinstance(other, Spline):
             return self.subtract(other, [(ix, ix) for ix in range(min(self.nInd, other.nInd))])
-        elif _isIterable(other):
-            return self.translate(-np.array(other))
         else:
-            return NotImplemented
+            return self.translate(-np.atleast_1d(other))
 
     def __rsub__(self, other):
         if isinstance(other, Spline):
             return other.subtract(self, [(ix, ix) for ix in range(min(self.nInd, other.nInd))])
-        elif _isIterable(other):
+        else:
             spline = self.scale(-1.0)
             return spline.translate(other)
-        else:
-            return NotImplemented
 
     def add(self, other, indMap = None):
         """
@@ -203,7 +177,7 @@ class Spline:
         Uses `common_basis` to ensure mapped variables share the same order and knots. 
         """
         if indMap is not None:
-            indMap = [mapping if _isIterable(mapping) else (mapping, mapping) for mapping in indMap]
+            indMap = [(mapping, mapping) if np.isscalar(mapping) else mapping for mapping in indMap]
         return bspy._spline_operations.add(self, other, indMap)
 
     def blossom(self, uvw):
@@ -274,7 +248,7 @@ class Spline:
         return bspy._spline_evaluation.bspline_values(knot, knots, splineOrder, u, derivativeOrder, taylorCoefs)
 
     @staticmethod
-    def circular_arc(radius, angle, tolerance):
+    def circular_arc(radius, angle, tolerance = None):
         """
         Create a 2D circular arc for a given radius and angle accurate to within a given tolerance.
 
@@ -286,8 +260,8 @@ class Spline:
         angle : `float`
             The angle of the circular arc measured in degrees starting at the x-axis rotating counterclockwise.
 
-        tolerance : `float`
-            The maximum allowed error in the circular arc.
+        tolerance : `float`, optional
+            The maximum allowed error in the circular arc (default is machine epsilon).
 
         Returns
         -------
@@ -521,7 +495,7 @@ class Spline:
         Computer Aided Geometric Design 11, no. 6 (1994): 597-620.
         """
         if indMap is not None:
-            indMap = [(*(mapping if _isIterable(mapping) else (mapping, mapping)), True) for mapping in indMap]
+            indMap = [(mapping, mapping, True) if np.isscalar(mapping) else (*mapping, True) for mapping in indMap]
         return bspy._spline_operations.multiplyAndConvolve(self, other, indMap, productType)
 
     def copy(self, metadata={}):
@@ -560,7 +534,7 @@ class Spline:
         """
         return bspy._spline_operations.cross(self, vector)
 
-    def derivative(self, with_respect_to, uvw):
+    def derivative(self, with_respect_to, *uvw, **kwargs):
         """
         Compute the derivative of the spline at given parameter values.
 
@@ -570,13 +544,18 @@ class Spline:
             An iterable of length `nInd` that specifies the integer order of derivative for each independent variable.
             A zero-order derivative just evaluates the spline normally.
         
-        uvw : `iterable`
-            An iterable of length `nInd` that specifies the values of each independent variable (the parameter values).
+        *uvw : `iterable` or iterable of iterables
+            An iterable of length `nInd` that specifies the values of each independent variable (the parameter values), or 
+            an iterable of iterables of length `nInd` that specifies values for each independent variable (numpy ufunc style).
+
+        **kwargs:
+            For other keyword-only arguments, see the `ufunc docs <https://numpy.org/doc/stable/reference/ufuncs.html#ufuncs-kwargs>`_.
 
         Returns
         -------
         value : `numpy.array`
-            The value of the derivative of the spline at the given parameter values.
+            The value of the derivative of the spline at the given parameter values (array of size nDep). If multiple points are 
+            passed (numpy ufunc style), then multiple arrays are returned, one for each dependent variable.
 
         See Also
         --------
@@ -592,7 +571,13 @@ class Spline:
         evaluated, then the dot product of those B-splines with the vector of
         B-spline coefficients is computed.
         """
-        return bspy._spline_evaluation.derivative(self, with_respect_to, uvw)
+        if len(uvw) > 1 or (not np.isscalar(uvw[0]) and len(uvw[0]) > self.nInd):
+            def vectorized(*uvwInstance):
+                return tuple(bspy._spline_evaluation.derivative(self, with_respect_to, uvwInstance))
+            uFunc = np.frompyfunc(vectorized, self.nInd, self.nDep)
+            return uFunc(*uvw, **kwargs)
+        else:
+            return bspy._spline_evaluation.derivative(self, with_respect_to, *uvw)
 
     def differentiate(self, with_respect_to = 0):
         """
@@ -715,19 +700,24 @@ class Spline:
         """
         return bspy._spline_domain.elevate_and_insert_knots(self, m, newKnots)
 
-    def evaluate(self, *args, **kwargs):
+    def evaluate(self, *uvw, **kwargs):
         """
         Compute the value of the spline at given parameter values.
 
         Parameters
         ----------
-        uvw : `iterable`
-            An iterable of length `nInd` that specifies the values of each independent variable (the parameter values).
+        *uvw : `iterable` or iterable of iterables
+            An iterable of length `nInd` that specifies the values of each independent variable (the parameter values), or 
+            an iterable of iterables of length `nInd` that specifies values for each independent variable (numpy ufunc style).
+
+        **kwargs:
+            For other keyword-only arguments, see the `ufunc docs <https://numpy.org/doc/stable/reference/ufuncs.html#ufuncs-kwargs>`_.
 
         Returns
         -------
         value : `numpy.array`
-            The value of the spline at the given parameter values.
+            The value of the spline at the given parameter values (array of size nDep). If multiple points are 
+            passed (numpy ufunc style), then multiple arrays are returned, one for each dependent variable.
 
         See Also
         --------
@@ -735,19 +725,20 @@ class Spline:
 
         Notes
         -----
+        Equivalent to spline(*uvw, **kwargs).
+
         The evaluate method uses the de Boor recurrence relations for a B-spline
         series to evaluate a spline.  The non-zero B-splines are
         evaluated, then the dot product of those B-splines with the vector of
         B-spline coefficients is computed.
         """
-        uvw = np.atleast_1d(args[0])
-        if len(args) > 1 or len(uvw) > self.nInd:
-            def vectorized(*uvw):
-                return tuple(bspy._spline_evaluation.evaluate(self, uvw))
+        if len(uvw) > 1 or (not np.isscalar(uvw[0]) and len(uvw[0]) > self.nInd):
+            def vectorized(*uvwInstance):
+                return tuple(bspy._spline_evaluation.evaluate(self, uvwInstance))
             uFunc = np.frompyfunc(vectorized, self.nInd, self.nDep)
-            return uFunc(*args, **kwargs)
+            return uFunc(*uvw, **kwargs)
         else:
-            return bspy._spline_evaluation.evaluate(self, uvw)
+            return bspy._spline_evaluation.evaluate(self, *uvw)
 
     def extrapolate(self, newDomain, continuityOrder):
         """
@@ -1119,7 +1110,7 @@ class Spline:
         Computer Aided Geometric Design 11, no. 6 (1994): 597-620.
         """
         if indMap is not None:
-            indMap = [(*(mapping if _isIterable(mapping) else (mapping, mapping)), False) for mapping in indMap]
+            indMap = [(mapping, mapping, False) if np.isscalar(mapping) else (*mapping, False) for mapping in indMap]
         return bspy._spline_operations.multiplyAndConvolve(self, other, indMap, productType)
 
     def normal(self, uvw, normalize=True, indices=None):
@@ -1450,7 +1441,7 @@ class Spline:
         Uses `common_basis` to ensure mapped variables share the same order and knots. 
         """
         if indMap is not None:
-            indMap = [mapping if _isIterable(mapping) else (mapping, mapping) for mapping in indMap]
+            indMap = [(mapping, mapping) if np.isscalar(mapping) else mapping for mapping in indMap]
         return self.add(other.scale(-1.0), indMap)
 
     def transform(self, matrix, maxSingularValue=None):
