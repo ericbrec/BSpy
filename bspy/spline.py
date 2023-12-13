@@ -84,8 +84,8 @@ class Spline:
         self.accuracy = accuracy
         self.metadata = dict(metadata)
 
-    def __call__(self, uvw):
-        return self.evaluate(uvw)
+    def __call__(self, *args, **kwargs):
+        return self.evaluate(*args, **kwargs)
 
     def __repr__(self):
         return f"Spline({self.nInd}, {self.nDep}, {self.order}, " + \
@@ -715,7 +715,7 @@ class Spline:
         """
         return bspy._spline_domain.elevate_and_insert_knots(self, m, newKnots)
 
-    def evaluate(self, uvw):
+    def evaluate(self, *args, **kwargs):
         """
         Compute the value of the spline at given parameter values.
 
@@ -740,7 +740,14 @@ class Spline:
         evaluated, then the dot product of those B-splines with the vector of
         B-spline coefficients is computed.
         """
-        return bspy._spline_evaluation.evaluate(self, uvw)
+        uvw = np.atleast_1d(args[0])
+        if len(args) > 1 or len(uvw) > self.nInd:
+            def vectorized(*uvw):
+                return tuple(bspy._spline_evaluation.evaluate(self, uvw))
+            uFunc = np.frompyfunc(vectorized, self.nInd, self.nDep)
+            return uFunc(*args, **kwargs)
+        else:
+            return bspy._spline_evaluation.evaluate(self, uvw)
 
     def extrapolate(self, newDomain, continuityOrder):
         """
