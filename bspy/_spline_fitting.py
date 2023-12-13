@@ -2,7 +2,9 @@ import numpy as np
 import bspy.spline
 import math
 
-def circular_arc(radius, angle, tolerance):
+def circular_arc(radius, angle, tolerance = None):
+    if tolerance is None:
+        tolerance = np.finfo(float).eps
     if radius < 0.0 or angle < 0.0 or tolerance < 0.0: raise ValueError("The radius, angle, and tolerance must be positive.")
 
     samples = int(max(np.ceil(((1.1536e-5 * radius / tolerance)**(1/8)) * angle / 90), 2.0)) + 1
@@ -418,7 +420,7 @@ def revolve(self, angle):
     maxRadius = max(abs(self.coefs[0].min()), self.coefs[0].max())
     arc = ((1.0 / maxRadius, 0.0),
             (0.0, 1.0 / maxRadius),
-            (0.0, 0.0)) @ bspy.Spline.circular_arc(maxRadius, angle, np.finfo(self.coefs.dtype).eps) + (0.0, 0.0, 1.0)
+            (0.0, 0.0)) @ bspy.Spline.circular_arc(maxRadius, angle) + (0.0, 0.0, 1.0)
     radiusHeight = ((1.0, 0.0),
             (1.0, 0.0),
             (0.0, 1.0)) @ self
