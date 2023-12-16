@@ -700,6 +700,14 @@ def test_cross():
             maxError = max(maxError, np.sqrt(xyz @ xyz))
     assert maxError <= np.sqrt(np.finfo(float).eps)
 
+def test_curvature():
+    testCurve = bspy.Spline.section([[1.0, 0.0, 90.0, 1.0], [0.0, 1.0, 180.0, 2.0]])
+    assert abs(testCurve.curvature(0.0) - 1.0) < 2.0e-15
+    assert abs(testCurve.curvature(1.0) - 2.0) < 2.0e-15
+    testCurve = testCurve @ [0, 1]
+    testVals = [testCurve.curvature(u) for u in np.linspace(0.0, 1.0, 101)]
+    return
+
 def test_derivative():
     maxError = 0.0
     myDerivative = myCurve.differentiate()
@@ -820,6 +828,16 @@ def test_fold_unfold():
                 for l in range(coefs.shape[3]):
                     maxError = max(maxError, abs(unfolded.coefs[i, j, k, l] - spline.coefs[i, j, k, l]))
     assert maxError <= np.finfo(float).eps
+
+def test_graph():
+    simpleFunc = bspy.Spline(2, 1, [3, 4], [4, 5], [[0.0, 0, 0, 0.4, 1, 1, 1],
+                             [0.0, 0, 0, 0, 0.6, 1, 1, 1, 1]], [[1.0, 2, 3, 4, 2, 3, 4, 5,
+                              3, 4, 5, 6, 4, 5, 6, 7, 5, 6, 7, 8]])
+    graphFunc = simpleFunc.graph()
+    uvfPoint = graphFunc([0.27, 0.83])
+    assert abs(uvfPoint[0] - 0.27) <= 4.0 * np.finfo(float).eps
+    assert abs(uvfPoint[1] - 0.83) <= 4.0 * np.finfo(float).eps
+    assert abs(uvfPoint[2] - simpleFunc([0.27, 0.83])[0]) <= 4.0 * np.finfo(float).eps
 
 def test_insert_knots():
     maxError = 0.0
@@ -1167,6 +1185,14 @@ def test_transform():
         [xTest, yTest] = transformedCurve.evaluate([u])
         maxError = max(maxError, (xTest - (2.0 * x + 3.0 * y)) ** 2 + (yTest - (-1.0 * x - 4.0 * y)) ** 2)
     assert maxError <= np.finfo(float).eps
+    shape234 = bspy.Spline(2, 2, [3, 4], [3, 4], [[0.0, 0, 0, 1, 1, 1], [0.0, 0, 0, 0, 1, 1, 1, 1]],
+                           [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+                            [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]])
+    shape334 = [[2, 0], [0, 0.5], [1, 1]] @ shape234
+    assert shape334.coefs[0,1,0] == 8
+    assert shape334.coefs[0,2,1] == 18
+    assert shape334.coefs[1,0,2] == 11
+    assert shape334.coefs[2,2,3] == 42
 
 def test_translate():
     maxError = 0.0

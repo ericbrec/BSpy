@@ -534,7 +534,28 @@ class Spline:
         """
         return bspy._spline_operations.cross(self, vector)
 
-    def derivative(self, with_respect_to, *uvw, **kwargs):
+    def curvature(self, uvw):
+        """
+        Compute the curvature of a univariate spline.
+
+        Parameters
+        ----------
+        uvw : `iterable`
+            An iterable of length `nInd` that specifies the values of each independent variable (the parameter values).
+
+        Returns
+        -------
+        value : scalar
+            The value of the curvature at the given point on the curve.
+        
+        Notes
+        -----
+        Computes the curvature of the graph of the function if nDep == 1.  If nDep == 1 or 2,
+        then the curvature is computed as a signed quantity.
+        """
+        return bspy._spline_evaluation.curvature(self, uvw)
+
+    def derivative(self, with_respect_to, *uvw):
         """
         Compute the derivative of the spline at given parameter values.
 
@@ -800,6 +821,31 @@ class Spline:
         so long as unfold unscrambles things in the corresponding way.  The second spline is needed to hold the basis information that was dropped so that it can be undone.
         """
         return bspy._spline_domain.fold(self, foldedInd)
+    
+    def graph(self):
+        """
+        Generate the spline which is the graph of the given spline.
+        
+        Parameters
+        ----------
+        
+        Returns
+        -------
+        Given a spline with n independent variables and m dependent variables, generate a new
+        spline with n independent variables which has n + m dependent variables, the first n of
+        which are just the independent variables themselves.  For example, given a scalar
+        valued function f of two variables u and v, return the spline of two variables whose
+        three dependent variables are (u, v, f(u,v)).
+        
+        See Also
+        --------
+        `add` : Add two splines together
+
+        Notes
+        -----
+        Makes use of matrix spline multiply and tensor product addition for splines.
+        """
+        return bspy._spline_operations.graph(self)
     
     def insert_knots(self, newKnots):
         """
