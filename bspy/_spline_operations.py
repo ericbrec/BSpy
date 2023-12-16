@@ -252,6 +252,20 @@ def dot(self, vector):
             coefs = coefs.reshape(1, *coefs.shape)
         return type(self)(self.nInd, 1, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
 
+def graph(self):
+    splineDomain = self.domain()
+    uvwSplines = [bspy.Spline(1, 1, [2], [2], [[uLow, uLow, uHigh, uHigh]],
+                              [[uLow, uHigh]]) for uLow, uHigh in splineDomain]
+    graphSpline = uvwSplines[0]
+    for nextSpline in uvwSplines[1:]:
+        graphMat = list(np.block([[np.identity(graphSpline.nInd)], [0.0]]))
+        nextMat = list(np.block([[np.zeros((graphSpline.nInd, 1))], [1.0]]))
+        graphSpline = (graphMat @ graphSpline).add(nextMat @ nextSpline)
+    graphMat = list(np.block([[np.identity(graphSpline.nInd)], [np.zeros((self.nDep, graphSpline.nInd))]]))
+    selfMat = list(np.block([[np.zeros((graphSpline.nInd, self.nDep))], [np.identity(self.nDep)]]))
+    finalGraph = graphMat @ graphSpline + selfMat @ self
+    return finalGraph
+
 def integrate(self, with_respect_to = 0):
     if not(0 <= with_respect_to < self.nInd): raise ValueError("Invalid with_respect_to")
 
@@ -732,8 +746,9 @@ def transform(self, matrix, maxSingularValue=None):
 
     if maxSingularValue is None:
         maxSingularValue = np.linalg.svd(matrix, compute_uv=False)[0]
-
-    return type(self)(self.nInd, matrix.shape[0], self.order, self.nCoef, self.knots, matrix @ self.coefs, maxSingularValue * self.accuracy, self.metadata)
+    swapped = np.swapaxes(self.coefs, 0, -2)
+    newCoefs = np.swapaxes(matrix @ swapped, 0, -2)
+    return type(self)(self.nInd, matrix.shape[0], self.order, self.nCoef, self.knots, newCoefs, maxSingularValue * self.accuracy, self.metadata)
 
 def translate(self, translationVector):
     translationVector = np.atleast_1d(translationVector)

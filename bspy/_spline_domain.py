@@ -51,7 +51,7 @@ def common_basis(self, splines, indMap):
     alignedSplines = []
     for i, spline in enumerate(splines):
         m = spline.nInd * [0]
-        newKnots = [[] for ix in range(spline.nInd)]
+        newKnots = [[] for ix in spline.order]
         for (map, order, multiplicities) in zip(indMap, orders, knots):
             ind = map[i]
             m[ind] = order - spline.order[ind]
