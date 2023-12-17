@@ -1152,6 +1152,19 @@ def test_section():
         for i in range(3):
             rate.append(math.log2(maxErrors[i] / maxErrors[i + 1]))
 
+def test_sphere():
+    mySphere = bspy.Spline.sphere(1.3, 1.0e-12)
+    tvals = np.linspace(0.0, 1.0, 31)
+    uvals = []
+    for tval in tvals:
+        uvals = uvals + list(tvals)
+    vvals = []
+    for tval in tvals:
+        vvals = vvals + len(tvals) * [tval]
+    xvals, yvals, zvals = mySphere(uvals, vvals)
+    for xval, yval, zval in zip(xvals, yvals, zvals):
+        assert (np.linalg.norm([xval, yval, zval]) - 1.3) < 1.0e-12
+    
 def test_subtract():
     maxError = 0.0
     spline1 = bspy.Spline(1, 2, (5,), (5,), [np.array([0, 0, 0, 0, 0.2, 0.5, 0.5, 1, 1, 1], float)], 

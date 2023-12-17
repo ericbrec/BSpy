@@ -555,7 +555,7 @@ class Spline:
         """
         return bspy._spline_evaluation.curvature(self, uvw)
 
-    def derivative(self, with_respect_to, *uvw):
+    def derivative(self, with_respect_to, *uvw, **kwargs):
         """
         Compute the derivative of the spline at given parameter values.
 
@@ -1450,7 +1450,38 @@ class Spline:
         `circular_arc` : Create a 2D circular arc for a given radius and angle accurate to within a given tolerance.
         """
         return bspy._spline_fitting.section(xytk)
+    
+    @staticmethod
+    def sphere(radius, tolerance = None):
+        """
+        Construct a sphere of the given radius.
 
+        Parameters
+        ----------
+        radius : scalar
+            The desired radius of the sphere
+
+        Returns
+        -------
+        spline : `Spline`
+            A bi-quartic spline approximation to a sphere of the specified radius, accurate to
+            the given tolerance.
+        
+        Notes
+        -----
+        The resulting mapping is defined over the unit square.  The first independent variable
+        corresponds to the latitude of the sphere, with 0 mapping to the south pole, 1 mapping to
+        the north pole, and 0.5 mapping to the equator.  The second independent variable is the
+        longitude, with 0 mapping to the meridian which is coplanar with the positive x-axis.
+
+        See Also
+        --------
+        `circular_arc` : Create a 2D circular arc for a given radius and angle accurate to within
+                         a given tolerance.
+        `multiply` : Multiply two splines together.
+        """
+        return bspy._spline_fitting.sphere(radius, tolerance)
+    
     def subtract(self, other, indMap = None):
         """
         Subtract two splines.

@@ -512,3 +512,10 @@ def section(xytk):
     # Join the pieces together and return
     return bspy.Spline.join(mySections)
 
+def sphere(radius, tolerance):
+    if radius <= 0.0:  raise ValueError("Radius must be positive")
+    phiCirc = bspy.Spline.circular_arc(radius, 180.0, 0.5 * tolerance)
+    thetaCirc = bspy.Spline.circular_arc(1.0, 360.0, 0.5 * tolerance / radius)
+    phi3D = [[0, 1], [0, 1], [-1, 0]] @ phiCirc
+    theta3D = [[1, 0], [0, 1], [0, 0]] @ thetaCirc + [0, 0, 1]
+    return phi3D.multiply(theta3D)
