@@ -978,7 +978,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
     def SetInitialView(self, eye, look, up):
         """
-        Set the initial view values used when reseting the view.
+        Set the initial view values used when resetting the view.
         """
         self.initialEye = np.array(eye, np.float32)
         self.initialLook = np.array(look, np.float32)
@@ -1246,7 +1246,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         Parameters
         ----------
         scale : `float`
-            Speed scale betwen 0 and 1.
+            Speed scale between 0 and 1.
         """
         self.speed = 0.1 * (100.0 ** float(scale) - 1.0) / 99.0
 
