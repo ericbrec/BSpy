@@ -555,7 +555,7 @@ class Spline:
         """
         return bspy._spline_evaluation.curvature(self, uvw)
 
-    def derivative(self, with_respect_to, *uvw):
+    def derivative(self, with_respect_to, *uvw, **kwargs):
         """
         Compute the derivative of the spline at given parameter values.
 
