@@ -1327,16 +1327,14 @@ so long as unfold unscrambles things in the corresponding way.  The second splin
     
             <div class="docstring"><p>Generate the spline which is the graph of the given spline.</p>
 
-<h6 id="parameters">Parameters</h6>
-
 <h6 id="returns">Returns</h6>
 
 <ul>
-<li><strong>Given a spline with n independent variables and m dependent variables, generate a new</strong></li>
-<li><strong>spline with n independent variables which has n + m dependent variables, the first n of</strong></li>
-<li><strong>which are just the independent variables themselves.  For example, given a scalar</strong></li>
-<li><strong>valued function f of two variables u and v, return the spline of two variables whose</strong></li>
-<li><strong>three dependent variables are (u, v, f(u,v)).</strong></li>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+A spline with nInd independent variables and nInd + nDep dependent variables, the first nInd of
+which are just the independent variables themselves. For example, given a scalar
+valued function f of two variables u and v, returns the spline of two independent variables whose
+three dependent variables are (u, v, f(u,v)).</li>
 </ul>
 
 <h6 id="see-also">See Also</h6>
