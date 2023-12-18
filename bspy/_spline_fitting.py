@@ -4,7 +4,7 @@ import math
 
 def circular_arc(radius, angle, tolerance = None):
     if tolerance is None:
-        tolerance = np.finfo(float).eps
+        tolerance = 1.0e-12
     if radius < 0.0 or angle < 0.0 or tolerance < 0.0: raise ValueError("The radius, angle, and tolerance must be positive.")
 
     samples = int(max(np.ceil(((1.1536e-5 * radius / tolerance)**(1/8)) * angle / 90), 2.0)) + 1
@@ -512,10 +512,28 @@ def section(xytk):
     # Join the pieces together and return
     return bspy.Spline.join(mySections)
 
-def sphere(radius, tolerance):
+def sphere(radius, tolerance = None):
     if radius <= 0.0:  raise ValueError("Radius must be positive")
+    if tolerance == None:
+        tolerance = 1.0e-12
     phiCirc = bspy.Spline.circular_arc(radius, 180.0, 0.5 * tolerance)
     thetaCirc = bspy.Spline.circular_arc(1.0, 360.0, 0.5 * tolerance / radius)
     phi3D = [[0, 1], [0, 1], [-1, 0]] @ phiCirc
     theta3D = [[1, 0], [0, 1], [0, 0]] @ thetaCirc + [0, 0, 1]
     return phi3D.multiply(theta3D)
+
+def torus(innerRadius, outerRadius, tolerance = None):
+    if innerRadius < 0.0:  raise ValueError("Inner radius must be positive")
+    if outerRadius <= innerRadius:  raise ValueError("Outer radius must be larger than inner radius")
+    if tolerance == None:
+        tolerance = 1.0e-12
+    bigRadius = 0.5 * (innerRadius + outerRadius)
+    donutRadius = 0.5 * (outerRadius - innerRadius)
+    bigCirc = bspy.Spline.circular_arc(bigRadius, 360.0, 0.25 * tolerance)
+    donutCirc = bspy.Spline.circular_arc(donutRadius, 360.0, 0.25 * tolerance)
+    bigCirc3D = [[1, 0], [0, 1], [0, 0]] @ bigCirc
+    donutCircCos = [[1, 0]] @ donutCirc
+    donutCirc3D = [[0, 0], [0, 0], [0, 1]] @ donutCirc
+    torus = bigCirc3D.multiply(donutCircCos) / bigRadius
+    torus = torus.add(bigCirc3D, [0]).add(donutCirc3D, [(1, 0)])
+    return torus

@@ -140,7 +140,11 @@ class Spline:
         else:
             spline = self.scale(-1.0)
             return spline.translate(other)
-
+    
+    def __truediv__(self, other):
+        if not np.isscalar(other):  raise ValueError('Divisor must be a scalar')
+        return self * (1.0 / other)
+    
     def add(self, other, indMap = None):
         """
         Add two splines.
@@ -1460,6 +1464,10 @@ class Spline:
         ----------
         radius : scalar
             The desired radius of the sphere
+        
+        tolerance : scalar
+            The desired absolute tolerance to which the sphere should be constructed.  Defaults
+            to 1.0e-12 if tolerance == None.
 
         Returns
         -------
@@ -1521,6 +1529,44 @@ class Spline:
             indMap = [(mapping, mapping) if np.isscalar(mapping) else mapping for mapping in indMap]
         return self.add(other.scale(-1.0), indMap)
 
+    @staticmethod
+    def torus(innerRadius, outerRadius, tolerance = None):
+        """
+        Construct a torus of the given radii.
+
+        Parameters
+        ----------
+        innerRadius : scalar
+            The desired inner radius of the torus
+        
+        outerRadius : scalar
+            The desired outer radius of the torus
+        
+        tolerance : scalar
+            The desired absolute tolerance to which the tolerance should be constructed.  Defaults
+            to 1.0e-12 if tolerance == None.
+
+        Returns
+        -------
+        spline : `Spline`
+            A bi-quartic spline approximation to a torus of the specified radii, accurate to
+            the given tolerance.
+        
+        Notes
+        -----
+        The resulting mapping is defined over the unit square.  The first independent variable
+        controls the angular position of the cross sectional circles.  The second independent
+        variable specifies the point on each cross section.
+
+        See Also
+        --------
+        `circular_arc` : Create a 2D circular arc for a given radius and angle accurate to within
+                         a given tolerance.
+        `add` : Add two splines together.
+        `multiply` : Multiply two splines together.
+        """
+        return bspy._spline_fitting.torus(innerRadius, outerRadius, tolerance)
+    
     def transform(self, matrix, maxSingularValue=None):
         """
         Transform a spline by the given matrix.
