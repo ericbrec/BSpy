@@ -100,6 +100,9 @@
                                 <a class="function" href="#Spline.cross">cross</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.curvature">curvature</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.derivative">derivative</a>
                         </li>
                         <li>
@@ -125,6 +128,9 @@
                         </li>
                         <li>
                                 <a class="function" href="#Spline.fold">fold</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.graph">graph</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.insert_knots">insert_knots</a>
@@ -514,7 +520,7 @@ The value of the bspline or its derivative at the given parameter.</li>
                     <div class="decorator">@staticmethod</div>
 
         <span class="def">def</span>
-        <span class="name">circular_arc</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">radius</span>, </span><span class="param"><span class="n">angle</span>, </span><span class="param"><span class="n">tolerance</span></span><span class="return-annotation">):</span></span>
+        <span class="name">circular_arc</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">radius</span>, </span><span class="param"><span class="n">angle</span>, </span><span class="param"><span class="n">tolerance</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -529,8 +535,8 @@ The value of the bspline or its derivative at the given parameter.</li>
 The radius of the circular arc.</li>
 <li><strong>angle</strong> (<code>float</code>):
 The angle of the circular arc measured in degrees starting at the x-axis rotating counterclockwise.</li>
-<li><strong>tolerance</strong> (<code>float</code>):
-The maximum allowed error in the circular arc.</li>
+<li><strong>tolerance</strong> (<code>float</code>, optional):
+The maximum allowed error in the circular arc (default is machine epsilon).</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -912,11 +918,45 @@ The crossed spline: self x vector.</li>
 
 
                             </div>
+                            <div id="Spline.curvature" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">curvature</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">uvw</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.curvature"></a>
+    
+            <div class="docstring"><p>Compute the curvature of a univariate spline.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>uvw</strong> (<code>iterable</code>):
+An iterable of length <code><a href="#Spline.nInd">nInd</a></code> that specifies the values of each independent variable (the parameter values).</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>value</strong> (scalar):
+The value of the curvature at the given point on the curve.</li>
+</ul>
+
+<h6 id="notes">Notes</h6>
+
+<p>Computes the curvature of the graph of the function if nDep == 1.  If nDep == 1 or 2,
+then the curvature is computed as a signed quantity.</p>
+</div>
+
+
+                            </div>
                             <div id="Spline.derivative" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">derivative</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">with_respect_to</span>, </span><span class="param"><span class="n">uvw</span></span><span class="return-annotation">):</span></span>
+        <span class="name">derivative</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">with_respect_to</span>, </span><span class="param"><span class="o">*</span><span class="n">uvw</span>, </span><span class="param"><span class="o">**</span><span class="n">kwargs</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -930,15 +970,18 @@ The crossed spline: self x vector.</li>
 <li><strong>with_respect_to</strong> (<code>iterable</code>):
 An iterable of length <code><a href="#Spline.nInd">nInd</a></code> that specifies the integer order of derivative for each independent variable.
 A zero-order derivative just evaluates the spline normally.</li>
-<li><strong>uvw</strong> (<code>iterable</code>):
-An iterable of length <code><a href="#Spline.nInd">nInd</a></code> that specifies the values of each independent variable (the parameter values).</li>
+<li><strong>*uvw</strong> (<code>iterable</code> or iterable of iterables):
+An iterable of length <code><a href="#Spline.nInd">nInd</a></code> that specifies the values of each independent variable (the parameter values), or 
+an iterable of iterables of length <code><a href="#Spline.nInd">nInd</a></code> that specifies values for each independent variable (numpy ufunc style).</li>
+<li><strong>**kwargs:</strong>: For other keyword-only arguments, see the <a href="https://numpy.org/doc/stable/reference/ufuncs.html#ufuncs-kwargs">ufunc docs </a>.</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
 
 <ul>
 <li><strong>value</strong> (<code>numpy.array</code>):
-The value of the derivative of the spline at the given parameter values.</li>
+The value of the derivative of the spline at the given parameter values (array of size nDep). If multiple points are 
+passed (numpy ufunc style), then multiple arrays are returned, one for each dependent variable.</li>
 </ul>
 
 <h6 id="see-also">See Also</h6>
@@ -1145,7 +1188,7 @@ A spline with the order of the current spline plus <code>m</code> that includes 
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">uvw</span></span><span class="return-annotation">):</span></span>
+        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">*</span><span class="n">uvw</span>, </span><span class="param"><span class="o">**</span><span class="n">kwargs</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -1156,15 +1199,18 @@ A spline with the order of the current spline plus <code>m</code> that includes 
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>uvw</strong> (<code>iterable</code>):
-An iterable of length <code><a href="#Spline.nInd">nInd</a></code> that specifies the values of each independent variable (the parameter values).</li>
+<li><strong>*uvw</strong> (<code>iterable</code> or iterable of iterables):
+An iterable of length <code><a href="#Spline.nInd">nInd</a></code> that specifies the values of each independent variable (the parameter values), or 
+an iterable of iterables of length <code><a href="#Spline.nInd">nInd</a></code> that specifies values for each independent variable (numpy ufunc style).</li>
+<li><strong>**kwargs:</strong>: For other keyword-only arguments, see the <a href="https://numpy.org/doc/stable/reference/ufuncs.html#ufuncs-kwargs">ufunc docs </a>.</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
 
 <ul>
 <li><strong>value</strong> (<code>numpy.array</code>):
-The value of the spline at the given parameter values.</li>
+The value of the spline at the given parameter values (array of size nDep). If multiple points are 
+passed (numpy ufunc style), then multiple arrays are returned, one for each dependent variable.</li>
 </ul>
 
 <h6 id="see-also">See Also</h6>
@@ -1172,6 +1218,8 @@ The value of the spline at the given parameter values.</li>
 <p><code><a href="#Spline.derivative">derivative</a></code>:  Compute the derivative of the spline at given parameter values.  </p>
 
 <h6 id="notes">Notes</h6>
+
+<p>Equivalent to spline(<em>uvw, *</em>kwargs).</p>
 
 <p>The evaluate method uses the de Boor recurrence relations for a B-spline
 series to evaluate a spline.  The non-zero B-splines are
@@ -1263,6 +1311,39 @@ returning the original spline.</p>
 Then spl.fold([0, 2]) should return a spline with 1 independent variable and 72 dependent variables.  It should have nCoef = [5], knots = [knots1], and its coefs array should have 
 shape (72, 5).  The other spline should have 0 dependent variables, 2 independent variables, and knots = [knots0, knots2].  How things get ordered in coefs probably doesn't matter 
 so long as unfold unscrambles things in the corresponding way.  The second spline is needed to hold the basis information that was dropped so that it can be undone.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.graph" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">graph</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.graph"></a>
+    
+            <div class="docstring"><p>Generate the spline which is the graph of the given spline.</p>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+A spline with nInd independent variables and nInd + nDep dependent variables, the first nInd of
+which are just the independent variables themselves. For example, given a scalar
+valued function f of two variables u and v, returns the spline of two independent variables whose
+three dependent variables are (u, v, f(u,v)).</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.add">add</a></code>:  Add two splines together  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>Makes use of matrix spline multiply and tensor product addition for splines.</p>
 </div>
 
 

@@ -830,16 +830,13 @@ class Spline:
         """
         Generate the spline which is the graph of the given spline.
         
-        Parameters
-        ----------
-        
         Returns
         -------
-        Given a spline with n independent variables and m dependent variables, generate a new
-        spline with n independent variables which has n + m dependent variables, the first n of
-        which are just the independent variables themselves.  For example, given a scalar
-        valued function f of two variables u and v, return the spline of two variables whose
-        three dependent variables are (u, v, f(u,v)).
+        spline: `Spline`
+            A spline with nInd independent variables and nInd + nDep dependent variables, the first nInd of
+            which are just the independent variables themselves. For example, given a scalar
+            valued function f of two variables u and v, returns the spline of two independent variables whose
+            three dependent variables are (u, v, f(u,v)).
         
         See Also
         --------
