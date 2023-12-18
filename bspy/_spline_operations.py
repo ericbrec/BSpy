@@ -301,11 +301,9 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
     if not(productType != 'C' or (self.nDep == other.nDep and 2 <= self.nDep <= 3)): raise ValueError("Mismatched dimensions")
     if not(productType != 'S' or self.nDep == 1 or other.nDep == 1 or self.nDep == other.nDep): raise ValueError("Mismatched dimensions")
 
-    # Ensure scalar spline (if any) comes first (simplifies array processing).
+    # Eliminate case tough case for data handling
     if other.nDep == 1 and self.nDep > 1:
-        temp = self
-        self = other
-        other = temp
+        other = (self.nDep * [[1]]) @ other
 
     # Construct new spline parameters.
     nInd = self.nInd + other.nInd
