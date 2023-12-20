@@ -926,7 +926,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         }
     """
  
-    def __init__(self, *args, **kw):
+    def __init__(self, *args, eye=(0.0, 0.0, 3.0), center=(0.0, 0.0, 0.0), up=(0.0, 1.0, 0.0), **kw):
         OpenGLFrame.__init__(self, *args, **kw)
         self.animate = 0 # Set to number of milliseconds before showing next frame (0 means no animation)
 
@@ -939,7 +939,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         self.backgroundColor = np.array((0.0, 0.2, 0.2, 1.0), np.float32)
 
-        self.SetInitialView((0.0, 0.0, 3.0), (0.0, 0.0, 1.0), (0.0, 1.0, 0.0))
+        self.SetInitialView(eye, center, up)
         self.ResetView()
 
         self.bind("<ButtonPress>", self.MouseDown)
@@ -976,13 +976,14 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.tessellationEnabled = True
         self.glInitialized = False
 
-    def SetInitialView(self, eye, look, up):
+    def SetInitialView(self, eye, center, up):
         """
         Set the initial view values used when resetting the view.
         """
         self.initialEye = np.array(eye, np.float32)
-        self.initialLook = np.array(look, np.float32)
+        self.initialCenter = np.array(center, np.float32)
         self.initialUp = np.array(up, np.float32)
+        self.initialUp = self.initialUp / np.linalg.norm(self.initialUp)
     
     def SetBackgroundColor(self, r, g=None, b=None, a=None):
         """
@@ -1017,9 +1018,10 @@ class SplineOpenGLFrame(OpenGLFrame):
         Update the view position to initial values.
         """
         self.eye = self.initialEye.copy()
-        self.look = self.initialLook.copy()
+        self.look = self.initialEye - self.initialCenter
+        self.anchorDistance = np.linalg.norm(self.look)
+        self.look = self.look / self.anchorDistance
         self.up = self.initialUp.copy()
-        self.anchorDistance = np.linalg.norm(self.initialEye)
         self.horizon = np.cross(self.up, self.look)
         self.horizon = self.horizon / np.linalg.norm(self.horizon)
         self.vertical = np.cross(self.look, self.horizon)
@@ -1033,7 +1035,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.CreateGLResources()
             self.glInitialized = True
 
-        self.HandleScreenSizeUpdate()
+        self.ResetBounds()
 
     def CreateGLResources(self):
         """
@@ -1126,15 +1128,15 @@ class SplineOpenGLFrame(OpenGLFrame):
         glEnable( GL_DEPTH_TEST )
         glClearColor(self.backgroundColor[0], self.backgroundColor[1], self.backgroundColor[2], self.backgroundColor[3])
 
-    def HandleScreenSizeUpdate(self):
+    def ResetBounds(self):
         """
-        Handle window size update (typically after a window resize).
+        Handle window size and/or clipping plane update (typically after a window resize).
         """
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         xExtent = self.width / self.height
-        clipDistance = np.sqrt(3.0)
-        initialAnchorDistance = np.linalg.norm(self.initialEye)
+        initialAnchorDistance = np.linalg.norm(self.initialEye - self.initialCenter)
+        clipDistance = initialAnchorDistance / np.sqrt(3.0)
         near = 0.01
         far = initialAnchorDistance + clipDistance
         top = clipDistance * near / initialAnchorDistance # Choose frustum that displays [-clipDistance,clipDistance] in y for z = -initialAnchorDistance
