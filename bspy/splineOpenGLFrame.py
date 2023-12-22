@@ -939,7 +939,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         self.backgroundColor = np.array((0.0, 0.2, 0.2, 1.0), np.float32)
 
-        self.SetInitialView(eye, center, up)
+        self.SetDefaultView(eye, center, up)
         self.ResetView()
 
         self.bind("<ButtonPress>", self.MouseDown)
@@ -976,14 +976,14 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.tessellationEnabled = True
         self.glInitialized = False
 
-    def SetInitialView(self, eye, center, up):
+    def SetDefaultView(self, eye, center, up):
         """
-        Set the initial view values used when resetting the view.
+        Set the default view values used when resetting the view.
         """
-        self.initialEye = np.array(eye, np.float32)
-        self.initialCenter = np.array(center, np.float32)
-        self.initialUp = np.array(up, np.float32)
-        self.initialUp = self.initialUp / np.linalg.norm(self.initialUp)
+        self.defaultEye = np.array(eye, np.float32)
+        self.defaultCenter = np.array(center, np.float32)
+        self.defaultUp = np.array(up, np.float32)
+        self.defaultUp = self.defaultUp / np.linalg.norm(self.defaultUp)
     
     def SetBackgroundColor(self, r, g=None, b=None, a=None):
         """
@@ -1015,13 +1015,13 @@ class SplineOpenGLFrame(OpenGLFrame):
     
     def ResetView(self):
         """
-        Update the view position to initial values.
+        Update the view position to default values.
         """
-        self.eye = self.initialEye.copy()
-        self.look = self.initialEye - self.initialCenter
+        self.eye = self.defaultEye.copy()
+        self.look = self.defaultEye - self.defaultCenter
         self.anchorDistance = np.linalg.norm(self.look)
         self.look = self.look / self.anchorDistance
-        self.up = self.initialUp.copy()
+        self.up = self.defaultUp.copy()
         self.horizon = np.cross(self.up, self.look)
         self.horizon = self.horizon / np.linalg.norm(self.horizon)
         self.vertical = np.cross(self.look, self.horizon)
@@ -1135,11 +1135,11 @@ class SplineOpenGLFrame(OpenGLFrame):
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         xExtent = self.width / self.height
-        initialAnchorDistance = np.linalg.norm(self.initialEye - self.initialCenter)
-        clipDistance = initialAnchorDistance / np.sqrt(3.0)
+        defaultAnchorDistance = np.linalg.norm(self.defaultEye - self.defaultCenter)
+        clipDistance = defaultAnchorDistance / np.sqrt(3.0)
         near = 0.01
-        far = initialAnchorDistance + clipDistance
-        top = clipDistance * near / initialAnchorDistance # Choose frustum that displays [-clipDistance,clipDistance] in y for z = -initialAnchorDistance
+        far = defaultAnchorDistance + clipDistance
+        top = clipDistance * near / defaultAnchorDistance # Choose frustum that displays [-clipDistance,clipDistance] in y for z = -defaultAnchorDistance
         glFrustum(-top*xExtent, top*xExtent, -top, top, near, far)
         #glOrtho(-xExtent, xExtent, -1.0, 1.0, -1.0, 1.0)
 
