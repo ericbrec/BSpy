@@ -1137,7 +1137,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         xExtent = self.width / self.height
         defaultAnchorDistance = np.linalg.norm(self.defaultEye - self.defaultCenter)
         clipDistance = defaultAnchorDistance / np.sqrt(3.0)
-        near = 0.01
+        near = 0.01 * defaultAnchorDistance / 3.0
         far = defaultAnchorDistance + clipDistance
         top = clipDistance * near / defaultAnchorDistance # Choose frustum that displays [-clipDistance,clipDistance] in y for z = -defaultAnchorDistance
         glFrustum(-top*xExtent, top*xExtent, -top, top, near, far)
