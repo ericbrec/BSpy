@@ -1048,6 +1048,21 @@ def test_least_squares():
         maxError = max(maxError, np.sqrt(xyz @ xyz))
     assert maxError <= fit.accuracy
 
+def test_line():
+    myLine = bspy.Spline.line([0.0, 1.0, 2.0], [2.0, 3.0, 4.0])
+    assert myLine.nInd == 1
+    assert myLine.nDep == 3
+    midPoint = myLine(0.5)
+    assert midPoint[0] == 1.0
+    assert midPoint[1] == 2.0
+    assert midPoint[2] == 3.0
+    return
+
+def test_point():
+    myPoint = bspy.Spline.point([0.0, 1.0, 2.0])
+    mvPointEval = myPoint()
+    assert abs(np.linalg.norm(myPoint() - np.array([0.0, 1.0, 2.0]))) < np.finfo(float).eps
+
 def test_remove_knot():
     noDiff = 1.0e-15
     a = np.array([[0.3, 0.0], [0.7, 0.3], [0.0, 0.7]])

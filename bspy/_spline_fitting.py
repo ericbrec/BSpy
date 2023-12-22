@@ -414,6 +414,15 @@ def least_squares(nInd, nDep, order, dataPoints, knotList = None, compression = 
         maxError = max(maxError, residuals.sum())
     return bspy.Spline(nInd, nDep, order, nCoef, knotList, coefs, np.sqrt(maxError), metadata)
 
+def line(startPoint, endPoint):
+    startPoint = bspy.Spline.point(startPoint)
+    endPoint = bspy.Spline.point(endPoint)
+    return bspy.Spline.ruled_surface(startPoint, endPoint)
+
+def point(point):
+    point = np.atleast_1d(point)
+    return bspy.Spline(0, len(point), [], [], [], point)
+
 def revolve(self, angle):
     if self.nDep != 2: raise ValueError("Spline must have 2 dependent variables")
 
@@ -430,7 +439,7 @@ def ruled_surface(curve1, curve2):
     # Ensure that the splines are compatible
     if curve1.nInd != curve2.nInd:  raise ValueError("Splines must have the same number of independent variables")
     if curve1.nDep != curve2.nDep:  raise ValueError("Splines must have the same number of dependent variables")
-    [newCurve1, newCurve2] = curve1.common_basis([curve2], ((0, 0),))
+    [newCurve1, newCurve2] = curve1.common_basis([curve2], ())
 
     # Generate the ruled spline between them
     return bspy.Spline(curve1.nInd + 1, curve1.nDep, list(newCurve1.order) + [2],

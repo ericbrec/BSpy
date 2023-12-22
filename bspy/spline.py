@@ -757,6 +757,8 @@ class Spline:
         evaluated, then the dot product of those B-splines with the vector of
         B-spline coefficients is computed.
         """
+        if len(uvw) == 0 and self.nInd == 0:
+            return self.coefs
         if len(uvw) > 1 or (not np.isscalar(uvw[0]) and len(uvw[0]) > self.nInd):
             def vectorized(*uvwInstance):
                 return tuple(bspy._spline_evaluation.evaluate(self, uvwInstance))
@@ -1076,6 +1078,34 @@ class Spline:
         return bspy._spline_fitting.least_squares(nInd, nDep, order, dataPoints, knots, compression, metadata)
 
     @staticmethod
+    def line(startPoint, endPoint):
+        """
+        Construct a line between two points or between two lines.
+
+        Parameters
+        ----------
+        startPoint : any
+            A scalar or a list or an array or an instance of a Spline.
+        
+        endPoint : any
+            A scalar or a list or an array or an instance of a Spline.
+        
+        Returns
+        -------
+        spline : `Spline`
+            The spline that interpolates the two inputs.
+        
+        See Also
+        --------
+        `ruled_surface` : Construct a ruled surface between two splines.
+
+        Notes
+        -----
+            Construct splines out of the two points and then call ruled_surface.
+        """
+        return bspy._spline_fitting.line(startPoint, endPoint)
+    
+    @staticmethod
     def load(fileName, splineType=None):
         """
         Load a spline from the specified filename (full path).
@@ -1226,6 +1256,31 @@ class Spline:
         """
         return bspy._spline_operations.normal_spline(self, indices)
 
+    @staticmethod
+    def point(point):
+        """
+        Construct a spline which represents a point.
+
+        Parameters
+        ----------
+        point : scalar, list, or array
+            A scalar or a list or an array or an instance of a Spline.
+        
+        Returns
+        -------
+        spline : `Spline`
+            The spline that represents the input point.
+        
+        See Also
+        --------
+        `line` : Construct a line between two points.
+
+        Notes
+        -----
+            Construct a spline out of an input point.
+        """
+        return bspy._spline_fitting.point(point)
+    
     def range_bounds(self):
         """
         Return the range of a spline as lower and upper bounds on each of the
