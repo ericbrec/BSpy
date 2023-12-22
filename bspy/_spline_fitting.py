@@ -276,6 +276,60 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         spline = spline.confine(F.domain())
     return spline
 
+def four_sided_patch(bottom, right, top, left, surfParam = 0.5):
+    if bottom.nInd != 1 or right.nInd != 1 or top.nInd != 1 or left.nInd != 1:
+        raise ValueError("Input curves must have one independent variable")
+    if bottom.nDep != right.nDep or bottom.nDep != top.nDep or bottom.nDep != left.nDep:
+        raise ValueError("Input curves must all have the same number of dependent variables")
+    
+    # Make sure all curves are parametrized over [0, 1]
+
+    bottom = bottom.reparametrize([[0.0, 1.0]])
+    right = right.reparametrize([[0.0, 1.0]])
+    top = top.reparametrize([[0.0, 1.0]])
+    left = left.reparametrize([[0.0, 1.0]])
+
+    # Make sure all curves and ordered and lined up in the best possible way
+
+    matchTo = bottom(1.0)
+    checkPoints = [right(1.0), top(0.0), top(1.0), left(0.0), left(1.0), right(0.0)]
+    checkDists = [np.linalg.norm(matchTo - pt) for pt in checkPoints]
+    iMin = np.argmin(checkDists)
+    if iMin == 1 or iMin == 2:
+        swap = right
+        right = top
+        top = swap
+    if iMin == 3 or iMin == 4:
+        swap = right
+        right = left
+        left = swap
+    if iMin % 2 == 0:
+        right = right.reverse()
+    matchTo = right(1.0)
+    checkPoints = [top(0.0), left(0.0), left(1.0), top(1.0)]
+    checkDists = [np.linalg.norm(matchTo - pt) for pt in checkPoints]
+    iMin = np.argmin(checkDists)
+    if iMin == 1 or iMin == 2:
+        swap = top
+        top = left
+        left = swap
+    if iMin < 2:
+        top = top.reverse()
+    if np.linalg.norm(bottom(0.0) - left(1.0)) + np.linalg.norm(top(0.0) - left(0.0)) < \
+       np.linalg.norm(bottom(0.0) - left(0.0)) + np.linalg.norm(top(0.0) - left(1.0)):
+        left = left.reverse()
+
+    # Construct the Coons patch for these four curves
+    
+    bottomTop = bspy.Spline.ruled_surface(bottom, top)
+    leftRight = bspy.Spline.ruled_surface(left, right)
+    bottomLine = bspy.Spline.line(0.5 * (bottom(0.0) + left(0.0)), 0.5 * (bottom(1.0) + right(0.0)))
+    topLine = bspy.Spline.line(0.5 * (top(0.0) + left(1.0)), 0.5 * (top(1.0) + right(1.0)))
+    biLinear = bspy.Spline.ruled_surface(bottomLine, topLine)
+    coons = bottomTop.add(leftRight, ((0,1), (1,0))) - biLinear
+
+    return coons
+
 def least_squares(nInd, nDep, order, dataPoints, knotList = None, compression = 0, metadata = {}):
     if not(nInd >= 0): raise ValueError("nInd < 0")
     if not(nDep >= 0): raise ValueError("nDep < 0")

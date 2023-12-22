@@ -829,6 +829,24 @@ def test_fold_unfold():
                     maxError = max(maxError, abs(unfolded.coefs[i, j, k, l] - spline.coefs[i, j, k, l]))
     assert maxError <= np.finfo(float).eps
 
+def test_four_sided_patch():
+    def procedural(c1, c2, c3, c4, u, v):
+        c1c2avg = (1.0 - v) * c1(u) + v * c2(u)
+        c3c4avg = (1.0 - u) * c3(v) + u * c4(v)
+        c1c2c3c4 = (1.0 - v) * ((1.0 - u) * c1(0.0) + u * c1(1.0)) + \
+                   v * ((1.0 - u) * c2(0.0) + u * c2(1.0))
+        return c1c2avg + c3c4avg - c1c2c3c4
+    crv1 = bspy.Spline(1, 3, [4], [4], [[0.0, 0, 0, 0, 1, 1, 1, 1]],
+                       [[0.0, 0.3, 0.7, 1.0], [0.0, 0.0, 0.0, 0.0], [0.0, 1.5, 0.5, 0.0]])
+    crv2 = bspy.Spline.line([0.0, 1.0, 0.0], [1.0, 1.0, 1.0])
+    crv3 = bspy.Spline.line([0.0, 1.0, 0.0], [0.0, 0.0, 0.0])
+    crv4 = [[0, 0], [1, 0], [0, 1]] @ bspy.Spline.section([[0.0, 0.0, 90.0, -0.7], [1.0, 1.0, -10.0, -0.7]]) + [1, 0, 0]
+    mySurf = bspy.Spline.four_sided_patch(crv1, crv2, crv3, crv4)
+    for uv in np.linspace(0.0, 1.0, 31):
+        truthPt = procedural(crv1, crv2, crv3.reverse(), crv4, uv, uv)
+        coonsPt = mySurf(uv, uv)
+        assert (np.linalg.norm(truthPt - coonsPt)) < 1.0e-15
+
 def test_graph():
     simpleFunc = bspy.Spline(2, 1, [3, 4], [4, 5], [[0.0, 0, 0, 0.4, 1, 1, 1],
                              [0.0, 0, 0, 0, 0.6, 1, 1, 1, 1]], [[1.0, 2, 3, 4, 2, 3, 4, 5,
