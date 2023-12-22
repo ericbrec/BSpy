@@ -439,7 +439,8 @@ def ruled_surface(curve1, curve2):
     # Ensure that the splines are compatible
     if curve1.nInd != curve2.nInd:  raise ValueError("Splines must have the same number of independent variables")
     if curve1.nDep != curve2.nDep:  raise ValueError("Splines must have the same number of dependent variables")
-    [newCurve1, newCurve2] = curve1.common_basis([curve2], ())
+    indMap = [(ix, ix) for ix in range(curve1.nInd)]
+    [newCurve1, newCurve2] = curve1.common_basis([curve2], indMap)
 
     # Generate the ruled spline between them
     return bspy.Spline(curve1.nInd + 1, curve1.nDep, list(newCurve1.order) + [2],
