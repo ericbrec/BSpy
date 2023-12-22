@@ -139,6 +139,7 @@ class bspyApp(tk.Tk):
         """Stop drawing all splines. Splines remain in the listbox."""
         self.listBox.selection_clear(0, self.listBox.size() - 1)
         self.splineRadius = 0.0
+        self.frame.ResetView()
         self.update()
 
     def empty(self):
@@ -146,6 +147,7 @@ class bspyApp(tk.Tk):
         self.splineList = []
         self.listBox.delete(0, self.listBox.size() - 1)
         self.splineRadius = 0.0
+        self.frame.ResetView()
         self.update()
 
     def set_background_color(self, r, g=None, b=None, a=None):
