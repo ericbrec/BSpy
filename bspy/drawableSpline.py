@@ -146,8 +146,8 @@ class DrawableSpline(Spline):
                 if not(self.order[i] <= self.maxOrder): raise ValueError(f"order larger than {self.maxOrder}")
                 floatCount += 2 + self.order[i] + self.nCoef[i]
                 coefficientCount *= self.nCoef[i]
-            if not(self.nDep == 4): raise ValueError("nDep must be 4") # Coefficients are all 4-vectors (homogeneous coordinates)
-            if not(floatCount + 4 * coefficientCount <= self._maxFloats): raise ValueError("Spline to large to draw")
+            if not(self.nDep == 3): raise ValueError("nDep must be 3") # Coefficients are all 4-vectors (homogeneous coordinates)
+            if not(floatCount + self.nDep * coefficientCount <= self._maxFloats): raise ValueError("Spline to large to draw")
             for knotArray in self.knots:
                 if not(knotArray.dtype == np.float32): raise ValueError("Must use 32-bit floats")
             if not(self.coefs.dtype == np.float32): raise ValueError("Must use 32-bit floats")
@@ -172,8 +172,7 @@ class DrawableSpline(Spline):
         if not(isinstance(spline, Spline)): raise ValueError("Invalid spline")
         
         knotList = [knots.astype(np.float32, copy=False) for knots in spline.knots]
-        coefs = np.zeros((4, *spline.nCoef), np.float32)
-        coefs[3,...] = 1.0
+        coefs = np.zeros((3, *spline.nCoef), np.float32)
         if spline.nInd == 1 and spline.nDep == 1:
             coefs[0] = np.linspace(knotList[0][spline.order[0] - 1], knotList[0][spline.nCoef[0]], spline.nCoef[0], dtype=np.float32)
             coefs[1] = spline.coefs[0]
@@ -191,7 +190,7 @@ class DrawableSpline(Spline):
         else:
             raise ValueError("Can't convert to drawable spline.")
         
-        drawable = DrawableSpline(spline.nInd, 4, spline.order, spline.nCoef, knotList, coefs, spline.accuracy)
+        drawable = DrawableSpline(spline.nInd, 3, spline.order, spline.nCoef, knotList, coefs, spline.accuracy)
         drawable.metadata = spline.metadata # Make the original spline share its metadata with its drawable spline
         if not "fillColor" in drawable.metadata:
             drawable.metadata["fillColor"] = np.array((0.0, 1.0, 0.0, 1.0), np.float32)
@@ -208,7 +207,7 @@ class DrawableSpline(Spline):
         glColor4fv(self.get_line_color())
         glBegin(GL_POINTS)
         for point in drawCoefficients:
-            glVertex4fv(point)
+            glVertex3fv(point)
         glEnd()
 
     def _DrawCurve(self, frame, drawCoefficients):
@@ -232,7 +231,7 @@ class DrawableSpline(Spline):
         size = 4 * len(self.knots[0])
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, self.knots[0])
         offset += size
-        size = 4 * 4 * len(drawCoefficients)
+        size = 3 * 4 * len(drawCoefficients)
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
         glEnableVertexAttribArray(frame.aCurveParameters)
         if frame.tessellationEnabled:
@@ -271,7 +270,7 @@ class DrawableSpline(Spline):
         size = 4 * len(self.knots[1])
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, self.knots[1])
         offset += size
-        size = 4 * 4 * drawCoefficients.shape[1] * drawCoefficients.shape[0]
+        size = 3 * 4 * drawCoefficients.shape[1] * drawCoefficients.shape[0]
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
         glEnableVertexAttribArray(frame.aSurfaceParameters)
         if frame.tessellationEnabled:
@@ -287,7 +286,7 @@ class DrawableSpline(Spline):
         """
         Draw a spline  within a `SplineOpenGLFrame`. The frame will call this method for you.
         """
-        drawCoefficients = self.coefs.T @ transform
+        drawCoefficients = self.coefs.T @ transform[:3,:3] + transform[3,:3]
         if self.order[0] == 1:
             self._DrawPoints(frame, drawCoefficients)
         elif self.nInd == 1:
