@@ -672,8 +672,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             vec4 point = vec4(0.0, 0.0, 0.0, 1.0);
             vec3 duPoint = vec3(0.0, 0.0, 0.0);
             vec3 dvPoint = vec3(0.0, 0.0, 0.0);
-            // splineColor = vec3(0.0, uFillColor.gb);
-            splineColor = uFillColor.rgb;
+            {initializeSplineColor}
             int j = header + inData.uOrder+inData.uN + inData.vOrder+inData.vN + (inData.vKnot - inData.vOrder) * inData.uN * nDep;
             for (int vB = 0; vB < inData.vOrder; vB++)
             {{
@@ -689,11 +688,12 @@ class SplineOpenGLFrame(OpenGLFrame):
                     dvPoint.x += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i).x;
                     dvPoint.y += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+1).x;
                     dvPoint.z += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+2).x;
-                    // splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;
+                    {computeSplineColor}
                     i += nDep;
                 }}
                 j += inData.uN * nDep;
             }}
+            {postProcessSplineColor}
 
             outData = inData;
 
@@ -809,6 +809,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                         vec4 point = vec4(0.0, 0.0, 0.0, 1.0);
                         vec3 duPoint = vec3(0.0, 0.0, 0.0);
                         vec3 dvPoint = vec3(0.0, 0.0, 0.0);
+                        {initializeSplineColor}
                         int j = jOffset;
                         for (int vB = 0; vB < outData.vOrder; vB++)
                         {{
@@ -824,19 +825,22 @@ class SplineOpenGLFrame(OpenGLFrame):
                                 dvPoint.x += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i).x;
                                 dvPoint.y += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+1).x;
                                 dvPoint.z += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+2).x;
+                                {computeSplineColor}
                                 i += nDep;
                             }}
                             j += outData.uN * nDep;
                         }}
+                        {postProcessSplineColor}
                         vec3 normal = normalize(cross(duPoint, dvPoint));
                         float specular = pow(abs(dot(normal, normalize(uLightDirection + point.xyz / length(point)))), 25.0);
-                        splineColor = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * uFillColor.rgb;
+                        splineColor = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * splineColor;
                         gl_Position = uProjectionMatrix * point;
                         EmitVertex();
 
                         point = vec4(0.0, 0.0, 0.0, 1.0);
                         duPoint = vec3(0.0, 0.0, 0.0);
                         dvPoint = vec3(0.0, 0.0, 0.0);
+                        {initializeSplineColor}
                         j = jOffset;
                         for (int vB = 0; vB < outData.vOrder; vB++)
                         {{
@@ -852,13 +856,15 @@ class SplineOpenGLFrame(OpenGLFrame):
                                 dvPoint.x += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uSplineData, i).x;
                                 dvPoint.y += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+1).x;
                                 dvPoint.z += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+2).x;
+                                {computeSplineColor}
                                 i += nDep;
                             }}
                             j += outData.uN * nDep;
                         }}
+                        {postProcessSplineColor}
                         normal = normalize(cross(duPoint, dvPoint));
                         specular = pow(abs(dot(normal, normalize(uLightDirection + point.xyz / length(point)))), 25.0);
-                        splineColor = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * uFillColor.rgb;
+                        splineColor = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * splineColor;
                         gl_Position = uProjectionMatrix * point;
                         EmitVertex();
 
@@ -1022,7 +1028,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         # Compile shaders and link programs
         self.computeBSplineCode = self.computeBSplineCode.format(maxOrder=DrawableSpline.maxOrder)
         self.computeSurfaceSamplesCode = self.computeSurfaceSamplesCode.format(maxOrder=DrawableSpline.maxOrder)
-        self.tessellationEnabled = False
+        self.tessellationEnabled = True
         try:
             curveTCShader = shaders.compileShader(self.curveTCShaderCode.format(
                 computeSampleRateCode=self.computeSampleRateCode,
@@ -1048,6 +1054,9 @@ class SplineOpenGLFrame(OpenGLFrame):
                     shaders.compileShader(self.surfaceTEShaderCode.format(
                         nDep=3,
                         computeBSplineCode=self.computeBSplineCode,
+                        initializeSplineColor="",
+                        computeSplineColor="",
+                        postProcessSplineColor="splineColor = uFillColor.rgb;",
                         maxOrder=DrawableSpline.maxOrder), GL_TESS_EVALUATION_SHADER), 
                     shaders.compileShader(self.surfaceFragmentShaderCode, GL_FRAGMENT_SHADER),
                     validate=False) # Validate after assigning textures below
@@ -1067,6 +1076,9 @@ class SplineOpenGLFrame(OpenGLFrame):
                         computeSampleRateCode=self.computeSampleRateCode,
                         computeSurfaceSamplesCode=self.computeSurfaceSamplesCode,
                         computeBSplineCode=self.computeBSplineCode,
+                        initializeSplineColor="",
+                        computeSplineColor="",
+                        postProcessSplineColor="splineColor = uFillColor.rgb;",
                         maxOrder=DrawableSpline.maxOrder), GL_GEOMETRY_SHADER), 
                     shaders.compileShader(self.surfaceSimpleFragmentShaderCode, GL_FRAGMENT_SHADER),
                     validate=False) # Validate after assigning textures below
