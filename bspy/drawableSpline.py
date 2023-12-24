@@ -139,19 +139,18 @@ class DrawableSpline(Spline):
             self.metadata = spline.metadata
         else:
             Spline.__init__(self, *args, **kwargs)
-
+            if self.nInd > 3: raise ValueError("nInd must be no more than 3")
+            if self.nDep < 3: raise ValueError("nDep must be at least 3")
+            if self.coefs.dtype != np.float32: raise ValueError("Must use 32-bit floats")
+            for knotArray in self.knots:
+                if knotArray.dtype != np.float32: raise ValueError("Must use 32-bit floats")
             floatCount = 0
             coefficientCount = 1
             for i in range(self.nInd):
-                if not(self.order[i] <= self.maxOrder): raise ValueError(f"order larger than {self.maxOrder}")
+                if self.order[i] > self.maxOrder: raise ValueError(f"order larger than {self.maxOrder}")
                 floatCount += 2 + self.order[i] + self.nCoef[i]
                 coefficientCount *= self.nCoef[i]
-            if not(self.nDep == 3): raise ValueError("nDep must be 3") # Coefficients are all 4-vectors (homogeneous coordinates)
             if not(floatCount + self.nDep * coefficientCount <= self._maxFloats): raise ValueError("Spline to large to draw")
-            for knotArray in self.knots:
-                if not(knotArray.dtype == np.float32): raise ValueError("Must use 32-bit floats")
-            if not(self.coefs.dtype == np.float32): raise ValueError("Must use 32-bit floats")
-
             self.metadata["fillColor"] = np.array((0.0, 1.0, 0.0, 1.0), np.float32)
             self.metadata["lineColor"] = np.array((0.0, 0.0, 0.0, 1.0) if self.nInd > 1 else (1.0, 1.0, 1.0, 1.0), np.float32)
             self.metadata["options"] = self.SHADED | self.BOUNDARY
@@ -170,23 +169,39 @@ class DrawableSpline(Spline):
         if isinstance(spline, DrawableSpline):
             return spline
         if not(isinstance(spline, Spline)): raise ValueError("Invalid spline")
+        if spline.nInd > 3: raise ValueError("Spline must have no more than 3 independent variables")
+        if spline.nDep > 6: raise ValueError("Spline must have no more than 6 dependent variables")
+
+        nDep = 3
+        if spline.nInd >= 2 and spline.nDep > 3:
+            nDep = 4 if spline.nDep == 4 else 6 # No nDep of 5
         
         knotList = [knots.astype(np.float32, copy=False) for knots in spline.knots]
-        coefs = np.zeros((3, *spline.nCoef), np.float32)
-        if spline.nInd == 1 and spline.nDep == 1:
-            coefs[0] = np.linspace(knotList[0][spline.order[0] - 1], knotList[0][spline.nCoef[0]], spline.nCoef[0], dtype=np.float32)
-            coefs[1] = spline.coefs[0]
-        elif spline.nInd == 1 and spline.nDep <= 3:
-            coefs[0:spline.nDep] = spline.coefs
-        elif spline.nInd == 2 and spline.nDep == 1:
-            xValues = np.linspace(knotList[0][spline.order[0] - 1], knotList[0][spline.nCoef[0]], spline.nCoef[0], dtype=np.float32)[:]
-            zValues = np.linspace(knotList[1][spline.order[1] - 1], knotList[1][spline.nCoef[1]], spline.nCoef[1], dtype=np.float32)[:]
-            xMesh, zMesh = np.meshgrid(xValues, zValues)
-            coefs[0] = xMesh.T
-            coefs[1] = spline.coefs[0]
-            coefs[2] = zMesh.T
-        elif spline.nInd == 2 and spline.nDep == 3:
-            coefs[0:3] = spline.coefs
+        coefs = np.zeros((nDep, *spline.nCoef), np.float32)
+        if spline.nInd == 1:
+            if spline.nDep == 1:
+                coefs[0] = np.linspace(knotList[0][spline.order[0] - 1], knotList[0][spline.nCoef[0]], spline.nCoef[0], dtype=np.float32)
+                coefs[1] = spline.coefs[0]
+            else:
+                coefs[:min(spline.nDep, 3)] = spline.coefs[:min(spline.nDep, 3)]
+        elif spline.nInd == 2:
+            if spline.nDep == 1:
+                xValues = np.linspace(knotList[0][spline.order[0] - 1], knotList[0][spline.nCoef[0]], spline.nCoef[0], dtype=np.float32)[:]
+                zValues = np.linspace(knotList[1][spline.order[1] - 1], knotList[1][spline.nCoef[1]], spline.nCoef[1], dtype=np.float32)[:]
+                xMesh, zMesh = np.meshgrid(xValues, zValues)
+                coefs[0] = xMesh.T
+                coefs[1] = spline.coefs[0]
+                coefs[2] = zMesh.T
+            elif spline.nDep >= 3:
+                coefs[:spline.nDep] = spline.coefs
+                # For dimensions above three, rescale dependent variables to [0, 1].
+                for i in range(3, spline.nDep):
+                    minCoef = coefs[i].min()
+                    rangeCoef = coefs[i].max() - minCoef
+                    if rangeCoef > 1.0e-8:
+                        coefs[i] = (coefs[i] - minCoef) / rangeCoef
+                    else:
+                        coefs[i] = 1.0
         else:
             raise ValueError("Can't convert to drawable spline.")
         
@@ -270,7 +285,7 @@ class DrawableSpline(Spline):
         size = 4 * len(self.knots[1])
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, self.knots[1])
         offset += size
-        size = 3 * 4 * drawCoefficients.shape[1] * drawCoefficients.shape[0]
+        size = self.nDep * 4 * drawCoefficients.shape[1] * drawCoefficients.shape[0]
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
         glEnableVertexAttribArray(frame.aSurfaceParameters)
         if frame.tessellationEnabled:
@@ -286,7 +301,10 @@ class DrawableSpline(Spline):
         """
         Draw a spline  within a `SplineOpenGLFrame`. The frame will call this method for you.
         """
-        drawCoefficients = self.coefs.T @ transform[:3,:3] + transform[3,:3]
+        coefs = self.coefs.T
+        drawCoefficients = np.empty(coefs.shape, np.float32)
+        drawCoefficients[..., :3] = coefs[..., :3] @ transform[:3,:3] + transform[3,:3]
+        drawCoefficients[..., 3:] = coefs[..., 3:]
         if self.order[0] == 1:
             self._DrawPoints(frame, drawCoefficients)
         elif self.nInd == 1:
