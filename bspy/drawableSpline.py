@@ -205,7 +205,7 @@ class DrawableSpline(Spline):
         else:
             raise ValueError("Can't convert to drawable spline.")
         
-        drawable = DrawableSpline(spline.nInd, 3, spline.order, spline.nCoef, knotList, coefs, spline.accuracy)
+        drawable = DrawableSpline(spline.nInd, nDep, spline.order, spline.nCoef, knotList, coefs, spline.accuracy)
         drawable.metadata = spline.metadata # Make the original spline share its metadata with its drawable spline
         if not "fillColor" in drawable.metadata:
             drawable.metadata["fillColor"] = np.array((0.0, 1.0, 0.0, 1.0), np.float32)
@@ -271,7 +271,14 @@ class DrawableSpline(Spline):
                     glVertex3f(point[0], point[1], point[2])
                 glEnd()
 
-        program = frame.surface3Program
+        if self.nDep == 3:
+            program = frame.surface3Program
+        elif self.nDep == 4:
+            program = frame.surface4Program
+        elif self.nDep == 6:
+            program = frame.surface6Program
+        else:
+            raise ValueError("Can't draw surface.")
         glUseProgram(program.surfaceProgram)
         glUniform4fv(program.uSurfaceFillColor, 1, self.get_fill_color())
         glUniform4fv(program.uSurfaceLineColor, 1, self.get_line_color())
