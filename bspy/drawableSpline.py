@@ -259,6 +259,23 @@ class DrawableSpline(Spline):
         glDisableVertexAttribArray(program.aCurveParameters)
         glUseProgram(0)
 
+    @staticmethod
+    def _ConvertRGBToHSV(r, g, b, a):
+        # Taken from http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
+        K = 0.0
+        if g < b:
+            tmp = g
+            g = b
+            b = tmp
+            K = -1.0
+        if r < g:
+            tmp = r
+            r = g
+            g = tmp
+            K = -2.0 / 6.0 - K
+        chroma = r - min(g, b)
+        return np.array((abs(K + (g - b) / (6.0 * chroma + 1e-20)), chroma / (r + 1e-20), r, a), np.float32)
+    
     def _DrawSurface(self, frame, drawCoefficients):
         """
         Draw a spline surface (nInd == 2) within a `SplineOpenGLFrame`. The frame will call this method for you.
@@ -271,16 +288,18 @@ class DrawableSpline(Spline):
                     glVertex3f(point[0], point[1], point[2])
                 glEnd()
 
+        fillColor = self.get_fill_color()
         if self.nDep == 3:
             program = frame.surface3Program
         elif self.nDep == 4:
             program = frame.surface4Program
+            fillColor = self._ConvertRGBToHSV(fillColor[0], fillColor[1], fillColor[2], fillColor[3])
         elif self.nDep == 6:
             program = frame.surface6Program
         else:
             raise ValueError("Can't draw surface.")
         glUseProgram(program.surfaceProgram)
-        glUniform4fv(program.uSurfaceFillColor, 1, self.get_fill_color())
+        glUniform4fv(program.uSurfaceFillColor, 1, fillColor)
         glUniform4fv(program.uSurfaceLineColor, 1, self.get_line_color())
         glUniform1i(program.uSurfaceOptions, self.get_options())
         glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)

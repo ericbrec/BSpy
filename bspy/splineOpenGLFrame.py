@@ -1050,7 +1050,17 @@ class SplineOpenGLFrame(OpenGLFrame):
             # Must create CurveProgram first, because it checks and potentially resets tessellationEnabled flag.
             self.curveProgram = CurveProgram(self)
             self.surface3Program = SurfaceProgram(self, 3, "", "", "splineColor = uFillColor.rgb;")
-            self.surface4Program = SurfaceProgram(self, 4, "", "", "splineColor = uFillColor.rgb;")
+            self.surface4Program = SurfaceProgram(self, 4, "splineColor = vec3(0.0, 0.0, 0.0);",
+                """
+                    splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;
+                """,
+                # Taken from http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
+                # uFillColor is passed in as HSV
+                """
+                    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+                    vec3 p = abs(fract(uFillColor.xxx + K.xyz) * 6.0 - K.www);
+                    splineColor = uFillColor.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), splineColor.r);
+                """)
             self.surface6Program = SurfaceProgram(self, 6, "splineColor = vec3(0.0, 0.0, 0.0);",
                 """
                     splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;
