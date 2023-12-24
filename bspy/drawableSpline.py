@@ -236,8 +236,9 @@ class DrawableSpline(Spline):
                 glVertex3f(point[0], point[1], point[2])
             glEnd()
 
-        glUseProgram(frame.curveProgram)
-        glUniform4fv(frame.uCurveLineColor, 1, self.get_line_color())
+        program = frame.curveProgram
+        glUseProgram(program.curveProgram)
+        glUniform4fv(program.uCurveLineColor, 1, self.get_line_color())
         glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
         offset = 0
         size = 4 * 2
@@ -248,14 +249,14 @@ class DrawableSpline(Spline):
         offset += size
         size = 3 * 4 * len(drawCoefficients)
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
-        glEnableVertexAttribArray(frame.aCurveParameters)
+        glEnableVertexAttribArray(program.aCurveParameters)
         if frame.tessellationEnabled:
             glPatchParameteri(GL_PATCH_VERTICES, 1)
             glDrawArraysInstanced(GL_PATCHES, 0, 1, drawCoefficients.shape[0] - self.order[0] + 1)
         else:
             glDrawArraysInstanced(GL_POINTS, 0, 1, drawCoefficients.shape[0] - self.order[0] + 1)
             glFlush() # Old graphics card
-        glDisableVertexAttribArray(frame.aCurveParameters)
+        glDisableVertexAttribArray(program.aCurveParameters)
         glUseProgram(0)
 
     def _DrawSurface(self, frame, drawCoefficients):
@@ -270,10 +271,11 @@ class DrawableSpline(Spline):
                     glVertex3f(point[0], point[1], point[2])
                 glEnd()
 
-        glUseProgram(frame.surfaceProgram)
-        glUniform4fv(frame.uSurfaceFillColor, 1, self.get_fill_color())
-        glUniform4fv(frame.uSurfaceLineColor, 1, self.get_line_color())
-        glUniform1i(frame.uSurfaceOptions, self.get_options())
+        program = frame.surface3Program
+        glUseProgram(program.surfaceProgram)
+        glUniform4fv(program.uSurfaceFillColor, 1, self.get_fill_color())
+        glUniform4fv(program.uSurfaceLineColor, 1, self.get_line_color())
+        glUniform1i(program.uSurfaceOptions, self.get_options())
         glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
         offset = 0
         size = 4 * 4
@@ -287,14 +289,14 @@ class DrawableSpline(Spline):
         offset += size
         size = self.nDep * 4 * drawCoefficients.shape[1] * drawCoefficients.shape[0]
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
-        glEnableVertexAttribArray(frame.aSurfaceParameters)
+        glEnableVertexAttribArray(program.aSurfaceParameters)
         if frame.tessellationEnabled:
             glPatchParameteri(GL_PATCH_VERTICES, 1)
             glDrawArraysInstanced(GL_PATCHES, 0, 1, (drawCoefficients.shape[1] - self.order[0] + 1) * (drawCoefficients.shape[0] - self.order[1] + 1))
         else:
             glDrawArraysInstanced(GL_POINTS, 0, 1, (drawCoefficients.shape[1] - self.order[0] + 1) * (drawCoefficients.shape[0] - self.order[1] + 1))
             glFlush() # Old graphics card
-        glDisableVertexAttribArray(frame.aSurfaceParameters)
+        glDisableVertexAttribArray(program.aSurfaceParameters)
         glUseProgram(0)
 
     def _Draw(self, frame, transform):

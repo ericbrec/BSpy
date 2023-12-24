@@ -1025,63 +1025,38 @@ class SplineOpenGLFrame(OpenGLFrame):
         #print("GL_SHADING_LANGUAGE_VERSION: ", glGetString(GL_SHADING_LANGUAGE_VERSION))
         #print("GL_MAX_TESS_GEN_LEVEL: ", glGetIntegerv(GL_MAX_TESS_GEN_LEVEL))
 
+        # Set up GL texture buffer for spline data
+        self.splineDataBuffer = glGenBuffers(1)
+        self.splineTextureBuffer = glGenTextures(1)
+        glBindBuffer(GL_TEXTURE_BUFFER, self.splineDataBuffer)
+        glBindTexture(GL_TEXTURE_BUFFER, self.splineTextureBuffer)
+        glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, self.splineDataBuffer)
+        glBufferData(GL_TEXTURE_BUFFER, 4 * DrawableSpline._maxFloats, None, GL_STATIC_READ)
+
+        # Set light direction
+        self.lightDirection = np.array((0.63960218, 0.63960218, 0.42640144), np.float32)
+        self.lightDirection = self.lightDirection / np.linalg.norm(self.lightDirection)
+
+        # Bind parameter buffer
+        self.parameterBuffer = glGenBuffers(1)
+        glBindBuffer(GL_ARRAY_BUFFER, self.parameterBuffer)
+        glBufferData(GL_ARRAY_BUFFER, 4 * 4, np.array([0,0,0,0], np.float32), GL_STATIC_DRAW)
+
         # Compile shaders and link programs
         self.computeBSplineCode = self.computeBSplineCode.format(maxOrder=DrawableSpline.maxOrder)
         self.computeSurfaceSamplesCode = self.computeSurfaceSamplesCode.format(maxOrder=DrawableSpline.maxOrder)
         self.tessellationEnabled = True
         try:
-            curveTCShader = shaders.compileShader(self.curveTCShaderCode.format(
-                computeSampleRateCode=self.computeSampleRateCode,
-                computeCurveSamplesCode=self.computeCurveSamplesCode), GL_TESS_CONTROL_SHADER)
-        except shaders.ShaderCompilationError:
-            self.tessellationEnabled = False
-
-        try:
-            if self.tessellationEnabled:
-                self.curveProgram = shaders.compileProgram(
-                    shaders.compileShader(self.curveVertexShaderCode, GL_VERTEX_SHADER), 
-                    curveTCShader, 
-                    shaders.compileShader(self.curveTEShaderCode.format(
-                        computeBSplineCode=self.computeBSplineCode,
-                        maxOrder=DrawableSpline.maxOrder), GL_TESS_EVALUATION_SHADER), 
-                    shaders.compileShader(self.curveFragmentShaderCode, GL_FRAGMENT_SHADER))
-                self.surfaceProgram = shaders.compileProgram(
-                    shaders.compileShader(self.surfaceVertexShaderCode, GL_VERTEX_SHADER), 
-                    shaders.compileShader(self.surfaceTCShaderCode.format(
-                        nDep=3,
-                        computeSampleRateCode=self.computeSampleRateCode,
-                        computeSurfaceSamplesCode=self.computeSurfaceSamplesCode), GL_TESS_CONTROL_SHADER), 
-                    shaders.compileShader(self.surfaceTEShaderCode.format(
-                        nDep=3,
-                        computeBSplineCode=self.computeBSplineCode,
-                        initializeSplineColor="",
-                        computeSplineColor="",
-                        postProcessSplineColor="splineColor = uFillColor.rgb;",
-                        maxOrder=DrawableSpline.maxOrder), GL_TESS_EVALUATION_SHADER), 
-                    shaders.compileShader(self.surfaceFragmentShaderCode, GL_FRAGMENT_SHADER),
-                    validate=False) # Validate after assigning textures below
-            else:
-                self.curveProgram = shaders.compileProgram(
-                    shaders.compileShader(self.curveVertexShaderCode, GL_VERTEX_SHADER), 
-                    shaders.compileShader(self.curveGeometryShaderCode.format(
-                        computeSampleRateCode=self.computeSampleRateCode,
-                        computeCurveSamplesCode=self.computeCurveSamplesCode,
-                        computeBSplineCode=self.computeBSplineCode,
-                        maxOrder=DrawableSpline.maxOrder), GL_GEOMETRY_SHADER), 
-                    shaders.compileShader(self.curveFragmentShaderCode, GL_FRAGMENT_SHADER))
-                self.surfaceProgram = shaders.compileProgram(
-                    shaders.compileShader(self.surfaceVertexShaderCode, GL_VERTEX_SHADER), 
-                    shaders.compileShader(self.surfaceGeometryShaderCode.format(
-                        nDep=3,
-                        computeSampleRateCode=self.computeSampleRateCode,
-                        computeSurfaceSamplesCode=self.computeSurfaceSamplesCode,
-                        computeBSplineCode=self.computeBSplineCode,
-                        initializeSplineColor="",
-                        computeSplineColor="",
-                        postProcessSplineColor="splineColor = uFillColor.rgb;",
-                        maxOrder=DrawableSpline.maxOrder), GL_GEOMETRY_SHADER), 
-                    shaders.compileShader(self.surfaceSimpleFragmentShaderCode, GL_FRAGMENT_SHADER),
-                    validate=False) # Validate after assigning textures below
+            # Must create CurveProgram first, because it checks and potentially resets tessellationEnabled flag.
+            self.curveProgram = CurveProgram(self)
+            self.surface3Program = SurfaceProgram(self, 3, "", "", "splineColor = uFillColor.rgb;")
+            self.surface4Program = SurfaceProgram(self, 4, "", "", "splineColor = uFillColor.rgb;")
+            self.surface6Program = SurfaceProgram(self, 6, "splineColor = vec3(0.0, 0.0, 0.0);",
+                """
+                    splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;
+                    splineColor.g += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+4).x;
+                    splineColor.b += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+5).x;
+                """, "")
         except shaders.ShaderCompilationError as exception:
             error = exception.args[0]
             lineNumber = error.split(":")[3]
@@ -1092,49 +1067,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             print(badLine)
             quit()
 
-        # Set up GL texture buffer for spline data
-        self.splineDataBuffer = glGenBuffers(1)
-        self.splineTextureBuffer = glGenTextures(1)
-        glBindBuffer(GL_TEXTURE_BUFFER, self.splineDataBuffer)
-        glBindTexture(GL_TEXTURE_BUFFER, self.splineTextureBuffer)
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, self.splineDataBuffer)
-        glBufferData(GL_TEXTURE_BUFFER, 4 * DrawableSpline._maxFloats, None, GL_STATIC_READ)
-
-        # Bind various buffers to view and configuration data
-        self.parameterBuffer = glGenBuffers(1)
-        glBindBuffer(GL_ARRAY_BUFFER, self.parameterBuffer)
-        glBufferData(GL_ARRAY_BUFFER, 4 * 4, np.array([0,0,0,0], np.float32), GL_STATIC_DRAW)
-
-        glUseProgram(self.curveProgram)
-        self.aCurveParameters = glGetAttribLocation(self.curveProgram, "aParameters")
-        glBindBuffer(GL_ARRAY_BUFFER, self.parameterBuffer)
-        glVertexAttribPointer(self.aCurveParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
-        self.uCurveProjectionMatrix = glGetUniformLocation(self.curveProgram, 'uProjectionMatrix')
-        self.uCurveScreenScale = glGetUniformLocation(self.curveProgram, 'uScreenScale')
-        self.uCurveClipBounds = glGetUniformLocation(self.curveProgram, 'uClipBounds')
-        self.uCurveLineColor = glGetUniformLocation(self.curveProgram, 'uLineColor')
-        self.uCurveSplineData = glGetUniformLocation(self.curveProgram, 'uSplineData')
-        glUniform1i(self.uCurveSplineData, 0) # GL_TEXTURE0 is the spline buffer texture
-
-        glUseProgram(self.surfaceProgram)
-        self.aSurfaceParameters = glGetAttribLocation(self.surfaceProgram, "aParameters")
-        glBindBuffer(GL_ARRAY_BUFFER, self.parameterBuffer)
-        glVertexAttribPointer(self.aSurfaceParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
-        self.uSurfaceProjectionMatrix = glGetUniformLocation(self.surfaceProgram, 'uProjectionMatrix')
-        self.uSurfaceScreenScale = glGetUniformLocation(self.surfaceProgram, 'uScreenScale')
-        self.uSurfaceClipBounds = glGetUniformLocation(self.surfaceProgram, 'uClipBounds')
-        self.uSurfaceFillColor = glGetUniformLocation(self.surfaceProgram, 'uFillColor')
-        self.uSurfaceLineColor = glGetUniformLocation(self.surfaceProgram, 'uLineColor')
-        self.uSurfaceLightDirection = glGetUniformLocation(self.surfaceProgram, 'uLightDirection')
-        self.lightDirection = np.array((0.63960218, 0.63960218, 0.42640144), np.float32)
-        self.lightDirection = self.lightDirection / np.linalg.norm(self.lightDirection)
-        glUniform3fv(self.uSurfaceLightDirection, 1, self.lightDirection)
-        self.uSurfaceOptions = glGetUniformLocation(self.surfaceProgram, 'uOptions')
-        self.uSurfaceSplineData = glGetUniformLocation(self.surfaceProgram, 'uSplineData')
-        glUniform1i(self.uSurfaceSplineData, 0) # GL_TEXTURE0 is the spline buffer texture
-
         glUseProgram(0)
-
         glEnable( GL_DEPTH_TEST )
         glClearColor(self.backgroundColor[0], self.backgroundColor[1], self.backgroundColor[2], self.backgroundColor[3])
 
@@ -1157,16 +1090,12 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.screenScale = np.array((0.5 * self.height * self.projection[0,0], 0.5 * self.height * self.projection[1,1], 1.0), np.float32)
         self.clipBounds = np.array((1.0 / self.projection[0,0], 1.0 / self.projection[1,1], -far, -near), np.float32)
 
-        glUseProgram(self.curveProgram)
-        glUniformMatrix4fv(self.uCurveProjectionMatrix, 1, GL_FALSE, self.projection)
-        glUniform3fv(self.uCurveScreenScale, 1, self.screenScale)
-        glUniform4fv(self.uCurveClipBounds, 1, self.clipBounds)
-        glUseProgram(self.surfaceProgram)
-        glUniformMatrix4fv(self.uSurfaceProjectionMatrix, 1, GL_FALSE, self.projection)
-        glUniform3fv(self.uSurfaceScreenScale, 1, self.screenScale)
-        glUniform4fv(self.uSurfaceClipBounds, 1, self.clipBounds)
-        glUseProgram(0)
+        self.curveProgram.ResetBounds(self)
+        self.surface3Program.ResetBounds(self)
+        self.surface4Program.ResetBounds(self)
+        self.surface6Program.ResetBounds(self)
 
+        glUseProgram(0)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
@@ -1307,3 +1236,102 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.anchorDistance *= 0.9
         self.eye = self.anchorPosition + self.anchorDistance * self.look
         self.Update()
+
+class CurveProgram:
+    """ Compile curve program """
+    def __init__(self, frame):
+        try:
+            curveTCShader = shaders.compileShader(frame.curveTCShaderCode.format(
+                computeSampleRateCode=frame.computeSampleRateCode,
+                computeCurveSamplesCode=frame.computeCurveSamplesCode), GL_TESS_CONTROL_SHADER)
+        except shaders.ShaderCompilationError:
+            frame.tessellationEnabled = False
+
+        if frame.tessellationEnabled:
+            self.curveProgram = shaders.compileProgram(
+                shaders.compileShader(frame.curveVertexShaderCode, GL_VERTEX_SHADER), 
+                curveTCShader, 
+                shaders.compileShader(frame.curveTEShaderCode.format(
+                    computeBSplineCode=frame.computeBSplineCode,
+                    maxOrder=DrawableSpline.maxOrder), GL_TESS_EVALUATION_SHADER), 
+                shaders.compileShader(frame.curveFragmentShaderCode, GL_FRAGMENT_SHADER))
+        else:
+            self.curveProgram = shaders.compileProgram(
+                shaders.compileShader(frame.curveVertexShaderCode, GL_VERTEX_SHADER), 
+                shaders.compileShader(frame.curveGeometryShaderCode.format(
+                    computeSampleRateCode=frame.computeSampleRateCode,
+                    computeCurveSamplesCode=frame.computeCurveSamplesCode,
+                    computeBSplineCode=frame.computeBSplineCode,
+                    maxOrder=DrawableSpline.maxOrder), GL_GEOMETRY_SHADER), 
+                shaders.compileShader(frame.curveFragmentShaderCode, GL_FRAGMENT_SHADER))
+
+        glUseProgram(self.curveProgram)
+        self.aCurveParameters = glGetAttribLocation(self.curveProgram, "aParameters")
+        glBindBuffer(GL_ARRAY_BUFFER, frame.parameterBuffer)
+        glVertexAttribPointer(self.aCurveParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
+        self.uCurveProjectionMatrix = glGetUniformLocation(self.curveProgram, 'uProjectionMatrix')
+        self.uCurveScreenScale = glGetUniformLocation(self.curveProgram, 'uScreenScale')
+        self.uCurveClipBounds = glGetUniformLocation(self.curveProgram, 'uClipBounds')
+        self.uCurveLineColor = glGetUniformLocation(self.curveProgram, 'uLineColor')
+        self.uCurveSplineData = glGetUniformLocation(self.curveProgram, 'uSplineData')
+        glUniform1i(self.uCurveSplineData, 0) # GL_TEXTURE0 is the spline buffer texture
+    
+    def ResetBounds(self, frame):
+        """Reset bounds and other frame configuration for curve program"""
+        glUseProgram(self.curveProgram)
+        glUniformMatrix4fv(self.uCurveProjectionMatrix, 1, GL_FALSE, frame.projection)
+        glUniform3fv(self.uCurveScreenScale, 1, frame.screenScale)
+        glUniform4fv(self.uCurveClipBounds, 1, frame.clipBounds)
+
+class SurfaceProgram:
+    """ Compile surface program """
+    def __init__(self, frame, nDep, initializeSplineColor, computeSplineColor, postProcessSplineColor):
+        if frame.tessellationEnabled:
+            self.surfaceProgram = shaders.compileProgram(
+                shaders.compileShader(frame.surfaceVertexShaderCode, GL_VERTEX_SHADER), 
+                shaders.compileShader(frame.surfaceTCShaderCode.format(
+                    nDep=nDep,
+                    computeSampleRateCode=frame.computeSampleRateCode,
+                    computeSurfaceSamplesCode=frame.computeSurfaceSamplesCode), GL_TESS_CONTROL_SHADER), 
+                shaders.compileShader(frame.surfaceTEShaderCode.format(
+                    nDep=nDep,
+                    computeBSplineCode=frame.computeBSplineCode,
+                    initializeSplineColor=initializeSplineColor,
+                    computeSplineColor=computeSplineColor,
+                    postProcessSplineColor=postProcessSplineColor,
+                    maxOrder=DrawableSpline.maxOrder), GL_TESS_EVALUATION_SHADER), 
+                shaders.compileShader(frame.surfaceFragmentShaderCode, GL_FRAGMENT_SHADER))
+        else:
+            self.surfaceProgram = shaders.compileProgram(
+                shaders.compileShader(frame.surfaceVertexShaderCode, GL_VERTEX_SHADER), 
+                shaders.compileShader(frame.surfaceGeometryShaderCode.format(
+                    nDep=nDep,
+                    computeSampleRateCode=frame.computeSampleRateCode,
+                    computeSurfaceSamplesCode=frame.computeSurfaceSamplesCode,
+                    computeBSplineCode=frame.computeBSplineCode,
+                    initializeSplineColor=initializeSplineColor,
+                    computeSplineColor=computeSplineColor,
+                    postProcessSplineColor=postProcessSplineColor,
+                    maxOrder=DrawableSpline.maxOrder), GL_GEOMETRY_SHADER), 
+                shaders.compileShader(frame.surfaceSimpleFragmentShaderCode, GL_FRAGMENT_SHADER))
+
+        glUseProgram(self.surfaceProgram)
+        self.aSurfaceParameters = glGetAttribLocation(self.surfaceProgram, "aParameters")
+        glBindBuffer(GL_ARRAY_BUFFER, frame.parameterBuffer)
+        glVertexAttribPointer(self.aSurfaceParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
+        self.uSurfaceProjectionMatrix = glGetUniformLocation(self.surfaceProgram, 'uProjectionMatrix')
+        self.uSurfaceScreenScale = glGetUniformLocation(self.surfaceProgram, 'uScreenScale')
+        self.uSurfaceClipBounds = glGetUniformLocation(self.surfaceProgram, 'uClipBounds')
+        self.uSurfaceFillColor = glGetUniformLocation(self.surfaceProgram, 'uFillColor')
+        self.uSurfaceLineColor = glGetUniformLocation(self.surfaceProgram, 'uLineColor')
+        glUniform3fv(glGetUniformLocation(self.surfaceProgram, 'uLightDirection'), 1, frame.lightDirection)
+        self.uSurfaceOptions = glGetUniformLocation(self.surfaceProgram, 'uOptions')
+        self.uSurfaceSplineData = glGetUniformLocation(self.surfaceProgram, 'uSplineData')
+        glUniform1i(self.uSurfaceSplineData, 0) # GL_TEXTURE0 is the spline buffer texture
+    
+    def ResetBounds(self, frame):
+        """Reset bounds and other frame configuration for surface program"""
+        glUseProgram(self.surfaceProgram)
+        glUniformMatrix4fv(self.uSurfaceProjectionMatrix, 1, GL_FALSE, frame.projection)
+        glUniform3fv(self.uSurfaceScreenScale, 1, frame.screenScale)
+        glUniform4fv(self.uSurfaceClipBounds, 1, frame.clipBounds)
