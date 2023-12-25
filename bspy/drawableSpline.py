@@ -202,6 +202,26 @@ class DrawableSpline(Spline):
                         coefs[i] = (coefs[i] - minCoef) / rangeCoef
                     else:
                         coefs[i] = 1.0
+        elif spline.nInd == 3:
+            if spline.nDep == 1:
+                xValues = np.linspace(knotList[0][spline.order[0] - 1], knotList[0][spline.nCoef[0]], spline.nCoef[0], dtype=np.float32)[:]
+                zValues = np.linspace(knotList[1][spline.order[1] - 1], knotList[1][spline.nCoef[1]], spline.nCoef[1], dtype=np.float32)[:]
+                wValues = np.linspace(knotList[2][spline.order[1] - 1], knotList[2][spline.nCoef[1]], spline.nCoef[2], dtype=np.float32)[:]
+                xMesh, zMesh, wMesh = np.meshgrid(xValues, zValues, wValues)
+                coefs[0] = xMesh.T
+                coefs[1] = spline.coefs[0]
+                coefs[2] = zMesh.T
+                coefs[3] = wMesh.T
+            elif spline.nDep >= 3:
+                coefs[:spline.nDep] = spline.coefs
+                # For dimensions above three, rescale dependent variables to [0, 1].
+                for i in range(3, spline.nDep):
+                    minCoef = coefs[i].min()
+                    rangeCoef = coefs[i].max() - minCoef
+                    if rangeCoef > 1.0e-8:
+                        coefs[i] = (coefs[i] - minCoef) / rangeCoef
+                    else:
+                        coefs[i] = 1.0
         else:
             raise ValueError("Can't convert to drawable spline.")
         
@@ -298,6 +318,7 @@ class DrawableSpline(Spline):
             program = frame.surface6Program
         else:
             raise ValueError("Can't draw surface.")
+        
         glUseProgram(program.surfaceProgram)
         glUniform4fv(program.uSurfaceFillColor, 1, fillColor)
         glUniform4fv(program.uSurfaceLineColor, 1, self.get_line_color())
@@ -324,6 +345,82 @@ class DrawableSpline(Spline):
             glFlush() # Old graphics card
         glDisableVertexAttribArray(program.aSurfaceParameters)
         glUseProgram(0)
+    
+    def _DrawSolid(self, frame, drawCoefficients):
+        """
+        Draw a spline solid (nInd == 3) within a `SplineOpenGLFrame`. The frame will call this method for you.
+        """
+        if self.get_options() & self.HULL:
+            glColor3f(0.0, 0.0, 1.0)
+            for pointSet in drawCoefficients:
+                for pointList in pointSet:
+                    glBegin(GL_LINE_STRIP)
+                    for point in pointList:
+                        glVertex3f(point[0], point[1], point[2])
+                    glEnd()
+
+        fillColor = self.get_fill_color()
+        if self.nDep == 3:
+            program = frame.surface3Program
+        elif self.nDep == 4:
+            program = frame.surface4Program
+            fillColor = self._ConvertRGBToHSV(fillColor[0], fillColor[1], fillColor[2], fillColor[3])
+        elif self.nDep == 6:
+            program = frame.surface6Program
+        else:
+            raise ValueError("Can't draw surface.")
+        
+        fillColor[3] *= 0.5
+        glUseProgram(program.surfaceProgram)
+        glUniform4fv(program.uSurfaceFillColor, 1, fillColor)
+        glUniform4fv(program.uSurfaceLineColor, 1, self.get_line_color())
+        glUniform1i(program.uSurfaceOptions, self.get_options())
+
+        def _DrawBoundarySurface(axis, index):
+            fullSlice = slice(None)
+            if axis == 0:
+                i1 = 1
+                i2 = 2
+                coefSlice = (index, fullSlice, fullSlice, fullSlice)
+            elif axis == 1:
+                i1 = 0
+                i2 = 2
+                coefSlice = (fullSlice, index, fullSlice, fullSlice)
+            else:
+                i1 = 0
+                i2 = 1
+                coefSlice = (fullSlice, fullSlice, index, fullSlice)
+
+            glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
+            offset = 0
+            size = 4 * 4
+            glBufferSubData(GL_TEXTURE_BUFFER, offset, size, np.array((self.order[i1], self.order[i2], drawCoefficients.shape[i2], drawCoefficients.shape[i1]), np.float32))
+            offset += size
+            size = 4 * len(self.knots[i1])
+            glBufferSubData(GL_TEXTURE_BUFFER, offset, size, self.knots[i1])
+            offset += size
+            size = 4 * len(self.knots[i2])
+            glBufferSubData(GL_TEXTURE_BUFFER, offset, size, self.knots[i2])
+            offset += size
+            size = self.nDep * 4 * drawCoefficients.shape[i2] * drawCoefficients.shape[i1]
+            glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients[coefSlice])
+            glEnableVertexAttribArray(program.aSurfaceParameters)
+            if frame.tessellationEnabled:
+                glPatchParameteri(GL_PATCH_VERTICES, 1)
+                glDrawArraysInstanced(GL_PATCHES, 0, 1, (drawCoefficients.shape[1] - self.order[0] + 1) * (drawCoefficients.shape[0] - self.order[1] + 1))
+            else:
+                glDrawArraysInstanced(GL_POINTS, 0, 1, (drawCoefficients.shape[1] - self.order[0] + 1) * (drawCoefficients.shape[0] - self.order[1] + 1))
+                glFlush() # Old graphics card
+            glDisableVertexAttribArray(program.aSurfaceParameters)
+
+        _DrawBoundarySurface(0, 0)
+        _DrawBoundarySurface(0, -1)
+        _DrawBoundarySurface(1, 0)
+        _DrawBoundarySurface(1, -1)
+        _DrawBoundarySurface(2, 0)
+        _DrawBoundarySurface(2, -1)
+
+        glUseProgram(0)
 
     def _Draw(self, frame, transform):
         """
@@ -339,6 +436,8 @@ class DrawableSpline(Spline):
             self._DrawCurve(frame, drawCoefficients)
         elif self.nInd == 2:
             self._DrawSurface(frame, drawCoefficients)
+        elif self.nInd == 3:
+            self._DrawSolid(frame, drawCoefficients)
     
     def get_fill_color(self):
         """
