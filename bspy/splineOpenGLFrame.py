@@ -1079,7 +1079,6 @@ class SplineOpenGLFrame(OpenGLFrame):
             quit()
 
         glUseProgram(0)
-        glEnable( GL_BLEND )
         glEnable( GL_DEPTH_TEST )
         glClearColor(self.backgroundColor[0], self.backgroundColor[1], self.backgroundColor[2], self.backgroundColor[3])
 

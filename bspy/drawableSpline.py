@@ -371,6 +371,9 @@ class DrawableSpline(Spline):
             raise ValueError("Can't draw surface.")
         
         fillColor[3] *= 0.5
+        glEnable( GL_BLEND )
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glDisable( GL_DEPTH_TEST )
         glUseProgram(program.surfaceProgram)
         glUniform4fv(program.uSurfaceFillColor, 1, fillColor)
         glUniform4fv(program.uSurfaceLineColor, 1, self.get_line_color())
@@ -421,6 +424,8 @@ class DrawableSpline(Spline):
         _DrawBoundarySurface(2, -1)
 
         glUseProgram(0)
+        glDisable( GL_BLEND )
+        glEnable( GL_DEPTH_TEST )
 
     def _Draw(self, frame, transform):
         """
