@@ -940,7 +940,6 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.origin = None
         self.button = None
         self.mode = self.ROTATE
-        self.speed = 0.01
 
         self.backgroundColor = np.array((0.0, 0.2, 0.2, 1.0), np.float32)
 
@@ -1006,6 +1005,8 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.horizon = self.horizon / np.linalg.norm(self.horizon)
         self.vertical = np.cross(self.look, self.horizon)
         self.anchorPosition = self.eye - self.anchorDistance * self.look
+        self.speed = 0.033 * self.anchorDistance
+        self.speed = max(self.speed, 1e-4)
 
     def initgl(self):
         """
@@ -1078,6 +1079,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             quit()
 
         glUseProgram(0)
+        glEnable( GL_BLEND )
         glEnable( GL_DEPTH_TEST )
         glClearColor(self.backgroundColor[0], self.backgroundColor[1], self.backgroundColor[2], self.backgroundColor[3])
 
@@ -1199,7 +1201,8 @@ class SplineOpenGLFrame(OpenGLFrame):
         scale : `float`
             Speed scale between 0 and 1.
         """
-        self.speed = 0.1 * (100.0 ** float(scale) - 1.0) / 99.0
+        self.speed = 0.033 * self.anchorDistance * (100.0 ** float(scale) - 1.0) / 99.0
+        self.speed = max(self.speed, 1e-4)
 
     def MouseDown(self, event):
         """
@@ -1211,6 +1214,8 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         if self.button == 4 or self.button == 5: # MouseWheel
             self.anchorDistance *= 0.9 if self.button == 4 else 1.1
+            self.speed *= 0.9 if self.button == 4 else 1.1
+            self.speed = max(self.speed, 1e-4)
             self.eye = self.anchorPosition + self.anchorDistance * self.look
             self.Update()
         
@@ -1242,8 +1247,11 @@ class SplineOpenGLFrame(OpenGLFrame):
         """
         if event.delta < 0:
             self.anchorDistance *= 1.1
+            self.speed *= 1.1
         elif event.delta > 0:
             self.anchorDistance *= 0.9
+            self.speed *= 0.9
+        self.speed = max(self.speed, 1e-4)
         self.eye = self.anchorPosition + self.anchorDistance * self.look
         self.Update()
 

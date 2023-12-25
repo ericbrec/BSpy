@@ -21,7 +21,7 @@ def Create4Sphere(samples):
     values = []
     for radius in np.linspace(1.0, 10.0, samples):
         for theta in np.linspace(0.0, 1.0, samples):
-            for phi in np.linspace(0.0, 1.0, samples):
+            for phi in np.linspace(0.1, 0.9, samples):
                 values.append((radius, theta, phi, 
                     radius * np.cos(theta * 2 * np.pi) * np.sin(phi * np.pi),
                     radius * np.cos(phi * np.pi),

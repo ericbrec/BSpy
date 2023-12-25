@@ -262,19 +262,19 @@ class DrawableSpline(Spline):
         glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
         offset = 0
         size = 4 * 2
-        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, np.array((self.order[0], drawCoefficients.shape[0]), np.float32))
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, np.array((self.order[0], self.nCoef[0]), np.float32))
         offset += size
         size = 4 * len(self.knots[0])
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, self.knots[0])
         offset += size
-        size = 3 * 4 * len(drawCoefficients)
+        size = 3 * 4 * self.nCoef[0]
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
         glEnableVertexAttribArray(program.aCurveParameters)
         if frame.tessellationEnabled:
             glPatchParameteri(GL_PATCH_VERTICES, 1)
-            glDrawArraysInstanced(GL_PATCHES, 0, 1, drawCoefficients.shape[0] - self.order[0] + 1)
+            glDrawArraysInstanced(GL_PATCHES, 0, 1, self.nCoef[0] - self.order[0] + 1)
         else:
-            glDrawArraysInstanced(GL_POINTS, 0, 1, drawCoefficients.shape[0] - self.order[0] + 1)
+            glDrawArraysInstanced(GL_POINTS, 0, 1, self.nCoef[0] - self.order[0] + 1)
             glFlush() # Old graphics card
         glDisableVertexAttribArray(program.aCurveParameters)
         glUseProgram(0)
@@ -326,7 +326,7 @@ class DrawableSpline(Spline):
         glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
         offset = 0
         size = 4 * 4
-        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, np.array((self.order[0], self.order[1], drawCoefficients.shape[1], drawCoefficients.shape[0]), np.float32))
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, np.array((self.order[0], self.order[1], self.nCoef[0], self.nCoef[1]), np.float32))
         offset += size
         size = 4 * len(self.knots[0])
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, self.knots[0])
@@ -334,14 +334,14 @@ class DrawableSpline(Spline):
         size = 4 * len(self.knots[1])
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, self.knots[1])
         offset += size
-        size = self.nDep * 4 * drawCoefficients.shape[1] * drawCoefficients.shape[0]
+        size = self.nDep * 4 * self.nCoef[0] * self.nCoef[1]
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
         glEnableVertexAttribArray(program.aSurfaceParameters)
         if frame.tessellationEnabled:
             glPatchParameteri(GL_PATCH_VERTICES, 1)
-            glDrawArraysInstanced(GL_PATCHES, 0, 1, (drawCoefficients.shape[1] - self.order[0] + 1) * (drawCoefficients.shape[0] - self.order[1] + 1))
+            glDrawArraysInstanced(GL_PATCHES, 0, 1, (self.nCoef[0] - self.order[0] + 1) * (self.nCoef[1] - self.order[1] + 1))
         else:
-            glDrawArraysInstanced(GL_POINTS, 0, 1, (drawCoefficients.shape[1] - self.order[0] + 1) * (drawCoefficients.shape[0] - self.order[1] + 1))
+            glDrawArraysInstanced(GL_POINTS, 0, 1, (self.nCoef[0] - self.order[0] + 1) * (self.nCoef[1] - self.order[1] + 1))
             glFlush() # Old graphics card
         glDisableVertexAttribArray(program.aSurfaceParameters)
         glUseProgram(0)
@@ -394,7 +394,7 @@ class DrawableSpline(Spline):
             glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
             offset = 0
             size = 4 * 4
-            glBufferSubData(GL_TEXTURE_BUFFER, offset, size, np.array((self.order[i1], self.order[i2], drawCoefficients.shape[i2], drawCoefficients.shape[i1]), np.float32))
+            glBufferSubData(GL_TEXTURE_BUFFER, offset, size, np.array((self.order[i1], self.order[i2], self.nCoef[i1], self.nCoef[i2]), np.float32))
             offset += size
             size = 4 * len(self.knots[i1])
             glBufferSubData(GL_TEXTURE_BUFFER, offset, size, self.knots[i1])
@@ -402,14 +402,14 @@ class DrawableSpline(Spline):
             size = 4 * len(self.knots[i2])
             glBufferSubData(GL_TEXTURE_BUFFER, offset, size, self.knots[i2])
             offset += size
-            size = self.nDep * 4 * drawCoefficients.shape[i2] * drawCoefficients.shape[i1]
+            size = self.nDep * 4 * self.nCoef[i1] * self.nCoef[i2]
             glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients[coefSlice])
             glEnableVertexAttribArray(program.aSurfaceParameters)
             if frame.tessellationEnabled:
                 glPatchParameteri(GL_PATCH_VERTICES, 1)
-                glDrawArraysInstanced(GL_PATCHES, 0, 1, (drawCoefficients.shape[1] - self.order[0] + 1) * (drawCoefficients.shape[0] - self.order[1] + 1))
+                glDrawArraysInstanced(GL_PATCHES, 0, 1, (self.nCoef[i1] - self.order[i1] + 1) * (self.nCoef[i2] - self.order[i2] + 1))
             else:
-                glDrawArraysInstanced(GL_POINTS, 0, 1, (drawCoefficients.shape[1] - self.order[0] + 1) * (drawCoefficients.shape[0] - self.order[1] + 1))
+                glDrawArraysInstanced(GL_POINTS, 0, 1, (self.nCoef[i1] - self.order[i1] + 1) * (self.nCoef[i2] - self.order[i2] + 1))
                 glFlush() # Old graphics card
             glDisableVertexAttribArray(program.aSurfaceParameters)
 
