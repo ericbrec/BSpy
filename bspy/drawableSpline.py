@@ -369,15 +369,7 @@ class DrawableSpline(Spline):
             program = frame.surface6Program
         else:
             raise ValueError("Can't draw surface.")
-        
         fillColor[3] *= 0.5
-        glEnable( GL_BLEND )
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glDisable( GL_DEPTH_TEST )
-        glUseProgram(program.surfaceProgram)
-        glUniform4fv(program.uSurfaceFillColor, 1, fillColor)
-        glUniform4fv(program.uSurfaceLineColor, 1, self.get_line_color())
-        glUniform1i(program.uSurfaceOptions, self.get_options())
 
         def _DrawBoundarySurface(axis, index):
             fullSlice = slice(None)
@@ -415,6 +407,14 @@ class DrawableSpline(Spline):
                 glDrawArraysInstanced(GL_POINTS, 0, 1, (self.nCoef[i1] - self.order[i1] + 1) * (self.nCoef[i2] - self.order[i2] + 1))
                 glFlush() # Old graphics card
             glDisableVertexAttribArray(program.aSurfaceParameters)
+
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glEnable( GL_BLEND )
+        glDisable( GL_DEPTH_TEST )
+        glUseProgram(program.surfaceProgram)
+        glUniform4fv(program.uSurfaceFillColor, 1, fillColor)
+        glUniform4fv(program.uSurfaceLineColor, 1, self.get_line_color())
+        glUniform1i(program.uSurfaceOptions, self.get_options())
 
         _DrawBoundarySurface(0, 0)
         _DrawBoundarySurface(0, -1)

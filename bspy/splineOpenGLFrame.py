@@ -936,12 +936,14 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.animate = 0 # Set to number of milliseconds before showing next frame (0 means no animation)
 
         self.splineDrawList = []
+        self.tessellationEnabled = True
+        self.glInitialized = False
         
         self.origin = None
         self.button = None
         self.mode = self.ROTATE
 
-        self.backgroundColor = np.array((0.0, 0.2, 0.2, 1.0), np.float32)
+        self.SetBackgroundColor(0.0, 0.2, 0.2)
 
         self.SetDefaultView(eye, center, up)
         self.ResetView()
@@ -951,9 +953,6 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.bind("<ButtonRelease>", self.MouseUp)
         self.bind("<MouseWheel>", self.MouseWheel)
         self.bind("<Unmap>", self.Unmap)
-
-        self.tessellationEnabled = True
-        self.glInitialized = False
 
     def SetDefaultView(self, eye, center, up):
         """
@@ -983,6 +982,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.
         """
         self.backgroundColor = _set_color(r, g, b, a)
+        self.backgroundColor[3] = 0.0
         if self.glInitialized:
             glClearColor(self.backgroundColor[0], self.backgroundColor[1], self.backgroundColor[2], self.backgroundColor[3])
 
@@ -999,14 +999,14 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.eye = self.defaultEye.copy()
         self.look = self.defaultEye - self.defaultCenter
         self.anchorDistance = np.linalg.norm(self.look)
+        self.anchorDistance = max(self.anchorDistance, 0.01)
+        self.speed = 0.033 * self.anchorDistance
         self.look = self.look / self.anchorDistance
         self.up = self.defaultUp.copy()
         self.horizon = np.cross(self.up, self.look)
         self.horizon = self.horizon / np.linalg.norm(self.horizon)
         self.vertical = np.cross(self.look, self.horizon)
         self.anchorPosition = self.eye - self.anchorDistance * self.look
-        self.speed = 0.033 * self.anchorDistance
-        self.speed = max(self.speed, 1e-4)
 
     def initgl(self):
         """
@@ -1114,7 +1114,11 @@ class SplineOpenGLFrame(OpenGLFrame):
         """
         Handle `OpenGLFrame` redraw action. Updates view and draws spline list.
         """
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glEnable( GL_BLEND )
+        glEnable( GL_DEPTH_TEST )
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT )
+        glDisable( GL_BLEND )
         glLoadIdentity()
 
         if self.button is not None:
@@ -1201,7 +1205,6 @@ class SplineOpenGLFrame(OpenGLFrame):
             Speed scale between 0 and 1.
         """
         self.speed = 0.033 * self.anchorDistance * (100.0 ** float(scale) - 1.0) / 99.0
-        self.speed = max(self.speed, 1e-4)
 
     def MouseDown(self, event):
         """
@@ -1213,8 +1216,8 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         if self.button == 4 or self.button == 5: # MouseWheel
             self.anchorDistance *= 0.9 if self.button == 4 else 1.1
-            self.speed *= 0.9 if self.button == 4 else 1.1
-            self.speed = max(self.speed, 1e-4)
+            self.anchorDistance = max(self.anchorDistance, 0.01)
+            self.speed = 0.033 * self.anchorDistance
             self.eye = self.anchorPosition + self.anchorDistance * self.look
             self.Update()
         
@@ -1246,11 +1249,10 @@ class SplineOpenGLFrame(OpenGLFrame):
         """
         if event.delta < 0:
             self.anchorDistance *= 1.1
-            self.speed *= 1.1
         elif event.delta > 0:
             self.anchorDistance *= 0.9
-            self.speed *= 0.9
-        self.speed = max(self.speed, 1e-4)
+        self.anchorDistance = max(self.anchorDistance, 0.01)
+        self.speed = 0.033 * self.anchorDistance
         self.eye = self.anchorPosition + self.anchorDistance * self.look
         self.Update()
 
