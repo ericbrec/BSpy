@@ -105,7 +105,7 @@ class DrawableSpline(Spline):
         functions (spline functions) as linear combinations of B-splines.
     
     `make_drawable` : Convert a `Spline` into a `DrawableSpline` that can be drawn in a `SplineOpenGLFrame`. Converts 
-        1D splines into 3D curves and 2D splines into surfaces (y-axis hold amplitude).
+        1D splines into 3D curves, 2D splines into surfaces (y-axis hold amplitude), and 3D splines into solids.
     """
 
     maxOrder = 9
@@ -162,7 +162,10 @@ class DrawableSpline(Spline):
     def make_drawable(spline):
         """
         Convert a `Spline` into a `DrawableSpline` that can be drawn in a `SplineOpenGLFrame`. Converts 
-        1D splines into 3D curves and 2D splines into surfaces (y-axis hold amplitude).
+        1D splines into 3D curves, 2D splines into surfaces (y-axis hold amplitude), and 3D splines into solids.
+
+        Spline surfaces and solids with more than 3 dependent variables will have their added dimensions rendered 
+        as colors (up to 6 dependent variables are supported).
 
         The drawable spline will share the original spline's metadata (metadata changes are shared).
         """
