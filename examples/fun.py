@@ -18,7 +18,7 @@ class FunOpenGLFrame(SplineOpenGLFrame):
             float u, v;
             float uInterval, vInterval;
         } inData;
-        in vec4 worldPosition;
+        in vec3 worldPosition;
         in vec3 normal;
         in vec2 parameters;
         in vec2 pixelPer;
@@ -45,11 +45,9 @@ class FunOpenGLFrame(SplineOpenGLFrame):
     """
 
     def CreateGLResources(self):
-        SplineOpenGLFrame.CreateGLResources(self)
-
         #img = Image.open("C:/Users/ericb/OneDrive/Pictures/Backgrounds/2020 Cannon Beach.jpg")
         img = Image.open("C:/Users/ericb/OneDrive/Pictures/Backgrounds/Tom Sailing.jpg")
-        img_data = np.array((img.getdata()), np.int8)
+        img_data = np.array((img.getdata())).astype(np.int8)
         self.textureBuffer = glGenTextures(1)
         glActiveTexture(GL_TEXTURE1)
         glBindTexture(GL_TEXTURE_2D, self.textureBuffer)
@@ -61,10 +59,12 @@ class FunOpenGLFrame(SplineOpenGLFrame):
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, img.size[0], img.size[1], 0, GL_RGB, GL_UNSIGNED_BYTE, img_data)            
         glActiveTexture(GL_TEXTURE0)
 
-        glUseProgram(self.surfaceProgram)
-        self.uSurfaceTextureMap = glGetUniformLocation(self.surfaceProgram, 'uTextureMap')
+        SplineOpenGLFrame.CreateGLResources(self)
+
+        glUseProgram(self.surface3Program.surfaceProgram)
+        self.uSurfaceTextureMap = glGetUniformLocation(self.surface3Program.surfaceProgram, 'uTextureMap')
         glUniform1i(self.uSurfaceTextureMap, 1) # GL_TEXTURE1 is the texture map
-        self.surfaceProgram.check_validate() # Now that textures are assigned, we can validate the program
+        self.surface3Program.surfaceProgram.check_validate() # Now that textures are assigned, we can validate the program
         glUseProgram(0)
 
 def CreateSplineFromMesh(xRange, zRange, yFunction):

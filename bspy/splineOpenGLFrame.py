@@ -1314,7 +1314,8 @@ class SurfaceProgram:
                     computeSplineColor=computeSplineColor,
                     postProcessSplineColor=postProcessSplineColor,
                     maxOrder=DrawableSpline.maxOrder), GL_TESS_EVALUATION_SHADER), 
-                shaders.compileShader(frame.surfaceFragmentShaderCode, GL_FRAGMENT_SHADER))
+                shaders.compileShader(frame.surfaceFragmentShaderCode, GL_FRAGMENT_SHADER),
+                validate = False)
         else:
             self.surfaceProgram = shaders.compileProgram(
                 shaders.compileShader(frame.surfaceVertexShaderCode, GL_VERTEX_SHADER), 
