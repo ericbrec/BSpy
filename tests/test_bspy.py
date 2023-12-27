@@ -841,7 +841,7 @@ def test_four_sided_patch():
     crv2 = bspy.Spline.line([0.0, 1.0, 0.0], [1.0, 1.0, 1.0])
     crv3 = bspy.Spline.line([0.0, 1.0, 0.0], [0.0, 0.0, 0.0])
     crv4 = [[0, 0], [1, 0], [0, 1]] @ bspy.Spline.section([[0.0, 0.0, 90.0, -0.7], [1.0, 1.0, -10.0, -0.7]]) + [1, 0, 0]
-    mySurf = bspy.Spline.four_sided_patch(crv1, crv2, crv3, crv4)
+    mySurf = bspy.Spline.four_sided_patch(crv1, crv2, crv3, crv4, 0.0)
     for uv in np.linspace(0.0, 1.0, 31):
         truthPt = procedural(crv1, crv2, crv3.reverse(), crv4, uv, uv)
         coonsPt = mySurf(uv, uv)

@@ -894,6 +894,23 @@ class Spline:
         """
         return bspy._spline_operations.graph(self)
     
+    def greville(self, ind = 0):
+        """
+        Compute and return the Greville abscissae (knot averages) for the given independent
+        variable.
+        
+        Returns
+        -------
+        knotAvgs: `numpy.array`
+            An array with the knot averages for the specified independent variable.
+
+        Notes
+        -----
+        The Greville abscissae always satisfy the interlacing conditions, so can be used as
+        valid collocation points, interpolation points, or quadrature points.
+        """
+        return bspy._spline_operations.greville(self, ind)
+        
     def insert_knots(self, newKnots):
         """
         Insert new knots into a spline.

@@ -266,6 +266,14 @@ def graph(self):
     finalGraph = graphMat @ graphSpline + selfMat @ self
     return finalGraph
 
+def greville(self, ind = 0):
+    if ind < 0 or ind >= self.nInd:  raise ValueError("Invalid independent variable")
+    myKnots = self.knots[ind]
+    knotAvgs = 0
+    for ix in range(1, self.order[ind]):
+        knotAvgs = knotAvgs + myKnots[ix : ix + self.nCoef[ind]]
+    return knotAvgs / (self.order[ind] - 1)
+
 def integrate(self, with_respect_to = 0):
     if not(0 <= with_respect_to < self.nInd): raise ValueError("Invalid with_respect_to")
 

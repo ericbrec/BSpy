@@ -328,7 +328,42 @@ def four_sided_patch(bottom, right, top, left, surfParam = 0.5):
     biLinear = bspy.Spline.ruled_surface(bottomLine, topLine)
     coons = bottomTop.add(leftRight, ((0,1), (1,0))) - biLinear
 
-    return coons
+    # Determine the Greville absiccae to use as collocation points
+
+    uPts = coons.greville(0)[1 : -1]
+    vPts = coons.greville(1)[1 : -1]
+    nu = len(uPts)
+    nv = len(vPts)
+    
+    # Set up the matrix and right-hand-side vectors for the problem
+    
+    laplace = coons.copy()
+    zeroSpline = (laplace.nDep * [0]) @ laplace
+    def laplacian(spline, uv):
+        return spline.derivative([2, 0], uv) + spline.derivative([0, 2], uv)
+    lapMat = np.zeros((nu, nv, nu, nv))
+    rhs = np.zeros((nu, nv, laplace.nDep))
+    for iv1 in range(nv):
+        for iu1 in range(nu):
+            rhs[iu1, iv1, :] = -laplacian(laplace, [uPts[iu1], vPts[iv1]])
+            for iv2 in range(nv):
+                for iu2 in range(nu):
+                    zeroSpline.coefs[0, iu2 + 1, iv2 + 1] = 1.0
+                    lapMat[iu1, iv1, iu2, iv2] = laplacian(zeroSpline, [uPts[iu1], vPts[iv1]])[0]
+                    zeroSpline.coefs[0, iu2 + 1, iv2 + 1] = 0.0
+    
+    # Solve the linear system
+    
+    lapMat = np.reshape(lapMat, (nu * nv, nu * nv))
+    rhs = np.reshape(rhs, (nu * nv, laplace.nDep))
+    interiorCoefs = np.linalg.solve(lapMat, rhs)
+    interiorCoefs = np.reshape(interiorCoefs, (nu, nv, laplace.nDep))
+    for ix in range(laplace.nDep):
+        laplace.coefs[ix, 1:-1, 1:-1] += interiorCoefs[:, :, ix]
+    
+    # Return the proper weighted average of the surfaces
+    
+    return (1.0 - surfParam) * coons + surfParam * laplace
 
 def least_squares(nInd, nDep, order, dataPoints, knotList = None, compression = 0, metadata = {}):
     if not(nInd >= 0): raise ValueError("nInd < 0")
