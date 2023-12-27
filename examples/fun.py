@@ -69,7 +69,7 @@ class FunOpenGLFrame(SplineOpenGLFrame):
 
 def CreateSplineFromMesh(xRange, zRange, yFunction):
     order = (3, 3)
-    coefficients = np.zeros((4, xRange[2], zRange[2]), np.float32)
+    coefficients = np.zeros((3, xRange[2], zRange[2]), np.float32)
     knots = (np.zeros(xRange[2] + order[0], np.float32), np.zeros(zRange[2] + order[1], np.float32))
     knots[0][0] = xRange[0]
     knots[0][1:xRange[2]+1] = np.linspace(xRange[0], xRange[1], xRange[2], dtype=np.float32)[:]
@@ -82,9 +82,8 @@ def CreateSplineFromMesh(xRange, zRange, yFunction):
             coefficients[0, i, j] = knots[0][i]
             coefficients[1, i, j] = yFunction(knots[0][i], knots[1][j])
             coefficients[2, i, j] = knots[1][j]
-            coefficients[3, i, j] = 1.0
     
-    return DrawableSpline(2, 4, order, (xRange[2], zRange[2]), knots, coefficients)
+    return DrawableSpline(2, 3, order, (xRange[2], zRange[2]), knots, coefficients)
 
 if __name__=='__main__':
     app = bspyApp(SplineOpenGLFrame=FunOpenGLFrame)
@@ -92,6 +91,6 @@ if __name__=='__main__':
     app.show(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: x*x + y*y - 1))
     app.show(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: x*x - y*y))
     for i in range(16):
-        app.show(DrawableSpline(1, 4, (3,), (5,), (np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.5, 0.5], np.float32),), np.array([[-1, 0, 0, 1], [-0.5, i/16.0, 0, 1], [0,0,0,1], [0.5, -i/16.0, 0, 1], [1,0,0,1]], np.float32)))
+        app.show(DrawableSpline(1, 3, (3,), (5,), (np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.5, 0.5], np.float32),), np.array([[-1, 0, 0], [-0.5, i/16.0, 0], [0,0,0], [0.5, -i/16.0, 0], [1,0,0]], np.float32)))
     app.show(Spline.load("C:/Users/ericb/OneDrive/Desktop/TomsNasty.npz", DrawableSpline))
     app.mainloop()
