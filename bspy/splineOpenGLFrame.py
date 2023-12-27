@@ -936,13 +936,14 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.animate = 0 # Set to number of milliseconds before showing next frame (0 means no animation)
 
         self.splineDrawList = []
+        self.tessellationEnabled = True
+        self.glInitialized = False
         
         self.origin = None
         self.button = None
         self.mode = self.ROTATE
-        self.speed = 0.01
 
-        self.backgroundColor = np.array((0.0, 0.2, 0.2, 1.0), np.float32)
+        self.SetBackgroundColor(0.0, 0.2, 0.2)
 
         self.SetDefaultView(eye, center, up)
         self.ResetView()
@@ -952,9 +953,6 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.bind("<ButtonRelease>", self.MouseUp)
         self.bind("<MouseWheel>", self.MouseWheel)
         self.bind("<Unmap>", self.Unmap)
-
-        self.tessellationEnabled = True
-        self.glInitialized = False
 
     def SetDefaultView(self, eye, center, up):
         """
@@ -1000,6 +998,8 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.eye = self.defaultEye.copy()
         self.look = self.defaultEye - self.defaultCenter
         self.anchorDistance = np.linalg.norm(self.look)
+        self.anchorDistance = max(self.anchorDistance, 0.01)
+        self.speed = 0.033 * self.anchorDistance
         self.look = self.look / self.anchorDistance
         self.up = self.defaultUp.copy()
         self.horizon = np.cross(self.up, self.look)
@@ -1199,7 +1199,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         scale : `float`
             Speed scale between 0 and 1.
         """
-        self.speed = 0.1 * (100.0 ** float(scale) - 1.0) / 99.0
+        self.speed = 0.033 * self.anchorDistance * (100.0 ** float(scale) - 1.0) / 99.0
 
     def MouseDown(self, event):
         """
@@ -1211,6 +1211,8 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         if self.button == 4 or self.button == 5: # MouseWheel
             self.anchorDistance *= 0.9 if self.button == 4 else 1.1
+            self.anchorDistance = max(self.anchorDistance, 0.01)
+            self.speed = 0.033 * self.anchorDistance
             self.eye = self.anchorPosition + self.anchorDistance * self.look
             self.Update()
         
@@ -1244,6 +1246,8 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.anchorDistance *= 1.1
         elif event.delta > 0:
             self.anchorDistance *= 0.9
+        self.anchorDistance = max(self.anchorDistance, 0.01)
+        self.speed = 0.033 * self.anchorDistance
         self.eye = self.anchorPosition + self.anchorDistance * self.look
         self.Update()
 

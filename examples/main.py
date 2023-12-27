@@ -17,6 +17,17 @@ def CreateSplineFromMesh(xRange, zRange, yFunction):
     
     return Spline(2, 1, order, (xRange[2], zRange[2]), knots, coefficients)
 
+def Create4Sphere(samples):
+    values = []
+    for radius in np.linspace(1.0, 10.0, samples):
+        for theta in np.linspace(0.0, 1.0, samples):
+            for phi in np.linspace(0.1, 0.9, samples):
+                values.append((radius, theta, phi, 
+                    radius * np.cos(theta * 2 * np.pi) * np.sin(phi * np.pi),
+                    radius * np.cos(phi * np.pi),
+                    radius * np.sin(theta * 2 * np.pi) * np.sin(phi * np.pi)))
+    return Spline.least_squares(3, 3, (4, 4, 4), values)
+
 if __name__=='__main__':
     app = bspyApp()
     ds1 = DrawableSpline.make_drawable(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: np.sin(4*np.sqrt(x*x + y*y))))
@@ -44,4 +55,5 @@ if __name__=='__main__':
     for i in range(8):
         app.show(Spline(1, 1, (3,), (5,), (np.array((-1.0, -0.6, -0.2, 0.2, 0.6, 1.0, 1.0, 1.0)),), np.array((0, i/8.0, 0, -i/8.0, 0))))
     app.show(Spline.load("C:/Users/ericb/OneDrive/Desktop/TomsNasty.npz", DrawableSpline))
+    app.show(Create4Sphere(5))
     app.mainloop()
