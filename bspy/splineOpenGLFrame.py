@@ -982,7 +982,6 @@ class SplineOpenGLFrame(OpenGLFrame):
             The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.
         """
         self.backgroundColor = _set_color(r, g, b, a)
-        self.backgroundColor[3] = 0.0
         if self.glInitialized:
             glClearColor(self.backgroundColor[0], self.backgroundColor[1], self.backgroundColor[2], self.backgroundColor[3])
 
@@ -1114,11 +1113,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         """
         Handle `OpenGLFrame` redraw action. Updates view and draws spline list.
         """
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glEnable( GL_BLEND )
-        glEnable( GL_DEPTH_TEST )
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT )
-        glDisable( GL_BLEND )
         glLoadIdentity()
 
         if self.button is not None:

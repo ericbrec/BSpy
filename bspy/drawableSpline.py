@@ -359,7 +359,8 @@ class DrawableSpline(Spline):
                         glVertex3f(point[0], point[1], point[2])
                     glEnd()
 
-        fillColor = self.get_fill_color()
+        fillColor = self.get_fill_color().copy()
+        lineColor = self.get_line_color().copy()
         if self.nDep == 3:
             program = frame.surface3Program
         elif self.nDep == 4:
@@ -370,6 +371,7 @@ class DrawableSpline(Spline):
         else:
             raise ValueError("Can't draw surface.")
         fillColor[3] *= 0.5
+        lineColor[3] *= 0.5
 
         def _DrawBoundarySurface(axis, index):
             fullSlice = slice(None)
@@ -413,7 +415,7 @@ class DrawableSpline(Spline):
         glDisable( GL_DEPTH_TEST )
         glUseProgram(program.surfaceProgram)
         glUniform4fv(program.uSurfaceFillColor, 1, fillColor)
-        glUniform4fv(program.uSurfaceLineColor, 1, self.get_line_color())
+        glUniform4fv(program.uSurfaceLineColor, 1, lineColor)
         glUniform1i(program.uSurfaceOptions, self.get_options())
 
         _DrawBoundarySurface(0, 0)
