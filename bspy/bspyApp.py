@@ -95,6 +95,7 @@ class bspyApp(tk.Tk):
         self.scale.set(0.5)
 
         self.splineList = []
+        self.splineRadius = 0.0
         self.adjust = None
         self.workQueue = workQueue
         if self.workQueue is not None:
@@ -137,12 +138,16 @@ class bspyApp(tk.Tk):
     def erase_all(self):
         """Stop drawing all splines. Splines remain in the listbox."""
         self.listBox.selection_clear(0, self.listBox.size() - 1)
+        self.splineRadius = 0.0
+        self.frame.ResetView()
         self.update()
 
     def empty(self):
         """Stop drawing all splines and remove them from the listbox."""
         self.splineList = []
         self.listBox.delete(0, self.listBox.size() - 1)
+        self.splineRadius = 0.0
+        self.frame.ResetView()
         self.update()
 
     def set_background_color(self, r, g=None, b=None, a=None):
@@ -167,10 +172,31 @@ class bspyApp(tk.Tk):
         self.frame.Update()
 
     def update(self):
-        """Update the spline draw list and refresh the frame."""
+        """Update the spline draw list, set the default view, reset the bounds, and refresh the frame."""
         self.frame.splineDrawList = []
+        gotOne = False
         for item in self.listBox.curselection():
-            self.frame.splineDrawList.append(self.splineList[item])
+            spline = self.splineList[item]
+            coefsAxis = tuple(range(1,spline.nInd + 1))
+            if gotOne:
+                splineMin = np.minimum(splineMin, spline.coefs[:3].min(axis=coefsAxis))
+                splineMax = np.maximum(splineMax, spline.coefs[:3].max(axis=coefsAxis))
+            else:
+                splineMin = spline.coefs[:3].min(axis=coefsAxis)
+                splineMax = spline.coefs[:3].max(axis=coefsAxis)
+                gotOne = True
+            self.frame.splineDrawList.append(spline)
+
+        if gotOne:
+            newRadius = 0.5 * np.max(splineMax - splineMin)
+            if newRadius > self.splineRadius:
+                self.splineRadius = newRadius
+                atDefaultEye = np.allclose(self.frame.eye, self.frame.defaultEye)
+                center = 0.5 * (splineMax + splineMin)
+                self.frame.SetDefaultView(center + (0.0, 0.0, 3.0 * newRadius), center, (0.0, 1.0, 0.0))
+                self.frame.ResetBounds()
+                if atDefaultEye:
+                    self.frame.ResetView()
 
         if self.adjust is not None:
             if self.frame.splineDrawList: 

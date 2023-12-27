@@ -65,7 +65,7 @@ class SplineOpenGLFrame(OpenGLFrame):
     """
 
     computeSampleRateCode = """
-        float ComputeSampleRate(in vec4 point, in vec3 dPoint, in vec3 d2Point, in float minRate)
+        float ComputeSampleRate(in vec3 point, in vec3 dPoint, in vec3 d2Point, in float minRate)
         {
             float rate = 0.0;
             float scale = uScreenScale.z > 0.0 ? -point.z : 1.0;
@@ -138,30 +138,27 @@ class SplineOpenGLFrame(OpenGLFrame):
                 else
                 {
                     int i = outData.uKnot - outData.uOrder;
-                    int coefficientOffset = header + outData.uOrder + outData.uN + 4 * i;
-                    vec4 coefficient0 = vec4(
+                    int coefficientOffset = header + outData.uOrder + outData.uN + nDep * i;
+                    vec3 coefficient0 = vec3(
                         texelFetch(uSplineData, coefficientOffset+0).x, 
                         texelFetch(uSplineData, coefficientOffset+1).x,
-                        texelFetch(uSplineData, coefficientOffset+2).x,
-                        texelFetch(uSplineData, coefficientOffset+3).x);
-                    coefficientOffset += 4;
-                    vec4 coefficient1 = vec4(
+                        texelFetch(uSplineData, coefficientOffset+2).x);
+                    coefficientOffset += nDep;
+                    vec3 coefficient1 = vec3(
                         texelFetch(uSplineData, coefficientOffset+0).x, 
                         texelFetch(uSplineData, coefficientOffset+1).x,
-                        texelFetch(uSplineData, coefficientOffset+2).x,
-                        texelFetch(uSplineData, coefficientOffset+3).x);
+                        texelFetch(uSplineData, coefficientOffset+2).x);
                     float gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]
-                    vec3 dPoint0 = ((outData.uOrder - 1) / gap) * (coefficient1.xyz - coefficient0.xyz);
+                    vec3 dPoint0 = ((outData.uOrder - 1) / gap) * (coefficient1 - coefficient0);
                     while (i < outData.uKnot-2)
                     {
-                        coefficientOffset += 4;
-                        vec4 coefficient2 = vec4(
+                        coefficientOffset += nDep;
+                        vec3 coefficient2 = vec3(
                             texelFetch(uSplineData, coefficientOffset+0).x, 
                             texelFetch(uSplineData, coefficientOffset+1).x,
-                            texelFetch(uSplineData, coefficientOffset+2).x,
-                            texelFetch(uSplineData, coefficientOffset+3).x);
+                            texelFetch(uSplineData, coefficientOffset+2).x);
                         gap = texelFetch(uSplineData, header + i+1+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]
-                        vec3 dPoint1 = ((outData.uOrder - 1) / gap) * (coefficient2.xyz - coefficient1.xyz);
+                        vec3 dPoint1 = ((outData.uOrder - 1) / gap) * (coefficient2 - coefficient1);
                         gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+uOrder] - uKnots[i+2]
                         vec3 d2Point = ((outData.uOrder - 2) / gap) * (dPoint1 - dPoint0);
 
@@ -187,6 +184,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         layout (vertices = 1) out;
 
         const int header = 2;
+        const int nDep = 3;
 
         in SplineInfo
         {{
@@ -232,6 +230,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         layout (isolines) in;
 
         const int header = 2;
+        const int nDep = 3;
 
         patch in SplineInfo
         {{
@@ -255,15 +254,14 @@ class SplineOpenGLFrame(OpenGLFrame):
                 inData.u + gl_TessCoord.x * inData.uInterval, 
                 uBSpline, duBSpline);
             
-            vec4 point = vec4(0.0, 0.0, 0.0, 0.0);
-            int i = header + inData.uOrder + inData.uN + 4 * (inData.uKnot - inData.uOrder);
+            vec4 point = vec4(0.0, 0.0, 0.0, 1.0);
+            int i = header + inData.uOrder + inData.uN + nDep * (inData.uKnot - inData.uOrder);
             for (int b = 0; b < inData.uOrder; b++) // loop from coefficient[uKnot-order] to coefficient[uKnot]
             {{
                 point.x += uBSpline[b] * texelFetch(uSplineData, i).x;
                 point.y += uBSpline[b] * texelFetch(uSplineData, i+1).x;
                 point.z += uBSpline[b] * texelFetch(uSplineData, i+2).x;
-                point.w += uBSpline[b] * texelFetch(uSplineData, i+3).x;
-                i += 4;
+                i += nDep;
             }}
 
             gl_Position = uProjectionMatrix * point;
@@ -277,6 +275,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         layout( line_strip, max_vertices = 256 ) out;
 
         const int header = 2;
+        const int nDep = 3;
 
         in SplineInfo
         {{
@@ -324,22 +323,21 @@ class SplineOpenGLFrame(OpenGLFrame):
                 float duBSpline[{maxOrder}];
                 float u = outData.u;
                 float deltaU = outData.uInterval / uSamples;
-                int iOffset = header + outData.uOrder + outData.uN + 4 * (outData.uKnot - outData.uOrder);
+                int iOffset = header + outData.uOrder + outData.uN + nDep * (outData.uKnot - outData.uOrder);
 
                 for (int uSample = 0; uSample <= uSamples; uSample++)
                 {{
                     ComputeBSpline(header, outData.uOrder, outData.uN, outData.uKnot,
                         u, uBSpline, duBSpline);
                     
-                    vec4 point = vec4(0.0, 0.0, 0.0, 0.0);
+                    vec4 point = vec4(0.0, 0.0, 0.0, 1.0);
                     int i = iOffset;
                     for (int b = 0; b < outData.uOrder; b++) // loop from coefficient[uKnot-order] to coefficient[uKnot]
                     {{
                         point.x += uBSpline[b] * texelFetch(uSplineData, i).x;
                         point.y += uBSpline[b] * texelFetch(uSplineData, i+1).x;
                         point.z += uBSpline[b] * texelFetch(uSplineData, i+2).x;
-                        point.w += uBSpline[b] * texelFetch(uSplineData, i+3).x;
-                        i += 4;
+                        i += nDep;
                     }}
 
                     gl_Position = uProjectionMatrix * point;
@@ -435,30 +433,27 @@ class SplineOpenGLFrame(OpenGLFrame):
                     {{
                         int i = max(outData.uKnot - 1 - outData.uOrder, 0);
                         int iLimit = min(outData.uKnot - 1, outData.uN - 2);
-                        int coefficientOffset = header + outData.uOrder+outData.uN + outData.vOrder+outData.vN + 4*outData.uN*j + 4*i;
-                        vec4 coefficient0 = vec4(
+                        int coefficientOffset = header + outData.uOrder+outData.uN + outData.vOrder+outData.vN + nDep*outData.uN*j + nDep*i;
+                        vec3 coefficient0 = vec3(
                             texelFetch(uSplineData, coefficientOffset+0).x, 
                             texelFetch(uSplineData, coefficientOffset+1).x,
-                            texelFetch(uSplineData, coefficientOffset+2).x,
-                            texelFetch(uSplineData, coefficientOffset+3).x);
-                        coefficientOffset += 4;
-                        vec4 coefficient1 = vec4(
+                            texelFetch(uSplineData, coefficientOffset+2).x);
+                        coefficientOffset += nDep;
+                        vec3 coefficient1 = vec3(
                             texelFetch(uSplineData, coefficientOffset+0).x, 
                             texelFetch(uSplineData, coefficientOffset+1).x,
-                            texelFetch(uSplineData, coefficientOffset+2).x,
-                            texelFetch(uSplineData, coefficientOffset+3).x);
+                            texelFetch(uSplineData, coefficientOffset+2).x);
                         float gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]
-                        vec3 dPoint0 = ((outData.uOrder - 1) / gap) * (coefficient1.xyz - coefficient0.xyz);
+                        vec3 dPoint0 = ((outData.uOrder - 1) / gap) * (coefficient1 - coefficient0);
                         while (i < iLimit)
                         {{
-                            coefficientOffset += 4;
-                            vec4 coefficient2 = vec4(
+                            coefficientOffset += nDep;
+                            vec3 coefficient2 = vec3(
                                 texelFetch(uSplineData, coefficientOffset+0).x, 
                                 texelFetch(uSplineData, coefficientOffset+1).x,
-                                texelFetch(uSplineData, coefficientOffset+2).x,
-                                texelFetch(uSplineData, coefficientOffset+3).x);
+                                texelFetch(uSplineData, coefficientOffset+2).x);
                             gap = texelFetch(uSplineData, header + i+1+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]
-                            vec3 dPoint1 = ((outData.uOrder - 1) / gap) * (coefficient2.xyz - coefficient1.xyz);
+                            vec3 dPoint1 = ((outData.uOrder - 1) / gap) * (coefficient2 - coefficient1);
                             gap = texelFetch(uSplineData, header + i+outData.uOrder).x - texelFetch(uSplineData, header + i+2).x; // uKnots[i+uOrder] - uKnots[i+2]
                             vec3 d2Point = ((outData.uOrder - 2) / gap) * (dPoint1 - dPoint0);
 
@@ -512,30 +507,27 @@ class SplineOpenGLFrame(OpenGLFrame):
                     {{
                         int j = max(outData.vKnot - 1 - outData.vOrder, 0);
                         int jLimit = min(outData.vKnot - 1, outData.vN - 2);
-                        int coefficientOffset = header + outData.uOrder+outData.uN + outData.vOrder+outData.vN + 4*outData.uN*j + 4*i;
-                        vec4 coefficient0 = vec4(
+                        int coefficientOffset = header + outData.uOrder+outData.uN + outData.vOrder+outData.vN + nDep*outData.uN*j + nDep*i;
+                        vec3 coefficient0 = vec3(
                             texelFetch(uSplineData, coefficientOffset+0).x, 
                             texelFetch(uSplineData, coefficientOffset+1).x,
-                            texelFetch(uSplineData, coefficientOffset+2).x,
-                            texelFetch(uSplineData, coefficientOffset+3).x);
-                        coefficientOffset += 4*outData.uN;
-                        vec4 coefficient1 = vec4(
+                            texelFetch(uSplineData, coefficientOffset+2).x);
+                        coefficientOffset += nDep*outData.uN;
+                        vec3 coefficient1 = vec3(
                             texelFetch(uSplineData, coefficientOffset+0).x, 
                             texelFetch(uSplineData, coefficientOffset+1).x,
-                            texelFetch(uSplineData, coefficientOffset+2).x,
-                            texelFetch(uSplineData, coefficientOffset+3).x);
+                            texelFetch(uSplineData, coefficientOffset+2).x);
                         float gap = texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+outData.vOrder).x - texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+1).x; // vKnots[j+vOrder] - vKnots[j+1]
-                        vec3 dPoint0 = ((outData.vOrder - 1) / gap) * (coefficient1.xyz - coefficient0.xyz);
+                        vec3 dPoint0 = ((outData.vOrder - 1) / gap) * (coefficient1 - coefficient0);
                         while (j < jLimit)
                         {{
-                            coefficientOffset += 4*outData.uN;
-                            vec4 coefficient2 = vec4(
+                            coefficientOffset += nDep*outData.uN;
+                            vec3 coefficient2 = vec3(
                                 texelFetch(uSplineData, coefficientOffset+0).x, 
                                 texelFetch(uSplineData, coefficientOffset+1).x,
-                                texelFetch(uSplineData, coefficientOffset+2).x,
-                                texelFetch(uSplineData, coefficientOffset+3).x);
+                                texelFetch(uSplineData, coefficientOffset+2).x);
                             gap = texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+1+outData.vOrder).x - texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+2).x; // vKnots[j+1+vOrder] - vKnots[j+2]
-                            vec3 dPoint1 = ((outData.vOrder - 1) / gap) * (coefficient2.xyz - coefficient1.xyz);
+                            vec3 dPoint1 = ((outData.vOrder - 1) / gap) * (coefficient2 - coefficient1);
                             gap = texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+outData.vOrder).x - texelFetch(uSplineData, header + outData.uOrder+outData.uN + j+2).x; // vKnots[j+vOrder] - vKnots[j+2]
                             vec3 d2Point = ((outData.vOrder - 2) / gap) * (dPoint1 - dPoint0);
 
@@ -574,6 +566,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         layout (vertices = 1) out;
 
         const int header = 4;
+        const int nDep = {nDep};
 
         in SplineInfo
         {{
@@ -628,6 +621,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         layout (quads) in;
 
         const int header = 4;
+        const int nDep = {nDep};
 
         patch in SplineInfo
         {{
@@ -642,6 +636,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         uniform mat4 uProjectionMatrix;
         uniform vec3 uScreenScale;
+        uniform vec4 uFillColor;
         uniform samplerBuffer uSplineData;
 
         flat out SplineInfo
@@ -654,7 +649,8 @@ class SplineOpenGLFrame(OpenGLFrame):
             float u, v;
             float uInterval, vInterval;
         }} outData;
-        out vec4 worldPosition;
+        out vec3 worldPosition;
+        out vec3 splineColor;
         out vec3 normal;
         out vec2 parameters;
         out vec2 pixelPer;
@@ -673,33 +669,35 @@ class SplineOpenGLFrame(OpenGLFrame):
             parameters.y = inData.v + gl_TessCoord.y * inData.vInterval;
             ComputeBSpline(header + inData.uOrder+inData.uN, inData.vOrder, inData.vN, inData.vKnot, parameters.y, vBSpline, dvBSpline);
             
-            vec4 point = vec4(0.0, 0.0, 0.0, 0.0);
+            vec4 point = vec4(0.0, 0.0, 0.0, 1.0);
             vec3 duPoint = vec3(0.0, 0.0, 0.0);
             vec3 dvPoint = vec3(0.0, 0.0, 0.0);
-            int j = header + inData.uOrder+inData.uN + inData.vOrder+inData.vN + (inData.vKnot - inData.vOrder) * inData.uN * 4;
+            {initializeSplineColor}
+            int j = header + inData.uOrder+inData.uN + inData.vOrder+inData.vN + (inData.vKnot - inData.vOrder) * inData.uN * nDep;
             for (int vB = 0; vB < inData.vOrder; vB++)
             {{
-                int i = j + (inData.uKnot - inData.uOrder) * 4;
+                int i = j + (inData.uKnot - inData.uOrder) * nDep;
                 for (int uB = 0; uB < inData.uOrder; uB++)
                 {{
                     point.x += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;
                     point.y += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;
                     point.z += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;
-                    point.w += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;
                     duPoint.x += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;
                     duPoint.y += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;
                     duPoint.z += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;
                     dvPoint.x += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i).x;
                     dvPoint.y += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+1).x;
                     dvPoint.z += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+2).x;
-                    i += 4;
+                    {computeSplineColor}
+                    i += nDep;
                 }}
-                j += inData.uN * 4;
+                j += inData.uN * nDep;
             }}
+            {postProcessSplineColor}
 
             outData = inData;
 
-            worldPosition = point;
+            worldPosition = point.xyz;
             normal = normalize(cross(duPoint, dvPoint));
             float zScale = 1.0 / (point.z * point.z);
             pixelPer.x = zScale * max(uScreenScale.x * abs(point.x * duPoint.z - duPoint.x * point.z), uScreenScale.y * abs(point.y * duPoint.z - duPoint.y * point.z));
@@ -715,6 +713,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         layout( triangle_strip, max_vertices = 256 ) out;
 
         const int header = 4;
+        const int nDep = {nDep};
 
         in SplineInfo
         {{
@@ -734,7 +733,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         uniform vec3 uLightDirection;
         uniform samplerBuffer uSplineData;
 
-        out vec3 splineColor; // We only output a color to reduce the number of components per vertex.
+        out vec3 splineColor; // We restrict our output to color to reduce the number of components per vertex.
 
         struct SplineInfo
         {{
@@ -794,8 +793,8 @@ class SplineOpenGLFrame(OpenGLFrame):
                 float u = outData.u;
                 ComputeBSpline(header, outData.uOrder, outData.uN, outData.uKnot, u, uBSpline, duBSpline);
 
-                int jOffset = header + outData.uOrder+outData.uN + outData.vOrder+outData.vN + (outData.vKnot - outData.vOrder) * outData.uN * 4;
-                int iOffset = (outData.uKnot - outData.uOrder) * 4;
+                int jOffset = header + outData.uOrder+outData.uN + outData.vOrder+outData.vN + (outData.vKnot - outData.vOrder) * outData.uN * nDep;
+                int iOffset = (outData.uKnot - outData.uOrder) * nDep;
 
                 for (int uSample = 0; uSample < uSamples; uSample++)
                 {{
@@ -807,9 +806,10 @@ class SplineOpenGLFrame(OpenGLFrame):
                     {{
                         ComputeBSpline(header + outData.uOrder+outData.uN, outData.vOrder, outData.vN, outData.vKnot, v, vBSpline, dvBSpline);
 
-                        vec4 point = vec4(0.0, 0.0, 0.0, 0.0);
+                        vec4 point = vec4(0.0, 0.0, 0.0, 1.0);
                         vec3 duPoint = vec3(0.0, 0.0, 0.0);
                         vec3 dvPoint = vec3(0.0, 0.0, 0.0);
+                        {initializeSplineColor}
                         int j = jOffset;
                         for (int vB = 0; vB < outData.vOrder; vB++)
                         {{
@@ -819,26 +819,28 @@ class SplineOpenGLFrame(OpenGLFrame):
                                 point.x += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;
                                 point.y += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;
                                 point.z += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;
-                                point.w += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;
                                 duPoint.x += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;
                                 duPoint.y += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;
                                 duPoint.z += duBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;
                                 dvPoint.x += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i).x;
                                 dvPoint.y += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+1).x;
                                 dvPoint.z += uBSpline[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+2).x;
-                                i += 4;
+                                {computeSplineColor}
+                                i += nDep;
                             }}
-                            j += outData.uN * 4;
+                            j += outData.uN * nDep;
                         }}
+                        {postProcessSplineColor}
                         vec3 normal = normalize(cross(duPoint, dvPoint));
                         float specular = pow(abs(dot(normal, normalize(uLightDirection + point.xyz / length(point)))), 25.0);
-                        splineColor = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * uFillColor.rgb;
+                        splineColor = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * splineColor;
                         gl_Position = uProjectionMatrix * point;
                         EmitVertex();
 
-                        point = vec4(0.0, 0.0, 0.0, 0.0);
+                        point = vec4(0.0, 0.0, 0.0, 1.0);
                         duPoint = vec3(0.0, 0.0, 0.0);
                         dvPoint = vec3(0.0, 0.0, 0.0);
+                        {initializeSplineColor}
                         j = jOffset;
                         for (int vB = 0; vB < outData.vOrder; vB++)
                         {{
@@ -848,20 +850,21 @@ class SplineOpenGLFrame(OpenGLFrame):
                                 point.x += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;
                                 point.y += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;
                                 point.z += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;
-                                point.w += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;
                                 duPoint.x += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i).x;
                                 duPoint.y += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+1).x;
                                 duPoint.z += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uSplineData, i+2).x;
                                 dvPoint.x += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uSplineData, i).x;
                                 dvPoint.y += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+1).x;
                                 dvPoint.z += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uSplineData, i+2).x;
-                                i += 4;
+                                {computeSplineColor}
+                                i += nDep;
                             }}
-                            j += outData.uN * 4;
+                            j += outData.uN * nDep;
                         }}
+                        {postProcessSplineColor}
                         normal = normalize(cross(duPoint, dvPoint));
                         specular = pow(abs(dot(normal, normalize(uLightDirection + point.xyz / length(point)))), 25.0);
-                        splineColor = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * uFillColor.rgb;
+                        splineColor = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * splineColor;
                         gl_Position = uProjectionMatrix * point;
                         EmitVertex();
 
@@ -880,10 +883,11 @@ class SplineOpenGLFrame(OpenGLFrame):
         #version 330 core
      
         in vec3 splineColor;
-        out vec3 color;
+        uniform vec4 uFillColor;
+        out vec4 color;
      
         void main() {
-            color = splineColor;
+            color = vec4(splineColor, uFillColor.a);
         }
     """
 
@@ -900,7 +904,8 @@ class SplineOpenGLFrame(OpenGLFrame):
             float u, v;
             float uInterval, vInterval;
         } inData;
-        in vec4 worldPosition;
+        in vec3 worldPosition;
+        in vec3 splineColor;
         in vec3 normal;
         in vec2 parameters;
         in vec2 pixelPer;
@@ -914,32 +919,33 @@ class SplineOpenGLFrame(OpenGLFrame):
      
         void main()
         {
-            float specular = pow(abs(dot(normal, normalize(uLightDirection + worldPosition.xyz / length(worldPosition)))), 25.0);
+            float specular = pow(abs(dot(normal, normalize(uLightDirection + worldPosition / length(worldPosition)))), 25.0);
             bool line = (uOptions & (1 << 2)) > 0 && (pixelPer.x * (parameters.x - inData.uFirst) < 1.5 || pixelPer.x * (inData.uFirst + inData.uSpan - parameters.x) < 1.5);
             line = line || ((uOptions & (1 << 2)) > 0 && (pixelPer.y * (parameters.y - inData.vFirst) < 1.5 || pixelPer.y * (inData.vFirst + inData.vSpan - parameters.y) < 1.5));
             line = line || ((uOptions & (1 << 3)) > 0 && pixelPer.x * (parameters.x - inData.u) < 1.5);
             line = line || ((uOptions & (1 << 3)) > 0 && pixelPer.y * (parameters.y - inData.v) < 1.5);
-            color = line ? uLineColor : ((uOptions & (1 << 1)) > 0 ? uFillColor : vec4(0.0, 0.0, 0.0, 0.0));
+            color = line ? uLineColor : ((uOptions & (1 << 1)) > 0 ? vec4(splineColor, uFillColor.a) : vec4(0.0, 0.0, 0.0, 0.0));
             color.rgb = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * color.rgb;
             if (color.a == 0.0)
                 discard;
         }
     """
  
-    def __init__(self, *args, **kw):
+    def __init__(self, *args, eye=(0.0, 0.0, 3.0), center=(0.0, 0.0, 0.0), up=(0.0, 1.0, 0.0), **kw):
         OpenGLFrame.__init__(self, *args, **kw)
         self.animate = 0 # Set to number of milliseconds before showing next frame (0 means no animation)
 
         self.splineDrawList = []
+        self.tessellationEnabled = True
+        self.glInitialized = False
         
         self.origin = None
         self.button = None
         self.mode = self.ROTATE
-        self.speed = 0.01
 
-        self.backgroundColor = np.array((0.0, 0.2, 0.2, 1.0), np.float32)
+        self.SetBackgroundColor(0.0, 0.2, 0.2)
 
-        self.SetInitialView((0.0, 0.0, 3.0), (0.0, 0.0, 1.0), (0.0, 1.0, 0.0))
+        self.SetDefaultView(eye, center, up)
         self.ResetView()
 
         self.bind("<ButtonPress>", self.MouseDown)
@@ -948,41 +954,14 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.bind("<MouseWheel>", self.MouseWheel)
         self.bind("<Unmap>", self.Unmap)
 
-        self.computeBSplineCode = self.computeBSplineCode.format(maxOrder=DrawableSpline.maxOrder)
-        self.computeSurfaceSamplesCode = self.computeSurfaceSamplesCode.format(maxOrder=DrawableSpline.maxOrder)
-        self.curveTCShaderCode = self.curveTCShaderCode.format(
-            computeSampleRateCode=self.computeSampleRateCode,
-            computeCurveSamplesCode=self.computeCurveSamplesCode)
-        self.curveTEShaderCode = self.curveTEShaderCode.format(
-            computeBSplineCode=self.computeBSplineCode,
-            maxOrder=DrawableSpline.maxOrder)
-        self.curveGeometryShaderCode = self.curveGeometryShaderCode.format(
-            computeSampleRateCode=self.computeSampleRateCode,
-            computeCurveSamplesCode=self.computeCurveSamplesCode,
-            computeBSplineCode=self.computeBSplineCode,
-            maxOrder=DrawableSpline.maxOrder)
-        self.surfaceTCShaderCode = self.surfaceTCShaderCode.format(
-            computeSampleRateCode=self.computeSampleRateCode,
-            computeSurfaceSamplesCode=self.computeSurfaceSamplesCode)
-        self.surfaceTEShaderCode = self.surfaceTEShaderCode.format(
-            computeBSplineCode=self.computeBSplineCode,
-            maxOrder=DrawableSpline.maxOrder)
-        self.surfaceGeometryShaderCode = self.surfaceGeometryShaderCode.format(
-            computeSampleRateCode=self.computeSampleRateCode,
-            computeSurfaceSamplesCode=self.computeSurfaceSamplesCode,
-            computeBSplineCode=self.computeBSplineCode,
-            maxOrder=DrawableSpline.maxOrder)
-
-        self.tessellationEnabled = True
-        self.glInitialized = False
-
-    def SetInitialView(self, eye, look, up):
+    def SetDefaultView(self, eye, center, up):
         """
-        Set the initial view values used when reseting the view.
+        Set the default view values used when resetting the view.
         """
-        self.initialEye = np.array(eye, np.float32)
-        self.initialLook = np.array(look, np.float32)
-        self.initialUp = np.array(up, np.float32)
+        self.defaultEye = np.array(eye, np.float32)
+        self.defaultCenter = np.array(center, np.float32)
+        self.defaultUp = np.array(up, np.float32)
+        self.defaultUp = self.defaultUp / np.linalg.norm(self.defaultUp)
     
     def SetBackgroundColor(self, r, g=None, b=None, a=None):
         """
@@ -1014,12 +993,15 @@ class SplineOpenGLFrame(OpenGLFrame):
     
     def ResetView(self):
         """
-        Update the view position to initial values.
+        Update the view position to default values.
         """
-        self.eye = self.initialEye.copy()
-        self.look = self.initialLook.copy()
-        self.up = self.initialUp.copy()
-        self.anchorDistance = np.linalg.norm(self.initialEye)
+        self.eye = self.defaultEye.copy()
+        self.look = self.defaultEye - self.defaultCenter
+        self.anchorDistance = np.linalg.norm(self.look)
+        self.anchorDistance = max(self.anchorDistance, 0.01)
+        self.speed = 0.033 * self.anchorDistance
+        self.look = self.look / self.anchorDistance
+        self.up = self.defaultUp.copy()
         self.horizon = np.cross(self.up, self.look)
         self.horizon = self.horizon / np.linalg.norm(self.horizon)
         self.vertical = np.cross(self.look, self.horizon)
@@ -1033,7 +1015,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.CreateGLResources()
             self.glInitialized = True
 
-        self.HandleScreenSizeUpdate()
+        self.ResetBounds()
 
     def CreateGLResources(self):
         """
@@ -1043,35 +1025,48 @@ class SplineOpenGLFrame(OpenGLFrame):
         #print("GL_SHADING_LANGUAGE_VERSION: ", glGetString(GL_SHADING_LANGUAGE_VERSION))
         #print("GL_MAX_TESS_GEN_LEVEL: ", glGetIntegerv(GL_MAX_TESS_GEN_LEVEL))
 
+        # Set up GL texture buffer for spline data
+        self.splineDataBuffer = glGenBuffers(1)
+        self.splineTextureBuffer = glGenTextures(1)
+        glBindBuffer(GL_TEXTURE_BUFFER, self.splineDataBuffer)
+        glBindTexture(GL_TEXTURE_BUFFER, self.splineTextureBuffer)
+        glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, self.splineDataBuffer)
+        glBufferData(GL_TEXTURE_BUFFER, 4 * DrawableSpline._maxFloats, None, GL_STATIC_READ)
+
+        # Set light direction
+        self.lightDirection = np.array((0.63960218, 0.63960218, 0.42640144), np.float32)
+        self.lightDirection = self.lightDirection / np.linalg.norm(self.lightDirection)
+
+        # Bind parameter buffer
+        self.parameterBuffer = glGenBuffers(1)
+        glBindBuffer(GL_ARRAY_BUFFER, self.parameterBuffer)
+        glBufferData(GL_ARRAY_BUFFER, 4 * 4, np.array([0,0,0,0], np.float32), GL_STATIC_DRAW)
+
+        # Compile shaders and link programs
+        self.computeBSplineCode = self.computeBSplineCode.format(maxOrder=DrawableSpline.maxOrder)
+        self.computeSurfaceSamplesCode = self.computeSurfaceSamplesCode.format(maxOrder=DrawableSpline.maxOrder)
         self.tessellationEnabled = True
         try:
-            curveTCShader = shaders.compileShader(self.curveTCShaderCode, GL_TESS_CONTROL_SHADER)
-        except shaders.ShaderCompilationError:
-            self.tessellationEnabled = False
-
-        try:
-            if self.tessellationEnabled:
-                self.curveProgram = shaders.compileProgram(
-                    shaders.compileShader(self.curveVertexShaderCode, GL_VERTEX_SHADER), 
-                    curveTCShader, 
-                    shaders.compileShader(self.curveTEShaderCode, GL_TESS_EVALUATION_SHADER), 
-                    shaders.compileShader(self.curveFragmentShaderCode, GL_FRAGMENT_SHADER))
-                self.surfaceProgram = shaders.compileProgram(
-                    shaders.compileShader(self.surfaceVertexShaderCode, GL_VERTEX_SHADER), 
-                    shaders.compileShader(self.surfaceTCShaderCode, GL_TESS_CONTROL_SHADER), 
-                    shaders.compileShader(self.surfaceTEShaderCode, GL_TESS_EVALUATION_SHADER), 
-                    shaders.compileShader(self.surfaceFragmentShaderCode, GL_FRAGMENT_SHADER),
-                    validate=False) # Validate after assigning textures below
-            else:
-                self.curveProgram = shaders.compileProgram(
-                    shaders.compileShader(self.curveVertexShaderCode, GL_VERTEX_SHADER), 
-                    shaders.compileShader(self.curveGeometryShaderCode, GL_GEOMETRY_SHADER), 
-                    shaders.compileShader(self.curveFragmentShaderCode, GL_FRAGMENT_SHADER))
-                self.surfaceProgram = shaders.compileProgram(
-                    shaders.compileShader(self.surfaceVertexShaderCode, GL_VERTEX_SHADER), 
-                    shaders.compileShader(self.surfaceGeometryShaderCode, GL_GEOMETRY_SHADER), 
-                    shaders.compileShader(self.surfaceSimpleFragmentShaderCode, GL_FRAGMENT_SHADER),
-                    validate=False) # Validate after assigning textures below
+            # Must create CurveProgram first, because it checks and potentially resets tessellationEnabled flag.
+            self.curveProgram = CurveProgram(self)
+            self.surface3Program = SurfaceProgram(self, 3, "", "", "splineColor = uFillColor.rgb;")
+            self.surface4Program = SurfaceProgram(self, 4, "splineColor = vec3(0.0, 0.0, 0.0);",
+                """
+                    splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;
+                """,
+                # Taken from http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
+                # uFillColor is passed in as HSV
+                """
+                    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+                    vec3 p = abs(fract(uFillColor.xxx + K.xyz) * 6.0 - K.www);
+                    splineColor = uFillColor.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), splineColor.r);
+                """)
+            self.surface6Program = SurfaceProgram(self, 6, "splineColor = vec3(0.0, 0.0, 0.0);",
+                """
+                    splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;
+                    splineColor.g += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+4).x;
+                    splineColor.b += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+5).x;
+                """, "")
         except shaders.ShaderCompilationError as exception:
             error = exception.args[0]
             lineNumber = error.split(":")[3]
@@ -1082,62 +1077,22 @@ class SplineOpenGLFrame(OpenGLFrame):
             print(badLine)
             quit()
 
-        self.splineDataBuffer = glGenBuffers(1)
-        self.splineTextureBuffer = glGenTextures(1)
-        glBindBuffer(GL_TEXTURE_BUFFER, self.splineDataBuffer)
-        glBindTexture(GL_TEXTURE_BUFFER, self.splineTextureBuffer)
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, self.splineDataBuffer)
-        glBufferData(GL_TEXTURE_BUFFER, 4 * DrawableSpline._maxFloats, None, GL_STATIC_READ)
-
-        self.parameterBuffer = glGenBuffers(1)
-        glBindBuffer(GL_ARRAY_BUFFER, self.parameterBuffer)
-        glBufferData(GL_ARRAY_BUFFER, 4 * 4, np.array([0,0,0,0], np.float32), GL_STATIC_DRAW)
-
-        glUseProgram(self.curveProgram)
-        self.aCurveParameters = glGetAttribLocation(self.curveProgram, "aParameters")
-        glBindBuffer(GL_ARRAY_BUFFER, self.parameterBuffer)
-        glVertexAttribPointer(self.aCurveParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
-        self.uCurveProjectionMatrix = glGetUniformLocation(self.curveProgram, 'uProjectionMatrix')
-        self.uCurveScreenScale = glGetUniformLocation(self.curveProgram, 'uScreenScale')
-        self.uCurveClipBounds = glGetUniformLocation(self.curveProgram, 'uClipBounds')
-        self.uCurveLineColor = glGetUniformLocation(self.curveProgram, 'uLineColor')
-        self.uCurveSplineData = glGetUniformLocation(self.curveProgram, 'uSplineData')
-        glUniform1i(self.uCurveSplineData, 0) # GL_TEXTURE0 is the spline buffer texture
-
-        glUseProgram(self.surfaceProgram)
-        self.aSurfaceParameters = glGetAttribLocation(self.surfaceProgram, "aParameters")
-        glBindBuffer(GL_ARRAY_BUFFER, self.parameterBuffer)
-        glVertexAttribPointer(self.aSurfaceParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
-        self.uSurfaceProjectionMatrix = glGetUniformLocation(self.surfaceProgram, 'uProjectionMatrix')
-        self.uSurfaceScreenScale = glGetUniformLocation(self.surfaceProgram, 'uScreenScale')
-        self.uSurfaceClipBounds = glGetUniformLocation(self.surfaceProgram, 'uClipBounds')
-        self.uSurfaceFillColor = glGetUniformLocation(self.surfaceProgram, 'uFillColor')
-        self.uSurfaceLineColor = glGetUniformLocation(self.surfaceProgram, 'uLineColor')
-        self.uSurfaceLightDirection = glGetUniformLocation(self.surfaceProgram, 'uLightDirection')
-        self.lightDirection = np.array((0.63960218, 0.63960218, 0.42640144), np.float32)
-        self.lightDirection = self.lightDirection / np.linalg.norm(self.lightDirection)
-        glUniform3fv(self.uSurfaceLightDirection, 1, self.lightDirection)
-        self.uSurfaceOptions = glGetUniformLocation(self.surfaceProgram, 'uOptions')
-        self.uSurfaceSplineData = glGetUniformLocation(self.surfaceProgram, 'uSplineData')
-        glUniform1i(self.uSurfaceSplineData, 0) # GL_TEXTURE0 is the spline buffer texture
-
         glUseProgram(0)
-
         glEnable( GL_DEPTH_TEST )
         glClearColor(self.backgroundColor[0], self.backgroundColor[1], self.backgroundColor[2], self.backgroundColor[3])
 
-    def HandleScreenSizeUpdate(self):
+    def ResetBounds(self):
         """
-        Handle window size update (typically after a window resize).
+        Handle window size and/or clipping plane update (typically after a window resize).
         """
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         xExtent = self.width / self.height
-        clipDistance = np.sqrt(3.0)
-        initialAnchorDistance = np.linalg.norm(self.initialEye)
-        near = 0.01
-        far = initialAnchorDistance + clipDistance
-        top = clipDistance * near / initialAnchorDistance # Choose frustum that displays [-clipDistance,clipDistance] in y for z = -initialAnchorDistance
+        defaultAnchorDistance = np.linalg.norm(self.defaultEye - self.defaultCenter)
+        clipDistance = defaultAnchorDistance / np.sqrt(3.0)
+        near = 0.01 * defaultAnchorDistance / 3.0
+        far = defaultAnchorDistance + clipDistance
+        top = clipDistance * near / defaultAnchorDistance # Choose frustum that displays [-clipDistance,clipDistance] in y for z = -defaultAnchorDistance
         glFrustum(-top*xExtent, top*xExtent, -top, top, near, far)
         #glOrtho(-xExtent, xExtent, -1.0, 1.0, -1.0, 1.0)
 
@@ -1145,16 +1100,12 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.screenScale = np.array((0.5 * self.height * self.projection[0,0], 0.5 * self.height * self.projection[1,1], 1.0), np.float32)
         self.clipBounds = np.array((1.0 / self.projection[0,0], 1.0 / self.projection[1,1], -far, -near), np.float32)
 
-        glUseProgram(self.curveProgram)
-        glUniformMatrix4fv(self.uCurveProjectionMatrix, 1, GL_FALSE, self.projection)
-        glUniform3fv(self.uCurveScreenScale, 1, self.screenScale)
-        glUniform4fv(self.uCurveClipBounds, 1, self.clipBounds)
-        glUseProgram(self.surfaceProgram)
-        glUniformMatrix4fv(self.uSurfaceProjectionMatrix, 1, GL_FALSE, self.projection)
-        glUniform3fv(self.uSurfaceScreenScale, 1, self.screenScale)
-        glUniform4fv(self.uSurfaceClipBounds, 1, self.clipBounds)
-        glUseProgram(0)
+        self.curveProgram.ResetBounds(self)
+        self.surface3Program.ResetBounds(self)
+        self.surface4Program.ResetBounds(self)
+        self.surface6Program.ResetBounds(self)
 
+        glUseProgram(0)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
@@ -1246,9 +1197,9 @@ class SplineOpenGLFrame(OpenGLFrame):
         Parameters
         ----------
         scale : `float`
-            Speed scale betwen 0 and 1.
+            Speed scale between 0 and 1.
         """
-        self.speed = 0.1 * (100.0 ** float(scale) - 1.0) / 99.0
+        self.speed = 0.033 * self.anchorDistance * (100.0 ** float(scale) - 1.0) / 99.0
 
     def MouseDown(self, event):
         """
@@ -1260,6 +1211,8 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         if self.button == 4 or self.button == 5: # MouseWheel
             self.anchorDistance *= 0.9 if self.button == 4 else 1.1
+            self.anchorDistance = max(self.anchorDistance, 0.01)
+            self.speed = 0.033 * self.anchorDistance
             self.eye = self.anchorPosition + self.anchorDistance * self.look
             self.Update()
         
@@ -1272,7 +1225,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         Handle mouse move event.
         """
         self.current = np.array((event.x, event.y), np.float32)
-        if self.mode == self.ROTATE or self.mode == self.PAN:
+        if self.button is not None and (self.mode == self.ROTATE or self.mode == self.PAN):
             self.Update()
 
     def MouseUp(self, event):
@@ -1293,5 +1246,107 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.anchorDistance *= 1.1
         elif event.delta > 0:
             self.anchorDistance *= 0.9
+        self.anchorDistance = max(self.anchorDistance, 0.01)
+        self.speed = 0.033 * self.anchorDistance
         self.eye = self.anchorPosition + self.anchorDistance * self.look
         self.Update()
+
+class CurveProgram:
+    """ Compile curve program """
+    def __init__(self, frame):
+        try:
+            curveTCShader = shaders.compileShader(frame.curveTCShaderCode.format(
+                computeSampleRateCode=frame.computeSampleRateCode,
+                computeCurveSamplesCode=frame.computeCurveSamplesCode), GL_TESS_CONTROL_SHADER)
+        except shaders.ShaderCompilationError:
+            frame.tessellationEnabled = False
+
+        if frame.tessellationEnabled:
+            self.curveProgram = shaders.compileProgram(
+                shaders.compileShader(frame.curveVertexShaderCode, GL_VERTEX_SHADER), 
+                curveTCShader, 
+                shaders.compileShader(frame.curveTEShaderCode.format(
+                    computeBSplineCode=frame.computeBSplineCode,
+                    maxOrder=DrawableSpline.maxOrder), GL_TESS_EVALUATION_SHADER), 
+                shaders.compileShader(frame.curveFragmentShaderCode, GL_FRAGMENT_SHADER))
+        else:
+            self.curveProgram = shaders.compileProgram(
+                shaders.compileShader(frame.curveVertexShaderCode, GL_VERTEX_SHADER), 
+                shaders.compileShader(frame.curveGeometryShaderCode.format(
+                    computeSampleRateCode=frame.computeSampleRateCode,
+                    computeCurveSamplesCode=frame.computeCurveSamplesCode,
+                    computeBSplineCode=frame.computeBSplineCode,
+                    maxOrder=DrawableSpline.maxOrder), GL_GEOMETRY_SHADER), 
+                shaders.compileShader(frame.curveFragmentShaderCode, GL_FRAGMENT_SHADER))
+
+        glUseProgram(self.curveProgram)
+        self.aCurveParameters = glGetAttribLocation(self.curveProgram, "aParameters")
+        glBindBuffer(GL_ARRAY_BUFFER, frame.parameterBuffer)
+        glVertexAttribPointer(self.aCurveParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
+        self.uCurveProjectionMatrix = glGetUniformLocation(self.curveProgram, 'uProjectionMatrix')
+        self.uCurveScreenScale = glGetUniformLocation(self.curveProgram, 'uScreenScale')
+        self.uCurveClipBounds = glGetUniformLocation(self.curveProgram, 'uClipBounds')
+        self.uCurveLineColor = glGetUniformLocation(self.curveProgram, 'uLineColor')
+        self.uCurveSplineData = glGetUniformLocation(self.curveProgram, 'uSplineData')
+        glUniform1i(self.uCurveSplineData, 0) # GL_TEXTURE0 is the spline buffer texture
+    
+    def ResetBounds(self, frame):
+        """Reset bounds and other frame configuration for curve program"""
+        glUseProgram(self.curveProgram)
+        glUniformMatrix4fv(self.uCurveProjectionMatrix, 1, GL_FALSE, frame.projection)
+        glUniform3fv(self.uCurveScreenScale, 1, frame.screenScale)
+        glUniform4fv(self.uCurveClipBounds, 1, frame.clipBounds)
+
+class SurfaceProgram:
+    """ Compile surface program """
+    def __init__(self, frame, nDep, initializeSplineColor, computeSplineColor, postProcessSplineColor):
+        if frame.tessellationEnabled:
+            self.surfaceProgram = shaders.compileProgram(
+                shaders.compileShader(frame.surfaceVertexShaderCode, GL_VERTEX_SHADER), 
+                shaders.compileShader(frame.surfaceTCShaderCode.format(
+                    nDep=nDep,
+                    computeSampleRateCode=frame.computeSampleRateCode,
+                    computeSurfaceSamplesCode=frame.computeSurfaceSamplesCode), GL_TESS_CONTROL_SHADER), 
+                shaders.compileShader(frame.surfaceTEShaderCode.format(
+                    nDep=nDep,
+                    computeBSplineCode=frame.computeBSplineCode,
+                    initializeSplineColor=initializeSplineColor,
+                    computeSplineColor=computeSplineColor,
+                    postProcessSplineColor=postProcessSplineColor,
+                    maxOrder=DrawableSpline.maxOrder), GL_TESS_EVALUATION_SHADER), 
+                shaders.compileShader(frame.surfaceFragmentShaderCode, GL_FRAGMENT_SHADER),
+                validate = False)
+        else:
+            self.surfaceProgram = shaders.compileProgram(
+                shaders.compileShader(frame.surfaceVertexShaderCode, GL_VERTEX_SHADER), 
+                shaders.compileShader(frame.surfaceGeometryShaderCode.format(
+                    nDep=nDep,
+                    computeSampleRateCode=frame.computeSampleRateCode,
+                    computeSurfaceSamplesCode=frame.computeSurfaceSamplesCode,
+                    computeBSplineCode=frame.computeBSplineCode,
+                    initializeSplineColor=initializeSplineColor,
+                    computeSplineColor=computeSplineColor,
+                    postProcessSplineColor=postProcessSplineColor,
+                    maxOrder=DrawableSpline.maxOrder), GL_GEOMETRY_SHADER), 
+                shaders.compileShader(frame.surfaceSimpleFragmentShaderCode, GL_FRAGMENT_SHADER))
+
+        glUseProgram(self.surfaceProgram)
+        self.aSurfaceParameters = glGetAttribLocation(self.surfaceProgram, "aParameters")
+        glBindBuffer(GL_ARRAY_BUFFER, frame.parameterBuffer)
+        glVertexAttribPointer(self.aSurfaceParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
+        self.uSurfaceProjectionMatrix = glGetUniformLocation(self.surfaceProgram, 'uProjectionMatrix')
+        self.uSurfaceScreenScale = glGetUniformLocation(self.surfaceProgram, 'uScreenScale')
+        self.uSurfaceClipBounds = glGetUniformLocation(self.surfaceProgram, 'uClipBounds')
+        self.uSurfaceFillColor = glGetUniformLocation(self.surfaceProgram, 'uFillColor')
+        self.uSurfaceLineColor = glGetUniformLocation(self.surfaceProgram, 'uLineColor')
+        glUniform3fv(glGetUniformLocation(self.surfaceProgram, 'uLightDirection'), 1, frame.lightDirection)
+        self.uSurfaceOptions = glGetUniformLocation(self.surfaceProgram, 'uOptions')
+        self.uSurfaceSplineData = glGetUniformLocation(self.surfaceProgram, 'uSplineData')
+        glUniform1i(self.uSurfaceSplineData, 0) # GL_TEXTURE0 is the spline buffer texture
+    
+    def ResetBounds(self, frame):
+        """Reset bounds and other frame configuration for surface program"""
+        glUseProgram(self.surfaceProgram)
+        glUniformMatrix4fv(self.uSurfaceProjectionMatrix, 1, GL_FALSE, frame.projection)
+        glUniform3fv(self.uSurfaceScreenScale, 1, frame.screenScale)
+        glUniform4fv(self.uSurfaceClipBounds, 1, frame.clipBounds)
