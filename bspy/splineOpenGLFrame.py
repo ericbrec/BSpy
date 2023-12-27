@@ -1225,7 +1225,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         Handle mouse move event.
         """
         self.current = np.array((event.x, event.y), np.float32)
-        if self.mode == self.ROTATE or self.mode == self.PAN:
+        if self.button is not None and (self.mode == self.ROTATE or self.mode == self.PAN):
             self.Update()
 
     def MouseUp(self, event):
