@@ -1025,6 +1025,9 @@ class SplineOpenGLFrame(OpenGLFrame):
         """
         Create OpenGL resources upon creation of the frame and window recovery (un-minimize).
         """
+        if self.glInitialized:
+            return
+        
         #print("GL_VERSION: ", glGetString(GL_VERSION))
         #print("GL_SHADING_LANGUAGE_VERSION: ", glGetString(GL_SHADING_LANGUAGE_VERSION))
         #print("GL_MAX_TESS_GEN_LEVEL: ", glGetIntegerv(GL_MAX_TESS_GEN_LEVEL))
@@ -1091,6 +1094,9 @@ class SplineOpenGLFrame(OpenGLFrame):
         """
         Handle window size and/or clipping plane update (typically after a window resize).
         """
+        if not self.glInitialized:
+            return
+        
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         xExtent = self.width / self.height
@@ -1119,6 +1125,9 @@ class SplineOpenGLFrame(OpenGLFrame):
         """
         Handle `OpenGLFrame` redraw action. Updates view and draws spline list.
         """
+        if not self.glInitialized:
+            return
+        
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT )
         glLoadIdentity()
 

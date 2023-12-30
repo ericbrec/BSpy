@@ -195,7 +195,7 @@ class DrawableSpline(Spline):
                 coefs[0] = xMesh.T
                 coefs[1] = spline.coefs[0]
                 coefs[2] = zMesh.T
-            elif spline.nDep >= 3:
+            else:
                 coefs[:spline.nDep] = spline.coefs
                 # For dimensions above three, rescale dependent variables to [0, 1].
                 for i in range(3, spline.nDep):
@@ -215,7 +215,7 @@ class DrawableSpline(Spline):
                 coefs[1] = spline.coefs[0]
                 coefs[2] = zMesh.T
                 coefs[3] = wMesh.T
-            elif spline.nDep >= 3:
+            else:
                 coefs[:spline.nDep] = spline.coefs
                 # For dimensions above three, rescale dependent variables to [0, 1].
                 for i in range(3, spline.nDep):

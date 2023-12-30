@@ -121,15 +121,23 @@ class bspyApp(tk.Tk):
                     self.work[work[0]](*work[1])
         self.after(200, self._check_for_work)
 
-    def show(self, spline):
-        """Show a `Spline` in the listbox. Can be called before app is running."""
+    def list(self, spline, name = None):
+        """List a `Spline` in the listbox. Can be called before app is running."""
         spline = DrawableSpline.make_drawable(spline)
+        if name is not None:
+            spline.metadata["Name"] = name
         self.splineList.append(spline)
         self.listBox.insert(tk.END, spline)
+
+    def show(self, spline, name = None):
+        """Show a `Spline` in the listbox (calls list method, kept for compatibility). Can be called before app is running."""
+        self.list(spline, name)
         
-    def draw(self, spline):
+    def draw(self, spline, name = None):
         """Add a `Spline` to the listbox and draw it. Can only be called after the app is running."""
         spline = DrawableSpline.make_drawable(spline)
+        if name is not None:
+            spline.metadata["Name"] = name
         self.splineList.append(spline)
         self.listBox.insert(tk.END, spline)
         self.listBox.selection_set(self.listBox.size() - 1)
@@ -316,20 +324,30 @@ class bspyGraphics:
         app = bspyApp(workQueue=self.workQueue)
         app.mainloop()        
 
-    def show(self, spline):
-        """Show a `Spline` in the listbox."""
-        for name, value in self.variableDictionary.items():
-            if value is spline:
-                spline.metadata["Name"] = name
-                break
+    def list(self, spline, name = None):
+        """Add a `Spline` to the listbox."""
+        if name is not None:
+            spline.metadata["Name"] = name
+        elif "Name" not in spline.metadata:
+            for name, value in self.variableDictionary.items():
+                if value is spline:
+                    spline.metadata["Name"] = name
+                    break
         self.workQueue.put(("show", (spline,)))
 
-    def draw(self, spline):
+    def show(self, spline, name = None):
+        """Show a `Spline` in the listbox (calls list method, kept for compatibility)."""
+        self.list(spline, name)
+
+    def draw(self, spline, name = None):
         """Add a `Spline` to the listbox and draw it."""
-        for name, value in self.variableDictionary.items():
-            if value is spline:
-                spline.metadata["Name"] = name
-                break
+        if name is not None:
+            spline.metadata["Name"] = name
+        elif "Name" not in spline.metadata:
+            for name, value in self.variableDictionary.items():
+                if value is spline:
+                    spline.metadata["Name"] = name
+                    break
         self.workQueue.put(("draw", (spline,)))
 
     def erase_all(self):
