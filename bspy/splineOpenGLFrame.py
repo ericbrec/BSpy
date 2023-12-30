@@ -389,9 +389,10 @@ class SplineOpenGLFrame(OpenGLFrame):
             outData.uN = int(texelFetch(uSplineData, 2).x);
             outData.vN = int(texelFetch(uSplineData, 3).x);
             int stride = outData.uN - outData.uOrder + 1;
+            int strides = gl_InstanceID / stride;
 
-            outData.uKnot = min(int(mod(gl_InstanceID, stride)) + outData.uOrder, outData.uN);
-            outData.vKnot = min(int(gl_InstanceID / stride) + outData.vOrder, outData.vN);
+            outData.uKnot = gl_InstanceID - stride * strides + outData.uOrder;
+            outData.vKnot = strides + outData.vOrder;
             outData.uFirst = texelFetch(uSplineData, header + outData.uOrder - 1).x; // uKnots[uOrder-1]
             outData.vFirst = texelFetch(uSplineData, header + outData.uOrder + outData.uN + outData.vOrder - 1).x; // vKnots[vOrder-1]
             outData.uSpan = texelFetch(uSplineData, header + outData.uN).x - outData.uFirst; // uKnots[uN] - uKnots[uOrder-1]
@@ -668,7 +669,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             float dvBSpline[{maxOrder}];
             parameters.y = inData.v + gl_TessCoord.y * inData.vInterval;
             ComputeBSpline(header + inData.uOrder+inData.uN, inData.vOrder, inData.vN, inData.vKnot, parameters.y, vBSpline, dvBSpline);
-            
+
+            {splineColorDeclarations}
+
             vec4 point = vec4(0.0, 0.0, 0.0, 1.0);
             vec3 duPoint = vec3(0.0, 0.0, 0.0);
             vec3 dvPoint = vec3(0.0, 0.0, 0.0);
@@ -781,6 +784,8 @@ class SplineOpenGLFrame(OpenGLFrame):
                 }}
                 int uSamples = int(uFullSamples[1]);
                 int vSamples = int(vFullSamples[1]);
+
+                {splineColorDeclarations}
 
                 float uBSpline[{maxOrder}];
                 float duBSpline[{maxOrder}];
@@ -1021,6 +1026,9 @@ class SplineOpenGLFrame(OpenGLFrame):
         """
         Create OpenGL resources upon creation of the frame and window recovery (un-minimize).
         """
+        if self.glInitialized:
+            return
+        
         #print("GL_VERSION: ", glGetString(GL_VERSION))
         #print("GL_SHADING_LANGUAGE_VERSION: ", glGetString(GL_SHADING_LANGUAGE_VERSION))
         #print("GL_MAX_TESS_GEN_LEVEL: ", glGetIntegerv(GL_MAX_TESS_GEN_LEVEL))
@@ -1045,23 +1053,25 @@ class SplineOpenGLFrame(OpenGLFrame):
         # Compile shaders and link programs
         self.computeBSplineCode = self.computeBSplineCode.format(maxOrder=DrawableSpline.maxOrder)
         self.computeSurfaceSamplesCode = self.computeSurfaceSamplesCode.format(maxOrder=DrawableSpline.maxOrder)
-        self.tessellationEnabled = True
         try:
             # Must create CurveProgram first, because it checks and potentially resets tessellationEnabled flag.
             self.curveProgram = CurveProgram(self)
-            self.surface3Program = SurfaceProgram(self, 3, "", "", "splineColor = uFillColor.rgb;")
-            self.surface4Program = SurfaceProgram(self, 4, "splineColor = vec3(0.0, 0.0, 0.0);",
+            self.surface3Program = SurfaceProgram(self, 3, "", "", "", "splineColor = uFillColor.rgb;")
+            self.surface4Program = SurfaceProgram(self, 4,
+                """
+                    vec4 kVec = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+                    vec3 pVec;
+                """, "splineColor = vec3(0.0, 0.0, 0.0);",
                 """
                     splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;
                 """,
                 # Taken from http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
                 # uFillColor is passed in as HSV
                 """
-                    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-                    vec3 p = abs(fract(uFillColor.xxx + K.xyz) * 6.0 - K.www);
-                    splineColor = uFillColor.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), splineColor.r);
+                    pVec = abs(fract(uFillColor.xxx + kVec.xyz) * 6.0 - kVec.www);
+                    splineColor = uFillColor.z * mix(kVec.xxx, clamp(pVec - kVec.xxx, 0.0, 1.0), splineColor.r);
                 """)
-            self.surface6Program = SurfaceProgram(self, 6, "splineColor = vec3(0.0, 0.0, 0.0);",
+            self.surface6Program = SurfaceProgram(self, 6, "", "splineColor = vec3(0.0, 0.0, 0.0);",
                 """
                     splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;
                     splineColor.g += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+4).x;
@@ -1085,6 +1095,9 @@ class SplineOpenGLFrame(OpenGLFrame):
         """
         Handle window size and/or clipping plane update (typically after a window resize).
         """
+        if not self.glInitialized:
+            return
+        
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         xExtent = self.width / self.height
@@ -1113,6 +1126,9 @@ class SplineOpenGLFrame(OpenGLFrame):
         """
         Handle `OpenGLFrame` redraw action. Updates view and draws spline list.
         """
+        if not self.glInitialized:
+            return
+        
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT )
         glLoadIdentity()
 
@@ -1299,7 +1315,7 @@ class CurveProgram:
 
 class SurfaceProgram:
     """ Compile surface program """
-    def __init__(self, frame, nDep, initializeSplineColor, computeSplineColor, postProcessSplineColor):
+    def __init__(self, frame, nDep, splineColorDeclarations, initializeSplineColor, computeSplineColor, postProcessSplineColor):
         if frame.tessellationEnabled:
             self.surfaceProgram = shaders.compileProgram(
                 shaders.compileShader(frame.surfaceVertexShaderCode, GL_VERTEX_SHADER), 
@@ -1310,6 +1326,7 @@ class SurfaceProgram:
                 shaders.compileShader(frame.surfaceTEShaderCode.format(
                     nDep=nDep,
                     computeBSplineCode=frame.computeBSplineCode,
+                    splineColorDeclarations=splineColorDeclarations,
                     initializeSplineColor=initializeSplineColor,
                     computeSplineColor=computeSplineColor,
                     postProcessSplineColor=postProcessSplineColor,
@@ -1324,6 +1341,7 @@ class SurfaceProgram:
                     computeSampleRateCode=frame.computeSampleRateCode,
                     computeSurfaceSamplesCode=frame.computeSurfaceSamplesCode,
                     computeBSplineCode=frame.computeBSplineCode,
+                    splineColorDeclarations=splineColorDeclarations,
                     initializeSplineColor=initializeSplineColor,
                     computeSplineColor=computeSplineColor,
                     postProcessSplineColor=postProcessSplineColor,

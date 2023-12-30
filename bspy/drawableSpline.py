@@ -195,7 +195,7 @@ class DrawableSpline(Spline):
                 coefs[0] = xMesh.T
                 coefs[1] = spline.coefs[0]
                 coefs[2] = zMesh.T
-            elif spline.nDep >= 3:
+            else:
                 coefs[:spline.nDep] = spline.coefs
                 # For dimensions above three, rescale dependent variables to [0, 1].
                 for i in range(3, spline.nDep):
@@ -215,7 +215,7 @@ class DrawableSpline(Spline):
                 coefs[1] = spline.coefs[0]
                 coefs[2] = zMesh.T
                 coefs[3] = wMesh.T
-            elif spline.nDep >= 3:
+            else:
                 coefs[:spline.nDep] = spline.coefs
                 # For dimensions above three, rescale dependent variables to [0, 1].
                 for i in range(3, spline.nDep):
@@ -381,7 +381,7 @@ class DrawableSpline(Spline):
             if axis == 0:
                 i1 = 1
                 i2 = 2
-                coefSlice = (index, fullSlice, fullSlice, fullSlice)
+                coefSlice = (fullSlice, fullSlice, index, fullSlice)
             elif axis == 1:
                 i1 = 0
                 i2 = 2
@@ -389,7 +389,7 @@ class DrawableSpline(Spline):
             else:
                 i1 = 0
                 i2 = 1
-                coefSlice = (fullSlice, fullSlice, index, fullSlice)
+                coefSlice = (index, fullSlice, fullSlice, fullSlice)
 
             glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
             offset = 0

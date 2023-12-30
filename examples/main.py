@@ -33,27 +33,27 @@ if __name__=='__main__':
     ds1 = DrawableSpline.make_drawable(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: np.sin(4*np.sqrt(x*x + y*y))))
     ds2 = DrawableSpline.make_drawable(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: x*x + y*y - 1))
     ds3 = DrawableSpline.make_drawable(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: x*x - y*y))
-    app.show(ds1)
-    app.show(ds2)
-    app.show(ds3)
+    app.list(ds1, "Surface1")
+    app.list(ds2, "Surface2")
+    app.list(ds3, "Surface3")
     coefs = np.zeros((6, *ds1.nCoef), ds1.coefs.dtype)
     coefs[:3] = ds1.coefs
     coefs[3:6] = ds1.coefs
     cs1 = Spline(2, 6, ds1.order, ds1.nCoef, ds1.knots, coefs)
-    app.show(cs1)
+    app.list(cs1, "Surface1 6D")
     coefs = np.zeros((5, *ds2.nCoef), ds2.coefs.dtype)
     coefs[:3] = ds2.coefs
     coefs[3] = ds2.coefs[0]
     coefs[4] = ds2.coefs[2]
     cs2 = Spline(2, 5, ds2.order, ds2.nCoef, ds2.knots, coefs)
-    app.show(cs2)
+    app.list(cs2, "Surface2 5D")
     coefs = np.zeros((4, *ds3.nCoef), ds3.coefs.dtype)
     coefs[:3] = ds3.coefs
     coefs[3] = ds3.coefs[0]
     cs3 = Spline(2, 4, ds3.order, ds3.nCoef, ds3.knots, coefs)
-    app.show(cs3)
+    app.list(cs3, "Surface3 4D")
     for i in range(8):
-        app.show(Spline(1, 1, (3,), (5,), (np.array((-1.0, -0.6, -0.2, 0.2, 0.6, 1.0, 1.0, 1.0)),), np.array((0, i/8.0, 0, -i/8.0, 0))))
-    app.show(Spline.load("C:/Users/ericb/OneDrive/Desktop/TomsNasty.npz", DrawableSpline))
-    app.show(Create4Sphere(5))
+        app.list(Spline(1, 1, (3,), (5,), (np.array((-1.0, -0.6, -0.2, 0.2, 0.6, 1.0, 1.0, 1.0)),), np.array((0, i/8.0, 0, -i/8.0, 0))))
+    app.list(Spline.load("C:/Users/ericb/OneDrive/Desktop/TomsNasty.npz", DrawableSpline))
+    app.list(Create4Sphere(5), "Solid1")
     app.mainloop()
