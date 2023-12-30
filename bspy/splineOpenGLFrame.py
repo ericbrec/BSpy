@@ -389,9 +389,10 @@ class SplineOpenGLFrame(OpenGLFrame):
             outData.uN = int(texelFetch(uSplineData, 2).x);
             outData.vN = int(texelFetch(uSplineData, 3).x);
             int stride = outData.uN - outData.uOrder + 1;
+            int strides = gl_InstanceID / stride;
 
-            outData.uKnot = min(int(mod(gl_InstanceID, stride)) + outData.uOrder, outData.uN);
-            outData.vKnot = min(int(gl_InstanceID / stride) + outData.vOrder, outData.vN);
+            outData.uKnot = gl_InstanceID - stride * strides + outData.uOrder;
+            outData.vKnot = strides + outData.vOrder;
             outData.uFirst = texelFetch(uSplineData, header + outData.uOrder - 1).x; // uKnots[uOrder-1]
             outData.vFirst = texelFetch(uSplineData, header + outData.uOrder + outData.uN + outData.vOrder - 1).x; // vKnots[vOrder-1]
             outData.uSpan = texelFetch(uSplineData, header + outData.uN).x - outData.uFirst; // uKnots[uN] - uKnots[uOrder-1]
