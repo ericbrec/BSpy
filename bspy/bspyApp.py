@@ -130,11 +130,11 @@ class bspyApp(tk.Tk):
         self.listBox.insert(tk.END, spline)
 
     def show(self, spline, name = None):
-        """Show a `Spline` in the listbox (calls list method, kept for compatibility). Can be called before app is running."""
+        """Show a `Spline` in the listbox (calls the list method, kept for compatibility). Can be called before app is running."""
         self.list(spline, name)
         
     def draw(self, spline, name = None):
-        """Add a `Spline` to the listbox and draw it. Can only be called after the app is running."""
+        """Add a `Spline` to the listbox and draw it. Can be called before the app is running."""
         spline = DrawableSpline.make_drawable(spline)
         if name is not None:
             spline.metadata["Name"] = name
@@ -197,7 +197,7 @@ class bspyApp(tk.Tk):
 
         if gotOne:
             newRadius = 0.5 * np.max(splineMax - splineMin)
-            if newRadius > self.splineRadius:
+            if not np.isclose(newRadius, self.splineRadius):
                 self.splineRadius = newRadius
                 atDefaultEye = np.allclose(self.frame.eye, self.frame.defaultEye)
                 center = 0.5 * (splineMax + splineMin)
@@ -205,6 +205,8 @@ class bspyApp(tk.Tk):
                 self.frame.ResetBounds()
                 if atDefaultEye:
                     self.frame.ResetView()
+        else:
+            self.splineRadius = 0.0
 
         if self.adjust is not None:
             if self.frame.splineDrawList: 
@@ -325,7 +327,7 @@ class bspyGraphics:
         app.mainloop()        
 
     def list(self, spline, name = None):
-        """Add a `Spline` to the listbox."""
+        """List a `Spline` in the listbox."""
         if name is not None:
             spline.metadata["Name"] = name
         elif "Name" not in spline.metadata:

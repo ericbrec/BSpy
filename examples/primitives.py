@@ -9,6 +9,6 @@ myTorus = bspy.Spline.torus(1.0, 2.0, 1.0e-8)
 
 if __name__=='__main__':
     app = bspy.bspyApp()
-    app.show(mySphere, 'mySphere')
+    app.list(mySphere, 'mySphere')
     app.draw(myTorus, 'myTorus')
     app.mainloop()
