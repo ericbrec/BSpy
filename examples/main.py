@@ -54,6 +54,6 @@ if __name__=='__main__':
     app.list(cs3, "Surface3 4D")
     for i in range(8):
         app.list(Spline(1, 1, (3,), (5,), (np.array((-1.0, -0.6, -0.2, 0.2, 0.6, 1.0, 1.0, 1.0)),), np.array((0, i/8.0, 0, -i/8.0, 0))))
-    app.list(Spline.load("C:/Users/ericb/OneDrive/Desktop/TomsNasty.npz", DrawableSpline))
+    app.list(Spline.load("examples/TomsNasty.json"))
     app.list(Create4Sphere(5), "Solid1")
     app.mainloop()
