@@ -322,6 +322,12 @@ class DrawableSpline(Spline):
         else:
             raise ValueError("Can't draw surface.")
         
+        useBlending = fillColor[3] < 1.0
+        if useBlending:
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+            glEnable( GL_BLEND )
+            glDisable( GL_DEPTH_TEST )
+
         glUseProgram(program.surfaceProgram)
         glUniform4fv(program.uSurfaceFillColor, 1, fillColor)
         glUniform4fv(program.uSurfaceLineColor, 1, self.get_line_color())
@@ -348,6 +354,9 @@ class DrawableSpline(Spline):
             glFlush() # Old graphics card
         glDisableVertexAttribArray(program.aSurfaceParameters)
         glUseProgram(0)
+        if useBlending:
+            glDisable( GL_BLEND )
+            glEnable( GL_DEPTH_TEST )
     
     def _DrawSolid(self, frame, drawCoefficients):
         """
