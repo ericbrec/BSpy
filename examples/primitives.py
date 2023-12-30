@@ -14,8 +14,11 @@ crv4 = [[0, 0], [1, 0], [0, 1]] @ bspy.Spline.section([[0.0, 0.0, 90.0, -0.7], [
 patch40 = bspy.Spline.four_sided_patch(crv1, crv2, crv3, crv4, 0.0)
 patch405 = bspy.Spline.four_sided_patch(crv1, crv2, crv3, crv4, 0.5)
 patch41 = bspy.Spline.four_sided_patch(crv1, crv2, crv3, crv4, 1.0)
+patch40 = bspy.DrawableSpline.make_drawable(patch40)
 patch40.set_fill_color(0.0, 0.8, 0.2, 0.6)
+patch405 = bspy.DrawableSpline.make_drawable(patch405)
 patch405.set_fill_color(0.0, 0.6, 0.4, 0.8)
+patch41 = bspy.DrawableSpline.make_drawable(patch41)
 patch41.set_fill_color(0.0, 0.4, 0.6, 1.0)
 bottomSurf = bspy.Spline(2, 3, [4, 4], [4, 4], 2 * [[0.0, 0, 0, 0, 1, 1, 1, 1]],
                                          [4 * [0.0, 0.3, 0.7, 1],
@@ -30,15 +33,8 @@ if __name__=='__main__':
     app = bspy.bspyApp()
     app.list(mySphere, 'mySphere')
     app.list(myTorus, 'myTorus')
-    app.list(patch40, 'patch40')
-    app.list(patch405, 'patch405')
-    app.list(patch41, 'patch41')
+    app.draw(patch40, 'patch40')
+    app.draw(patch405, 'patch405')
+    app.draw(patch41, 'patch41')
     app.list(mySolid, 'mySolid')
-    app.mainloop()
-
-
-if __name__=='__main__':
-    app = bspy.bspyApp()
-    app.list(mySphere, 'mySphere')
-    app.draw(myTorus, 'myTorus')
     app.mainloop()
