@@ -381,7 +381,7 @@ class DrawableSpline(Spline):
             if axis == 0:
                 i1 = 1
                 i2 = 2
-                coefSlice = (index, fullSlice, fullSlice, fullSlice)
+                coefSlice = (fullSlice, fullSlice, index, fullSlice)
             elif axis == 1:
                 i1 = 0
                 i2 = 2
@@ -389,7 +389,7 @@ class DrawableSpline(Spline):
             else:
                 i1 = 0
                 i2 = 1
-                coefSlice = (fullSlice, fullSlice, index, fullSlice)
+                coefSlice = (index, fullSlice, fullSlice, fullSlice)
 
             glBindBuffer(GL_TEXTURE_BUFFER, frame.splineDataBuffer)
             offset = 0
