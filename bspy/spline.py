@@ -1,5 +1,6 @@
 import numpy as np
 from os import path
+import json
 import bspy._spline_domain
 import bspy._spline_evaluation
 import bspy._spline_intersection
@@ -1108,15 +1109,12 @@ class Spline:
     @staticmethod
     def load(fileName, splineType=None):
         """
-        Load a spline from the specified filename (full path).
+        Load a spline in json format from the specified filename (full path).
 
         Parameters
         ----------
         fileName : `string`
             The full path to the file containing the spline. Can be a relative path.
-        
-        splineType : `type`, optional
-            The class type that should be created. It must be an instance of Spline (the default).
         
         Returns
         -------
@@ -1125,24 +1123,13 @@ class Spline:
 
         See Also
         --------
-        `save` : Save a spline to the specified filename (full path).
-
-        Notes
-        -----
-        Uses numpy's load function.
+        `save` : Save a spline in json format to the specified filename (full path).
         """
-        kw = np.load(fileName)
-        order = kw["order"]
-        nInd = len(order)
-        knots = []
-        for i in range(nInd):
-            knots.append(kw[f"knots{i}"])
-        coefficients = kw["coefficients"]
+        with open(fileName, 'r', encoding='utf-8') as file:
+            splineDict = json.load(file)
 
-        if splineType is None:
-            splineType = Spline
-        spline = splineType(nInd, coefficients.shape[0], order, coefficients.shape[1:], knots, coefficients, metadata=dict(Path=path, Name=path.splitext(path.split(fileName)[1])[0]))
-        return spline
+        return Spline(splineDict["nInd"], splineDict["nDep"], splineDict["order"], splineDict["nCoef"],
+            [np.array(knots) for knots in splineDict["knots"]], np.array(splineDict["coefs"]), splineDict["accuracy"], splineDict["metadata"])
 
     def multiply(self, other, indMap = None, productType = 'S'):
         """
@@ -1427,7 +1414,7 @@ class Spline:
     
     def save(self, fileName):
         """
-        Save a spline to the specified filename (full path).
+        Save a spline in json format to the specified filename (full path).
 
         Parameters
         ----------
@@ -1437,17 +1424,26 @@ class Spline:
         See Also
         --------
         `load` : Load a spline from the specified filename (full path).
-
-        Notes
-        -----
-        Uses numpy's savez function. Accuracy and metadata are not saved.
         """
-        kw = {}
-        kw["order"] = order=np.array(self.order, np.int32)
-        for i in range(len(self.knots)):
-            kw[f"knots{i}"] = self.knots[i]
-        kw["coefficients"] = self.coefs
-        np.savez(fileName, **kw )
+        class SplineEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, np.ndarray):
+                    return obj.tolist()
+                if isinstance(obj, Spline):
+                    return {
+                        "nInd" : obj.nInd,
+                        "nDep" : obj.nDep,
+                        "order" : obj.order,
+                        "nCoef" : obj.nCoef,
+                        "knots" : obj.knots,
+                        "coefs" : obj.coefs,
+                        "accuracy" : obj.accuracy,
+                        "metadata" : obj.metadata
+                    }
+                return super().default(obj)
+
+        with open(fileName, 'w', encoding='utf-8') as file:
+            json.dump(self, file, indent=4, cls=SplineEncoder)
 
     def scale(self, multiplier):
         """
