@@ -10090,4 +10090,4 @@ if __name__=='__main__':
         (-0.2599999999999999, 0.1231608688396116, -1.1996283909327388),
         (-0.2599999999999999, 0.17470808987183925, -1.2)], np.float32)
     spline = Spline(2, 3, (4, 5), (900, 11), [uKnots, vKnots], coefficients)
-    spline.save("C:/Users/ericb/OneDrive/Desktop/tomsnasty")
+    spline.save("C:/Users/thoma/Github/bspy/examples/tomsnasty")

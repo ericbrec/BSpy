@@ -828,6 +828,50 @@ class Spline:
         """
         return bspy._spline_domain.fold(self, foldedInd)
     
+    def four_sided_patch(bottom, right, top, left, surfParam = 0.5):
+        """
+        Construct a surface from its four boundary curves.
+    
+        Parameters
+        ----------
+        bottom : `Spline`
+            A curve which represents the bottom edge of the resulting surface.
+        
+        right : `Spline`
+            A curve which represents the right edge of the resulting surface.
+
+        top : `Spline`
+            A curve which represents the top edge of the resulting surface.
+
+        left : `Spline`
+            A curve which represents the left edge of the resulting surface.
+    
+        surfParam : scalar
+            A scalar which selects which member of a one parameter family of interpolating
+            surfaces to return.  surfParam = 0.0 will return the Coons patch.  surfParam = 1.0
+            will return the surface for which each dependent variable approximately solves the
+            Laplace equation for which the four boundary curves are the Dirichlet boundary
+            conditions.  Other values of surfParam will return the appropriate affine combination
+            of those two surfaces.
+    
+        Returns
+        -------
+        surface : `Spline`
+            The spline surface requested by the input curves and surfParam.
+
+        See Also
+        --------
+        `common_basis` : Determine a common B-spline basis for two or more splines.
+    
+        Notes
+        -----
+        The variables bottom, right, top, and left are notional in the sense that the curves can
+        be given in any order.  This method does the best possible job of matching endpoints, so
+        the roles of "right," "top," and "left" may very well get reassigned.  Moreover, the
+        parametrization of the curves may also get reversed in order to best match endpoints.
+        """
+        return bspy._spline_fitting.four_sided_patch(bottom, right, top, left, surfParam)
+
     def graph(self):
         """
         Generate the spline which is the graph of the given spline.
@@ -850,6 +894,23 @@ class Spline:
         """
         return bspy._spline_operations.graph(self)
     
+    def greville(self, ind = 0):
+        """
+        Compute and return the Greville abscissae (knot averages) for the given independent
+        variable.
+        
+        Returns
+        -------
+        knotAvgs: `numpy.array`
+            An array with the knot averages for the specified independent variable.
+
+        Notes
+        -----
+        The Greville abscissae always satisfy the interlacing conditions, so can be used as
+        valid collocation points, interpolation points, or quadrature points.
+        """
+        return bspy._spline_operations.greville(self, ind)
+        
     def insert_knots(self, newKnots):
         """
         Insert new knots into a spline.
