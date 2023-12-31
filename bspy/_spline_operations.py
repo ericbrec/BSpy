@@ -253,18 +253,14 @@ def dot(self, vector):
         return type(self)(self.nInd, 1, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
 
 def graph(self):
-    splineDomain = self.domain()
-    uvwSplines = [bspy.Spline(1, 1, [self.order[ind]], [self.nCoef[ind]], [self.knots[ind]],
-                              self.greville(ind)) for ind in range(self.nInd)]
-    graphSpline = uvwSplines[0]
-    for nextSpline in uvwSplines[1:]:
-        graphMat = list(np.block([[np.identity(graphSpline.nInd)], [0.0]]))
-        nextMat = list(np.block([[np.zeros((graphSpline.nInd, 1))], [1.0]]))
-        graphSpline = (graphMat @ graphSpline).add(nextMat @ nextSpline)
-    graphMat = list(np.block([[np.identity(graphSpline.nInd)], [np.zeros((self.nDep, graphSpline.nInd))]]))
-    selfMat = list(np.block([[np.zeros((graphSpline.nInd, self.nDep))], [np.identity(self.nDep)]]))
-    finalGraph = graphMat @ graphSpline + selfMat @ self
-    return finalGraph
+    self = self.clamp(range(self.nInd), range(self.nInd))
+    coefs = np.insert(self.coefs, self.nInd * (0,), 0.0, axis = 0)
+    for nInd, order, nCoef, knots in zip(range(self.nInd), self.order, self.nCoef, self.knots):
+        dep = np.swapaxes(coefs, nInd + 1, 1)[nInd] # Returns a view, so changes to dep make changes to coefs
+        dep[0] = knots[1]
+        for i in range(1, nCoef):
+            dep[i] = dep[i - 1] + (knots[i + order - 1] - knots[i])/(order - 1)
+    return type(self)(self.nInd, self.nInd + self.nDep, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
 
 def greville(self, ind = 0):
     if ind < 0 or ind >= self.nInd:  raise ValueError("Invalid independent variable")
