@@ -183,18 +183,17 @@ class DrawableSpline(Spline):
         coefs = np.zeros((nDep, *spline.nCoef), np.float32)
         if spline.nInd == 1:
             if spline.nDep == 1:
-                coefs[0] = np.linspace(knotList[0][spline.order[0] - 1], knotList[0][spline.nCoef[0]], spline.nCoef[0], dtype=np.float32)
-                coefs[1] = spline.coefs[0]
+                spline = spline.graph()
+                coefs[0] = spline.coefs[0]
+                coefs[1] = spline.coefs[1]
             else:
                 coefs[:min(spline.nDep, 3)] = spline.coefs[:min(spline.nDep, 3)]
         elif spline.nInd == 2:
             if spline.nDep == 1:
-                xValues = np.linspace(knotList[0][spline.order[0] - 1], knotList[0][spline.nCoef[0]], spline.nCoef[0], dtype=np.float32)[:]
-                zValues = np.linspace(knotList[1][spline.order[1] - 1], knotList[1][spline.nCoef[1]], spline.nCoef[1], dtype=np.float32)[:]
-                xMesh, zMesh = np.meshgrid(xValues, zValues)
-                coefs[0] = xMesh.T
-                coefs[1] = spline.coefs[0]
-                coefs[2] = zMesh.T
+                spline = spline.graph()
+                coefs[0] = spline.coefs[0]
+                coefs[1] = spline.coefs[2]
+                coefs[2] = spline.coefs[1]
             else:
                 coefs[:spline.nDep] = spline.coefs
                 # For dimensions above three, rescale dependent variables to [0, 1].
@@ -207,14 +206,11 @@ class DrawableSpline(Spline):
                         coefs[i] = 1.0
         elif spline.nInd == 3:
             if spline.nDep == 1:
-                xValues = np.linspace(knotList[0][spline.order[0] - 1], knotList[0][spline.nCoef[0]], spline.nCoef[0], dtype=np.float32)[:]
-                zValues = np.linspace(knotList[1][spline.order[1] - 1], knotList[1][spline.nCoef[1]], spline.nCoef[1], dtype=np.float32)[:]
-                wValues = np.linspace(knotList[2][spline.order[1] - 1], knotList[2][spline.nCoef[1]], spline.nCoef[2], dtype=np.float32)[:]
-                xMesh, zMesh, wMesh = np.meshgrid(xValues, zValues, wValues)
-                coefs[0] = xMesh.T
-                coefs[1] = spline.coefs[0]
-                coefs[2] = zMesh.T
-                coefs[3] = wMesh.T
+                spline = spline.graph()
+                coefs[0] = spline.coefs[0]
+                coefs[1] = spline.coefs[3]
+                coefs[2] = spline.coefs[1]
+                coefs[3] = spline.coefs[2]
             else:
                 coefs[:spline.nDep] = spline.coefs
                 # For dimensions above three, rescale dependent variables to [0, 1].
