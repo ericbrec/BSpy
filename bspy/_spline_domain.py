@@ -1,7 +1,7 @@
 import numpy as np
 
 def clamp(self, left, right):
-    bounds = self.nInd * [[None, None]]
+    bounds = [[None, None] for ind in range(self.nInd)]
 
     for ind in left:
         bounds[ind][0] = self.knots[ind][self.order[ind]-1]
