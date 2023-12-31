@@ -15,11 +15,11 @@ patch40 = bspy.Spline.four_sided_patch(crv1, crv2, crv3, crv4, 0.0)
 patch405 = bspy.Spline.four_sided_patch(crv1, crv2, crv3, crv4, 0.5)
 patch41 = bspy.Spline.four_sided_patch(crv1, crv2, crv3, crv4, 1.0)
 patch40 = bspy.DrawableSpline.make_drawable(patch40)
-patch40.set_fill_color(0.0, 0.8, 0.2, 0.6)
+patch40.set_fill_color(0.0, 0.8, 0.2, 0.5)
 patch405 = bspy.DrawableSpline.make_drawable(patch405)
-patch405.set_fill_color(0.0, 0.6, 0.4, 0.8)
+patch405.set_fill_color(0.0, 0.8, 0.2, 0.5)
 patch41 = bspy.DrawableSpline.make_drawable(patch41)
-patch41.set_fill_color(0.0, 0.4, 0.6, 1.0)
+patch41.set_fill_color(0.0, 0.8, 0.2, 0.5)
 bottomSurf = bspy.Spline(2, 3, [4, 4], [4, 4], 2 * [[0.0, 0, 0, 0, 1, 1, 1, 1]],
                                          [4 * [0.0, 0.3, 0.7, 1],
                                           [0.0, 0, 0, 0, 0.3, 0.3, 0.3, 0.3,
