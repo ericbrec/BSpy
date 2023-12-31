@@ -254,8 +254,8 @@ def dot(self, vector):
 
 def graph(self):
     splineDomain = self.domain()
-    uvwSplines = [bspy.Spline(1, 1, [2], [2], [[uLow, uLow, uHigh, uHigh]],
-                              [[uLow, uHigh]]) for uLow, uHigh in splineDomain]
+    uvwSplines = [bspy.Spline(1, 1, [self.order[ind]], [self.nCoef[ind]], [self.knots[ind]],
+                              self.greville(ind)) for ind in range(self.nInd)]
     graphSpline = uvwSplines[0]
     for nextSpline in uvwSplines[1:]:
         graphMat = list(np.block([[np.identity(graphSpline.nInd)], [0.0]]))
