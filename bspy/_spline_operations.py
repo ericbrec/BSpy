@@ -255,11 +255,10 @@ def dot(self, vector):
 def graph(self):
     self = self.clamp(range(self.nInd), range(self.nInd))
     coefs = np.insert(self.coefs, self.nInd * (0,), 0.0, axis = 0)
-    for nInd, order, nCoef, knots in zip(range(self.nInd), self.order, self.nCoef, self.knots):
+    for nInd in range(self.nInd):
         dep = np.swapaxes(coefs, nInd + 1, 1)[nInd] # Returns a view, so changes to dep make changes to coefs
-        dep[0] = knots[1]
-        for i in range(1, nCoef):
-            dep[i] = dep[i - 1] + (knots[i + order - 1] - knots[i])/(order - 1)
+        for i, knotAvg in enumerate(self.greville(nInd)):
+            dep[i] = knotAvg
     return type(self)(self.nInd, self.nInd + self.nDep, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
 
 def greville(self, ind = 0):

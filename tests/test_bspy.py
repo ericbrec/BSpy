@@ -852,6 +852,7 @@ def test_graph():
                              [0.0, 0, 0, 0, 0.6, 1, 1, 1, 1]], [[1.0, 2, 3, 4, 2, 3, 4, 5,
                               3, 4, 5, 6, 4, 5, 6, 7, 5, 6, 7, 8]])
     graphFunc = simpleFunc.graph()
+    print(graphFunc.coefs[0,3,4] - 1.0, np.finfo(float).eps)
     uvfPoint = graphFunc([0.27, 0.83])
     assert abs(uvfPoint[0] - 0.27) <= 4.0 * np.finfo(float).eps
     assert abs(uvfPoint[1] - 0.83) <= 4.0 * np.finfo(float).eps
