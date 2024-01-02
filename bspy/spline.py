@@ -1168,7 +1168,7 @@ class Spline:
         return bspy._spline_fitting.line(startPoint, endPoint)
     
     @staticmethod
-    def load(fileName, splineType=None):
+    def load(fileName):
         """
         Load a spline in json format from the specified filename (full path).
 
@@ -1186,6 +1186,20 @@ class Spline:
         --------
         `save` : Save a spline in json format to the specified filename (full path).
         """
+        # First try numpy's load function for backward compatibility with original file format.
+        try:
+            kw = np.load(fileName)
+            order = kw["order"]
+            nInd = len(order)
+            knots = []
+            for i in range(nInd):
+                knots.append(kw[f"knots{i}"])
+            coefficients = kw["coefficients"]
+            return Spline(nInd, coefficients.shape[0], order, coefficients.shape[1:], knots, coefficients, metadata=dict(Path=path, Name=path.splitext(path.split(fileName)[1])[0]))
+        except:
+            pass # Do nothing, an error is expected for json files
+        
+        # Load json file.
         with open(fileName, 'r', encoding='utf-8') as file:
             splineDict = json.load(file)
 
