@@ -146,7 +146,7 @@ A dictionary of ancillary data to store with the spline</li>
 <p><code><a href="spline.html">bspy.spline</a></code>:  A class to model, represent, and process piecewise polynomial tensor product
 functions (spline functions) as linear combinations of B-splines. <br />
 <code><a href="#DrawableSpline.make_drawable">make_drawable</a></code>:  Convert a <code>Spline</code> into a <code><a href="#DrawableSpline">DrawableSpline</a></code> that can be drawn in a <code>SplineOpenGLFrame</code>. Converts 
-1D splines into 3D curves and 2D splines into surfaces (y-axis hold amplitude).  </p>
+1D splines into 3D curves, 2D splines into surfaces (y-axis hold amplitude), and 3D splines into solids.  </p>
 </div>
 
 
@@ -272,7 +272,10 @@ functions (spline functions) as linear combinations of B-splines. <br />
     <a class="headerlink" href="#DrawableSpline.make_drawable"></a>
     
             <div class="docstring"><p>Convert a <code>Spline</code> into a <code><a href="#DrawableSpline">DrawableSpline</a></code> that can be drawn in a <code>SplineOpenGLFrame</code>. Converts 
-1D splines into 3D curves and 2D splines into surfaces (y-axis hold amplitude).</p>
+1D splines into 3D curves, 2D splines into surfaces (y-axis hold amplitude), and 3D splines into solids.</p>
+
+<p>Spline surfaces and solids with more than 3 dependent variables will have their added dimensions rendered 
+as colors (up to 6 dependent variables are supported).</p>
 
 <p>The drawable spline will share the original spline's metadata (metadata changes are shared).</p>
 </div>
@@ -468,7 +471,9 @@ The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> th
                 <dd id="DrawableSpline.evaluate" class="function"><a href="spline.html#Spline.evaluate">evaluate</a></dd>
                 <dd id="DrawableSpline.extrapolate" class="function"><a href="spline.html#Spline.extrapolate">extrapolate</a></dd>
                 <dd id="DrawableSpline.fold" class="function"><a href="spline.html#Spline.fold">fold</a></dd>
+                <dd id="DrawableSpline.four_sided_patch" class="function"><a href="spline.html#Spline.four_sided_patch">four_sided_patch</a></dd>
                 <dd id="DrawableSpline.graph" class="function"><a href="spline.html#Spline.graph">graph</a></dd>
+                <dd id="DrawableSpline.greville" class="function"><a href="spline.html#Spline.greville">greville</a></dd>
                 <dd id="DrawableSpline.insert_knots" class="function"><a href="spline.html#Spline.insert_knots">insert_knots</a></dd>
                 <dd id="DrawableSpline.integral" class="function"><a href="spline.html#Spline.integral">integral</a></dd>
                 <dd id="DrawableSpline.integrate" class="function"><a href="spline.html#Spline.integrate">integrate</a></dd>
@@ -476,10 +481,12 @@ The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> th
                 <dd id="DrawableSpline.jacobian" class="function"><a href="spline.html#Spline.jacobian">jacobian</a></dd>
                 <dd id="DrawableSpline.join" class="function"><a href="spline.html#Spline.join">join</a></dd>
                 <dd id="DrawableSpline.least_squares" class="function"><a href="spline.html#Spline.least_squares">least_squares</a></dd>
+                <dd id="DrawableSpline.line" class="function"><a href="spline.html#Spline.line">line</a></dd>
                 <dd id="DrawableSpline.load" class="function"><a href="spline.html#Spline.load">load</a></dd>
                 <dd id="DrawableSpline.multiply" class="function"><a href="spline.html#Spline.multiply">multiply</a></dd>
                 <dd id="DrawableSpline.normal" class="function"><a href="spline.html#Spline.normal">normal</a></dd>
                 <dd id="DrawableSpline.normal_spline" class="function"><a href="spline.html#Spline.normal_spline">normal_spline</a></dd>
+                <dd id="DrawableSpline.point" class="function"><a href="spline.html#Spline.point">point</a></dd>
                 <dd id="DrawableSpline.range_bounds" class="function"><a href="spline.html#Spline.range_bounds">range_bounds</a></dd>
                 <dd id="DrawableSpline.remove_knot" class="function"><a href="spline.html#Spline.remove_knot">remove_knot</a></dd>
                 <dd id="DrawableSpline.remove_knots" class="function"><a href="spline.html#Spline.remove_knots">remove_knots</a></dd>
@@ -490,7 +497,9 @@ The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> th
                 <dd id="DrawableSpline.save" class="function"><a href="spline.html#Spline.save">save</a></dd>
                 <dd id="DrawableSpline.scale" class="function"><a href="spline.html#Spline.scale">scale</a></dd>
                 <dd id="DrawableSpline.section" class="function"><a href="spline.html#Spline.section">section</a></dd>
+                <dd id="DrawableSpline.sphere" class="function"><a href="spline.html#Spline.sphere">sphere</a></dd>
                 <dd id="DrawableSpline.subtract" class="function"><a href="spline.html#Spline.subtract">subtract</a></dd>
+                <dd id="DrawableSpline.torus" class="function"><a href="spline.html#Spline.torus">torus</a></dd>
                 <dd id="DrawableSpline.transform" class="function"><a href="spline.html#Spline.transform">transform</a></dd>
                 <dd id="DrawableSpline.translate" class="function"><a href="spline.html#Spline.translate">translate</a></dd>
                 <dd id="DrawableSpline.trim" class="function"><a href="spline.html#Spline.trim">trim</a></dd>

@@ -847,7 +847,7 @@ class Spline:
         left : `Spline`
             A curve which represents the left edge of the resulting surface.
     
-        surfParam : scalar
+        surfParam : scalar, optional
             A scalar which selects which member of a one parameter family of interpolating
             surfaces to return.  surfParam = 0.0 will return the Coons patch.  surfParam = 1.0
             will return the surface for which each dependent variable approximately solves the
@@ -899,10 +899,15 @@ class Spline:
         """
         Compute and return the Greville abscissae (knot averages) for the given independent
         variable.
+
+        Parameters
+        ----------
+        ind : integer, optional
+            The index of the independent variable (default is 0).
         
         Returns
         -------
-        knotAverages: `numpy.array`
+        knotAverages: `numpy.ndarray`
             An array with the knot averages for the specified independent variable.
 
         Notes
@@ -958,7 +963,7 @@ class Spline:
  
         Returns
         -------
-        value : `numpy.array`
+        value : `numpy.ndarray`
             The value of the integral of the spline at the given parameter limits.
 
         spline : `Spline`
@@ -1163,7 +1168,7 @@ class Spline:
 
         Notes
         -----
-            Construct splines out of the two points and then call ruled_surface.
+        Construct splines out of the two points and then call ruled_surface.
         """
         return bspy._spline_fitting.line(startPoint, endPoint)
     
@@ -1339,7 +1344,7 @@ class Spline:
 
         Notes
         -----
-            Construct a spline out of an input point.
+        Construct a spline out of an input point.
         """
         return bspy._spline_fitting.point(point)
     
@@ -1498,7 +1503,7 @@ class Spline:
         
         See Also
         --------
-        `load` : Load a spline from the specified filename (full path).
+        `load` : Load a spline in json format from the specified filename (full path).
         """
         class SplineEncoder(json.JSONEncoder):
             def default(self, obj):
@@ -1588,7 +1593,7 @@ class Spline:
         radius : scalar
             The desired radius of the sphere
         
-        tolerance : scalar
+        tolerance : scalar, optional
             The desired absolute tolerance to which the sphere should be constructed.  Defaults
             to 1.0e-12 if tolerance == None.
 
@@ -1665,7 +1670,7 @@ class Spline:
         outerRadius : scalar
             The desired outer radius of the torus
         
-        tolerance : scalar
+        tolerance : scalar, optional
             The desired absolute tolerance to which the tolerance should be constructed.  Defaults
             to 1.0e-12 if tolerance == None.
 

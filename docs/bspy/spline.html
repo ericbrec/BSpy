@@ -130,7 +130,13 @@
                                 <a class="function" href="#Spline.fold">fold</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.four_sided_patch">four_sided_patch</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.graph">graph</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.greville">greville</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.insert_knots">insert_knots</a>
@@ -154,6 +160,9 @@
                                 <a class="function" href="#Spline.least_squares">least_squares</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.line">line</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.load">load</a>
                         </li>
                         <li>
@@ -164,6 +173,9 @@
                         </li>
                         <li>
                                 <a class="function" href="#Spline.normal_spline">normal_spline</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.point">point</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.range_bounds">range_bounds</a>
@@ -196,7 +208,13 @@
                                 <a class="function" href="#Spline.section">section</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.sphere">sphere</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.subtract">subtract</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.torus">torus</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.transform">transform</a>
@@ -1315,6 +1333,59 @@ so long as unfold unscrambles things in the corresponding way.  The second splin
 
 
                             </div>
+                            <div id="Spline.four_sided_patch" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">four_sided_patch</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">bottom</span>, </span><span class="param"><span class="n">right</span>, </span><span class="param"><span class="n">top</span>, </span><span class="param"><span class="n">left</span>, </span><span class="param"><span class="n">surfParam</span><span class="o">=</span><span class="mf">0.5</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.four_sided_patch"></a>
+    
+            <div class="docstring"><p>Construct a surface from its four boundary curves.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>bottom</strong> (<code><a href="#Spline">Spline</a></code>):
+A curve which represents the bottom edge of the resulting surface.</li>
+<li><strong>right</strong> (<code><a href="#Spline">Spline</a></code>):
+A curve which represents the right edge of the resulting surface.</li>
+<li><strong>top</strong> (<code><a href="#Spline">Spline</a></code>):
+A curve which represents the top edge of the resulting surface.</li>
+<li><strong>left</strong> (<code><a href="#Spline">Spline</a></code>):
+A curve which represents the left edge of the resulting surface.</li>
+<li><strong>surfParam</strong> (scalar, optional):
+A scalar which selects which member of a one parameter family of interpolating
+surfaces to return.  surfParam = 0.0 will return the Coons patch.  surfParam = 1.0
+will return the surface for which each dependent variable approximately solves the
+Laplace equation for which the four boundary curves are the Dirichlet boundary
+conditions.  Other values of surfParam will return the appropriate affine combination
+of those two surfaces.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>surface</strong> (<code><a href="#Spline">Spline</a></code>):
+The spline surface requested by the input curves and surfParam.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.common_basis">common_basis</a></code>:  Determine a common B-spline basis for two or more splines.  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>The variables bottom, right, top, and left are notional in the sense that the curves can
+be given in any order.  This method does the best possible job of matching endpoints, so
+the roles of "right," "top," and "left" may very well get reassigned.  Moreover, the
+parametrization of the curves may also get reversed in order to best match endpoints.</p>
+</div>
+
+
+                            </div>
                             <div id="Spline.graph" class="classattr">
                                 <div class="attr function">
             
@@ -1344,6 +1415,41 @@ three dependent variables are (u, v, f(u,v)).</li>
 <h6 id="notes">Notes</h6>
 
 <p>Makes use of matrix spline multiply and tensor product addition for splines.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.greville" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">greville</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">ind</span><span class="o">=</span><span class="mi">0</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.greville"></a>
+    
+            <div class="docstring"><p>Compute and return the Greville abscissae (knot averages) for the given independent
+variable.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>ind</strong> (integer, optional):
+The index of the independent variable (default is 0).</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>knotAverages</strong> (<code>numpy.ndarray</code>):
+An array with the knot averages for the specified independent variable.</li>
+</ul>
+
+<h6 id="notes">Notes</h6>
+
+<p>The Greville abscissae always satisfy the interlacing conditions, so can be used as
+valid collocation points, interpolation points, or quadrature points.</p>
 </div>
 
 
@@ -1415,7 +1521,7 @@ A boolean flag that if true returns the integrated spline along with the value o
 <h6 id="returns">Returns</h6>
 
 <ul>
-<li><strong>value</strong> (<code>numpy.array</code>):
+<li><strong>value</strong> (<code>numpy.ndarray</code>):
 The value of the integral of the spline at the given parameter limits.</li>
 <li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
 The integrated spline, which is only returned if <code>returnSpline</code> is <code>True</code>.</li>
@@ -1649,26 +1755,64 @@ The algorithm to choose knots automatically is from Piegl, Les A., and Wayne Til
 
 
                             </div>
+                            <div id="Spline.line" class="classattr">
+                                <div class="attr function">
+                    <div class="decorator">@staticmethod</div>
+
+        <span class="def">def</span>
+        <span class="name">line</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">startPoint</span>, </span><span class="param"><span class="n">endPoint</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.line"></a>
+    
+            <div class="docstring"><p>Construct a line between two points or between two lines.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>startPoint</strong> (any):
+A scalar or a list or an array or an instance of a Spline.</li>
+<li><strong>endPoint</strong> (any):
+A scalar or a list or an array or an instance of a Spline.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+The spline that interpolates the two inputs.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.ruled_surface">ruled_surface</a></code>:  Construct a ruled surface between two splines.  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>Construct splines out of the two points and then call ruled_surface.</p>
+</div>
+
+
+                            </div>
                             <div id="Spline.load" class="classattr">
                                 <div class="attr function">
                     <div class="decorator">@staticmethod</div>
 
         <span class="def">def</span>
-        <span class="name">load</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">fileName</span>, </span><span class="param"><span class="n">splineType</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+        <span class="name">load</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">fileName</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
     <a class="headerlink" href="#Spline.load"></a>
     
-            <div class="docstring"><p>Load a spline from the specified filename (full path).</p>
+            <div class="docstring"><p>Load a spline in json format from the specified filename (full path).</p>
 
 <h6 id="parameters">Parameters</h6>
 
 <ul>
 <li><strong>fileName</strong> (<code>string</code>):
 The full path to the file containing the spline. Can be a relative path.</li>
-<li><strong>splineType</strong> (<code>type</code>, optional):
-The class type that should be created. It must be an instance of Spline (the default).</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -1680,11 +1824,7 @@ The loaded spline.</li>
 
 <h6 id="see-also">See Also</h6>
 
-<p><code><a href="#Spline.save">save</a></code>:  Save a spline to the specified filename (full path).  </p>
-
-<h6 id="notes">Notes</h6>
-
-<p>Uses numpy's load function.</p>
+<p><code><a href="#Spline.save">save</a></code>:  Save a spline in json format to the specified filename (full path).  </p>
 </div>
 
 
@@ -1830,6 +1970,44 @@ The spline that evaluates to the normal of the given spline.</li>
 <p>Attentive readers will notice that the number of independent variables could be one more than the number of 
 dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of 
 the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.point" class="classattr">
+                                <div class="attr function">
+                    <div class="decorator">@staticmethod</div>
+
+        <span class="def">def</span>
+        <span class="name">point</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">point</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.point"></a>
+    
+            <div class="docstring"><p>Construct a spline which represents a point.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>point</strong> (scalar, list, or array):
+A scalar or a list or an array or an instance of a Spline.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+The spline that represents the input point.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.line">line</a></code>:  Construct a line between two points.  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>Construct a spline out of an input point.</p>
 </div>
 
 
@@ -2074,7 +2252,7 @@ Ruled surface between spline1 and spline2.</li>
     </div>
     <a class="headerlink" href="#Spline.save"></a>
     
-            <div class="docstring"><p>Save a spline to the specified filename (full path).</p>
+            <div class="docstring"><p>Save a spline in json format to the specified filename (full path).</p>
 
 <h6 id="parameters">Parameters</h6>
 
@@ -2085,11 +2263,7 @@ The full path to the file containing the spline. Can be a relative path.</li>
 
 <h6 id="see-also">See Also</h6>
 
-<p><code><a href="#Spline.load">load</a></code>:  Load a spline from the specified filename (full path).  </p>
-
-<h6 id="notes">Notes</h6>
-
-<p>Uses numpy's savez function. Accuracy and metadata are not saved.</p>
+<p><code><a href="#Spline.load">load</a></code>:  Load a spline in json format from the specified filename (full path).  </p>
 </div>
 
 
@@ -2178,6 +2352,53 @@ with an error.</p>
 
 
                             </div>
+                            <div id="Spline.sphere" class="classattr">
+                                <div class="attr function">
+                    <div class="decorator">@staticmethod</div>
+
+        <span class="def">def</span>
+        <span class="name">sphere</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">radius</span>, </span><span class="param"><span class="n">tolerance</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.sphere"></a>
+    
+            <div class="docstring"><p>Construct a sphere of the given radius.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>radius</strong> (scalar):
+The desired radius of the sphere</li>
+<li><strong>tolerance</strong> (scalar, optional):
+The desired absolute tolerance to which the sphere should be constructed.  Defaults
+to 1.0e-12 if tolerance == None.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+A bi-quartic spline approximation to a sphere of the specified radius, accurate to
+the given tolerance.</li>
+</ul>
+
+<h6 id="notes">Notes</h6>
+
+<p>The resulting mapping is defined over the unit square.  The first independent variable
+corresponds to the latitude of the sphere, with 0 mapping to the south pole, 1 mapping to
+the north pole, and 0.5 mapping to the equator.  The second independent variable is the
+longitude, with 0 mapping to the meridian which is coplanar with the positive x-axis.</p>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.circular_arc">circular_arc</a></code>:  Create a 2D circular arc for a given radius and angle accurate to within
+a given tolerance. <br />
+<code><a href="#Spline.multiply">multiply</a></code>:  Multiply two splines together.  </p>
+</div>
+
+
+                            </div>
                             <div id="Spline.subtract" class="classattr">
                                 <div class="attr function">
             
@@ -2223,6 +2444,55 @@ The result of subtracting other from self.</li>
 <p>Equivalent to spline1 - spline2 with indMap = range(min(spline1.nInd, spline2.nInd)).</p>
 
 <p>Uses <code><a href="#Spline.common_basis">common_basis</a></code> to ensure mapped variables share the same order and knots.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.torus" class="classattr">
+                                <div class="attr function">
+                    <div class="decorator">@staticmethod</div>
+
+        <span class="def">def</span>
+        <span class="name">torus</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">innerRadius</span>, </span><span class="param"><span class="n">outerRadius</span>, </span><span class="param"><span class="n">tolerance</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.torus"></a>
+    
+            <div class="docstring"><p>Construct a torus of the given radii.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>innerRadius</strong> (scalar):
+The desired inner radius of the torus</li>
+<li><strong>outerRadius</strong> (scalar):
+The desired outer radius of the torus</li>
+<li><strong>tolerance</strong> (scalar, optional):
+The desired absolute tolerance to which the tolerance should be constructed.  Defaults
+to 1.0e-12 if tolerance == None.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+A bi-quartic spline approximation to a torus of the specified radii, accurate to
+the given tolerance.</li>
+</ul>
+
+<h6 id="notes">Notes</h6>
+
+<p>The resulting mapping is defined over the unit square.  The first independent variable
+controls the angular position of the cross sectional circles.  The second independent
+variable specifies the point on each cross section.</p>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.circular_arc">circular_arc</a></code>:  Create a 2D circular arc for a given radius and angle accurate to within
+a given tolerance. <br />
+<code><a href="#Spline.add">add</a></code>:  Add two splines together. <br />
+<code><a href="#Spline.multiply">multiply</a></code>:  Multiply two splines together.  </p>
 </div>
 
 

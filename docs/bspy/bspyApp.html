@@ -52,10 +52,16 @@
                                 <a class="variable" href="#bspyApp.splineList">splineList</a>
                         </li>
                         <li>
+                                <a class="variable" href="#bspyApp.splineRadius">splineRadius</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#bspyApp.adjust">adjust</a>
                         </li>
                         <li>
                                 <a class="variable" href="#bspyApp.workQueue">workQueue</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#bspyApp.list">list</a>
                         </li>
                         <li>
                                 <a class="function" href="#bspyApp.show">show</a>
@@ -92,6 +98,9 @@
                         </li>
                         <li>
                                 <a class="variable" href="#bspyGraphics.variableDictionary">variableDictionary</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#bspyGraphics.list">list</a>
                         </li>
                         <li>
                                 <a class="function" href="#bspyGraphics.show">show</a>
@@ -244,6 +253,17 @@ is the name of the widget class.</p>
     
 
                             </div>
+                            <div id="bspyApp.splineRadius" class="classattr">
+                                <div class="attr variable">
+            <span class="name">splineRadius</span>
+
+        
+    </div>
+    <a class="headerlink" href="#bspyApp.splineRadius"></a>
+    
+    
+
+                            </div>
                             <div id="bspyApp.adjust" class="classattr">
                                 <div class="attr variable">
             <span class="name">adjust</span>
@@ -266,17 +286,32 @@ is the name of the widget class.</p>
     
 
                             </div>
+                            <div id="bspyApp.list" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">list</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">spline</span>, </span><span class="param"><span class="n">name</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#bspyApp.list"></a>
+    
+            <div class="docstring"><p>List a <code>Spline</code> in the listbox. Can be called before app is running.</p>
+</div>
+
+
+                            </div>
                             <div id="bspyApp.show" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">show</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">spline</span></span><span class="return-annotation">):</span></span>
+        <span class="name">show</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">spline</span>, </span><span class="param"><span class="n">name</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
     <a class="headerlink" href="#bspyApp.show"></a>
     
-            <div class="docstring"><p>Show a <code>Spline</code> in the listbox. Can be called before app is running.</p>
+            <div class="docstring"><p>Show a <code>Spline</code> in the listbox (calls the list method, kept for compatibility). Can be called before app is running.</p>
 </div>
 
 
@@ -285,13 +320,13 @@ is the name of the widget class.</p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">draw</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">spline</span></span><span class="return-annotation">):</span></span>
+        <span class="name">draw</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">spline</span>, </span><span class="param"><span class="n">name</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
     <a class="headerlink" href="#bspyApp.draw"></a>
     
-            <div class="docstring"><p>Add a <code>Spline</code> to the listbox and draw it. Can only be called after the app is running.</p>
+            <div class="docstring"><p>Add a <code>Spline</code> to the listbox and draw it. Can be called before the app is running.</p>
 </div>
 
 
@@ -364,7 +399,7 @@ The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> th
     </div>
     <a class="headerlink" href="#bspyApp.update"></a>
     
-            <div class="docstring"><p>Update the spline draw list and refresh the frame.</p>
+            <div class="docstring"><p>Update the spline draw list, set the default view, reset the bounds, and refresh the frame.</p>
 </div>
 
 
@@ -671,17 +706,32 @@ splines, and a set of controls to adjust and view the selected splines.  </p>
     
 
                             </div>
+                            <div id="bspyGraphics.list" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">list</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">spline</span>, </span><span class="param"><span class="n">name</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#bspyGraphics.list"></a>
+    
+            <div class="docstring"><p>List a <code>Spline</code> in the listbox.</p>
+</div>
+
+
+                            </div>
                             <div id="bspyGraphics.show" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">show</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">spline</span></span><span class="return-annotation">):</span></span>
+        <span class="name">show</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">spline</span>, </span><span class="param"><span class="n">name</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
     <a class="headerlink" href="#bspyGraphics.show"></a>
     
-            <div class="docstring"><p>Show a <code>Spline</code> in the listbox.</p>
+            <div class="docstring"><p>Show a <code>Spline</code> in the listbox (calls list method, kept for compatibility).</p>
 </div>
 
 
@@ -690,7 +740,7 @@ splines, and a set of controls to adjust and view the selected splines.  </p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">draw</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">spline</span></span><span class="return-annotation">):</span></span>
+        <span class="name">draw</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">spline</span>, </span><span class="param"><span class="n">name</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
