@@ -211,10 +211,13 @@ class bspyApp(tk.Tk):
         if self.adjust is not None:
             if self.frame.splineDrawList: 
                 self.bits.set(self.frame.splineDrawList[0].get_options())
+                animate = self.frame.splineDrawList[0].get_animate()
             else:
                 self.bits.set(0)
+                animate = None
             for button in self.checkButtons.winfo_children():
                 button.Update()
+            self.animate.set(next(key for key, value in self.animateOptions.items() if value == animate))
 
         self.frame.Update()
 
@@ -251,7 +254,7 @@ class bspyApp(tk.Tk):
             tk.Button(buttons, text='Fill color', command=self._FillColorChange).pack(side=tk.TOP, fill=tk.X)
             tk.Button(buttons, text='Line color', command=self._LineColorChange).pack(side=tk.TOP, fill=tk.X)
             self.animate = tk.StringVar()
-            self.animateOptions = {"Animate: Off" : None, "Animate: 0(u)" : 0, "Animate: 1(v)" : 1, "Animate: 2(w)" : 2, "Animate: 3(s)" : 3, "Animate: 4(t)" : 4 }
+            self.animateOptions = {"Animate: Off" : None, "Animate: u(0)" : 0, "Animate: v(1)" : 1, "Animate: w(2)" : 2}
             if self.frame.splineDrawList:
                 animate = self.frame.splineDrawList[0].get_animate()
             else:

@@ -239,12 +239,15 @@ class DrawableSpline(Spline):
 
     def _DrawPoints(self, frame, drawCoefficients):
         """
-        Draw spline points for an order 1 spline within a `SplineOpenGLFrame`. The frame will call this method for you.
+        Draw spline points for an nInd == 0 or order == 1 spline within a `SplineOpenGLFrame`. The frame will call this method for you.
         """
         glColor4fv(self.get_line_color())
         glBegin(GL_POINTS)
-        for point in drawCoefficients:
-            glVertex3fv(point)
+        if self.nInd == 0:
+            glVertex3fv(drawCoefficients)
+        else:
+            for point in drawCoefficients:
+                glVertex3fv(point)
         glEnd()
 
     def _DrawCurve(self, frame, drawCoefficients):
@@ -270,6 +273,7 @@ class DrawableSpline(Spline):
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, self.knots[0])
         offset += size
         size = 3 * 4 * self.nCoef[0]
+        drawCoefficients = drawCoefficients[..., :3]
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
         glEnableVertexAttribArray(program.aCurveParameters)
         if frame.tessellationEnabled:
@@ -444,11 +448,24 @@ class DrawableSpline(Spline):
         """
         Draw a spline  within a `SplineOpenGLFrame`. The frame will call this method for you.
         """
+        # Contract spline if it's animating.
+        nInd = self.get_animate()
+        if nInd is not None:
+            uvw = self.nInd * [None]
+            u1 = self.knots[nInd][self.order[nInd] - 1]
+            u2 = self.knots[nInd][self.nCoef[nInd]]
+            # Contraction value is set to cycle every 10 seconds (10000 ms).
+            uvw[nInd] = u1 + 0.49999 * (u2 - u1) * (1.0 - np.cos(2.0 * np.pi * frame.frameCount * frame.MsPerFrame / 10000))
+            self = self.contract(uvw)
+
+        # Transform coefs by view transform.
         coefs = self.coefs.T
         drawCoefficients = np.empty(coefs.shape, np.float32)
         drawCoefficients[..., :3] = coefs[..., :3] @ transform[:3,:3] + transform[3,:3]
         drawCoefficients[..., 3:] = coefs[..., 3:]
-        if self.order[0] == 1:
+
+        # Draw spline.
+        if self.nInd == 0 or self.order[0] == 1:
             self._DrawPoints(frame, drawCoefficients)
         elif self.nInd == 1:
             self._DrawCurve(frame, drawCoefficients)
