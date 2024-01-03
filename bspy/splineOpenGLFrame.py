@@ -18,6 +18,9 @@ class SplineOpenGLFrame(OpenGLFrame):
     FLY = 3
     """View mode in which dragging the left mouse flies toward the mouse position."""
 
+    MsPerFrame = 50 # Update every 20th of a second
+    """Milliseconds per frame when animating or flying."""
+
     computeBSplineCode = """
         void ComputeBSpline(in int offset, in int order, in int n, in int knot, in float u, 
             out float uBSpline[{maxOrder}], out float duBSpline[{maxOrder}])
@@ -938,9 +941,11 @@ class SplineOpenGLFrame(OpenGLFrame):
  
     def __init__(self, *args, eye=(0.0, 0.0, 3.0), center=(0.0, 0.0, 0.0), up=(0.0, 1.0, 0.0), **kw):
         OpenGLFrame.__init__(self, *args, **kw)
-        self.animate = 0 # Set to number of milliseconds before showing next frame (0 means no animation)
 
         self.splineDrawList = []
+        self.animating = False
+        self.animate = 0 # Set to number of milliseconds before showing next frame (0 means no animation)
+        self.frameCount = 0
         self.tessellationEnabled = True
         self.glInitialized = False
         
@@ -1174,6 +1179,9 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         glFlush()
 
+        if self.animate > 0:
+            self.frameCount = (self.frameCount + 1) % 1000000
+
     def Unmap(self, event):
         """
         Handle window unmap.
@@ -1216,6 +1224,13 @@ class SplineOpenGLFrame(OpenGLFrame):
             Speed scale between 0 and 1.
         """
         self.speed = 0.033 * self.anchorDistance * (100.0 ** float(scale) - 1.0) / 99.0
+    
+    def SetAnimating(self, animating):
+        self.animating = animating
+        if self.animating:
+            self.animate = self.MsPerFrame
+        elif self.mode != self.FLY or self.button is None:
+            self.animate = 0 # Stop animating
 
     def MouseDown(self, event):
         """
@@ -1232,8 +1247,8 @@ class SplineOpenGLFrame(OpenGLFrame):
             self.eye = self.anchorPosition + self.anchorDistance * self.look
             self.Update()
         
-        if self.mode == self.FLY:
-            self.animate = 50 # Update every 20th of a second
+        if self.mode == self.FLY and not self.animating:
+            self.animate = self.MsPerFrame
             self.Update()
 
     def MouseMove(self, event):
@@ -1250,7 +1265,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         """
         self.origin = None
         self.button = None
-        if self.mode == self.FLY:
+        if self.mode == self.FLY and not self.animating:
             self.animate = 0 # Stop animation
             self.Update()
 
