@@ -154,6 +154,7 @@ class DrawableSpline(Spline):
             self.metadata["fillColor"] = np.array((0.0, 1.0, 0.0, 1.0), np.float32)
             self.metadata["lineColor"] = np.array((0.0, 0.0, 0.0, 1.0) if self.nInd > 1 else (1.0, 1.0, 1.0, 1.0), np.float32)
             self.metadata["options"] = self.SHADED | self.BOUNDARY
+            self.metadata["animate"] = None
 
     def __str__(self):
         return self.metadata.get("Name", "[{0}, {1}]".format(self.coefs[0], self.coefs[1]))
@@ -232,16 +233,21 @@ class DrawableSpline(Spline):
             drawable.metadata["lineColor"] = np.array((0.0, 0.0, 0.0, 1.0) if drawable.nInd > 1 else (1.0, 1.0, 1.0, 1.0), np.float32)
         if not "options" in drawable.metadata:
             drawable.metadata["options"] = drawable.SHADED | drawable.BOUNDARY
+        if not "animate" in drawable.metadata:
+            drawable.metadata["animate"] = None
         return drawable
 
     def _DrawPoints(self, frame, drawCoefficients):
         """
-        Draw spline points for an order 1 spline within a `SplineOpenGLFrame`. The frame will call this method for you.
+        Draw spline points for an nInd == 0 or order == 1 spline within a `SplineOpenGLFrame`. The frame will call this method for you.
         """
         glColor4fv(self.get_line_color())
         glBegin(GL_POINTS)
-        for point in drawCoefficients:
-            glVertex3fv(point)
+        if self.nInd == 0:
+            glVertex3fv(drawCoefficients)
+        else:
+            for point in drawCoefficients:
+                glVertex3fv(point)
         glEnd()
 
     def _DrawCurve(self, frame, drawCoefficients):
@@ -267,6 +273,7 @@ class DrawableSpline(Spline):
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, self.knots[0])
         offset += size
         size = 3 * 4 * self.nCoef[0]
+        drawCoefficients = drawCoefficients[..., :3]
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
         glEnableVertexAttribArray(program.aCurveParameters)
         if frame.tessellationEnabled:
@@ -441,11 +448,24 @@ class DrawableSpline(Spline):
         """
         Draw a spline  within a `SplineOpenGLFrame`. The frame will call this method for you.
         """
+        # Contract spline if it's animating.
+        nInd = self.get_animate()
+        if nInd is not None:
+            uvw = self.nInd * [None]
+            u1 = self.knots[nInd][self.order[nInd] - 1]
+            u2 = self.knots[nInd][self.nCoef[nInd]]
+            # Contraction value is set to cycle every 10 seconds (10000 ms).
+            uvw[nInd] = u1 + 0.49999 * (u2 - u1) * (1.0 - np.cos(2.0 * np.pi * frame.frameCount * frame.MsPerFrame / 10000))
+            self = self.contract(uvw)
+
+        # Transform coefs by view transform.
         coefs = self.coefs.T
         drawCoefficients = np.empty(coefs.shape, np.float32)
         drawCoefficients[..., :3] = coefs[..., :3] @ transform[:3,:3] + transform[3,:3]
         drawCoefficients[..., 3:] = coefs[..., 3:]
-        if self.order[0] == 1:
+
+        # Draw spline.
+        if self.nInd == 0 or self.order[0] == 1:
             self._DrawPoints(frame, drawCoefficients)
         elif self.nInd == 1:
             self._DrawCurve(frame, drawCoefficients)
@@ -543,3 +563,25 @@ class DrawableSpline(Spline):
             * `DrawableSpline.ISOPARMS` Draw the lines of constant knot values of the spline in the line color (only useful for nInd >= 2). Off by default.
         """
         self.metadata["options"] = options
+    
+    def get_animate(self):
+        """
+        Get the independent variable that is animated (None if there is none).
+
+        Returns
+        -------
+        animate : `int` or `None`
+            The index of the independent variable that is animated (None is there is none).
+        """
+        return self.metadata["animate"]
+
+    def set_animate(self, animate):
+        """
+        Set the independent variable that is animated (None if there is none).
+
+        Parameters
+        ----------
+        animate : `int` or `None`
+            The index of the independent variable that is animated (None is there is none).
+        """
+        self.metadata["animate"] = animate

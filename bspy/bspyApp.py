@@ -211,10 +211,13 @@ class bspyApp(tk.Tk):
         if self.adjust is not None:
             if self.frame.splineDrawList: 
                 self.bits.set(self.frame.splineDrawList[0].get_options())
+                animate = self.frame.splineDrawList[0].get_animate()
             else:
                 self.bits.set(0)
+                animate = None
             for button in self.checkButtons.winfo_children():
                 button.Update()
+            self.animate.set(next(key for key, value in self.animateOptions.items() if value == animate))
 
         self.frame.Update()
 
@@ -233,7 +236,7 @@ class bspyApp(tk.Tk):
             self.adjust.title("Adjust")
             self.adjust.bind('<Destroy>', self._AdjustDestroy)
 
-            self.checkButtons = tk.LabelFrame(self.adjust, text="Style")
+            self.checkButtons = tk.LabelFrame(self.adjust, text="Decoration")
             self.checkButtons.pack(side=tk.LEFT, fill=tk.BOTH, expand=tk.YES)
 
             self.bits = tk.IntVar()
@@ -246,10 +249,18 @@ class bspyApp(tk.Tk):
             _BitCheckbutton(self.checkButtons, DrawableSpline.ISOPARMS, text="Isoparms", anchor=tk.W, variable=self.bits, command=self._ChangeOptions).pack(side=tk.TOP, fill=tk.X)
             _BitCheckbutton(self.checkButtons, DrawableSpline.HULL, text="Hull", anchor=tk.W, variable=self.bits, command=self._ChangeOptions).pack(side=tk.TOP, fill=tk.X)
 
-            buttons = tk.LabelFrame(self.adjust, text="Color")
+            buttons = tk.LabelFrame(self.adjust, text="Options")
             buttons.pack(side=tk.LEFT, fill=tk.BOTH, expand=tk.YES)
             tk.Button(buttons, text='Fill color', command=self._FillColorChange).pack(side=tk.TOP, fill=tk.X)
             tk.Button(buttons, text='Line color', command=self._LineColorChange).pack(side=tk.TOP, fill=tk.X)
+            self.animate = tk.StringVar()
+            self.animateOptions = {"Animate: Off" : None, "Animate: u(0)" : 0, "Animate: v(1)" : 1, "Animate: w(2)" : 2}
+            if self.frame.splineDrawList:
+                animate = self.frame.splineDrawList[0].get_animate()
+            else:
+                animate = None
+            self.animate.set(next(key for key, value in self.animateOptions.items() if value == animate))
+            tk.OptionMenu(buttons, self.animate, *self.animateOptions.keys(), command=self._ChangeAnimate).pack(side=tk.TOP, fill=tk.X)
             tk.Button(buttons, text='Dismiss', command=self.adjust.withdraw).pack(side=tk.TOP, fill=tk.X)
 
             self.adjust.update()
@@ -271,6 +282,17 @@ class bspyApp(tk.Tk):
         """Handle when the spline options are changed."""
         for spline in self.frame.splineDrawList:
             spline.set_options(options)
+        self.frame.Update()
+    
+    def _ChangeAnimate(self, value):
+        """Handle when the spline animation is changed."""
+        nInd = self.animateOptions[value]
+        animating = False
+        for spline in self.frame.splineDrawList:
+            if nInd is None or nInd < spline.nInd:
+                spline.set_animate(nInd)
+                animating = True
+        self.frame.SetAnimating(animating)
         self.frame.Update()
 
     def _FillColorChange(self):
