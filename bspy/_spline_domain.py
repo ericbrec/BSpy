@@ -491,6 +491,20 @@ def reverse(self, variable = 0):
     newfolded = type(self)(folded.nInd, folded.nDep, folded.order, folded.nCoef, (newKnots,), newCoefs, folded.accuracy, folded.metadata)
     return newfolded.unfold(myIndices, basisInfo)
 
+def transpose(self, axes=None):
+    if axes is None:
+        axes = range(self.nInd)[::-1]
+    order = []
+    nCoef = []
+    knots = []
+    coefAxes = [0]
+    for axis in axes:
+        order.append(self.order[axis])
+        nCoef.append(self.nCoef[axis])
+        knots.append(self.knots[axis])
+        coefAxes.append(axis + 1)
+    return type(self)(self.nInd, self.nDep, order, nCoef, knots, np.transpose(self.coefs, coefAxes), self.accuracy, self.metadata)
+
 def trim(self, newDomain):
     if not(len(newDomain) == self.nInd): raise ValueError("Invalid newDomain")
 

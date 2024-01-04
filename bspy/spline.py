@@ -1762,6 +1762,32 @@ class Spline:
         """
         return bspy._spline_operations.translate(self, translationVector)
 
+    def transpose(self, axes=None):
+        """
+        Transpose the domain of a spline, changing the order of independent variables.
+
+        Parameters
+        ----------
+        axes : iterable, optional
+            If specified, it must be an iterable which contains a permutation of [0,1,…,nInd-1]. 
+            The i'th independent variable of the returned spline will correspond to the axes[i] variable of the input. 
+            If not specified, defaults to range(nInd)[::-1], which reverses the order of the independent variables.
+
+        Returns
+        -------
+        spline : `Spline`
+            Trimmed spline. If all the knots are unchanged, the original spline is returned.
+
+        See Also
+        --------
+        `numpy.transpose` : Returns an array with axes transposed.
+
+        Notes
+        -----
+        Use spline.transpose(argsort(axes)) to invert the transposition when using the axes argument.
+        """
+        return bspy._spline_domain.transpose(self, axes)
+
     def trim(self, newDomain):
         """
         Trim the domain of a spline.
