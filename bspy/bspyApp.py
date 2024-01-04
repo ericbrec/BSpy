@@ -1,9 +1,10 @@
 import numpy as np
 import tkinter as tk
 from tkinter.colorchooser import askcolor
+from tkinter import filedialog
 import queue, threading
 from bspy import SplineOpenGLFrame
-from bspy import DrawableSpline
+from bspy import Spline, DrawableSpline
 
 class _BitCheckbutton(tk.Checkbutton):
     """A tkinter `CheckButton` that gets/sets its variable based on a given `bitmask`."""
@@ -62,9 +63,11 @@ class bspyApp(tk.Tk):
         controls = tk.Frame(self)
         controls.pack(side=tk.LEFT, fill=tk.Y)
 
-        tk.Button(controls, text='Adjust Splines', command=self._Adjust).pack(side=tk.BOTTOM, fill=tk.X)
-        #tk.Button(controls, text='Empty Splines', command=self.empty).pack(side=tk.BOTTOM, fill=tk.X)
-        tk.Button(controls, text='Erase Splines', command=self.erase_all).pack(side=tk.BOTTOM, fill=tk.X)
+        tk.Button(controls, text='Adjust', command=self._Adjust).pack(side=tk.BOTTOM, fill=tk.X)
+        #tk.Button(controls, text='Empty', command=self.empty).pack(side=tk.BOTTOM, fill=tk.X)
+        tk.Button(controls, text='Erase', command=self.erase_all).pack(side=tk.BOTTOM, fill=tk.X)
+        tk.Button(controls, text='Save', command=self.save_splines).pack(side=tk.BOTTOM, fill=tk.X)
+        tk.Button(controls, text='Load', command=self.load_splines).pack(side=tk.BOTTOM, fill=tk.X)
 
         self.listBox = tk.Listbox(controls, selectmode=tk.MULTIPLE)
         self.listBox.pack(side=tk.LEFT, fill=tk.Y)
@@ -143,6 +146,25 @@ class bspyApp(tk.Tk):
         self.listBox.selection_set(self.listBox.size() - 1)
         self.update()
 
+    def save_splines(self):
+        if self.frame.splineDrawList:
+            initialName = self.frame.splineDrawList[0].metadata.get("Name", "spline") + ".json"
+            fileName = filedialog.asksaveasfilename(title="Save splines", initialfile=initialName,
+                defaultextension=".json", filetypes=(('Json files', '*.json'),('All files', '*.*')))
+            if fileName:
+                self.frame.splineDrawList[0].save(fileName, *self.frame.splineDrawList[1:])
+
+    def load_splines(self):
+        fileName = filedialog.askopenfilename(title="Load splines", 
+            defaultextension=".json", filetypes=(('Json files', '*.json'),('All files', '*.*')))
+        if fileName:
+            splines = DrawableSpline.load(fileName)
+            if isinstance(splines, Spline):
+                self.list(splines)
+            else:
+                for spline in splines:
+                    self.list(spline)
+    
     def erase_all(self):
         """Stop drawing all splines. Splines remain in the listbox."""
         self.listBox.selection_clear(0, self.listBox.size() - 1)
