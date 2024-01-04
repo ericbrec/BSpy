@@ -1266,6 +1266,24 @@ def test_translate():
         maxError = max(maxError, (xTest - (2.0 + x)) ** 2 + (yTest - (3.0 + y)) ** 2)
     assert maxError <= np.finfo(float).eps
 
+def test_transpose():
+    maxError = 0.0
+    transposed = myCurve.transpose() # Should change nothing
+    for [u, x, y] in truthCurve:
+        [xTest, yTest] = transposed.evaluate([u])
+        maxError = max(maxError, np.sqrt((xTest - x) ** 2 + (yTest - y) ** 2))
+    assert maxError <= np.finfo(float).eps
+    maxError = 0.0
+    i = 0
+    transposed = mySurface.transpose() # Should switch u and v
+    for v in np.linspace(0, 1, 21):
+        for u in np.linspace(0, 1, 21):
+            xyz1 = transposed([v, u])
+            xyz = xyz1 - np.array(truthSurface[i])
+            maxError = max(maxError, np.sqrt(xyz @ xyz))
+            i += 1
+    assert maxError <= 2.5 * np.finfo(float).eps
+
 def test_trim():
     maxError = 0.0
     left = 13
