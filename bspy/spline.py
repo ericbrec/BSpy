@@ -560,6 +560,43 @@ class Spline:
         """
         return bspy._spline_evaluation.curvature(self, uvw)
 
+    @staticmethod
+    def cylinder(radius, height, tolerance = None):
+        """
+        Construct a cylinder of the given radius and height.
+
+        Parameters
+        ----------
+        radius : scalar
+            The desired radius of the cylinder
+        
+        height : scalar
+            The desired height of the cylinder
+
+        tolerance : scalar, optional
+            The desired absolute tolerance to which the cylinder should be constructed.  Defaults
+            to 1.0e-12 if tolerance == None.
+
+        Returns
+        -------
+        spline : `Spline`
+            A bi-quartic spline approximation to a cylinder of the specified radius and height,
+            accurate to the given tolerance.
+        
+        Notes
+        -----
+        The resulting mapping is defined over the unit square.  The first independent variable
+        corresponds to the radial position on the cylinder, while the second independent variable
+        is the location along the height.
+    
+        See Also
+        --------
+        `circular_arc` : Create a 2D circular arc for a given radius and angle accurate to within
+                         a given tolerance.
+        `ruled_surface` : Construct a ruled surface between two curves.
+        """
+        return bspy._spline_fitting.cylinder(radius, height, tolerance)
+
     def derivative(self, with_respect_to, *uvw, **kwargs):
         """
         Compute the derivative of the spline at given parameter values.
@@ -1479,6 +1516,34 @@ class Spline:
         """
         return bspy._spline_fitting.revolve(self, angle)
 
+    def rotate(self, vector, angle):
+        """
+        Rotate a spline around a vector by the specified angle.
+
+        Parameters
+        ----------
+        vector : array-like
+            A vector of length three about which to rotate the spline
+        
+        angle : scalar
+            The number of degrees to rotate the spline around vector by
+        
+        Returns
+        -------
+        spline : `Spline`
+            The rotated spline
+        
+        See Also
+        --------
+        `transform` : Multiply a spline by a given matrix.
+
+        Notes
+        -----
+             Uses the well-known Rodrigues' rotation formula and mathematical operations
+             on splines.
+        """
+        return bspy._spline_operations.rotate(self, vector, angle)
+    
     @staticmethod
     def ruled_surface(spline1, spline2):
         """

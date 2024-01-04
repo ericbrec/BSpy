@@ -276,6 +276,13 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         spline = spline.confine(F.domain())
     return spline
 
+def cylinder(radius, height, tolerance):
+    if tolerance is None:
+        tolerance = 1.0e-12
+    bottom = [[1.0, 0.0], [0.0, 1.0], [0.0, 0.0]] @ bspy.Spline.circular_arc(radius, 360.0, tolerance)
+    top = bottom + [0.0, 0.0, height]
+    return bspy.Spline.ruled_surface(bottom, top)
+
 def four_sided_patch(bottom, right, top, left, surfParam = 0.5):
     if bottom.nInd != 1 or right.nInd != 1 or top.nInd != 1 or left.nInd != 1:
         raise ValueError("Input curves must have one independent variable")

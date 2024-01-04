@@ -28,6 +28,8 @@ bottomSurf = bspy.Spline(2, 3, [4, 4], [4, 4], 2 * [[0.0, 0, 0, 0, 1, 1, 1, 1]],
                                            0.2, 0.3, 0.7, 0.2, 0.0, 0.6, 0.0, 0.0]])
 topSurf = bottomSurf + [0, 0, 1]
 mySolid = bspy.Spline.ruled_surface(bottomSurf, topSurf)
+myCylinder = bspy.Spline.cylinder(1.0, 5.0)
+rotCylinder = myCylinder.rotate([1.0, 1.0, 0.0], 45.0)
 
 if __name__=='__main__':
     app = bspy.bspyApp()
@@ -37,4 +39,6 @@ if __name__=='__main__':
     app.draw(patch405, 'patch405')
     app.draw(patch41, 'patch41')
     app.list(mySolid, 'mySolid')
+    app.list(myCylinder, 'myCylinder')
+    app.list(rotCylinder, 'rotCylinder')
     app.mainloop()

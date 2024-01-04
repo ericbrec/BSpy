@@ -718,6 +718,20 @@ def normal_spline(self, indices=None):
     nDep = max(self.nInd, self.nDep) if indices is None else len(indices)
     return bspy.Spline.least_squares(self.nInd, nDep, newOrder, points, newKnots, 0, self.metadata)
 
+def rotate(self, vector, angle):
+    vector = np.atleast_1d(vector)
+    vector = vector / np.linalg.norm(vector)
+    if len(vector) != 3:  raise ValueError("Rotation vector must have 3 components")
+    if self.nDep != 3:  raise ValueError("Spline must have exactly 3 dependent variables")
+    radians = np.pi * angle / 180.0
+    cost = np.cos(radians)
+    sint = np.sin(radians)
+    kMat = np.array([[0.0, -vector[2], vector[1]],
+                     [vector[2], 0.0, -vector[0]],
+                     [-vector[1], vector[0], 0.0]])
+    rotMat = np.identity(3) + sint * kMat + (1.0 - cost) * kMat @ kMat
+    return list(rotMat) @ self
+
 def scale(self, multiplier):
     if isinstance(multiplier, bspy.Spline):
         return self.multiply(multiplier, [(ix, ix) for ix in range(min(self.nInd, multiplier.nInd))], 'S')
