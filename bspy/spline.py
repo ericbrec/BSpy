@@ -1175,7 +1175,7 @@ class Spline:
     @staticmethod
     def load(fileName):
         """
-        Load a spline in json format from the specified filename (full path).
+        Load spline(s) in json format from the specified filename (full path).
 
         Parameters
         ----------
@@ -1184,8 +1184,8 @@ class Spline:
         
         Returns
         -------
-        spline : `Spline`
-            The loaded spline.
+        spline(s) : `Spline` or list of `Spline`
+            The loaded spline(s).
 
         See Also
         --------
@@ -1206,10 +1206,17 @@ class Spline:
         
         # Load json file.
         with open(fileName, 'r', encoding='utf-8') as file:
-            splineDict = json.load(file)
+            splineData = json.load(file)
 
-        return Spline(splineDict["nInd"], splineDict["nDep"], splineDict["order"], splineDict["nCoef"],
-            [np.array(knots) for knots in splineDict["knots"]], np.array(splineDict["coefs"]), splineDict["accuracy"], splineDict["metadata"])
+        if isinstance(splineData, dict):
+            return Spline(splineData["nInd"], splineData["nDep"], splineData["order"], splineData["nCoef"],
+                [np.array(knots) for knots in splineData["knots"]], np.array(splineData["coefs"]), splineData["accuracy"], splineData["metadata"])
+        else:
+            splines = []
+            for splineDict in splineData:
+                splines.append(Spline(splineDict["nInd"], splineDict["nDep"], splineDict["order"], splineDict["nCoef"],
+                    [np.array(knots) for knots in splineDict["knots"]], np.array(splineDict["coefs"]), splineDict["accuracy"], splineDict["metadata"]))
+            return splines        
 
     def multiply(self, other, indMap = None, productType = 'S'):
         """
@@ -1492,7 +1499,7 @@ class Spline:
         """
         return bspy._spline_fitting.ruled_surface(spline1, spline2)
     
-    def save(self, fileName):
+    def save(self, fileName, *additional_splines):
         """
         Save a spline in json format to the specified filename (full path).
 
@@ -1501,9 +1508,12 @@ class Spline:
         fileName : `string`
             The full path to the file containing the spline. Can be a relative path.
         
+        *additional_splines : `Spline`
+            More splines to save in the same file.
+        
         See Also
         --------
-        `load` : Load a spline in json format from the specified filename (full path).
+        `load` : Load spline(s) in json format from the specified filename (full path).
         """
         class SplineEncoder(json.JSONEncoder):
             def default(self, obj):
@@ -1523,7 +1533,10 @@ class Spline:
                 return super().default(obj)
 
         with open(fileName, 'w', encoding='utf-8') as file:
-            json.dump(self, file, indent=4, cls=SplineEncoder)
+            if additional_splines:
+                json.dump((self, *additional_splines), file, indent=4, cls=SplineEncoder)
+            else:
+                json.dump(self, file, indent=4, cls=SplineEncoder)
 
     def scale(self, multiplier):
         """
