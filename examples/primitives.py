@@ -30,6 +30,7 @@ topSurf = bottomSurf + [0, 0, 1]
 mySolid = bspy.Spline.ruled_surface(bottomSurf, topSurf)
 myCylinder = bspy.Spline.cylinder(1.0, 5.0)
 rotCylinder = myCylinder.rotate([1.0, 1.0, 0.0], 45.0)
+myCone = bspy.Spline.cone(1.0, 0.2, 2.0)
 
 if __name__=='__main__':
     app = bspy.bspyApp()
@@ -41,4 +42,5 @@ if __name__=='__main__':
     app.list(mySolid, 'mySolid')
     app.list(myCylinder, 'myCylinder')
     app.list(rotCylinder, 'rotCylinder')
+    app.list(myCone, 'myCone')
     app.mainloop()

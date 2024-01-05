@@ -337,6 +337,46 @@ class Spline:
         """
         return bspy._spline_domain.common_basis(self, splines, indMap)
 
+    @staticmethod
+    def cone(radius1, radius2, height, tolerance = None):
+        """
+        Construct a cone of the two given radii and height.
+
+        Parameters
+        ----------
+        radius1 : scalar
+            The desired radius of the cone at the bottom
+        
+        radius2 : scalar
+            The desired radius of the cone at the top
+        
+        height : scalar
+            The desired height of the cone
+
+        tolerance : scalar, optional
+            The desired absolute tolerance to which the cylinder should be constructed.  Defaults
+            to 1.0e-12 if tolerance == None.
+
+        Returns
+        -------
+        spline : `Spline`
+            A bi-quartic spline approximation to a cone of the specified radii and height,
+            accurate to the given tolerance.
+        
+        Notes
+        -----
+        The resulting mapping is defined over the unit square.  The first independent variable
+        corresponds to the radial position on the cone, while the second independent variable
+        is the location along the height.
+    
+        See Also
+        --------
+        `circular_arc` : Create a 2D circular arc for a given radius and angle accurate to within
+                         a given tolerance.
+        `ruled_surface` : Construct a ruled surface between two curves.
+        """
+        return bspy._spline_fitting.cone(radius1, radius2, height, tolerance)
+
     def confine(self, range_bounds):
         """
         Confine the range of a curve to the given bounds.

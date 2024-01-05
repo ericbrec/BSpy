@@ -10,6 +10,17 @@ def circular_arc(radius, angle, tolerance = None):
     samples = int(max(np.ceil(((1.1536e-5 * radius / tolerance)**(1/8)) * angle / 90), 2.0)) + 1
     return bspy.Spline.section([(radius * np.cos(u * angle * np.pi / 180), radius * np.sin(u * angle * np.pi / 180), 90 + u * angle, 1.0 / radius) for u in np.linspace(0.0, 1.0, samples)])
 
+def cone(radius1, radius2, height, tolerance):
+    if tolerance is None:
+        tolerance = 1.0e-12
+    bigRadius = max(radius1, radius2)
+    radius1 /= bigRadius
+    radius2 /= bigRadius
+    bottom = [[1.0, 0.0], [0.0, 1.0], [0.0, 0.0]] @ bspy.Spline.circular_arc(bigRadius, 360.0, tolerance)
+    top = radius2 * bottom + [0.0, 0.0, height]
+    bottom = radius1 * bottom
+    return bspy.Spline.ruled_surface(bottom, top)
+
 # Courtesy of Michael Epton - Translated from his F77 code lgnzro
 def _legendre_polynomial_zeros(degree):
     def legendre(degree, x):
