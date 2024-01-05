@@ -17,15 +17,15 @@ If you use VSCode, here are some extensions you might consider.
 	* Markdown All in One (I’ve got this. Useful for authoring .md files.)
 	* Awesome Emacs Keymap (VSCode emacs emulation.)
 
-You'll likely want to use a virtual environment (.venv) for the bspy project so that you don't need worry about version conflicts or machine changes impacting bspy and your development environment. This is easy in VSCode.
+You'll likely want to use a virtual environment (.venv) for the BSpy project so that you don't need worry about version conflicts or machine changes impacting BSpy and your development environment. This is easy in VSCode.
 * From the Help menu, select Show All Commands
 	* Type: `Python: Create Environment…` (you don't need to type the whole thing, just select it when it comes up)
 	* Select `Venv`
 	* Select the Microsoft store version of Python
 
-bpsy depends on a few Python packages (found on PyPi.org). You’ll want to pip install them.
+BSpy depends on a few Python packages (found on PyPi.org). You’ll want to pip install them.
 
-    pip install numpy tk PyOpenGL Pyopengltk
+    pip install numpy PyOpenGL Pyopengltk
  
 We also use the following Python packages for testing.
 
@@ -59,7 +59,7 @@ The repo directory structure is as follows:
 
 We use [GitHub Flow](https://githubflow.github.io/) as our branching and submission strategy. Always make your changes in a feature branch off main and then submit a pull request when you're ready to release your improvements.
 
-I’m happy to help you with any issues you have getting bspy working, so I can update these instructions for future collaborators. 😊
+I’m happy to help you with any issues you have getting BSpy working, so I can update these instructions for future collaborators. 😊
  
 Thanks,
  
