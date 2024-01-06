@@ -294,7 +294,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         uniform vec4 uClipBounds;
         uniform samplerBuffer uSplineData;
 
-        struct SplineInfo
+        struct SplineInfoStruct
         {{
             int uOrder;
             int uN;
@@ -741,7 +741,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         out vec3 splineColor; // We restrict our output to color to reduce the number of components per vertex.
 
-        struct SplineInfo
+        struct SplineInfoStruct
         {{
             int uOrder, vOrder;
             int uN, vN;
@@ -946,7 +946,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.animating = False
         self.animate = 0 # Set to number of milliseconds before showing next frame (0 means no animation)
         self.frameCount = 0
-        self.tessellationEnabled = True
+        self.tessellationEnabled = False
         self.glInitialized = False
         
         self.origin = None
