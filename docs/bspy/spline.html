@@ -223,6 +223,9 @@
                                 <a class="function" href="#Spline.translate">translate</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.transpose">transpose</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.trim">trim</a>
                         </li>
                         <li>
@@ -1806,7 +1809,7 @@ The spline that interpolates the two inputs.</li>
     </div>
     <a class="headerlink" href="#Spline.load"></a>
     
-            <div class="docstring"><p>Load a spline in json format from the specified filename (full path).</p>
+            <div class="docstring"><p>Load spline(s) in json format from the specified filename (full path).</p>
 
 <h6 id="parameters">Parameters</h6>
 
@@ -1818,8 +1821,8 @@ The full path to the file containing the spline. Can be a relative path.</li>
 <h6 id="returns">Returns</h6>
 
 <ul>
-<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
-The loaded spline.</li>
+<li><strong>spline(s)</strong> (<code><a href="#Spline">Spline</a></code> or list of <code><a href="#Spline">Spline</a></code>):
+The loaded spline(s).</li>
 </ul>
 
 <h6 id="see-also">See Also</h6>
@@ -2246,7 +2249,7 @@ Ruled surface between spline1 and spline2.</li>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">save</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">fileName</span></span><span class="return-annotation">):</span></span>
+        <span class="name">save</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">fileName</span>, </span><span class="param"><span class="o">*</span><span class="n">additional_splines</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -2259,11 +2262,13 @@ Ruled surface between spline1 and spline2.</li>
 <ul>
 <li><strong>fileName</strong> (<code>string</code>):
 The full path to the file containing the spline. Can be a relative path.</li>
+<li><strong>*additional_splines</strong> (<code><a href="#Spline">Spline</a></code>):
+More splines to save in the same file.</li>
 </ul>
 
 <h6 id="see-also">See Also</h6>
 
-<p><code><a href="#Spline.load">load</a></code>:  Load a spline in json format from the specified filename (full path).  </p>
+<p><code><a href="#Spline.load">load</a></code>:  Load spline(s) in json format from the specified filename (full path).  </p>
 </div>
 
 
@@ -2572,6 +2577,45 @@ The translated spline.</li>
 <h6 id="notes">Notes</h6>
 
 <p>Equivalent to spline + translationVector.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.transpose" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">transpose</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">axes</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.transpose"></a>
+    
+            <div class="docstring"><p>Transpose the domain of a spline, changing the order of independent variables.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>axes</strong> (iterable, optional):
+If specified, it must be an iterable which contains a permutation of [0,1,…,nInd-1]. 
+The i'th independent variable of the returned spline will correspond to the axes[i] variable of the input. 
+If not specified, defaults to range(nInd)[::-1], which reverses the order of the independent variables.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+Trimmed spline. If all the knots are unchanged, the original spline is returned.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code>numpy.transpose</code>:  Returns an array with axes transposed.  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>Use spline.transpose(argsort(axes)) to invert the transposition when using the axes argument.</p>
 </div>
 
 

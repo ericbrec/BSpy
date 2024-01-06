@@ -357,7 +357,7 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
 
             if isConvolve:
                 # For convolve, we need to convolve matching independent variables (variables mapped to each other).
-                # We can't do this directly with b-spline coefficients, but we can indirectly with the following steps:
+                # We can't do this directly with B-spline coefficients, but we can indirectly with the following steps:
                 #   1) Determine the knots of the convolved spline from the knots of the matching independent variables.
                 #   2) Use the knots to determine segments and integration intervals that compute integral of self(x - y) * other(y) dy.
                 #   3) For each segment:
@@ -422,7 +422,7 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
                 newMultiplicities.append(newOrder)
             else:
                 # For multiply, we need to combine like terms for matching independent variables (variables mapped to each other).
-                # We can't do this directly with b-spline coefficients, but we can indirectly with the following steps:
+                # We can't do this directly with B-spline coefficients, but we can indirectly with the following steps:
                 #   1) Use the combined knots from matching independent variables to divide the spline into segments.
                 #   2) For each segment, convert the splines into polynomials (Taylor series).
                 #   3) Sum coefficients of matching polynomial degree (the coefficients have already been multiplied together).
