@@ -946,7 +946,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.animating = False
         self.animate = 0 # Set to number of milliseconds before showing next frame (0 means no animation)
         self.frameCount = 0
-        self.tessellationEnabled = False
+        self.tessellationEnabled = True
         self.glInitialized = False
         
         self.origin = None
