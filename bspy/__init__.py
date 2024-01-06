@@ -1,5 +1,5 @@
 """
-bspy is a python library for manipulating and rendering non-uniform b-splines.
+bspy is a python library for manipulating and rendering non-uniform B-splines.
 
 Available subpackages
 ---------------------
