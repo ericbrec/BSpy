@@ -127,8 +127,8 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     # Start subdivision loop.
     while True:
         # Define G(coefs) to be dGCoefs @ coefs - GSamples,
-        # where dGCoefs and GSamples are the b-spline values and sample points, respectively, for x(t).
-        # The dGCoefs matrix is banded due to b-spline local support, so initialize it to zero.
+        # where dGCoefs and GSamples are the B-spline values and sample points, respectively, for x(t).
+        # The dGCoefs matrix is banded due to B-spline local support, so initialize it to zero.
         # Solving for coefs provides us our initial coefficients of x(t).
         dGCoefs = np.zeros((nUnknownCoefs, nDep, nDep, nCoef), contourDtype)
         i = 0
@@ -149,7 +149,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         # Array to hold the values of F and contour dot for each t, excluding endpoints.
         FSamples = np.empty((nUnknownCoefs, nDep), contourDtype)
         # Array to hold the Jacobian of the FSamples with respect to the coefficients.
-        # The Jacobian is banded due to b-spline local support, so initialize it to zero.
+        # The Jacobian is banded due to B-spline local support, so initialize it to zero.
         dFCoefs = np.zeros((nUnknownCoefs, nDep, nDep, nCoef), contourDtype)
         # Working array to hold the transpose of the Jacobian of F for a particular x(t).
         dFX = np.empty((nDep, nDep - 1), contourDtype)
