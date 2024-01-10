@@ -10,6 +10,17 @@ def circular_arc(radius, angle, tolerance = None):
     samples = int(max(np.ceil(((1.1536e-5 * radius / tolerance)**(1/8)) * angle / 90), 2.0)) + 1
     return bspy.Spline.section([(radius * np.cos(u * angle * np.pi / 180), radius * np.sin(u * angle * np.pi / 180), 90 + u * angle, 1.0 / radius) for u in np.linspace(0.0, 1.0, samples)])
 
+def cone(radius1, radius2, height, tolerance = None):
+    if tolerance is None:
+        tolerance = 1.0e-12
+    bigRadius = max(radius1, radius2)
+    radius1 /= bigRadius
+    radius2 /= bigRadius
+    bottom = [[1.0, 0.0], [0.0, 1.0], [0.0, 0.0]] @ bspy.Spline.circular_arc(bigRadius, 360.0, tolerance)
+    top = radius2 * bottom + [0.0, 0.0, height]
+    bottom = radius1 * bottom
+    return bspy.Spline.ruled_surface(bottom, top)
+
 # Courtesy of Michael Epton - Translated from his F77 code lgnzro
 def _legendre_polynomial_zeros(degree):
     def legendre(degree, x):
@@ -276,6 +287,13 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         spline = spline.confine(F.domain())
     return spline
 
+def cylinder(radius, height, tolerance = None):
+    if tolerance is None:
+        tolerance = 1.0e-12
+    bottom = [[1.0, 0.0], [0.0, 1.0], [0.0, 0.0]] @ bspy.Spline.circular_arc(radius, 360.0, tolerance)
+    top = bottom + [0.0, 0.0, height]
+    return bspy.Spline.ruled_surface(bottom, top)
+
 def four_sided_patch(bottom, right, top, left, surfParam = 0.5):
     if bottom.nInd != 1 or right.nInd != 1 or top.nInd != 1 or left.nInd != 1:
         raise ValueError("Input curves must have one independent variable")
@@ -532,10 +550,12 @@ def ruled_surface(curve1, curve2):
     [newCurve1, newCurve2] = curve1.common_basis([curve2], indMap)
 
     # Generate the ruled spline between them
+    myCoefs1 = np.reshape(newCurve1.coefs, newCurve1.coefs.shape + (1,))
+    myCoefs2 = np.reshape(newCurve2.coefs, newCurve2.coefs.shape + (1,))
+    newCoefs = np.append(myCoefs1, myCoefs2, newCurve1.nInd + 1)
     return bspy.Spline(curve1.nInd + 1, curve1.nDep, list(newCurve1.order) + [2],
                        list(newCurve1.nCoef) + [2], list(newCurve1.knots) + [[0.0, 0.0, 1.0, 1.0]],
-                       [np.array([coef1, coef2]).T for coef1, coef2 in zip(newCurve1.coefs, newCurve2.coefs)],
-                       accuracy = max(newCurve1.accuracy, newCurve2.accuracy))
+                       newCoefs, accuracy = max(newCurve1.accuracy, newCurve2.accuracy))
 
 def section(xytk):    
     def twoPointSection(startPointX, startPointY, startAngle, startKappa, endPointX, endPointY, endAngle, endKappa):
