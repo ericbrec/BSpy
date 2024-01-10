@@ -550,10 +550,12 @@ def ruled_surface(curve1, curve2):
     [newCurve1, newCurve2] = curve1.common_basis([curve2], indMap)
 
     # Generate the ruled spline between them
+    myCoefs1 = np.reshape(newCurve1.coefs, newCurve1.coefs.shape + (1,))
+    myCoefs2 = np.reshape(newCurve2.coefs, newCurve2.coefs.shape + (1,))
+    newCoefs = np.append(myCoefs1, myCoefs2, newCurve1.nInd + 1)
     return bspy.Spline(curve1.nInd + 1, curve1.nDep, list(newCurve1.order) + [2],
                        list(newCurve1.nCoef) + [2], list(newCurve1.knots) + [[0.0, 0.0, 1.0, 1.0]],
-                       [np.array([coef1, coef2]).T for coef1, coef2 in zip(newCurve1.coefs, newCurve2.coefs)],
-                       accuracy = max(newCurve1.accuracy, newCurve2.accuracy))
+                       newCoefs, accuracy = max(newCurve1.accuracy, newCurve2.accuracy))
 
 def section(xytk):    
     def twoPointSection(startPointX, startPointY, startAngle, startKappa, endPointX, endPointY, endAngle, endKappa):
