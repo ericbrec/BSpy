@@ -104,6 +104,10 @@ def evaluate(self, uvw):
     # Make work for scalar valued functions
     uvw = np.atleast_1d(uvw)
 
+    # Check for the correct number of independent variables
+    if len(uvw) != self.nInd:
+        raise ValueError(f"Incorrect number of parameter values: {len(uvw)}")
+
     # Check for evaluation point inside domain
     dom = self.domain()
     for ix in range(self.nInd):

@@ -597,7 +597,11 @@ class Spline:
         evaluated, then the dot product of those B-splines with the vector of
         B-spline coefficients is computed.
         """
-        if len(uvw) > 1 or (not np.isscalar(uvw[0]) and len(uvw[0]) > self.nInd):
+        if len(uvw) == 0 and self.nInd == 0:
+            return np.zeros(self.nDep, self.coefs.dtype)
+        elif np.isscalar(uvw[0]):
+            return bspy._spline_evaluation.derivative(self, with_respect_to, uvw)
+        elif len(uvw) > 1 or len(uvw[0]) > self.nInd:
             def vectorized(*uvwInstance):
                 return tuple(bspy._spline_evaluation.derivative(self, with_respect_to, uvwInstance))
             uFunc = np.frompyfunc(vectorized, self.nInd, self.nDep)
@@ -760,7 +764,9 @@ class Spline:
         """
         if len(uvw) == 0 and self.nInd == 0:
             return self.coefs
-        if len(uvw) > 1 or (not np.isscalar(uvw[0]) and len(uvw[0]) > self.nInd):
+        elif np.isscalar(uvw[0]):
+            return bspy._spline_evaluation.evaluate(self, uvw)
+        elif len(uvw) > 1 or len(uvw[0]) > self.nInd:
             def vectorized(*uvwInstance):
                 return tuple(bspy._spline_evaluation.evaluate(self, uvwInstance))
             uFunc = np.frompyfunc(vectorized, self.nInd, self.nDep)
