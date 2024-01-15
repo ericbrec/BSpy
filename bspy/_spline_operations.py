@@ -653,23 +653,20 @@ def _cross_correlation_matrix(self):
                 if not match:
                     break
             ccm[i, j] = ccm[j, i] = not match
-
     ccm[-1, -1] = True
     return ccm
 
 def normal_spline(self, indices=None):
-    if abs(self.nInd - self.nDep) != 1: raise ValueError("The number of independent variables must be one different than the number of dependent variables.")
+    if abs(self.nInd - self.nDep) != 1: raise ValueError("The number of independent variables must be one less than the number of dependent variables.")
 
     # Construct order and knots for generalized cross product of the tangent space.
     newOrder = []
     newKnots = []
-    startUvw = []
-    endUvw = []
-    deltaUvw = []
+    uvwValues = []
+    nCoefs = []
     totalCoefs = [1]
-    rank = min(self.nInd, self.nDep)
     ccm = _cross_correlation_matrix(self)
-    for i, order, knots in zip(range(self.nInd), self.order, self.knots):
+    for i, (order, knots) in enumerate(zip(self.order, self.knots)):
         # First, calculate the order of the normal for this independent variable.
         # Note that the total order will be one less than usual, because one of 
         # the tangents is the derivative with respect to that independent variable.
@@ -700,23 +697,25 @@ def normal_spline(self, indices=None):
         # using that calculation to span uvw from the starting knot to the end for each variable.
         nCoef = len(newKnots[-1]) - newOrder[-1]
         totalCoefs.append(totalCoefs[-1] * nCoef)
-        startUvw.append(uniqueKnots[0])
-        endUvw.append(uniqueKnots[-1])
-        deltaUvw.append((uniqueKnots[-1] - uniqueKnots[0]) / (nCoef - 1))
-    
+        uvwValues.append(bspy.Spline(1, 0, [newOrd], [nCoef], [newKnots[-1]], []).greville())
+        nCoefs.append(nCoef)
     points = []
-    uvw = [*startUvw]
+    ijk = [0 for order in self.order]
     for i in range(totalCoefs[-1]):
-        points.append((*uvw, *self.normal(uvw, False, indices)))
-        for j, nCoef, start, end, delta in zip(range(self.nInd), totalCoefs[:-1], startUvw, endUvw, deltaUvw):
+        uvw = [uvwValues[j][k] for j, k in enumerate(ijk)]
+        points.append(self.normal(uvw, False, indices))
+        for j, nCoef in enumerate(totalCoefs[:-1]):
             if (i + 1) % nCoef == 0:
-                uvw[j] = min(uvw[j] + delta, end)
+                ijk[j] += 1
                 if j > 0:
-                    uvw[j - 1] = previousStart
-            previousStart = start
-    
+                    ijk[j - 1] = 0
+    points = np.array(points).T
     nDep = max(self.nInd, self.nDep) if indices is None else len(indices)
-    return bspy.Spline.least_squares(self.nInd, nDep, newOrder, points, newKnots, 0, self.metadata)
+    nCoefs.reverse()
+    points = np.reshape(points, [nDep] + nCoefs)
+    points = np.transpose(points, [0] + list(range(self.nInd, 0, -1)))
+    return bspy.Spline.least_squares(uvwValues, points, order = newOrder, knots = newKnots, metadata = self.metadata)
+#    return bspy.Spline.least_squares(self.nInd, nDep, newOrder, points, newKnots, 0, self.metadata)
 
 def rotate(self, vector, angle):
     vector = np.atleast_1d(vector)

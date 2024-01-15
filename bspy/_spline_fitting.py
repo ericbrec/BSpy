@@ -383,143 +383,89 @@ def four_sided_patch(bottom, right, top, left, surfParam = 0.5):
     
     return (1.0 - surfParam) * coons + surfParam * laplace
 
-def least_squares(nInd, nDep, order, dataPoints, knotList = None, compression = 0, metadata = {}):
-    if not(nInd >= 0): raise ValueError("nInd < 0")
-    if not(nDep >= 0): raise ValueError("nDep < 0")
-    if not(len(order) == nInd): raise ValueError("len(order) != nInd")
-    if not(0 <= compression < 100): raise ValueError("compression not between 0 and 99")
-    totalOrder = 1
-    for ord in order:
-        totalOrder *= ord
+def least_squares(uValues, dataPoints, order = None, knots = None, compression = 0.0,
+                  tolerance = None, fixEnds = False, metadata = {}):
+    
+    # Preprocess the parameters values for the points
 
-    totalDataPoints = len(dataPoints)
-    for point in dataPoints:
-        if not(len(point) == nInd + nDep or len(point) == nInd + nDep * (nInd + 1)): raise ValueError(f"Data points do not have {nInd + nDep} values")
-        if len(point) == nInd + nDep * (nInd + 1):
-            totalDataPoints += nInd
-
-    if knotList is None:
-        # Compute the target number of coefficients and the actual number of samples in each independent variable.
-        targetTotalCoef = len(dataPoints) * (100 - compression) / 100.0
-        totalCoef = 1
-        knotSamples = np.array([point[:nInd] for point in dataPoints], type(dataPoints[0][0])).T
-        knotList = []
-        for knotSample in knotSamples:
-            knots = np.unique(knotSample)
-            knotList.append(knots)
-            totalCoef *= len(knots)
-        
-        # Scale the number of coefficients for each independent variable so that the total closely matches the target.
-        scaling = min((targetTotalCoef / totalCoef) ** (1.0 / nInd), 1.0)
-        nCoef = []
-        totalCoef = 1
-        for knots in knotList:
-            nCf = int(math.ceil(len(knots) * scaling))
-            nCoef.append(nCf)
-            totalCoef *= nCf
-        
-        # Compute "ideal" knots for each independent variable, based on the number of coefficients and the sample values.
-        # Piegl, Les A., and Wayne Tiller. "Surface approximation to scanned data." The visual computer 16 (2000): 386-395.
-        newKnotList = []
-        for iInd, ord, nCf, knots in zip(range(nInd), order, nCoef, knotList):
-            degree = ord - 1
-            newKnots = [knots[0]] * ord
-            inc = len(knots)/nCf
-            low = 0
-            d = -1
-            w = np.empty((nCf,), float)
-            for i in range(nCf):
-                d += inc
-                high = int(d + 0.5 + 1) # Paper's algorithm sets high to d + 0.5, but only references high + 1
-                w[i] = np.mean(knots[low:high])
-                low = high
-            for i in range(1, nCf - degree):
-                newKnots.append(np.mean(w[i:i + degree]))
-            newKnots += [knots[-1]] * ord
-            newKnotList.append(np.array(newKnots, knots.dtype))
-        knotList = newKnotList
+    if np.isscalar(uValues[0]):
+        nInd = 1
+        uValues = [uValues]
     else:
-        if not(len(knotList) == nInd): raise ValueError("len(knots) != nInd") # The documented interface uses the argument 'knots' instead of 'knotList'
-        nCoef = [len(knotList[i]) - order[i] for i in range(nInd)]
-        totalCoef = 1
-        newKnotList = []
-        for knots, ord, nCf in zip(knotList, order, nCoef):
-            for i in range(nCf):
-                if not(knots[i] <= knots[i + 1] and knots[i] < knots[i + ord]): raise ValueError("Improperly ordered knot sequence")
-            totalCoef *= nCf
-            newKnotList.append(np.array(knots))
-        if not(totalCoef <= totalDataPoints): raise ValueError(f"Insufficient number of data points. You need at least {totalCoef}.")
-        knotList = newKnotList
+        nInd = len(uValues)
+    if nInd != 1 and nInd != 2:  raise ValueError("uValues is not a 1 or 2 dimensional array")
+    domain = []
+    for iInd in range(nInd):
+        uMin = np.min(uValues[iInd])
+        uMax = np.max(uValues[iInd])
+        domain.append([uMin, uMax])
+        for i in range(len(uValues[iInd]) - 1):
+            if uValues[iInd][i] > uValues[iInd][i + 1]:  raise ValueError("Independent variable values are out of order")
+
+    # Preprocess the data points
+
+    if len(dataPoints.shape) != nInd + 1:  raise ValueError("dataPoints has the wrong shape")
+    nDep = dataPoints.shape[0]
+    pointsPerDirection = list(dataPoints.shape)[1:]
+    nPoints = 1
+    for i, nu in enumerate(pointsPerDirection):
+        if nu != len(uValues[i]):  raise ValueError("Wrong number of parameter values in one or more directions")
+        nPoints *= nu
+
+    # Make sure the order makes sense
+
+    if order is None:
+        order = [min(4, nu) for nu in pointsPerDirection]
+    for nP, nOrder in zip(pointsPerDirection, order):
+        if nP < nOrder:  raise ValueError("Not enough points in one or more directions")
+
+    # Determine the (initial) knots array
+
+    if not(0.0 <= compression <= 1.0):  raise ValueError("compression not between 0.0 and 1.0")
+    if knots is None:
+        knots = [np.array(order[iInd] * [domain[iInd][0]] + order[iInd] * [domain[iInd][1]]) for iInd in range(nInd)]
+        for iInd, (nP, nOrder) in enumerate(zip(pointsPerDirection, order)):
+            knotsToAdd = int((nP - nOrder) * (1.0 - compression) + 0.9999999999)
+            addSpots = np.linspace(0.0, nP - 1.0, knotsToAdd + 2)[1 : -1]
+            newKnots = []
+            for newSpot in addSpots:
+                ix = int(newSpot)
+                alpha = newSpot - ix
+                newKnots.append((1.0 - alpha) * uValues[iInd][ix] + alpha * uValues[iInd][ix + 1])
+            knots[iInd] = np.sort(np.append(knots[iInd], newKnots))
+    for iInd in range(nInd):
+        if domain[iInd][0] < knots[iInd][order[iInd] - 1] or \
+           domain[iInd][1] > knots[iInd][-order[iInd]]:  raise ValueError("One or more dataPoints are outside the domain of the spline")
+
+    # Loop through each independent variable and fit all of the data
     
-    # Initialize A and b from the likely overdetermined equation, A x = b, where A contains the bspline values at the independent variables,
-    # b contains point values for the dependent variables, and the x contains the desired coefficients.
-    A = np.zeros((totalDataPoints, totalCoef), type(dataPoints[0][0]))
-    b = np.empty((totalDataPoints, nDep), A.dtype)
-
-    # Fill in the bspline values in A and the dependent point values in b at row at a time.
-    # Note that if a data point also specifies first derivatives, it fills out nInd + 1 rows (the point and its derivatives).
-    row = 0
-    for point in dataPoints:
-        hasDerivatives = len(point) == nInd + nDep * (nInd + 1)
-
-        # Compute the bspline values (and their first derivatives as needed).
-        bValueData = []
-        for knots, ord, nCf, u in zip(knotList, order, nCoef, point[:nInd]):
-            ix = np.searchsorted(knots, u, 'right')
-            ix = min(ix, nCf)
-            bValueData.append((ix, bspy.Spline.bspline_values(ix, knots, ord, u), \
-                bspy.Spline.bspline_values(ix, knots, ord, u, 1) if hasDerivatives else None))
-        
-        # Compute the values for the A array.
-        # It's a little tricky because we have to multiply nInd different bspline arrays of different sizes
-        # and index into flattened A array. The solution is to loop through the total number of entries
-        # being changed (totalOrder), and compute the array indices via mods and multiplies.
-        indices = [0] * nInd
-        for i in range(totalOrder):
-            column = 0
-            bValues = np.ones((nInd + 1,), A.dtype)
-            for j, ord, nCf, index, (ix, values, dValues) in zip(range(1, nInd + 1), order, nCoef, indices, bValueData):
-                column = column * nCf + ix - ord + index
-                # Compute the bspline value for this specific element of A.
-                bValues[0] *= values[index]
-                if hasDerivatives:
-                    # Compute the first derivative values for each independent variable.
-                    for k in range(1, nInd + 1):
-                        bValues[k] *= dValues[index] if k == j else values[index]
-
-            # Assign all the values and derivatives.
-            A[row, column] = bValues[0]
-            if hasDerivatives:
-                for k in range(1, nInd + 1):
-                    A[row + k, column] = bValues[k]
-
-            # Increment the bspline indices.
-            for j in range(nInd - 1, -1, -1):
-                indices[j] = (indices[j] + 1) % order[j]
-                if indices[j] > 0:
-                    break
-
-        # Assign values for the b array.
-        b[row, :] = point[nInd:nInd + nDep]
-        if hasDerivatives:
-            for k in range(1, nInd + 1):
-                b[row + k, :] = point[nInd + nDep * k:nInd + nDep * (k + 1)]
-
-        # Increment the row before filling in the next data point
-        row += nInd + 1 if hasDerivatives else 1
-    
-    # Yay, the A and b arrays are ready to solve.
-    # Now, we call numpy's least squares solver.
-    coefs, residuals, rank, s = np.linalg.lstsq(A, b, rcond=None)
-
-    # Reshape the coefs array to match nCoef (un-flatten) and move the dependent variables to the front.
-    coefs = np.moveaxis(coefs.reshape((*nCoef, nDep)), -1, 0)
-
-    # Return the resulting spline, computing the accuracy based on system epsilon and the norm of the residuals.
-    maxError = np.finfo(coefs.dtype).eps
-    if residuals.size > 0:
-        maxError = max(maxError, residuals.sum())
-    return bspy.Spline(nInd, nDep, order, nCoef, knotList, coefs, np.sqrt(maxError), metadata)
+    accuracy = np.finfo(float).eps
+    for iInd in range(nInd):
+        nRows = pointsPerDirection[iInd]
+        nCols = len(knots[iInd]) - order[iInd]
+        A = np.zeros((nRows, nCols))
+        u = -np.finfo(float).max
+        for iRow in range(nRows):
+            uNew = uValues[iInd][iRow]
+            if uNew != u:
+                iDerivative = 0
+                u = uNew
+                ix = np.searchsorted(knots[iInd], u, 'right')
+                ix = min(ix, nCols)
+            else:
+                iDerivative += 1
+            row = bspy.Spline.bspline_values(ix, knots[iInd], order[iInd], u, iDerivative)
+            A[iRow, ix - order[iInd] : ix] = row
+        b = np.swapaxes(dataPoints, 0, iInd + 1)
+        b = np.reshape(b, (nRows, nDep * nPoints // nRows))
+        x, residuals, rank, s = np.linalg.lstsq(A, b, rcond = None)
+        accuracy *= s[0] / s[rank - nCols - 1]
+        pointsPerDirection[iInd] = nDep
+        x = np.reshape(x, [nCols] + pointsPerDirection)
+        dataPoints = np.swapaxes(x, 0, iInd + 1)
+        pointsPerDirection[iInd] = nCols
+        nPoints = nCols * nPoints // nRows
+    return bspy.Spline(nInd, nDep, order, pointsPerDirection, knots, dataPoints, accuracy = accuracy)
 
 def line(startPoint, endPoint):
     startPoint = bspy.Spline.point(startPoint)
