@@ -17,7 +17,7 @@ def add(self, other, indMap = None):
     otherMapped = []
     otherToSelf = {}
     if indMap is not None:
-        (self, other) = self.common_basis((other,), indMap)
+        (self, other) = bspy.Spline.common_basis((self, other), indMap)
         for map in indMap:
             selfMapped.append(map[0])
             otherMapped.append(map[1])

@@ -947,7 +947,7 @@ def test_least_squares():
 
     # Create knots and fit data taken from 2D spline. Should match returned accuracy at data points.
     fit = bspy.Spline.least_squares(uValues, dataPoints, order = [3, 4])
-    commonSpline, commonFit = spline.common_basis([fit], ((0, 0), (1, 1)))
+    commonSpline, commonFit = bspy.Spline.common_basis([spline, fit])
     coefErrors = commonFit.coefs - commonSpline.coefs
     maxError = max(-coefErrors.min(), coefErrors.max()) / 2.0
     assert maxError <= 0.0025

@@ -11,10 +11,11 @@ def clamp(self, left, right):
 
     return self.trim(bounds)
 
-def common_basis(self, splines, indMap):
+def common_basis(splines, indMap):
     # Step 1: Compute the order for each aligned independent variable.
     orders = []
-    splines = (self, *splines)
+    if indMap is None:
+        indMap = [len(splines) * [iInd] for iInd in range(splines[0].nInd)]
     for map in indMap:
         if not(len(map) == len(splines)): raise ValueError("Invalid map")
         order = 0

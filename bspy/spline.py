@@ -305,14 +305,15 @@ class Spline:
         """
         return bspy._spline_domain.clamp(self, left, right)
 
-    def common_basis(self, splines, indMap):
+    @staticmethod
+    def common_basis(splines, indMap = None):
         """
         Align a collection of splines to a common basis, elevating the order and adding knots as needed.
 
         Parameters
         ----------
         splines : `iterable`
-            The collection of N - 1 splines to align (N total splines, including self).
+            The collection of N splines to align.
 
         indMap : `iterable`
             The collection of independent variables to align. Since each spline can have multiple 
@@ -321,6 +322,7 @@ class Spline:
             The domains of mapped independent variables must match. 
             An independent variable can map to no more than one other independent variable.
             If all the splines are curves (1 independent variable), then `indMap` is ((0, 0, .. 0),).
+            If indMap is None (the default), then it is set to [N * [i] for i in range(nInd)]
 
         Returns
         -------
@@ -335,7 +337,7 @@ class Spline:
         -----
         Uses `elevate_and_insert_knots` to ensure mapped variables share the same order and knots. 
         """
-        return bspy._spline_domain.common_basis(self, splines, indMap)
+        return bspy._spline_domain.common_basis(splines, indMap)
 
     @staticmethod
     def cone(radius1, radius2, height, tolerance = None):

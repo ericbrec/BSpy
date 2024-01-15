@@ -522,7 +522,7 @@ def contours(self):
             continue # Try a different theta
 
         # Find turning points by combining self and turningPointDeterminant into a system and processing its zeros.
-        systemSelf, systemTurningPointDeterminant = self.common_basis((turningPointDeterminant,), [(nInd, nInd) for nInd in range(self.nInd)])
+        systemSelf, systemTurningPointDeterminant = bspy.Spline.common_basis((self, turningPointDeterminant))
         system = type(systemSelf)(self.nInd, self.nInd, systemSelf.order, systemSelf.nCoef, systemSelf.knots, \
             np.concatenate((systemSelf.coefs, systemTurningPointDeterminant.coefs)), systemSelf.accuracy, systemSelf.metadata)
         zeros = system.zeros()
