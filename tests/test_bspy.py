@@ -921,7 +921,7 @@ def test_least_squares():
     spline = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0, 0.3, 0.7, 1, 1, 1, 1], float)], 
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
     uValues = np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], spline.nCoef[0] + 5)
-    data = np.array(spline(uValues), spline.coefs.dtype)
+    data = np.array(spline(uValues))
     fit = bspy.Spline.least_squares(uValues, data, knots = spline.knots)
     coefErrors = fit.coefs - spline.coefs
     maxError = max(-coefErrors.min(), coefErrors.max()) / 580.0
@@ -958,6 +958,24 @@ def test_least_squares():
     approxDerivative = fit.derivative([1], 0.0)
     newDistance = np.linalg.norm(trueDerivative - approxDerivative)
     assert newDistance < derivativeDistance
+
+    # Reproduce a bivariate tensor product quadratic using a Taylor series
+    quadKnots = 2 * [[0.0, 0.0, 0.0, 1.0, 1.0, 1.0]]
+    spline = bspy.Spline(2, 3, [3, 3], [3, 3], quadKnots,
+                         [[0.0, 0.0, 0.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0],
+                          [0.0, 0.5, 1.0, 0.0, 0.5, 1.0, 0.0, 0.5, 1.0],
+                          [0.0, 0.0, 1.0, 0.0, 4.0, 0.0, 0.0, 2.0, 2.0]])
+    allAt = [0.5, 0.5]
+    data = [spline.derivative([0, 0], allAt), spline.derivative([0, 1], allAt), spline.derivative([0, 2], allAt),
+            spline.derivative([1, 0], allAt), spline.derivative([1, 1], allAt), spline.derivative([1, 2], allAt),
+            spline.derivative([2, 0], allAt), spline.derivative([2, 1], allAt), spline.derivative([2, 2], allAt)]
+    data = np.array(data)
+    data = np.swapaxes(data, 0, 1)
+    data = np.reshape(data, (3, 3, 3))
+    fit = bspy.Spline.least_squares([3 * [0.5], 3 * [0.5]], data, knots = spline.knots)
+    coefErrors = fit.coefs - spline.coefs
+    maxError = max(-coefErrors.min(), coefErrors.max())            
+    assert maxError < fit.accuracy
 
     # Replicate 2D spline using its knots. Should be precise to machine epsilon.
     spline = mySurface
