@@ -933,6 +933,31 @@ def test_least_squares():
     coefErrors = commonFit.coefs - spline.coefs
     maxError = max(-coefErrors.min(), coefErrors.max()) / 580.0
     assert maxError <= 0.15
+    trueStart = spline(0.0)
+    trueDerivative = spline.derivative([1], 0.0)
+    approxStart = fit(0.0)
+    approxDerivative = fit.derivative([1], 0.0)
+    derivativeDistance = np.linalg.norm(trueDerivative - approxDerivative)
+
+    # Attempt the same thing, but with Hermite data this time
+    uValues = np.append(uValues, [uValues[0], uValues[3], uValues[7], uValues[7]])
+    uValues = np.sort(uValues)
+    data = np.array(spline(uValues), spline.coefs.dtype)
+    for i in range(1, len(uValues)):
+        if uValues[i - 1] == uValues[i]:
+            data[: , i] = spline.derivative([1], uValues[i])
+    for i in range(2, len(uValues)):
+        if uValues[i - 2] == uValues[i]:
+            data[: , i] = spline.derivative([2], uValues[i])
+    fit = bspy.Spline.least_squares(uValues, data, compression = 1.0)
+    commonFit = fit.insert_knots([[0.3, 0.7]])
+    coefErrors = commonFit.coefs - spline.coefs
+    maxError = max(-coefErrors.min(), coefErrors.max()) / 580.0
+    assert maxError <= 0.4
+    approxStart = fit(0.0)
+    approxDerivative = fit.derivative([1], 0.0)
+    newDistance = np.linalg.norm(trueDerivative - approxDerivative)
+    assert newDistance < derivativeDistance
 
     # Replicate 2D spline using its knots. Should be precise to machine epsilon.
     spline = mySurface
