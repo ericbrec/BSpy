@@ -445,6 +445,7 @@ def least_squares(uValues, dataPoints, order = None, knots = None, compression =
         nCols = len(knots[iInd]) - order[iInd]
         A = np.zeros((nRows, nCols))
         u = -np.finfo(float).max
+        fixedRows = []
         for iRow in range(nRows):
             uNew = uValues[iInd][iRow]
             if uNew != u:
@@ -456,16 +457,37 @@ def least_squares(uValues, dataPoints, order = None, knots = None, compression =
                 iDerivative += 1
             row = bspy.Spline.bspline_values(ix, knots[iInd], order[iInd], u, iDerivative)
             A[iRow, ix - order[iInd] : ix] = row
+            if fixEnds and (u == uValues[iInd][0] or u == uValues[iInd][-1]):
+                fixedRows.append(iRow)
         b = np.swapaxes(dataPoints, 0, iInd + 1)
         b = np.reshape(b, (nRows, nDep * nPoints // nRows))
-        x, residuals, rank, s = np.linalg.lstsq(A, b, rcond = None)
-        accuracy *= s[0] / s[rank - nCols - 1]
+        nInterp = len(fixedRows)
+        if nInterp != 0:
+            C = np.take(A, fixedRows, 0)
+            d = np.take(b, fixedRows, 0)
+            A = np.delete(A, fixedRows, 0)
+            b = np.delete(b, fixedRows, 0)
+            U, Sigma, VT = np.linalg.svd(C)
+            d = U.T @ d
+            for iRow in range(nInterp):
+                d[iRow] = d[iRow] / Sigma[iRow]
+            accuracy *= Sigma[0] / Sigma[-1]
+            rangeCols = np.take(VT.T, range(nInterp), 1)
+            nullspace = np.delete(VT.T, range(nInterp), 1)
+            x1 = rangeCols @ d
+            b1 = b - A @ x1
+            xNullspace, residuals, rank, s = np.linalg.lstsq(A @ nullspace, b1, rcond = None)
+            x = x1 + nullspace @ xNullspace
+        else:
+            x, residuals, rank, s = np.linalg.lstsq(A, b, rcond = None)
+        accuracy *= s[0] / s[rank - 1]
         pointsPerDirection[iInd] = nDep
         x = np.reshape(x, [nCols] + pointsPerDirection)
         dataPoints = np.swapaxes(x, 0, iInd + 1)
         pointsPerDirection[iInd] = nCols
         nPoints = nCols * nPoints // nRows
-    return bspy.Spline(nInd, nDep, order, pointsPerDirection, knots, dataPoints, accuracy = accuracy)
+    return bspy.Spline(nInd, nDep, order, pointsPerDirection, knots, dataPoints,
+                       accuracy = accuracy, metadata = metadata)
 
 def line(startPoint, endPoint):
     startPoint = bspy.Spline.point(startPoint)

@@ -959,6 +959,15 @@ def test_least_squares():
     newDistance = np.linalg.norm(trueDerivative - approxDerivative)
     assert newDistance < derivativeDistance
 
+    # Now attempt it with fixEnds == True
+    uValues = np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], 21)
+    data = np.array(spline(uValues))
+    fit = bspy.Spline.least_squares(uValues, data, compression = 1.0, fixEnds = True)
+    commonFit = fit.insert_knots([[0.3, 0.7]])
+    coefErrors = commonFit.coefs - spline.coefs
+    maxError = max(-coefErrors.min(), coefErrors.max()) / 580.0
+    assert maxError <= 0.16
+ 
     # Reproduce a bivariate tensor product quadratic using a Taylor series
     quadKnots = 2 * [[0.0, 0.0, 0.0, 1.0, 1.0, 1.0]]
     spline = bspy.Spline(2, 3, [3, 3], [3, 3], quadKnots,
