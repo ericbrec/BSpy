@@ -272,7 +272,7 @@ def extrapolate(self, newDomain, continuityOrder):
     return type(self)(self.nInd, self.nDep, self.order, nCoef, knots, dCoefs[0], self.accuracy, self.metadata)
 
 def fold(self, foldedInd):
-    if not(0 <= len(foldedInd) < self.nInd): raise ValueError("Invalid foldedInd")
+    if not(0 <= len(foldedInd) <= self.nInd): raise ValueError("Invalid foldedInd")
     foldedOrder = []
     foldedNCoef = []
     foldedKnots = []

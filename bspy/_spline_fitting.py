@@ -385,7 +385,29 @@ def four_sided_patch(bottom, right, top, left, surfParam = 0.5):
 
 def least_squares(uValues, dataPoints, order = None, knots = None, compression = 0.0,
                   tolerance = None, fixEnds = False, metadata = {}):
+
+    # Preprocess all the input if everything is a spline
     
+    dataPoints = np.array(dataPoints)
+    flatView = np.ravel(dataPoints)
+    splineInput = False
+    if type(flatView[0]) is bspy.Spline:
+        splineInput = True
+        nInd = flatView[0].nInd
+        nDep = flatView[0].nDep
+        splineDomain = flatView[0].domain()
+        for spline in flatView:
+            if spline.nInd != nInd:  raise ValueError("Input splines have different number of independent variables")
+            if spline.nDep != nDep:  raise ValueError("Input splines have different number of dependent variables")
+            if not np.array_equal(spline.domain(), splineDomain):  raise ValueError("Input splines have different domains")
+        commonSplines = bspy.Spline.common_basis(flatView)
+        foldedData = []
+        for spline in commonSplines:
+            folded, unfoldInfo = spline.fold(list(range(nInd)))
+            foldedData.append(folded())
+        foldedData = np.array(foldedData).T
+        dataPoints = np.reshape(foldedData, (foldedData.shape[0],) + dataPoints.shape)
+
     # Preprocess the parameters values for the points
 
     if np.isscalar(uValues[0]):
@@ -393,7 +415,6 @@ def least_squares(uValues, dataPoints, order = None, knots = None, compression =
         uValues = [uValues]
     else:
         nInd = len(uValues)
-    if nInd != 1 and nInd != 2:  raise ValueError("uValues is not a 1 or 2 dimensional array")
     domain = []
     for iInd in range(nInd):
         uMin = np.min(uValues[iInd])
@@ -402,6 +423,7 @@ def least_squares(uValues, dataPoints, order = None, knots = None, compression =
         for i in range(len(uValues[iInd]) - 1):
             if uValues[iInd][i] > uValues[iInd][i + 1]:  raise ValueError("Independent variable values are out of order")
 
+    
     # Preprocess the data points
 
     if len(dataPoints.shape) != nInd + 1:  raise ValueError("dataPoints has the wrong shape")
@@ -486,8 +508,11 @@ def least_squares(uValues, dataPoints, order = None, knots = None, compression =
         dataPoints = np.swapaxes(x, 0, iInd + 1)
         pointsPerDirection[iInd] = nCols
         nPoints = nCols * nPoints // nRows
-    return bspy.Spline(nInd, nDep, order, pointsPerDirection, knots, dataPoints,
-                       accuracy = accuracy, metadata = metadata)
+    splineFit = bspy.Spline(nInd, nDep, order, pointsPerDirection, knots, dataPoints,
+                            accuracy = accuracy, metadata = metadata)
+    if splineInput:
+        splineFit = splineFit.unfold(range(unfoldInfo.nInd), unfoldInfo)
+    return splineFit
 
 def line(startPoint, endPoint):
     startPoint = bspy.Spline.point(startPoint)

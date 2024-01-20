@@ -921,7 +921,7 @@ def test_least_squares():
     spline = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0, 0.3, 0.7, 1, 1, 1, 1], float)], 
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
     uValues = np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], spline.nCoef[0] + 5)
-    data = np.array(spline(uValues))
+    data = spline(uValues)
     fit = bspy.Spline.least_squares(uValues, data, knots = spline.knots)
     coefErrors = fit.coefs - spline.coefs
     maxError = max(-coefErrors.min(), coefErrors.max()) / 580.0
@@ -967,6 +967,14 @@ def test_least_squares():
     coefErrors = commonFit.coefs - spline.coefs
     maxError = max(-coefErrors.min(), coefErrors.max()) / 580.0
     assert maxError <= 0.16
+
+    # Now attempt a fit when splines are passed in
+    crv1 = bspy.Spline.line([0.0, 0.0, 0.0], [1.0, 0.0, 0.0])
+    crv2 = bspy.Spline.section([[0.0, 0.0, 45.0, -0.5], [1.0, 0.0, -45.0, -0.5]])
+    crv2 = [[1, 0], [0, 0], [0, 1]] @ crv2 + [0.0, 0.5, 0.0]
+    crv3 = bspy.Spline.line([0.0, 1.0, 0.0], [1.0, 1.0, 0.0])
+    fit = bspy.Spline.least_squares([0.0, 0.5, 1.0], [crv1, crv2, crv3])
+    assert fit.nInd == 2 and fit.nDep == 3 and fit.order[0] == 5 and fit.order[1] == 3
  
     # Reproduce a bivariate tensor product quadratic using a Taylor series
     quadKnots = 2 * [[0.0, 0.0, 0.0, 1.0, 1.0, 1.0]]
