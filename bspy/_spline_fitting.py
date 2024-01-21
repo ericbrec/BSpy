@@ -346,7 +346,7 @@ def four_sided_patch(bottom, right, top, left, surfParam = 0.5):
     biLinear = bspy.Spline.ruled_surface(bottomLine, topLine)
     coons = bottomTop.add(leftRight, ((0,1), (1,0))) - biLinear
 
-    # Determine the Greville absiccae to use as collocation points
+    # Determine the Greville abscissae to use as collocation points
 
     uPts = coons.greville(0)[1 : -1]
     vPts = coons.greville(1)[1 : -1]
@@ -490,19 +490,19 @@ def least_squares(uValues, dataPoints, order = None, knots = None, compression =
                 A[iRow, ix - order[iInd] : ix] = row
                 if fixEnds and (u == uValues[iInd][0] or u == uValues[iInd][-1]):
                     fixedRows.append(iRow)
-            nInterp = len(fixedRows)
-            if nInterp != 0:
+            nInterpolationConditions = len(fixedRows)
+            if nInterpolationConditions != 0:
                 C = np.take(A, fixedRows, 0)
                 d = np.take(b, fixedRows, 0)
                 AUse = np.delete(A, fixedRows, 0)
                 bUse = np.delete(b, fixedRows, 0)
                 U, Sigma, VT = np.linalg.svd(C)
                 d = U.T @ d
-                for iRow in range(nInterp):
+                for iRow in range(nInterpolationConditions):
                     d[iRow] = d[iRow] / Sigma[iRow]
                 loopAccuracy *= Sigma[0] / Sigma[-1]
-                rangeCols = np.take(VT.T, range(nInterp), 1)
-                nullspace = np.delete(VT.T, range(nInterp), 1)
+                rangeCols = np.take(VT.T, range(nInterpolationConditions), 1)
+                nullspace = np.delete(VT.T, range(nInterpolationConditions), 1)
                 x1 = rangeCols @ d
                 b1 = bUse - AUse @ x1
                 xNullspace, residuals, rank, s = np.linalg.lstsq(AUse @ nullspace, b1, rcond = None)
