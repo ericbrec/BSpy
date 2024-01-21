@@ -30,6 +30,15 @@ crv2 = bspy.Spline.section([[0.0, 0.0, 45.0, -0.5], [1.0, 0.0, -45.0, -0.5]])
 crv2 = [[1, 0], [0, 0], [0, 1]] @ crv2 + [0.0, 0.5, 0.0]
 crv3 = bspy.Spline.line([0.0, 1.0, 0.0], [1.0, 1.0, 0.0])
 surfThroughCurves = bspy.Spline.least_squares([0.0, 0.5, 1.0], [crv1, crv2, crv3])
+def ffe(x, y):
+    return 0.75 * np.exp(-0.25 * ((9 * x - 2) ** 2 + (9 * y - 2) ** 2)) + \
+           0.75 * np.exp(-(9 * x + 1) ** 2 / 49.0 - ((9 * y + 1) ** 2 / 10.0)) + \
+           0.5 * np.exp(-0.25 * ((9 * x - 7) ** 2 + (9 * y - 3) ** 2)) - \
+           0.2 * np.exp(-(9 * x - 4) ** 2 - (9 * x - 7) ** 2)
+uValues = np.linspace(0.0, 1.0, 201)
+dataPoints = np.array([[u, v, ffe(u, v)] for u in uValues for v in uValues]).T
+dataPoints = np.reshape(dataPoints, (3, 201, 201))
+fit = bspy.Spline.least_squares([uValues, uValues], dataPoints, tolerance = 1.0e-5)
 
 if __name__=='__main__':
     app = bspy.bspyApp()
@@ -41,4 +50,5 @@ if __name__=='__main__':
     app.list(rotCylinder, 'rotCylinder')
     app.list(myCone, 'myCone')
     app.list(surfThroughCurves, 'surfThroughCurves')
+    app.list(fit, 'ffe')
     app.mainloop()

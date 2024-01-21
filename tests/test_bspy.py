@@ -1003,8 +1003,7 @@ def test_least_squares():
     # Replicate 2D spline using its knots. Should be precise to machine epsilon.
     spline = mySurface
     uValues = [np.linspace(0.0, 1.0, 11), np.linspace(0.0, 1.0, 9)]
-    dataPoints = np.array([spline(u, v) for u in uValues[0] for v in uValues[1]])
-    dataPoints = np.swapaxes(dataPoints, 0, 1)
+    dataPoints = np.array([spline(u, v) for u in uValues[0] for v in uValues[1]]).T
     dataPoints = np.reshape(dataPoints, (3, 11, 9))
     fit = bspy.Spline.least_squares(uValues, dataPoints, order = [3, 4], knots = spline.knots)
     coefErrors = fit.coefs - spline.coefs
@@ -1017,6 +1016,18 @@ def test_least_squares():
     coefErrors = commonFit.coefs - commonSpline.coefs
     maxError = max(-coefErrors.min(), coefErrors.max()) / 2.0
     assert maxError <= 0.0025
+
+    # Attempt an adaptive fit of Franke's famous exponential
+    def ffe(x, y):
+        return 0.75 * np.exp(-0.25 * ((9 * x - 2) ** 2 + (9 * y - 2) ** 2)) + \
+               0.75 * np.exp(-(9 * x + 1) ** 2 / 49.0 - ((9 * y + 1) ** 2 / 10.0)) + \
+               0.5 * np.exp(-0.25 * ((9 * x - 7) ** 2 + (9 * y - 3) ** 2)) - \
+               0.2 * np.exp(-(9 * x - 4) ** 2 - (9 * x - 7) ** 2)
+    uValues = np.linspace(0.0, 1.0, 201)
+    dataPoints = np.array([[u, v, ffe(u, v)] for u in uValues for v in uValues]).T
+    dataPoints = np.reshape(dataPoints, (3, 201, 201))
+    fit = bspy.Spline.least_squares([uValues, uValues], dataPoints, tolerance = 1.0e-5)
+    assert fit.accuracy < 1.0e-5
 
 def test_line():
     myLine = bspy.Spline.line([0.0, 1.0, 2.0], [2.0, 3.0, 4.0])
