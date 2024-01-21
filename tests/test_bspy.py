@@ -942,7 +942,7 @@ def test_least_squares():
     # Attempt the same thing, but with Hermite data this time
     uValues = np.append(uValues, [uValues[0], uValues[3], uValues[7], uValues[7]])
     uValues = np.sort(uValues)
-    data = np.array(spline(uValues), spline.coefs.dtype)
+    data = np.array(spline(uValues))
     for i in range(1, len(uValues)):
         if uValues[i - 1] == uValues[i]:
             data[: , i] = spline.derivative([1], uValues[i])
@@ -961,12 +961,18 @@ def test_least_squares():
 
     # Now attempt it with fixEnds == True
     uValues = np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], 21)
-    data = np.array(spline(uValues))
+    data = spline(uValues)
     fit = bspy.Spline.least_squares(uValues, data, compression = 1.0, fixEnds = True)
     commonFit = fit.insert_knots([[0.3, 0.7]])
     coefErrors = commonFit.coefs - spline.coefs
     maxError = max(-coefErrors.min(), coefErrors.max()) / 580.0
     assert maxError <= 0.16
+
+    # Try a fit to tolerance with fixEnds == True
+    uValues = np.linspace(0.0, 1.0, 101)
+    data = np.array([[np.cos(0.5 * np.pi * u), np.sin(0.5 * np.pi * u)] for u in uValues]).T
+    fit = bspy.Spline.least_squares(uValues, data, tolerance = 1.0e-5, fixEnds = True)
+    assert fit.accuracy < 1.0e-5
 
     # Now attempt a fit when splines are passed in
     crv1 = bspy.Spline.line([0.0, 0.0, 0.0], [1.0, 0.0, 0.0])

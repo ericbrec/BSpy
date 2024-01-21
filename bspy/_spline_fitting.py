@@ -422,7 +422,6 @@ def least_squares(uValues, dataPoints, order = None, knots = None, compression =
         domain.append([uMin, uMax])
         for i in range(len(uValues[iInd]) - 1):
             if uValues[iInd][i] > uValues[iInd][i + 1]:  raise ValueError("Independent variable values are out of order")
-
     
     # Preprocess the data points
 
@@ -444,6 +443,10 @@ def least_squares(uValues, dataPoints, order = None, knots = None, compression =
     # Determine the (initial) knots array
 
     if not(0.0 <= compression <= 1.0):  raise ValueError("compression not between 0.0 and 1.0")
+    if tolerance is None:
+        tolerance = np.finfo(float).max
+    else:
+        compression = 1.0
     if knots is None:
         knots = [np.array(order[iInd] * [domain[iInd][0]] + order[iInd] * [domain[iInd][1]]) for iInd in range(nInd)]
         for iInd, (nP, nOrder) in enumerate(zip(pointsPerDirection, order)):
@@ -464,50 +467,68 @@ def least_squares(uValues, dataPoints, order = None, knots = None, compression =
     accuracy = np.finfo(float).eps
     for iInd in range(nInd):
         nRows = pointsPerDirection[iInd]
-        nCols = len(knots[iInd]) - order[iInd]
-        A = np.zeros((nRows, nCols))
-        u = -np.finfo(float).max
-        fixedRows = []
-        for iRow in range(nRows):
-            uNew = uValues[iInd][iRow]
-            if uNew != u:
-                iDerivative = 0
-                u = uNew
-                ix = np.searchsorted(knots[iInd], u, 'right')
-                ix = min(ix, nCols)
-            else:
-                iDerivative += 1
-            row = bspy.Spline.bspline_values(ix, knots[iInd], order[iInd], u, iDerivative)
-            A[iRow, ix - order[iInd] : ix] = row
-            if fixEnds and (u == uValues[iInd][0] or u == uValues[iInd][-1]):
-                fixedRows.append(iRow)
         b = np.swapaxes(dataPoints, 0, iInd + 1)
-        b = np.reshape(b, (nRows, nDep * nPoints // nRows))
-        nInterp = len(fixedRows)
-        if nInterp != 0:
-            C = np.take(A, fixedRows, 0)
-            d = np.take(b, fixedRows, 0)
-            A = np.delete(A, fixedRows, 0)
-            b = np.delete(b, fixedRows, 0)
-            U, Sigma, VT = np.linalg.svd(C)
-            d = U.T @ d
-            for iRow in range(nInterp):
-                d[iRow] = d[iRow] / Sigma[iRow]
-            accuracy *= Sigma[0] / Sigma[-1]
-            rangeCols = np.take(VT.T, range(nInterp), 1)
-            nullspace = np.delete(VT.T, range(nInterp), 1)
-            x1 = rangeCols @ d
-            b1 = b - A @ x1
-            xNullspace, residuals, rank, s = np.linalg.lstsq(A @ nullspace, b1, rcond = None)
-            x = x1 + nullspace @ xNullspace
-        else:
-            x, residuals, rank, s = np.linalg.lstsq(A, b, rcond = None)
-        accuracy *= s[0] / s[rank - 1]
+        loopDep = nDep * nPoints // nRows
+        b = np.reshape(b, (nRows, loopDep))
+        done = False
+        while not done:
+            loopAccuracy = accuracy
+            nCols = len(knots[iInd]) - order[iInd]
+            A = np.zeros((nRows, nCols))
+            u = -np.finfo(float).max
+            fixedRows = []
+            for iRow in range(nRows):
+                uNew = uValues[iInd][iRow]
+                if uNew != u:
+                    iDerivative = 0
+                    u = uNew
+                    ix = np.searchsorted(knots[iInd], u, 'right')
+                    ix = min(ix, nCols)
+                else:
+                    iDerivative += 1
+                row = bspy.Spline.bspline_values(ix, knots[iInd], order[iInd], u, iDerivative)
+                A[iRow, ix - order[iInd] : ix] = row
+                if fixEnds and (u == uValues[iInd][0] or u == uValues[iInd][-1]):
+                    fixedRows.append(iRow)
+            nInterp = len(fixedRows)
+            if nInterp != 0:
+                C = np.take(A, fixedRows, 0)
+                d = np.take(b, fixedRows, 0)
+                AUse = np.delete(A, fixedRows, 0)
+                bUse = np.delete(b, fixedRows, 0)
+                U, Sigma, VT = np.linalg.svd(C)
+                d = U.T @ d
+                for iRow in range(nInterp):
+                    d[iRow] = d[iRow] / Sigma[iRow]
+                loopAccuracy *= Sigma[0] / Sigma[-1]
+                rangeCols = np.take(VT.T, range(nInterp), 1)
+                nullspace = np.delete(VT.T, range(nInterp), 1)
+                x1 = rangeCols @ d
+                b1 = bUse - AUse @ x1
+                xNullspace, residuals, rank, s = np.linalg.lstsq(AUse @ nullspace, b1, rcond = None)
+                x = x1 + nullspace @ xNullspace
+            else:
+                x, residuals, rank, s = np.linalg.lstsq(A, b, rcond = None)
+            loopAccuracy *= s[0] / s[rank - 1]
+            residuals = b - A @ x
+            maxError = 0.0
+            for iRow in range(nRows):
+                rowError = np.linalg.norm(residuals[iRow, :])
+                if rowError > maxError:
+                    maxError = rowError
+                    maxRow = iRow
+            if maxError <= tolerance / nInd:
+                done = True
+            else:
+                ix = np.searchsorted(knots[iInd], uValues[iInd][maxRow], 'right')
+                ix = min(ix, nCols)
+                knots[iInd] = np.sort(np.append(knots[iInd], 0.5 * (knots[iInd][ix - 1] + knots[iInd][ix])))
         pointsPerDirection[iInd] = nDep
         x = np.reshape(x, [nCols] + pointsPerDirection)
         dataPoints = np.swapaxes(x, 0, iInd + 1)
         pointsPerDirection[iInd] = nCols
         nPoints = nCols * nPoints // nRows
+        accuracy = loopAccuracy
     splineFit = bspy.Spline(nInd, nDep, order, pointsPerDirection, knots, dataPoints,
                             accuracy = accuracy, metadata = metadata)
     if splineInput:
