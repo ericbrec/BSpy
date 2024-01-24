@@ -984,7 +984,7 @@ def test_least_squares():
     fit = bspy.Spline.least_squares([0.0, 0.5, 1.0], [crv1, crv2, crv3])
     assert fit.nInd == 2 and fit.nDep == 3 and fit.order[0] == 5 and fit.order[1] == 3
  
-    # Reproduce a bivariate tensor product quadratic using a Taylor series
+    # Reproduce a bi-variate tensor product quadratic using a Taylor series
     quadKnots = 2 * [[0.0, 0.0, 0.0, 1.0, 1.0, 1.0]]
     spline = bspy.Spline(2, 3, [3, 3], [3, 3], quadKnots,
                          [[0.0, 0.0, 0.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0],
@@ -1012,7 +1012,7 @@ def test_least_squares():
     maxError = max(-coefErrors.min(), coefErrors.max()) / 2.0
     assert maxError < 1.0e-14
 
-    # Create knots and fit data taken from 2D spline. Should match returned accuracy at data points.
+    # Create knots and fit data taken from 2D spline.
     fit = bspy.Spline.least_squares(uValues, dataPoints, order = [3, 4])
     commonSpline, commonFit = bspy.Spline.common_basis([spline, fit])
     coefErrors = commonFit.coefs - commonSpline.coefs

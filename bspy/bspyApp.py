@@ -159,11 +159,8 @@ class bspyApp(tk.Tk):
             defaultextension=".json", filetypes=(('Json files', '*.json'),('All files', '*.*')))
         if fileName:
             splines = DrawableSpline.load(fileName)
-            if isinstance(splines, Spline):
-                self.list(splines)
-            else:
-                for spline in splines:
-                    self.list(spline)
+            for spline in splines:
+                self.list(spline)
     
     def erase_all(self):
         """Stop drawing all splines. Splines remain in the listbox."""

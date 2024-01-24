@@ -1281,7 +1281,7 @@ class Spline:
     @staticmethod
     def load(fileName):
         """
-        Load spline(s) in json format from the specified filename (full path).
+        Load splines in json format from the specified filename (full path).
 
         Parameters
         ----------
@@ -1290,8 +1290,8 @@ class Spline:
         
         Returns
         -------
-        spline(s) : `Spline` or list of `Spline`
-            The loaded spline(s).
+        splines : list of `Spline`
+            The loaded splines.
 
         See Also
         --------
@@ -1306,7 +1306,7 @@ class Spline:
             for i in range(nInd):
                 knots.append(kw[f"knots{i}"])
             coefficients = kw["coefficients"]
-            return Spline(nInd, coefficients.shape[0], order, coefficients.shape[1:], knots, coefficients, metadata=dict(Path=path, Name=path.splitext(path.split(fileName)[1])[0]))
+            return [Spline(nInd, coefficients.shape[0], order, coefficients.shape[1:], knots, coefficients, metadata=dict(Path=path, Name=path.splitext(path.split(fileName)[1])[0]))]
         except:
             pass # Do nothing, an error is expected for json files
         
@@ -1314,15 +1314,13 @@ class Spline:
         with open(fileName, 'r', encoding='utf-8') as file:
             splineData = json.load(file)
 
+        splines = []
         if isinstance(splineData, dict):
-            return Spline(splineData["nInd"], splineData["nDep"], splineData["order"], splineData["nCoef"],
-                [np.array(knots) for knots in splineData["knots"]], np.array(splineData["coefs"]), splineData["metadata"])
-        else:
-            splines = []
-            for splineDict in splineData:
-                splines.append(Spline(splineDict["nInd"], splineDict["nDep"], splineDict["order"], splineDict["nCoef"],
-                    [np.array(knots) for knots in splineDict["knots"]], np.array(splineDict["coefs"]), splineDict["metadata"]))
-            return splines        
+            splineData = [splineData]
+        for splineDict in splineData:
+            splines.append(Spline(splineDict["nInd"], splineDict["nDep"], splineDict["order"], splineDict["nCoef"],
+                [np.array(knots) for knots in splineDict["knots"]], np.array(splineDict["coefs"]), splineDict["metadata"]))
+        return splines        
 
     def multiply(self, other, indMap = None, productType = 'S'):
         """

@@ -378,7 +378,7 @@ def remove_knot(self, iKnot):
     myKnots = self.knots[0]
     thisKnot = myKnots[iKnot]
 
-    # Form the bidiagonal system
+    # Form the bi-diagonal system
     for ix in range(1, myOrder):
         alpha = (myKnots[iKnot + ix] - thisKnot) / (myKnots[iKnot + ix] - myKnots[iKnot + ix - myOrder])
         diag0.append(alpha)

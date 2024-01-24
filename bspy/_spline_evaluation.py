@@ -62,14 +62,14 @@ def curvature(self, uv):
             self = self.graph()
         fp = self.derivative([1], uv)
         fpp = self.derivative([2], uv)
-        fpdotfp = fp @ fp
-        fpdotfpp = fp @ fpp
-        denom = fpdotfp ** 1.5
+        fpDotFp = fp @ fp
+        fpDotFpp = fp @ fpp
+        denom = fpDotFp ** 1.5
         if self.nDep == 2:
-            numer = fp[0] * fpp[1] - fp[1] * fpp[0]
+            numerator = fp[0] * fpp[1] - fp[1] * fpp[0]
         else:
-            numer = np.sqrt((fpp @ fpp) * fpdotfp - fpdotfpp ** 2)
-        return numer / denom 
+            numerator = np.sqrt((fpp @ fpp) * fpDotFp - fpDotFpp ** 2)
+        return numerator / denom 
 
 def derivative(self, with_respect_to, uvw):
     # Make work for scalar valued functions
