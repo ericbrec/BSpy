@@ -57,7 +57,7 @@ def add(self, other, indMap = None):
     # Reverse the permutation.
     coefs = coefs.transpose(np.argsort(permutation)) 
     
-    return type(self)(nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy + other.accuracy, self.metadata)
+    return type(self)(nInd, self.nDep, order, nCoef, knots, coefs, self.metadata)
 
 def confine(self, range_bounds):
     if self.nInd != 1: raise ValueError("Confine only works on curves (nInd == 1)")
@@ -194,7 +194,7 @@ def contract(self, uvw):
         else:
             ix += 1
     
-    return type(self)(nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy, self.metadata)
+    return type(self)(nInd, self.nDep, order, nCoef, knots, coefs, self.metadata)
 
 def cross(self, vector):
     if isinstance(vector, bspy.Spline):
@@ -206,14 +206,14 @@ def cross(self, vector):
         coefs[0] = vector[2] * self.coefs[1] - vector[1] * self.coefs[2]
         coefs[1] = vector[0] * self.coefs[2] - vector[2] * self.coefs[0]
         coefs[2] = vector[1] * self.coefs[0] - vector[0] * self.coefs[1]
-        return type(self)(self.nInd, 3, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
+        return type(self)(self.nInd, 3, self.order, self.nCoef, self.knots, coefs, self.metadata)
     else:
         if not(self.nDep == 2): raise ValueError("Invalid nDep")
         if not(len(vector) == self.nDep): raise ValueError("Invalid vector")
 
         coefs = np.empty((1, *self.coefs.shape[1:]), self.coefs.dtype)
         coefs[0] = vector[1] * self.coefs[0] - vector[0] * self.coefs[1]
-        return type(self)(self.nInd, 3, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
+        return type(self)(self.nInd, 3, self.order, self.nCoef, self.knots, coefs, self.metadata)
 
 def differentiate(self, with_respect_to = 0):
     if not(0 <= with_respect_to < self.nInd): raise ValueError("Invalid with_respect_to")
@@ -237,7 +237,7 @@ def differentiate(self, with_respect_to = 0):
         alpha =  degree / (dKnots[i+degree] - dKnots[i])
         newCoefs[i] = alpha * (newCoefs[i] - oldCoefs[i])
     
-    return type(self)(self.nInd, self.nDep, order, nCoef, knots, newCoefs.swapaxes(0, with_respect_to + 1), self.accuracy, self.metadata)
+    return type(self)(self.nInd, self.nDep, order, nCoef, knots, newCoefs.swapaxes(0, with_respect_to + 1), self.metadata)
 
 def dot(self, vector):
     if isinstance(vector, bspy.Spline):
@@ -250,7 +250,7 @@ def dot(self, vector):
             coefs += vector[i] * self.coefs[i]
         if len(coefs.shape) == len(self.coefs.shape) - 1:
             coefs = coefs.reshape(1, *coefs.shape)
-        return type(self)(self.nInd, 1, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
+        return type(self)(self.nInd, 1, self.order, self.nCoef, self.knots, coefs, self.metadata)
 
 def graph(self):
     self = self.clamp(range(self.nInd), range(self.nInd))
@@ -259,7 +259,7 @@ def graph(self):
         dep = np.swapaxes(coefs, nInd + 1, 1)[nInd] # Returns a view, so changes to dep make changes to coefs
         for i, knotAverage in enumerate(self.greville(nInd)):
             dep[i] = knotAverage
-    return type(self)(self.nInd, self.nInd + self.nDep, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
+    return type(self)(self.nInd, self.nInd + self.nDep, self.order, self.nCoef, self.knots, coefs, self.metadata)
 
 def greville(self, ind = 0):
     if ind < 0 or ind >= self.nInd:  raise ValueError("Invalid independent variable")
@@ -295,7 +295,7 @@ def integrate(self, with_respect_to = 0):
     for i in range(1, nCoef[with_respect_to]):
         newCoefs[i] = newCoefs[i - 1] + ((iKnots[degree + i] - iKnots[i]) / degree) * oldCoefs[i - 1]
 
-    return type(self)(self.nInd, self.nDep, order, nCoef, knots, newCoefs.swapaxes(0, with_respect_to + 1), self.accuracy, self.metadata)
+    return type(self)(self.nInd, self.nDep, order, nCoef, knots, newCoefs.swapaxes(0, with_respect_to + 1), self.metadata)
 
 def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
     if not(productType == 'C' or productType == 'D' or productType == 'S'): raise ValueError("productType must be 'C', 'D' or 'S'")
@@ -631,7 +631,7 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
             # Now move combined independent variable back to its original axis.
             coefs = np.moveaxis(newCoefs[:nCoef[ind1]], 0, ind1 + 1)
 
-    return type(self)(nInd, nDep, order, nCoef, knots, coefs, self.accuracy + other.accuracy, self.metadata)
+    return type(self)(nInd, nDep, order, nCoef, knots, coefs, self.metadata)
 
 # Return a matrix of booleans whose [i,j] value indicates if self's partial wrt variable i depends on variable j. 
 def _cross_correlation_matrix(self):
@@ -736,33 +736,28 @@ def scale(self, multiplier):
         return self.multiply(multiplier, [(ix, ix) for ix in range(min(self.nInd, multiplier.nInd))], 'S')
     else:
         if np.isscalar(multiplier):
-            accuracy = abs(multiplier) * self.accuracy
             nDep = self.nDep
             coefs = multiplier * self.coefs
         elif len(multiplier) == self.nDep:
-            accuracy = np.linalg.norm(multiplier) * self.accuracy
             nDep = self.nDep
             coefs = np.array(self.coefs)
             for i in range(nDep):
                 coefs[i] *= multiplier[i]
         elif self.nDep == 1:
-            accuracy = np.linalg.norm(multiplier) * self.accuracy
             nDep = len(multiplier)
             coefs = np.empty((nDep, *self.coefs.shape[1:]), self.coefs.dtype)
             for i in range(nDep):
                 coefs[i] = multiplier[i] * self.coefs[0]
         else:
             raise ValueError("Invalid multiplier")
-        return type(self)(self.nInd, nDep, self.order, self.nCoef, self.knots, coefs, accuracy, self.metadata)
+        return type(self)(self.nInd, nDep, self.order, self.nCoef, self.knots, coefs, self.metadata)
 
-def transform(self, matrix, maxSingularValue=None):
+def transform(self, matrix):
     if not(matrix.ndim == 2 and matrix.shape[1] == self.nDep): raise ValueError("Invalid matrix")
 
-    if maxSingularValue is None:
-        maxSingularValue = np.linalg.svd(matrix, compute_uv=False)[0]
     swapped = np.swapaxes(self.coefs, 0, -2)
     newCoefs = np.swapaxes(matrix @ swapped, 0, -2)
-    return type(self)(self.nInd, matrix.shape[0], self.order, self.nCoef, self.knots, newCoefs, maxSingularValue * self.accuracy, self.metadata)
+    return type(self)(self.nInd, matrix.shape[0], self.order, self.nCoef, self.knots, newCoefs, self.metadata)
 
 def translate(self, translationVector):
     translationVector = np.atleast_1d(translationVector)
@@ -771,4 +766,4 @@ def translate(self, translationVector):
     coefs = np.array(self.coefs)
     for i in range(self.nDep):
         coefs[i] += translationVector[i]
-    return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
+    return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, coefs, self.metadata)

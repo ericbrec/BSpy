@@ -35,16 +35,11 @@ class Spline:
     coefs : array-like
         A list of the B-spline coefficients of the spline.
     
-    accuracy : `float`, optional
-        Each spline is presumed to be an approximation of something else. 
-        The `accuracy` stores the infinity norm error of the difference between 
-        the given spline and that something else. Default is zero.
-
     metadata : `dict`, optional
         A dictionary of ancillary data to store with the spline. Default is {}.
     """
     
-    def __init__(self, nInd, nDep, order, nCoef, knots, coefs, accuracy = 0.0, metadata = {}):
+    def __init__(self, nInd, nDep, order, nCoef, knots, coefs, metadata = {}):
         if not(nInd >= 0): raise ValueError("nInd < 0")
         self.nInd = int(nInd)
         if not(nDep >= 0): raise ValueError("nDep < 0")
@@ -74,7 +69,6 @@ class Spline:
                 self.coefs = self.coefs.reshape((*self.nCoef[::-1], self.nDep)).T
             else:
                 self.coefs = np.array([c.T for c in self.coefs]).reshape((self.nDep, *self.nCoef))
-        self.accuracy = accuracy
         self.metadata = dict(metadata)
 
     def __call__(self, *uvw, **kwargs):
@@ -82,8 +76,7 @@ class Spline:
 
     def __repr__(self):
         return f"Spline({self.nInd}, {self.nDep}, {self.order}, " + \
-               f"{self.nCoef}, {self.knots} {self.coefs}, {self.accuracy}, " + \
-               f"{self.metadata})"
+               f"{self.nCoef}, {self.knots} {self.coefs}, {self.metadata})"
 
     def __add__(self, other):
         if isinstance(other, Spline):
@@ -432,8 +425,7 @@ class Spline:
 
         epsilon : `float`, optional
             Tolerance for contour precision. Evaluating `F` with contour values will be within epsilon 
-            of zero. The default is square root of machine epsilon. The actual accuracy of the contour 
-            is returned as `spline.accuracy`.
+            of zero. The default is square root of machine epsilon.
             
         metadata : `dict`, optional
             A dictionary of ancillary data to store with the spline. Default is {}.
@@ -559,7 +551,7 @@ class Spline:
         spline : `Spline`
             The spline copy.
         """
-        return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, self.coefs, self.accuracy, metadata)
+        return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, self.coefs, metadata)
 
     def cross(self, vector):
         """
@@ -1220,7 +1212,7 @@ class Spline:
         knots : `list`, optional
             A list of the lists of the knots of the spline in each independent variable.  The
             length of knots should be nInd if it is specified, where each of the arrays specify
-            the knots of the spline to use in that independent variable.  All of the datapoints
+            the knots of the spline to use in that independent variable.  All of the dataPoints
             must lie within the domain specified by the knots.  If knots == None (the default),
             then the knots are automatically determined.
         
@@ -1253,11 +1245,7 @@ class Spline:
 
         Notes
         -----
-        Uses `numpy.linalg.lstsq` to compute the least squares solution. The returned
-        spline.accuracy is computed from the sum of the residual across dependent variables
-        and the system epsilon.  The algorithm to choose knots automatically is from Piegl,
-        Les A., and Wayne Tiller. 
-        "Surface approximation to scanned data." The visual computer 16 (2000): 386-395.
+        Uses `numpy.linalg.lstsq` to compute the least squares solution.
         """
         return bspy._spline_fitting.least_squares(uValues, dataPoints, order, knots, compression,
                                                   tolerance, fixEnds, metadata)
@@ -1328,12 +1316,12 @@ class Spline:
 
         if isinstance(splineData, dict):
             return Spline(splineData["nInd"], splineData["nDep"], splineData["order"], splineData["nCoef"],
-                [np.array(knots) for knots in splineData["knots"]], np.array(splineData["coefs"]), splineData["accuracy"], splineData["metadata"])
+                [np.array(knots) for knots in splineData["knots"]], np.array(splineData["coefs"]), splineData["metadata"])
         else:
             splines = []
             for splineDict in splineData:
                 splines.append(Spline(splineDict["nInd"], splineDict["nDep"], splineDict["order"], splineDict["nCoef"],
-                    [np.array(knots) for knots in splineDict["knots"]], np.array(splineDict["coefs"]), splineDict["accuracy"], splineDict["metadata"]))
+                    [np.array(knots) for knots in splineDict["knots"]], np.array(splineDict["coefs"]), splineDict["metadata"]))
             return splines        
 
     def multiply(self, other, indMap = None, productType = 'S'):
@@ -1673,7 +1661,6 @@ class Spline:
                         "nCoef" : obj.nCoef,
                         "knots" : obj.knots,
                         "coefs" : obj.coefs,
-                        "accuracy" : obj.accuracy,
                         "metadata" : obj.metadata
                     }
                 return super().default(obj)
@@ -1854,7 +1841,7 @@ class Spline:
         """
         return bspy._spline_fitting.torus(innerRadius, outerRadius, tolerance)
     
-    def transform(self, matrix, maxSingularValue=None):
+    def transform(self, matrix):
         """
         Transform a spline by the given matrix.
 
@@ -1862,10 +1849,6 @@ class Spline:
         ----------
         matrix : array-like
             An array of size `newNDep`x`nDep` that specifies the transform matrix.
-
-        maxSingularValue : `float`, optional
-            The largest singular value of `matrix`, used to update the accuracy of the spline. 
-            If no value is provided (default), the largest singular value is computed.
 
         Returns
         -------
@@ -1881,7 +1864,7 @@ class Spline:
         -----
         Equivalent to spline @ matrix.
         """
-        return bspy._spline_operations.transform(self, matrix, maxSingularValue)
+        return bspy._spline_operations.transform(self, matrix)
 
     def translate(self, translationVector):
         """
@@ -2001,7 +1984,7 @@ class Spline:
         ----------
         epsilon : `float`, optional
             Tolerance for root precision. The root will be within epsilon of the actual root. 
-            The default is the max of spline accuracy and machine epsilon.
+            The default is the machine epsilon.
 
         Returns
         -------

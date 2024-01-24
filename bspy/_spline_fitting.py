@@ -282,7 +282,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
 
     # Rescale x(t) back to original data points.
     coefs = (coefsMin + coefs.T * coefsMaxMinusMin).T
-    spline = bspy.Spline(1, nDep, (order,), (nCoef,), (knots,), coefs, epsilon, metadata)
+    spline = bspy.Spline(1, nDep, (order,), (nCoef,), (knots,), coefs, metadata)
     if isinstance(F, bspy.Spline):
         spline = spline.confine(F.domain())
     return spline

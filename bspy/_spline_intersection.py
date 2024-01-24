@@ -524,7 +524,7 @@ def contours(self):
         # Find turning points by combining self and turningPointDeterminant into a system and processing its zeros.
         systemSelf, systemTurningPointDeterminant = bspy.Spline.common_basis((self, turningPointDeterminant))
         system = type(systemSelf)(self.nInd, self.nInd, systemSelf.order, systemSelf.nCoef, systemSelf.knots, \
-            np.concatenate((systemSelf.coefs, systemTurningPointDeterminant.coefs)), systemSelf.accuracy, systemSelf.metadata)
+            np.concatenate((systemSelf.coefs, systemTurningPointDeterminant.coefs)), systemSelf.metadata)
         zeros = system.zeros()
         for uvw in zeros:
             if isinstance(uvw, tuple):
@@ -566,7 +566,7 @@ def contours(self):
     degree = self.order[1] - 1
     for i in range(1, self.nCoef[1]):
         panelCoefs[self.nDep, :, i] = panelCoefs[self.nDep, :, i - 1] + ((self.knots[1][degree + i] - self.knots[1][i]) / degree) * sinTheta
-    panel = type(self)(self.nInd, self.nInd, self.order, self.nCoef, self.knots, panelCoefs, self.accuracy, self.metadata)
+    panel = type(self)(self.nInd, self.nInd, self.order, self.nCoef, self.knots, panelCoefs, self.metadata)
 
     # Okay, we have everything we need to determine the contour topology and points along each contour.
     # We've done the first two steps of Grandine and Klein's algorithm:
