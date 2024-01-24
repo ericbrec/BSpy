@@ -458,6 +458,8 @@ def least_squares(uValues, dataPoints, order = None, knots = None, compression =
                 alpha = newSpot - ix
                 newKnots.append((1.0 - alpha) * uValues[iInd][ix] + alpha * uValues[iInd][ix + 1])
             knots[iInd] = np.sort(np.append(knots[iInd], newKnots))
+    else:
+        knots = tuple(np.array(kk) for kk in knots)
     for iInd in range(nInd):
         if domain[iInd][0] < knots[iInd][order[iInd] - 1] or \
            domain[iInd][1] > knots[iInd][-order[iInd]]:  raise ValueError("One or more dataPoints are outside the domain of the spline")

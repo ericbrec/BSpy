@@ -634,11 +634,12 @@ def test_contours():
     order = 9
     knots = [0.0] * order + [1.0] * order
     nCoef = order
-    points = []
-    for u in np.linspace(0.0, 1.0, nCoef):
-        for v in np.linspace(0.0, 1.0, nCoef):
-            points.append((u, v, F(u, v)))
-    spline = bspy.Spline.least_squares(2, 1, (order, order), points, (knots, knots))
+    dataPoints = np.empty((1, nCoef, nCoef), float)
+    uValues = [np.linspace(0.0, 1.0, nCoef), np.linspace(0.0, 1.0, nCoef)]
+    for i, u in enumerate(uValues[0]):
+        for j, v in enumerate(uValues[1]):
+            dataPoints[0, i, j] = F(u, v)
+    spline = bspy.Spline.least_squares(uValues, dataPoints, (order, order), (knots, knots))
     contours = spline.contours()
     for contour in contours:
         for t in np.linspace(0.0, 1.0, 11):
@@ -894,20 +895,26 @@ def test_intersect():
     order = 9
     knots = [0.0] * order + [1.0] * order
     nCoef = order
-    points = []
-    for u in np.linspace(0.0, 1.0, nCoef):
-        for v in np.linspace(0.0, 1.0, nCoef):
-            points.append((u, v, u, v, F(u, v)))
-    spline = bspy.Spline.least_squares(2, 3, (order, order), points, (knots, knots))
+    dataPoints = np.empty((3, nCoef, nCoef), float)
+    uValues = [np.linspace(0.0, 1.0, nCoef), np.linspace(0.0, 1.0, nCoef)]
+    for i, u in enumerate(uValues[0]):
+        for j, v in enumerate(uValues[1]):
+            dataPoints[0, i, j] = u
+            dataPoints[1, i, j] = v
+            dataPoints[2, i, j] = F(u, v)
+    spline = bspy.Spline.least_squares(uValues, dataPoints, (order, order), (knots, knots))
 
     order = 4
     knots = [0.0] * order + [1.0] * order
     nCoef = order
-    points = []
-    for u in np.linspace(0.0, 1.0, nCoef):
-        for v in np.linspace(0.0, 1.0, nCoef):
-            points.append((u, v, 2*u - 0.5, 2*v - 0.5, 0.0))
-    plane = bspy.Spline.least_squares(2, 3, (order, order), points, (knots, knots))
+    dataPoints = np.empty((3, nCoef, nCoef), float)
+    uValues = [np.linspace(0.0, 1.0, nCoef), np.linspace(0.0, 1.0, nCoef)]
+    for i, u in enumerate(uValues[0]):
+        for j, v in enumerate(uValues[1]):
+            dataPoints[0, i, j] = 2*u - 0.5
+            dataPoints[1, i, j] = 2*v - 0.5
+            dataPoints[2, i, j] = 0.0
+    plane = bspy.Spline.least_squares(uValues, dataPoints, (order, order), (knots, knots))
 
     contours = spline.intersect(plane)
     for contour in contours:
