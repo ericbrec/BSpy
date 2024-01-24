@@ -305,14 +305,15 @@ class Spline:
         """
         return bspy._spline_domain.clamp(self, left, right)
 
-    def common_basis(self, splines, indMap):
+    @staticmethod
+    def common_basis(splines, indMap = None):
         """
         Align a collection of splines to a common basis, elevating the order and adding knots as needed.
 
         Parameters
         ----------
         splines : `iterable`
-            The collection of N - 1 splines to align (N total splines, including self).
+            The collection of N splines to align.
 
         indMap : `iterable`
             The collection of independent variables to align. Since each spline can have multiple 
@@ -321,6 +322,7 @@ class Spline:
             The domains of mapped independent variables must match. 
             An independent variable can map to no more than one other independent variable.
             If all the splines are curves (1 independent variable), then `indMap` is ((0, 0, .. 0),).
+            If indMap is None (the default), then it is set to [N * [i] for i in range(nInd)]
 
         Returns
         -------
@@ -335,7 +337,7 @@ class Spline:
         -----
         Uses `elevate_and_insert_knots` to ensure mapped variables share the same order and knots. 
         """
-        return bspy._spline_domain.common_basis(self, splines, indMap)
+        return bspy._spline_domain.common_basis(splines, indMap)
 
     @staticmethod
     def cone(radius1, radius2, height, tolerance = None):
@@ -1174,41 +1176,72 @@ class Spline:
         return bspy._spline_domain.join(splineList)
        
     @staticmethod
-    def least_squares(nInd, nDep, order, dataPoints, knots = None, compression = 0, metadata = {}):
+    def least_squares(uValues, dataPoints, order = None, knots = None, compression = 0.0,
+                      tolerance = None, fixEnds = False, metadata = {}):
         """
         Fit a spline to an array of data points using the method of least squares.
 
         Parameters
         ----------
-        nInd : `int`
-            The number of independent variables of the spline.
+        uValues : `iterable` of array-like values
+            The values of the independent variables in each of the coordinate directions for
+            each of the data points.  It's either a simple array of length nU or it is an array
+            of length nInd of arrays with corresponding lengths nU, nV, . . ., nW, where each
+            length indicates the number of data points in that independent variable.  For each
+            independent variable, the values must be ordered, i.e. uValue[i] <= uValue[i+1].  The
+            corresponding point in dataPoints will be an array of length nDep which represents the
+            desired function values at that point.  If the values in uValues are repeated, then
+            the corresponding data in dataPoints represents a derivative value.  Examples:
+            
+            If uValues == [0.0, 1.0, 1.0, 2.0, 3.0, 3.0, 3.0], then nInd == 1 and dataPoints
+            contains
+            [f(0.0), f(1.0), f'(1.0), f(2.0), f(3.0), f'(3.0), f''(3.0)]
 
-        nDep : `int`
-            The number of dependent variables of the spline.
-        
-        order : `tuple`
-            A tuple of length nInd where each integer entry represents the
-            polynomial order of the spline in that variable. When in doubt,
-            use `[4] * nInd` (a cubic spline).
+            if uValues == [[0.0, 1.0, 1.0, 2.0], [0.0, 1.0, 2.0, 2.0, 3.0]], then nInd == 2 and
+            dataPoints contains
+            [[f(0,0), f(0,1), f(0,2), f_v(0,2), f(0,3)],
+             [f(1,0), f(1,1), f(1,2), f_v(1,2), f(1,3)],
+             [f_u(1,0), f_u(1,1), f_u(1,2), f_uv(1,2), f_u(1,3)],
+             [f(2,0), f(2,1), f(2,2), f_v(2,2), f(2,3)]]
 
         dataPoints : `iterable` of array-like values
-            A collection of data points. Each data point is an array of length `nInd + nDep`. 
-            The first `nInd` values designate the independent values for the point.
-            The next `nDep` values designate the dependent values for the point. 
-            The data points need not form a regular mesh nor be in any particular order.
-            In addition, each data point may instead have `nInd + nDep * (nInd + 1)` values, 
-            the first `nInd` being independent and the next `nInd + 1` sets of `nDep` values designating 
-            the dependent point and its first derivatives with respect to each independent variable.
+            A collection of data points.  The shape of this array mirrors the shape of
+            Spline.coefs, i.e. it has shape (nDep, nU, nV, . . . , nW).  The indices into this
+            array also index into uValues to retrieve the independent variable values.
+            For example, if nInd == 2 and nDep == 3, then the shape of dataPoints is (3, nU, nV)
+            and dataPoint[:,i,j] has independent variable values given by uValues[0,i] and
+            uValues[1,j].
+
+        order : `tuple`
+            A tuple of length nInd where each integer entry represents the
+            polynomial order of the spline in that variable.  If order == None, then
+            order == [4] * nInd is assumed.
 
         knots : `list`, optional
-            A list of the lists of the knots of the spline in each independent variable.
-            Default is `None`, in which case knots are chosen automatically.
+            A list of the lists of the knots of the spline in each independent variable.  The
+            length of knots should be nInd if it is specified, where each of the arrays specify
+            the knots of the spline to use in that independent variable.  All of the datapoints
+            must lie within the domain specified by the knots.  If knots == None (the default),
+            then the knots are automatically determined.
         
-        compression : `int`, optional
-            The desired compression of data used as a percentage of the number of data points (0 - 99). 
-            This percentage is used to determine the total number of spline coefficients when 
-            knots are chosen automatically (it's ignored otherwise). The actual compression will be slightly less 
-            because the number of coefficients is rounded up. The default value is zero (interpolation, no compression).
+        compression : scalar, optional
+            The desired compression of data used as a fraction of the number of data points, i.e
+            compression is a number between 0 and 1.  This fraction is used to determine the
+            total number of spline coefficients when knots are chosen automatically (it's if the
+            knots are specified). The actual compression will be slightly less because the number
+            of coefficients is rounded up. The default value is zero (interpolation, no compression).
+
+        tolerance : scalar, optional
+            If tolerance is specified, then a fit to tolerance is performed.  Using the given knots
+            as the initial set of knots, additional knots are inserted until the 2-norm of the
+            difference between each of the each given dataPoints and the vector given by the
+            spline is no larger than the specified tolerance.
+        
+        fixEnds : Boolean, optional
+            if fixEnds is True, then all of the dataPoints which lie on any of the domain
+            boundaries of the spline become interpolation conditions, i.e. the spline will be
+            fit in such a way that those boundary points are exactly satisfied by the computed
+            spline.  Otherwise, least-squares fitting will be performed on all of the dataPoints.
 
         metadata : `dict`, optional
             A dictionary of ancillary data to store with the spline. Default is {}.
@@ -1220,12 +1253,14 @@ class Spline:
 
         Notes
         -----
-        Uses `numpy.linalg.lstsq` to compute the least squares solution. The returned spline.accuracy is computed 
-        from the sum of the residual across dependent variables and the system epsilon. 
-        The algorithm to choose knots automatically is from Piegl, Les A., and Wayne Tiller. 
+        Uses `numpy.linalg.lstsq` to compute the least squares solution. The returned
+        spline.accuracy is computed from the sum of the residual across dependent variables
+        and the system epsilon.  The algorithm to choose knots automatically is from Piegl,
+        Les A., and Wayne Tiller. 
         "Surface approximation to scanned data." The visual computer 16 (2000): 386-395.
         """
-        return bspy._spline_fitting.least_squares(nInd, nDep, order, dataPoints, knots, compression, metadata)
+        return bspy._spline_fitting.least_squares(uValues, dataPoints, order, knots, compression,
+                                                  tolerance, fixEnds, metadata)
 
     @staticmethod
     def line(startPoint, endPoint):

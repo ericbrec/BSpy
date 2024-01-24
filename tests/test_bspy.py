@@ -831,11 +831,11 @@ def test_fold_unfold():
 
 def test_four_sided_patch():
     def procedural(c1, c2, c3, c4, u, v):
-        c1c2avg = (1.0 - v) * c1(u) + v * c2(u)
-        c3c4avg = (1.0 - u) * c3(v) + u * c4(v)
+        c1c2average = (1.0 - v) * c1(u) + v * c2(u)
+        c3c4average = (1.0 - u) * c3(v) + u * c4(v)
         c1c2c3c4 = (1.0 - v) * ((1.0 - u) * c1(0.0) + u * c1(1.0)) + \
                    v * ((1.0 - u) * c2(0.0) + u * c2(1.0))
-        return c1c2avg + c3c4avg - c1c2c3c4
+        return c1c2average + c3c4average - c1c2c3c4
     crv1 = bspy.Spline(1, 3, [4], [4], [[0.0, 0, 0, 0, 1, 1, 1, 1]],
                        [[0.0, 0.3, 0.7, 1.0], [0.0, 0.0, 0.0, 0.0], [0.0, 1.5, 0.5, 0.0]])
     crv2 = bspy.Spline.line([0.0, 1.0, 0.0], [1.0, 1.0, 1.0])
@@ -917,58 +917,123 @@ def test_intersect():
     assert maxError <= np.finfo(float).eps ** 0.2
 
 def test_least_squares():
-    # Replicate 1D spline using its knots. Should be precise to machine epsilon.
-    spline = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0.2, 0.3, 0.4, 0.5, 0.5, 1, 1], float)], 
+    # Replicate 1D spline using its knots. Should be precise to nearly machine epsilon.
+    spline = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0, 0.3, 0.7, 1, 1, 1, 1], float)], 
         np.array(((260, 100), (100, 260), (260, 420), (420, 420), (580, 260), (420, 100)), float))
-    values = [(u, *spline([u])) for u in np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], spline.nCoef[0] + 5)]
-    u = spline.knots[0][spline.order[0]-1]
-    values.append((u, *spline([u]), *spline.derivative([1], [u])))
-    u = spline.knots[0][spline.nCoef[0]]
-    values.append((u, *spline([u]), *spline.derivative([1], [u])))
-    fit = bspy.Spline.least_squares(spline.nInd, spline.nDep, spline.order, values, spline.knots)
-    maxError = 0.0
-    for u in np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], 100):
-        xyz = spline([u]) - fit([u])
-        maxError = max(maxError, np.sqrt(xyz @ xyz))
-    assert maxError <= np.sqrt(np.finfo(float).eps)
-    assert maxError <= fit.accuracy
+    uValues = np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], spline.nCoef[0] + 5)
+    data = spline(uValues)
+    fit = bspy.Spline.least_squares(uValues, data, knots = spline.knots)
+    coefErrors = fit.coefs - spline.coefs
+    maxError = max(-coefErrors.min(), coefErrors.max()) / 580.0
+    assert maxError <= 1.0e-14
 
-    # Create knots and fit data taken from 1D spline. Should match returned accuracy at data points.
-    fit = bspy.Spline.least_squares(spline.nInd, spline.nDep, spline.order, values)
-    maxError = 0.0
-    for point in values:
-        xyz = point[spline.nInd:spline.nInd + spline.nDep] - fit(point[:spline.nInd])
-        maxError = max(maxError, np.sqrt(xyz @ xyz))
-    assert maxError <= fit.accuracy
+    # Create knots and fit data taken from 1D spline.
+    fit = bspy.Spline.least_squares(uValues, data, compression = 1.0)
+    commonFit = fit.insert_knots([[0.3, 0.7]])
+    coefErrors = commonFit.coefs - spline.coefs
+    maxError = max(-coefErrors.min(), coefErrors.max()) / 580.0
+    assert maxError <= 0.15
+    trueStart = spline(0.0)
+    trueDerivative = spline.derivative([1], 0.0)
+    approxStart = fit(0.0)
+    approxDerivative = fit.derivative([1], 0.0)
+    derivativeDistance = np.linalg.norm(trueDerivative - approxDerivative)
+
+    # Attempt the same thing, but with Hermite data this time
+    uValues = np.append(uValues, [uValues[0], uValues[3], uValues[7], uValues[7]])
+    uValues = np.sort(uValues)
+    data = np.array(spline(uValues))
+    for i in range(1, len(uValues)):
+        if uValues[i - 1] == uValues[i]:
+            data[: , i] = spline.derivative([1], uValues[i])
+    for i in range(2, len(uValues)):
+        if uValues[i - 2] == uValues[i]:
+            data[: , i] = spline.derivative([2], uValues[i])
+    fit = bspy.Spline.least_squares(uValues, data, compression = 1.0)
+    commonFit = fit.insert_knots([[0.3, 0.7]])
+    coefErrors = commonFit.coefs - spline.coefs
+    maxError = max(-coefErrors.min(), coefErrors.max()) / 580.0
+    assert maxError <= 0.4
+    approxStart = fit(0.0)
+    approxDerivative = fit.derivative([1], 0.0)
+    newDistance = np.linalg.norm(trueDerivative - approxDerivative)
+    assert newDistance < derivativeDistance
+
+    # Now attempt it with fixEnds == True
+    uValues = np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], 21)
+    data = spline(uValues)
+    fit = bspy.Spline.least_squares(uValues, data, compression = 1.0, fixEnds = True)
+    commonFit = fit.insert_knots([[0.3, 0.7]])
+    coefErrors = commonFit.coefs - spline.coefs
+    maxError = max(-coefErrors.min(), coefErrors.max()) / 580.0
+    assert maxError <= 0.16
+
+    # Try a fit to tolerance with fixEnds == True
+    uValues = np.linspace(0.0, 1.0, 101)
+    data = np.array([[np.cos(0.5 * np.pi * u), np.sin(0.5 * np.pi * u)] for u in uValues]).T
+    fit = bspy.Spline.least_squares(uValues, data, tolerance = 1.0e-6, fixEnds = True)
+    shouldBeOne = ([[1, 1]] @ (fit * fit)).range_bounds()
+    myError = max(shouldBeOne[0, 1] - 1.0, 1.0 - shouldBeOne[0, 0])
+    assert myError < 1.0e-6
+
+    # Now attempt a fit when splines are passed in
+    crv1 = bspy.Spline.line([0.0, 0.0, 0.0], [1.0, 0.0, 0.0])
+    crv2 = bspy.Spline.section([[0.0, 0.0, 45.0, -0.5], [1.0, 0.0, -45.0, -0.5]])
+    crv2 = [[1, 0], [0, 0], [0, 1]] @ crv2 + [0.0, 0.5, 0.0]
+    crv3 = bspy.Spline.line([0.0, 1.0, 0.0], [1.0, 1.0, 0.0])
+    fit = bspy.Spline.least_squares([0.0, 0.5, 1.0], [crv1, crv2, crv3])
+    assert fit.nInd == 2 and fit.nDep == 3 and fit.order[0] == 5 and fit.order[1] == 3
+ 
+    # Reproduce a bivariate tensor product quadratic using a Taylor series
+    quadKnots = 2 * [[0.0, 0.0, 0.0, 1.0, 1.0, 1.0]]
+    spline = bspy.Spline(2, 3, [3, 3], [3, 3], quadKnots,
+                         [[0.0, 0.0, 0.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0],
+                          [0.0, 0.5, 1.0, 0.0, 0.5, 1.0, 0.0, 0.5, 1.0],
+                          [0.0, 0.0, 1.0, 0.0, 4.0, 0.0, 0.0, 2.0, 2.0]])
+    allAt = [0.5, 0.5]
+    data = [spline.derivative([0, 0], allAt), spline.derivative([0, 1], allAt), spline.derivative([0, 2], allAt),
+            spline.derivative([1, 0], allAt), spline.derivative([1, 1], allAt), spline.derivative([1, 2], allAt),
+            spline.derivative([2, 0], allAt), spline.derivative([2, 1], allAt), spline.derivative([2, 2], allAt)]
+    data = np.array(data)
+    data = np.swapaxes(data, 0, 1)
+    data = np.reshape(data, (3, 3, 3))
+    fit = bspy.Spline.least_squares([3 * [0.5], 3 * [0.5]], data, knots = spline.knots)
+    coefErrors = fit.coefs - spline.coefs
+    maxError = max(-coefErrors.min(), coefErrors.max())            
+    assert maxError < 1.0e-14
 
     # Replicate 2D spline using its knots. Should be precise to machine epsilon.
     spline = mySurface
-    values = []
-    u = spline.knots[0][spline.order[0]-1]
-    v = spline.knots[1][spline.order[1]-1]
-    values.append((u, v, *spline([u, v]), *spline.derivative([1, 0], [u, v]), *spline.derivative([0, 1], [u, v])))
-    for u in np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], spline.nCoef[0] + 3):
-        for v in np.linspace(spline.knots[1][spline.order[1]-1], spline.knots[1][spline.nCoef[1]], spline.nCoef[1] + 7):
-            values.append((u, v, *spline((u, v))))
-    u = spline.knots[0][spline.nCoef[0]]
-    v = spline.knots[1][spline.nCoef[1]]
-    values.append((u, v, *spline([u, v]), *spline.derivative([1, 0], [u, v]), *spline.derivative([0, 1], [u, v])))
-    fit = bspy.Spline.least_squares(spline.nInd, spline.nDep, spline.order, values, spline.knots)
-    maxError = 0.0
-    for u in np.linspace(spline.knots[0][spline.order[0]-1], spline.knots[0][spline.nCoef[0]], 21):
-        for v in np.linspace(spline.knots[1][spline.order[1]-1], spline.knots[1][spline.nCoef[1]], 21):
-            xyz = spline([u,v]) - fit([u,v])
-            maxError = max(maxError, np.sqrt(xyz @ xyz))
-    assert maxError <= np.sqrt(np.finfo(float).eps)
-    assert maxError <= fit.accuracy
+    uValues = [np.linspace(0.0, 1.0, 11), np.linspace(0.0, 1.0, 9)]
+    dataPoints = np.array([spline(u, v) for u in uValues[0] for v in uValues[1]]).T
+    dataPoints = np.reshape(dataPoints, (3, 11, 9))
+    fit = bspy.Spline.least_squares(uValues, dataPoints, order = [3, 4], knots = spline.knots)
+    coefErrors = fit.coefs - spline.coefs
+    maxError = max(-coefErrors.min(), coefErrors.max()) / 2.0
+    assert maxError < 1.0e-14
 
     # Create knots and fit data taken from 2D spline. Should match returned accuracy at data points.
-    fit = bspy.Spline.least_squares(spline.nInd, spline.nDep, spline.order, values, compression=30)
-    maxError = 0.0
-    for point in values:
-        xyz = point[spline.nInd:spline.nInd + spline.nDep] - fit(point[:spline.nInd])
-        maxError = max(maxError, np.sqrt(xyz @ xyz))
-    assert maxError <= fit.accuracy
+    fit = bspy.Spline.least_squares(uValues, dataPoints, order = [3, 4])
+    commonSpline, commonFit = bspy.Spline.common_basis([spline, fit])
+    coefErrors = commonFit.coefs - commonSpline.coefs
+    maxError = max(-coefErrors.min(), coefErrors.max()) / 2.0
+    assert maxError <= 0.0025
+
+    # Attempt an adaptive fit of Franke's famous exponential
+    def ffe(x, y):
+        return 0.75 * np.exp(-0.25 * ((9 * x - 2) ** 2 + (9 * y - 2) ** 2)) + \
+               0.75 * np.exp(-(9 * x + 1) ** 2 / 49.0 - ((9 * y + 1) ** 2 / 10.0)) + \
+               0.5 * np.exp(-0.25 * ((9 * x - 7) ** 2 + (9 * y - 3) ** 2)) - \
+               0.2 * np.exp(-(9 * x - 4) ** 2 - (9 * x - 7) ** 2)
+    uValues = np.linspace(0.0, 1.0, 201)
+    dataPoints = np.array([[u, v, ffe(u, v)] for u in uValues for v in uValues]).T
+    dataPoints = np.reshape(dataPoints, (3, 201, 201))
+    fit = bspy.Spline.least_squares([uValues, uValues], dataPoints, tolerance = 1.0e-5)
+    u = 2.0 / 9.0
+    fitPoint = fit(u, u)
+    actualPoint = ffe(u, u)
+    myError = abs(fitPoint[2] - actualPoint)
+    assert myError < 1.0e-7
 
 def test_line():
     myLine = bspy.Spline.line([0.0, 1.0, 2.0], [2.0, 3.0, 4.0])
@@ -1193,16 +1258,16 @@ def test_section():
 
 def test_sphere():
     mySphere = bspy.Spline.sphere(1.3, 1.0e-12)
-    tvals = np.linspace(0.0, 1.0, 31)
-    uvals = []
-    for tval in tvals:
-        uvals = uvals + list(tvals)
-    vvals = []
-    for tval in tvals:
-        vvals = vvals + len(tvals) * [tval]
-    xvals, yvals, zvals = mySphere(uvals, vvals)
-    for xval, yval, zval in zip(xvals, yvals, zvals):
-        assert abs(np.linalg.norm([xval, yval, zval]) - 1.3) < 1.0e-12
+    tValues = np.linspace(0.0, 1.0, 31)
+    uValues = []
+    for tValue in tValues:
+        uValues = uValues + list(tValues)
+    vValues = []
+    for tValue in tValues:
+        vValues = vValues + len(tValues) * [tValue]
+    xValues, yValues, zValues = mySphere(uValues, vValues)
+    for xValue, yValue, zValue in zip(xValues, yValues, zValues):
+        assert abs(np.linalg.norm([xValue, yValue, zValue]) - 1.3) < 1.0e-12
     
 def test_subtract():
     maxError = 0.0
@@ -1232,17 +1297,17 @@ def test_subtract():
 
 def test_torus():
     myTorus = bspy.Spline.torus(1.0, 2.0, 1.0e-12)
-    tvals = np.linspace(0.0, 1.0, 31)
-    uvals = []
-    for tval in tvals:
-        uvals = uvals + list(tvals)
-    vvals = []
-    for tval in tvals:
-        vvals = vvals + len(tvals) * [tval]
-    xvals, yvals, zvals = myTorus(uvals, vvals)
-    for xval, yval, zval in zip(xvals, yvals, zvals):
-        torusPt = np.array([xval, yval, zval])
-        genPt = np.array([xval, yval, 0.0])
+    tValues = np.linspace(0.0, 1.0, 31)
+    uValues = []
+    for tValue in tValues:
+        uValues = uValues + list(tValues)
+    vValues = []
+    for tValue in tValues:
+        vValues = vValues + len(tValues) * [tValue]
+    xValues, yValues, zValues = myTorus(uValues, vValues)
+    for xValue, yValue, zValue in zip(xValues, yValues, zValues):
+        torusPt = np.array([xValue, yValue, zValue])
+        genPt = np.array([xValue, yValue, 0.0])
         genPt = 1.5 * genPt / np.linalg.norm(genPt)
         assert abs(np.linalg.norm(torusPt - genPt) - 0.5) < 1.0e-12    
     return
@@ -1372,34 +1437,26 @@ def test_zeros():
     roots = spline.zeros()
     check_1D_roots(expectedRoots, roots, tolerance)
 
-    data = []
-    for u in np.linspace(-2.0, 2.0, 3):
-        for v in np.linspace(-2.0, 2.0, 7):
-            data.append((u, v, 9 * u * u + v * v - 1.0, u - v))
-    spline = bspy.Spline.least_squares(2, 2, (3,3), data)
+    uValues = [np.linspace(-2.0, 2.0, 3), np.linspace(-2.0, 2.0, 7)]
+    data = np.array([[9 * u ** 2 + v ** 2 - 1.0, u - v] for u in uValues[0] for v in uValues[1]])
+    data = np.swapaxes(data, 0, 1)
+    data = np.reshape(data, (2, 3, 7))
+    spline = bspy.Spline.least_squares(uValues, data, order = [3, 3], compression = 1.0)
     roots = spline.zeros(tolerance)
     check_roots(spline, 2, roots, tolerance)
 
-    data = []
-    for u in np.linspace(-2.0, 2.0, 3):
-        for v in np.linspace(-2.0, 2.0, 7):
-            data.append((u, v, 9 * u * u + v * v - 1.0, u))
-    spline = bspy.Spline.least_squares(2, 2, (3,3), data)
+    uValues = [np.linspace(-2.0, 2.0, 3), np.linspace(-2.0, 2.0, 3)]
+    data = np.array([[9 * u ** 2 + v ** 2 - 1.0, u] for u in uValues[0] for v in uValues[1]])
+    data = np.swapaxes(data, 0, 1)
+    data = np.reshape(data, (2, 3, 3))
+    spline = bspy.Spline.least_squares(uValues, data, order = [3, 3])
     roots = spline.zeros(tolerance)
     check_roots(spline, 2, roots, tolerance)
 
-    data = []
-    for u in np.linspace(-2.0, 2.0, 3):
-        for v in np.linspace(-2.0, 2.0, 7):
-            data.append((u, v, 9 * u * u + v * v - 1.0, v))
-    spline = bspy.Spline.least_squares(2, 2, (3,3), data)
-    roots = spline.zeros(tolerance)
-    check_roots(spline, 2, roots, tolerance)
-
-    data = []
-    for u in np.linspace(-2.0, 2.0, 21):
-        for v in np.linspace(-2.0, 2.0, 21):
-            data.append((u, v, math.cos(math.pi * (u * u + v * v)), u - v))
-    spline = bspy.Spline.least_squares(2, 2, (4,4), data)
+    uValues = [np.linspace(-2.0, 2.0, 21), np.linspace(-2.0, 2.0, 21)]
+    data = np.array([[math.cos(math.pi * (u ** 2 + v ** 2)), u - v] for u in uValues[0] for v in uValues[1]])
+    data = np.swapaxes(data, 0, 1)
+    data = np.reshape(data, (2, 21, 21))
+    spline = bspy.Spline.least_squares(uValues, data)
     roots = spline.zeros(tolerance)
     check_roots(spline, 16, roots, tolerance)
