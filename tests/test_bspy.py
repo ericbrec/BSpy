@@ -831,11 +831,11 @@ def test_fold_unfold():
 
 def test_four_sided_patch():
     def procedural(c1, c2, c3, c4, u, v):
-        c1c2avg = (1.0 - v) * c1(u) + v * c2(u)
-        c3c4avg = (1.0 - u) * c3(v) + u * c4(v)
+        c1c2average = (1.0 - v) * c1(u) + v * c2(u)
+        c3c4average = (1.0 - u) * c3(v) + u * c4(v)
         c1c2c3c4 = (1.0 - v) * ((1.0 - u) * c1(0.0) + u * c1(1.0)) + \
                    v * ((1.0 - u) * c2(0.0) + u * c2(1.0))
-        return c1c2avg + c3c4avg - c1c2c3c4
+        return c1c2average + c3c4average - c1c2c3c4
     crv1 = bspy.Spline(1, 3, [4], [4], [[0.0, 0, 0, 0, 1, 1, 1, 1]],
                        [[0.0, 0.3, 0.7, 1.0], [0.0, 0.0, 0.0, 0.0], [0.0, 1.5, 0.5, 0.0]])
     crv2 = bspy.Spline.line([0.0, 1.0, 0.0], [1.0, 1.0, 1.0])
@@ -925,7 +925,7 @@ def test_least_squares():
     fit = bspy.Spline.least_squares(uValues, data, knots = spline.knots)
     coefErrors = fit.coefs - spline.coefs
     maxError = max(-coefErrors.min(), coefErrors.max()) / 580.0
-    assert maxError <= fit.accuracy
+    assert maxError <= 1.0e-14
 
     # Create knots and fit data taken from 1D spline.
     fit = bspy.Spline.least_squares(uValues, data, compression = 1.0)
@@ -971,8 +971,10 @@ def test_least_squares():
     # Try a fit to tolerance with fixEnds == True
     uValues = np.linspace(0.0, 1.0, 101)
     data = np.array([[np.cos(0.5 * np.pi * u), np.sin(0.5 * np.pi * u)] for u in uValues]).T
-    fit = bspy.Spline.least_squares(uValues, data, tolerance = 1.0e-5, fixEnds = True)
-    assert fit.accuracy < 1.0e-5
+    fit = bspy.Spline.least_squares(uValues, data, tolerance = 1.0e-6, fixEnds = True)
+    shouldBeOne = ([[1, 1]] @ (fit * fit)).range_bounds()
+    myError = max(shouldBeOne[0, 1] - 1.0, 1.0 - shouldBeOne[0, 0])
+    assert myError < 1.0e-6
 
     # Now attempt a fit when splines are passed in
     crv1 = bspy.Spline.line([0.0, 0.0, 0.0], [1.0, 0.0, 0.0])
@@ -998,7 +1000,7 @@ def test_least_squares():
     fit = bspy.Spline.least_squares([3 * [0.5], 3 * [0.5]], data, knots = spline.knots)
     coefErrors = fit.coefs - spline.coefs
     maxError = max(-coefErrors.min(), coefErrors.max())            
-    assert maxError < fit.accuracy
+    assert maxError < 1.0e-14
 
     # Replicate 2D spline using its knots. Should be precise to machine epsilon.
     spline = mySurface
@@ -1008,7 +1010,7 @@ def test_least_squares():
     fit = bspy.Spline.least_squares(uValues, dataPoints, order = [3, 4], knots = spline.knots)
     coefErrors = fit.coefs - spline.coefs
     maxError = max(-coefErrors.min(), coefErrors.max()) / 2.0
-    assert maxError < fit.accuracy
+    assert maxError < 1.0e-14
 
     # Create knots and fit data taken from 2D spline. Should match returned accuracy at data points.
     fit = bspy.Spline.least_squares(uValues, dataPoints, order = [3, 4])
@@ -1027,7 +1029,11 @@ def test_least_squares():
     dataPoints = np.array([[u, v, ffe(u, v)] for u in uValues for v in uValues]).T
     dataPoints = np.reshape(dataPoints, (3, 201, 201))
     fit = bspy.Spline.least_squares([uValues, uValues], dataPoints, tolerance = 1.0e-5)
-    assert fit.accuracy < 1.0e-5
+    u = 2.0 / 9.0
+    fitPoint = fit(u, u)
+    actualPoint = ffe(u, u)
+    myError = abs(fitPoint[2] - actualPoint)
+    assert myError < 1.0e-7
 
 def test_line():
     myLine = bspy.Spline.line([0.0, 1.0, 2.0], [2.0, 3.0, 4.0])
@@ -1252,16 +1258,16 @@ def test_section():
 
 def test_sphere():
     mySphere = bspy.Spline.sphere(1.3, 1.0e-12)
-    tvals = np.linspace(0.0, 1.0, 31)
-    uvals = []
-    for tval in tvals:
-        uvals = uvals + list(tvals)
-    vvals = []
-    for tval in tvals:
-        vvals = vvals + len(tvals) * [tval]
-    xvals, yvals, zvals = mySphere(uvals, vvals)
-    for xval, yval, zval in zip(xvals, yvals, zvals):
-        assert abs(np.linalg.norm([xval, yval, zval]) - 1.3) < 1.0e-12
+    tValues = np.linspace(0.0, 1.0, 31)
+    uValues = []
+    for tValue in tValues:
+        uValues = uValues + list(tValues)
+    vValues = []
+    for tValue in tValues:
+        vValues = vValues + len(tValues) * [tValue]
+    xValues, yValues, zValues = mySphere(uValues, vValues)
+    for xValue, yValue, zValue in zip(xValues, yValues, zValues):
+        assert abs(np.linalg.norm([xValue, yValue, zValue]) - 1.3) < 1.0e-12
     
 def test_subtract():
     maxError = 0.0
@@ -1291,17 +1297,17 @@ def test_subtract():
 
 def test_torus():
     myTorus = bspy.Spline.torus(1.0, 2.0, 1.0e-12)
-    tvals = np.linspace(0.0, 1.0, 31)
-    uvals = []
-    for tval in tvals:
-        uvals = uvals + list(tvals)
-    vvals = []
-    for tval in tvals:
-        vvals = vvals + len(tvals) * [tval]
-    xvals, yvals, zvals = myTorus(uvals, vvals)
-    for xval, yval, zval in zip(xvals, yvals, zvals):
-        torusPt = np.array([xval, yval, zval])
-        genPt = np.array([xval, yval, 0.0])
+    tValues = np.linspace(0.0, 1.0, 31)
+    uValues = []
+    for tValue in tValues:
+        uValues = uValues + list(tValues)
+    vValues = []
+    for tValue in tValues:
+        vValues = vValues + len(tValues) * [tValue]
+    xValues, yValues, zValues = myTorus(uValues, vValues)
+    for xValue, yValue, zValue in zip(xValues, yValues, zValues):
+        torusPt = np.array([xValue, yValue, zValue])
+        genPt = np.array([xValue, yValue, 0.0])
         genPt = 1.5 * genPt / np.linalg.norm(genPt)
         assert abs(np.linalg.norm(torusPt - genPt) - 0.5) < 1.0e-12    
     return

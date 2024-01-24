@@ -257,17 +257,17 @@ def graph(self):
     coefs = np.insert(self.coefs, self.nInd * (0,), 0.0, axis = 0)
     for nInd in range(self.nInd):
         dep = np.swapaxes(coefs, nInd + 1, 1)[nInd] # Returns a view, so changes to dep make changes to coefs
-        for i, knotAvg in enumerate(self.greville(nInd)):
-            dep[i] = knotAvg
+        for i, knotAverage in enumerate(self.greville(nInd)):
+            dep[i] = knotAverage
     return type(self)(self.nInd, self.nInd + self.nDep, self.order, self.nCoef, self.knots, coefs, self.accuracy, self.metadata)
 
 def greville(self, ind = 0):
     if ind < 0 or ind >= self.nInd:  raise ValueError("Invalid independent variable")
     myKnots = self.knots[ind]
-    knotAvgs = 0
+    knotAverages = 0
     for ix in range(1, self.order[ind]):
-        knotAvgs = knotAvgs + myKnots[ix : ix + self.nCoef[ind]]
-    return knotAvgs / (self.order[ind] - 1)
+        knotAverages = knotAverages + myKnots[ix : ix + self.nCoef[ind]]
+    return knotAverages / (self.order[ind] - 1)
 
 def integrate(self, with_respect_to = 0):
     if not(0 <= with_respect_to < self.nInd): raise ValueError("Invalid with_respect_to")

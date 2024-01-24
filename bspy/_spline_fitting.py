@@ -464,7 +464,6 @@ def least_squares(uValues, dataPoints, order = None, knots = None, compression =
 
     # Loop through each independent variable and fit all of the data
     
-    accuracy = np.finfo(float).eps
     for iInd in range(nInd):
         nRows = pointsPerDirection[iInd]
         b = np.swapaxes(dataPoints, 0, iInd + 1)
@@ -472,7 +471,6 @@ def least_squares(uValues, dataPoints, order = None, knots = None, compression =
         b = np.reshape(b, (nRows, loopDep))
         done = False
         while not done:
-            loopAccuracy = accuracy
             nCols = len(knots[iInd]) - order[iInd]
             A = np.zeros((nRows, nCols))
             u = -np.finfo(float).max
@@ -500,7 +498,6 @@ def least_squares(uValues, dataPoints, order = None, knots = None, compression =
                 d = U.T @ d
                 for iRow in range(nInterpolationConditions):
                     d[iRow] = d[iRow] / Sigma[iRow]
-                loopAccuracy *= Sigma[0] / Sigma[-1]
                 rangeCols = np.take(VT.T, range(nInterpolationConditions), 1)
                 nullspace = np.delete(VT.T, range(nInterpolationConditions), 1)
                 x1 = rangeCols @ d
@@ -509,7 +506,6 @@ def least_squares(uValues, dataPoints, order = None, knots = None, compression =
                 x = x1 + nullspace @ xNullspace
             else:
                 x, residuals, rank, s = np.linalg.lstsq(A, b, rcond = None)
-            loopAccuracy *= s[0] / s[rank - 1]
             residuals = b - A @ x
             maxError = 0.0
             for iRow in range(nRows):
@@ -528,9 +524,7 @@ def least_squares(uValues, dataPoints, order = None, knots = None, compression =
         dataPoints = np.swapaxes(x, 0, iInd + 1)
         pointsPerDirection[iInd] = nCols
         nPoints = nCols * nPoints // nRows
-        accuracy = loopAccuracy
-    splineFit = bspy.Spline(nInd, nDep, order, pointsPerDirection, knots, dataPoints,
-                            accuracy = accuracy, metadata = metadata)
+    splineFit = bspy.Spline(nInd, nDep, order, pointsPerDirection, knots, dataPoints, metadata = metadata)
     if splineInput:
         splineFit = splineFit.unfold(range(unfoldInfo.nInd), unfoldInfo)
     return splineFit
@@ -568,7 +562,7 @@ def ruled_surface(curve1, curve2):
     newCoefs = np.append(myCoefs1, myCoefs2, newCurve1.nInd + 1)
     return bspy.Spline(curve1.nInd + 1, curve1.nDep, list(newCurve1.order) + [2],
                        list(newCurve1.nCoef) + [2], list(newCurve1.knots) + [[0.0, 0.0, 1.0, 1.0]],
-                       newCoefs, accuracy = max(newCurve1.accuracy, newCurve2.accuracy))
+                       newCoefs)
 
 def section(xytk):    
     def twoPointSection(startPointX, startPointY, startAngle, startKappa, endPointX, endPointY, endAngle, endKappa):
