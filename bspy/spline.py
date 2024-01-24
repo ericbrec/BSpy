@@ -1606,8 +1606,8 @@ class Spline:
 
         Notes
         -----
-             Uses the well-known Rodrigues' rotation formula and mathematical operations
-             on splines.
+        Uses the well-known Rodrigues' rotation formula and mathematical operations
+        on splines.
         """
         return bspy._spline_operations.rotate(self, vector, angle)
     
@@ -1645,7 +1645,7 @@ class Spline:
         
         See Also
         --------
-        `load` : Load spline(s) in json format from the specified filename (full path).
+        `load` : Load splines in json format from the specified filename (full path).
         """
         class SplineEncoder(json.JSONEncoder):
             def default(self, obj):

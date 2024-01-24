@@ -55,9 +55,6 @@
                                 <a class="variable" href="#Spline.coefs">coefs</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Spline.accuracy">accuracy</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Spline.metadata">metadata</a>
                         </li>
                         <li>
@@ -77,6 +74,9 @@
                         </li>
                         <li>
                                 <a class="function" href="#Spline.common_basis">common_basis</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.cone">cone</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.confine">confine</a>
@@ -101,6 +101,9 @@
                         </li>
                         <li>
                                 <a class="function" href="#Spline.curvature">curvature</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.cylinder">cylinder</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.derivative">derivative</a>
@@ -196,6 +199,9 @@
                                 <a class="function" href="#Spline.revolve">revolve</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.rotate">rotate</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.ruled_surface">ruled_surface</a>
                         </li>
                         <li>
@@ -289,10 +295,6 @@ in that variable.</li>
 A list of the lists of the knots of the spline in each independent variable.</li>
 <li><strong>coefs</strong> (array-like):
 A list of the B-spline coefficients of the spline.</li>
-<li><strong>accuracy</strong> (<code>float</code>, optional):
-Each spline is presumed to be an approximation of something else. 
-The <code><a href="#Spline.accuracy">accuracy</a></code> stores the infinity norm error of the difference between 
-the given spline and that something else. Default is zero.</li>
 <li><strong>metadata</strong> (<code>dict</code>, optional):
 A dictionary of ancillary data to store with the spline. Default is {}.</li>
 </ul>
@@ -302,7 +304,7 @@ A dictionary of ancillary data to store with the spline. Default is {}.</li>
                             <div id="Spline.__init__" class="classattr">
                                 <div class="attr function">
             
-        <span class="name">Spline</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">nInd</span>, </span><span class="param"><span class="n">nDep</span>, </span><span class="param"><span class="n">order</span>, </span><span class="param"><span class="n">nCoef</span>, </span><span class="param"><span class="n">knots</span>, </span><span class="param"><span class="n">coefs</span>, </span><span class="param"><span class="n">accuracy</span><span class="o">=</span><span class="mf">0.0</span>, </span><span class="param"><span class="n">metadata</span><span class="o">=</span><span class="p">{}</span></span>)</span>
+        <span class="name">Spline</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">nInd</span>, </span><span class="param"><span class="n">nDep</span>, </span><span class="param"><span class="n">order</span>, </span><span class="param"><span class="n">nCoef</span>, </span><span class="param"><span class="n">knots</span>, </span><span class="param"><span class="n">coefs</span>, </span><span class="param"><span class="n">metadata</span><span class="o">=</span><span class="p">{}</span></span>)</span>
 
         
     </div>
@@ -373,17 +375,6 @@ A dictionary of ancillary data to store with the spline. Default is {}.</li>
         
     </div>
     <a class="headerlink" href="#Spline.coefs"></a>
-    
-    
-
-                            </div>
-                            <div id="Spline.accuracy" class="classattr">
-                                <div class="attr variable">
-            <span class="name">accuracy</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Spline.accuracy"></a>
     
     
 
@@ -614,9 +605,10 @@ The clamped spline. If the spline was already clamped, the original spline is re
                             </div>
                             <div id="Spline.common_basis" class="classattr">
                                 <div class="attr function">
-            
+                    <div class="decorator">@staticmethod</div>
+
         <span class="def">def</span>
-        <span class="name">common_basis</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">splines</span>, </span><span class="param"><span class="n">indMap</span></span><span class="return-annotation">):</span></span>
+        <span class="name">common_basis</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">splines</span>, </span><span class="param"><span class="n">indMap</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -628,14 +620,15 @@ The clamped spline. If the spline was already clamped, the original spline is re
 
 <ul>
 <li><strong>splines</strong> (<code>iterable</code>):
-The collection of N - 1 splines to align (N total splines, including self).</li>
+The collection of N splines to align.</li>
 <li><strong>indMap</strong> (<code>iterable</code>):
 The collection of independent variables to align. Since each spline can have multiple 
 independent variables, <code>indMap</code> is an <code>iterable</code> of <code>iterables</code> (like a list of lists). 
 Each collection of indices (i0, i1, .. iN) maps the i'th independent variable to each other. 
 The domains of mapped independent variables must match. 
 An independent variable can map to no more than one other independent variable.
-If all the splines are curves (1 independent variable), then <code>indMap</code> is ((0, 0, .. 0),).</li>
+If all the splines are curves (1 independent variable), then <code>indMap</code> is ((0, 0, .. 0),).
+If indMap is None (the default), then it is set to [N * [i] for i in range(nInd)]</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -652,6 +645,56 @@ The aligned collection of N splines.</li>
 <h6 id="notes">Notes</h6>
 
 <p>Uses <code><a href="#Spline.elevate_and_insert_knots">elevate_and_insert_knots</a></code> to ensure mapped variables share the same order and knots.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.cone" class="classattr">
+                                <div class="attr function">
+                    <div class="decorator">@staticmethod</div>
+
+        <span class="def">def</span>
+        <span class="name">cone</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">radius1</span>, </span><span class="param"><span class="n">radius2</span>, </span><span class="param"><span class="n">height</span>, </span><span class="param"><span class="n">tolerance</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.cone"></a>
+    
+            <div class="docstring"><p>Construct a cone of the two given radii and height.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>radius1</strong> (scalar):
+The desired radius of the cone at the bottom</li>
+<li><strong>radius2</strong> (scalar):
+The desired radius of the cone at the top</li>
+<li><strong>height</strong> (scalar):
+The desired height of the cone</li>
+<li><strong>tolerance</strong> (scalar, optional):
+The desired absolute tolerance to which the cylinder should be constructed.  Defaults
+to 1.0e-12 if tolerance == None.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+A bi-quartic spline approximation to a cone of the specified radii and height,
+accurate to the given tolerance.</li>
+</ul>
+
+<h6 id="notes">Notes</h6>
+
+<p>The resulting mapping is defined over the unit square.  The first independent variable
+corresponds to the radial position on the cone, while the second independent variable
+is the location along the height.</p>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.circular_arc">circular_arc</a></code>:  Create a 2D circular arc for a given radius and angle accurate to within
+a given tolerance. <br />
+<code><a href="#Spline.ruled_surface">ruled_surface</a></code>:  Construct a ruled surface between two curves.  </p>
 </div>
 
 
@@ -728,8 +771,7 @@ If <code>F</code> is not a spline, computing the first derivatives involves mult
 and can be numerically unstable.</li>
 <li><strong>epsilon</strong> (<code>float</code>, optional):
 Tolerance for contour precision. Evaluating <code>F</code> with contour values will be within epsilon 
-of zero. The default is square root of machine epsilon. The actual accuracy of the contour 
-is returned as <code>spline.accuracy</code>.</li>
+of zero. The default is square root of machine epsilon.</li>
 <li><strong>metadata</strong> (<code>dict</code>, optional):
 A dictionary of ancillary data to store with the spline. Default is {}.</li>
 </ul>
@@ -969,6 +1011,54 @@ The value of the curvature at the given point on the curve.</li>
 
 <p>Computes the curvature of the graph of the function if nDep == 1.  If nDep == 1 or 2,
 then the curvature is computed as a signed quantity.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.cylinder" class="classattr">
+                                <div class="attr function">
+                    <div class="decorator">@staticmethod</div>
+
+        <span class="def">def</span>
+        <span class="name">cylinder</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">radius</span>, </span><span class="param"><span class="n">height</span>, </span><span class="param"><span class="n">tolerance</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.cylinder"></a>
+    
+            <div class="docstring"><p>Construct a cylinder of the given radius and height.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>radius</strong> (scalar):
+The desired radius of the cylinder</li>
+<li><strong>height</strong> (scalar):
+The desired height of the cylinder</li>
+<li><strong>tolerance</strong> (scalar, optional):
+The desired absolute tolerance to which the cylinder should be constructed.  Defaults
+to 1.0e-12 if tolerance == None.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+A bi-quartic spline approximation to a cylinder of the specified radius and height,
+accurate to the given tolerance.</li>
+</ul>
+
+<h6 id="notes">Notes</h6>
+
+<p>The resulting mapping is defined over the unit square.  The first independent variable
+corresponds to the radial position on the cylinder, while the second independent variable
+is the location along the height.</p>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.circular_arc">circular_arc</a></code>:  Create a 2D circular arc for a given radius and angle accurate to within
+a given tolerance. <br />
+<code><a href="#Spline.ruled_surface">ruled_surface</a></code>:  Construct a ruled surface between two curves.  </p>
 </div>
 
 
@@ -1702,7 +1792,7 @@ is parametrized over the unit cube.</li>
                     <div class="decorator">@staticmethod</div>
 
         <span class="def">def</span>
-        <span class="name">least_squares</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">nInd</span>,</span><span class="param">	<span class="n">nDep</span>,</span><span class="param">	<span class="n">order</span>,</span><span class="param">	<span class="n">dataPoints</span>,</span><span class="param">	<span class="n">knots</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">compression</span><span class="o">=</span><span class="mi">0</span>,</span><span class="param">	<span class="n">metadata</span><span class="o">=</span><span class="p">{}</span></span><span class="return-annotation">):</span></span>
+        <span class="name">least_squares</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">uValues</span>,</span><span class="param">	<span class="n">dataPoints</span>,</span><span class="param">	<span class="n">order</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">knots</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">compression</span><span class="o">=</span><span class="mf">0.0</span>,</span><span class="param">	<span class="n">tolerance</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">fixEnds</span><span class="o">=</span><span class="kc">False</span>,</span><span class="param">	<span class="n">metadata</span><span class="o">=</span><span class="p">{}</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -1713,30 +1803,59 @@ is parametrized over the unit cube.</li>
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>nInd</strong> (<code>int</code>):
-The number of independent variables of the spline.</li>
-<li><strong>nDep</strong> (<code>int</code>):
-The number of dependent variables of the spline.</li>
+<li><p><strong>uValues</strong> (<code>iterable</code> of array-like values):
+The values of the independent variables in each of the coordinate directions for
+each of the data points.  It's either a simple array of length nU or it is an array
+of length nInd of arrays with corresponding lengths nU, nV, . . ., nW, where each
+length indicates the number of data points in that independent variable.  For each
+independent variable, the values must be ordered, i.e. uValue[i] &lt;= uValue[i+1].  The
+corresponding point in dataPoints will be an array of length nDep which represents the
+desired function values at that point.  If the values in uValues are repeated, then
+the corresponding data in dataPoints represents a derivative value.  Examples:</p>
+
+<p>If uValues == [0.0, 1.0, 1.0, 2.0, 3.0, 3.0, 3.0], then nInd == 1 and dataPoints
+contains
+[f(0.0), f(1.0), f'(1.0), f(2.0), f(3.0), f'(3.0), f''(3.0)]</p>
+
+<p>if uValues == [[0.0, 1.0, 1.0, 2.0], [0.0, 1.0, 2.0, 2.0, 3.0]], then nInd == 2 and
+dataPoints contains
+[[f(0,0), f(0,1), f(0,2), f_v(0,2), f(0,3)],
+[f(1,0), f(1,1), f(1,2), f_v(1,2), f(1,3)],
+[f_u(1,0), f_u(1,1), f_u(1,2), f_uv(1,2), f_u(1,3)],
+[f(2,0), f(2,1), f(2,2), f_v(2,2), f(2,3)]]</p></li>
+<li><strong>dataPoints</strong> (<code>iterable</code> of array-like values):
+A collection of data points.  The shape of this array mirrors the shape of
+<a href="#Spline.coefs">Spline.coefs</a>, i.e. it has shape (nDep, nU, nV, . . . , nW).  The indices into this
+array also index into uValues to retrieve the independent variable values.
+For example, if nInd == 2 and nDep == 3, then the shape of dataPoints is (3, nU, nV)
+and dataPoint[:,i,j] has independent variable values given by uValues[0,i] and
+uValues[1,j].</li>
 <li><strong>order</strong> (<code>tuple</code>):
 A tuple of length nInd where each integer entry represents the
-polynomial order of the spline in that variable. When in doubt,
-use <code>[4] * nInd</code> (a cubic spline).</li>
-<li><strong>dataPoints</strong> (<code>iterable</code> of array-like values):
-A collection of data points. Each data point is an array of length <code>nInd + nDep</code>. 
-The first <code><a href="#Spline.nInd">nInd</a></code> values designate the independent values for the point.
-The next <code><a href="#Spline.nDep">nDep</a></code> values designate the dependent values for the point. 
-The data points need not form a regular mesh nor be in any particular order.
-In addition, each data point may instead have <code>nInd + nDep * (nInd + 1)</code> values, 
-the first <code><a href="#Spline.nInd">nInd</a></code> being independent and the next <code>nInd + 1</code> sets of <code><a href="#Spline.nDep">nDep</a></code> values designating 
-the dependent point and its first derivatives with respect to each independent variable.</li>
+polynomial order of the spline in that variable.  If order == None, then
+order == [4] * nInd is assumed.</li>
 <li><strong>knots</strong> (<code>list</code>, optional):
-A list of the lists of the knots of the spline in each independent variable.
-Default is <code>None</code>, in which case knots are chosen automatically.</li>
-<li><strong>compression</strong> (<code>int</code>, optional):
-The desired compression of data used as a percentage of the number of data points (0 - 99). 
-This percentage is used to determine the total number of spline coefficients when 
-knots are chosen automatically (it's ignored otherwise). The actual compression will be slightly less 
-because the number of coefficients is rounded up. The default value is zero (interpolation, no compression).</li>
+A list of the lists of the knots of the spline in each independent variable.  The
+length of knots should be nInd if it is specified, where each of the arrays specify
+the knots of the spline to use in that independent variable.  All of the dataPoints
+must lie within the domain specified by the knots.  If knots == None (the default),
+then the knots are automatically determined.</li>
+<li><strong>compression</strong> (scalar, optional):
+The desired compression of data used as a fraction of the number of data points, i.e
+compression is a number between 0 and 1.  This fraction is used to determine the
+total number of spline coefficients when knots are chosen automatically (it's if the
+knots are specified). The actual compression will be slightly less because the number
+of coefficients is rounded up. The default value is zero (interpolation, no compression).</li>
+<li><strong>tolerance</strong> (scalar, optional):
+If tolerance is specified, then a fit to tolerance is performed.  Using the given knots
+as the initial set of knots, additional knots are inserted until the 2-norm of the
+difference between each of the each given dataPoints and the vector given by the
+spline is no larger than the specified tolerance.</li>
+<li><strong>fixEnds</strong> (Boolean, optional):
+if fixEnds is True, then all of the dataPoints which lie on any of the domain
+boundaries of the spline become interpolation conditions, i.e. the spline will be
+fit in such a way that those boundary points are exactly satisfied by the computed
+spline.  Otherwise, least-squares fitting will be performed on all of the dataPoints.</li>
 <li><strong>metadata</strong> (<code>dict</code>, optional):
 A dictionary of ancillary data to store with the spline. Default is {}.</li>
 </ul>
@@ -1750,10 +1869,7 @@ A spline curve which approximates the data points.</li>
 
 <h6 id="notes">Notes</h6>
 
-<p>Uses <code>numpy.linalg.lstsq</code> to compute the least squares solution. The returned spline.accuracy is computed 
-from the sum of the residual across dependent variables and the system epsilon. 
-The algorithm to choose knots automatically is from Piegl, Les A., and Wayne Tiller. 
-"Surface approximation to scanned data." The visual computer 16 (2000): 386-395.</p>
+<p>Uses <code>numpy.linalg.lstsq</code> to compute the least squares solution.</p>
 </div>
 
 
@@ -1809,7 +1925,7 @@ The spline that interpolates the two inputs.</li>
     </div>
     <a class="headerlink" href="#Spline.load"></a>
     
-            <div class="docstring"><p>Load spline(s) in json format from the specified filename (full path).</p>
+            <div class="docstring"><p>Load splines in json format from the specified filename (full path).</p>
 
 <h6 id="parameters">Parameters</h6>
 
@@ -1821,8 +1937,8 @@ The full path to the file containing the spline. Can be a relative path.</li>
 <h6 id="returns">Returns</h6>
 
 <ul>
-<li><strong>spline(s)</strong> (<code><a href="#Spline">Spline</a></code> or list of <code><a href="#Spline">Spline</a></code>):
-The loaded spline(s).</li>
+<li><strong>splines</strong> (list of <code><a href="#Spline">Spline</a></code>):
+The loaded splines.</li>
 </ul>
 
 <h6 id="see-also">See Also</h6>
@@ -2213,6 +2329,46 @@ Surface of revolution (first independent variable sweeps the arc from 0 to 1).</
 
 
                             </div>
+                            <div id="Spline.rotate" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">rotate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">vector</span>, </span><span class="param"><span class="n">angle</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.rotate"></a>
+    
+            <div class="docstring"><p>Rotate a spline around a vector by the specified angle.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>vector</strong> (array-like):
+A vector of length three about which to rotate the spline</li>
+<li><strong>angle</strong> (scalar):
+The number of degrees to rotate the spline around vector by</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+The rotated spline</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.transform">transform</a></code>:  Multiply a spline by a given matrix.  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>Uses the well-known Rodrigues' rotation formula and mathematical operations
+on splines.</p>
+</div>
+
+
+                            </div>
                             <div id="Spline.ruled_surface" class="classattr">
                                 <div class="attr function">
                     <div class="decorator">@staticmethod</div>
@@ -2268,7 +2424,7 @@ More splines to save in the same file.</li>
 
 <h6 id="see-also">See Also</h6>
 
-<p><code><a href="#Spline.load">load</a></code>:  Load spline(s) in json format from the specified filename (full path).  </p>
+<p><code><a href="#Spline.load">load</a></code>:  Load splines in json format from the specified filename (full path).  </p>
 </div>
 
 
@@ -2506,7 +2662,7 @@ a given tolerance. <br />
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">transform</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">matrix</span>, </span><span class="param"><span class="n">maxSingularValue</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+        <span class="name">transform</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">matrix</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -2519,9 +2675,6 @@ a given tolerance. <br />
 <ul>
 <li><strong>matrix</strong> (array-like):
 An array of size <code>newNDep</code>x<code><a href="#Spline.nDep">nDep</a></code> that specifies the transform matrix.</li>
-<li><strong>maxSingularValue</strong> (<code>float</code>, optional):
-The largest singular value of <code>matrix</code>, used to update the accuracy of the spline. 
-If no value is provided (default), the largest singular value is computed.</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -2721,7 +2874,7 @@ so long as unfold unscrambles things in the corresponding way.  The second splin
 <ul>
 <li><strong>epsilon</strong> (<code>float</code>, optional):
 Tolerance for root precision. The root will be within epsilon of the actual root. 
-The default is the max of spline accuracy and machine epsilon.</li>
+The default is the machine epsilon.</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
