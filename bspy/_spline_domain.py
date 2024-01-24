@@ -162,7 +162,7 @@ def elevate_and_insert_knots(self, m, newKnots):
         # Set new coefs to the elevated zeroth derivative coefficients with variables swapped back.
         coefs = coefs[0].swapaxes(0, ind + 1)
     
-    return type(self)(self.nInd, self.nDep, order, nCoef, knots, coefs, self.accuracy, self.metadata)
+    return type(self)(self.nInd, self.nDep, order, nCoef, knots, coefs, self.metadata)
 
 def extrapolate(self, newDomain, continuityOrder):
     if not(len(newDomain) == self.nInd): raise ValueError("Invalid newDomain")
@@ -269,7 +269,7 @@ def extrapolate(self, newDomain, continuityOrder):
         # Swap dependent and independent variables back.
         dCoefs = dCoefs.swapaxes(1, ind + 2) 
 
-    return type(self)(self.nInd, self.nDep, self.order, nCoef, knots, dCoefs[0], self.accuracy, self.metadata)
+    return type(self)(self.nInd, self.nDep, self.order, nCoef, knots, dCoefs[0], self.metadata)
 
 def fold(self, foldedInd):
     if not(0 <= len(foldedInd) <= self.nInd): raise ValueError("Invalid foldedInd")
@@ -300,8 +300,8 @@ def fold(self, foldedInd):
     foldedCoefs = np.moveaxis(self.coefs, coefficientMoveFrom, coefficientMoveTo).reshape((foldedNDep, *foldedNCoef))
     coefficientlessCoefs = np.empty((0, *coefficientlessNCoef), self.coefs.dtype)
 
-    foldedSpline = type(self)(len(foldedOrder), foldedNDep, foldedOrder, foldedNCoef, foldedKnots, foldedCoefs, self.accuracy, self.metadata)
-    coefficientlessSpline = type(self)(len(coefficientlessOrder), 0, coefficientlessOrder, coefficientlessNCoef, coefficientlessKnots, coefficientlessCoefs, self.accuracy, self.metadata)
+    foldedSpline = type(self)(len(foldedOrder), foldedNDep, foldedOrder, foldedNCoef, foldedKnots, foldedCoefs, self.metadata)
+    coefficientlessSpline = type(self)(len(coefficientlessOrder), 0, coefficientlessOrder, coefficientlessNCoef, coefficientlessKnots, coefficientlessCoefs, self.metadata)
     return foldedSpline, coefficientlessSpline
 
 def insert_knots(self, newKnots):
@@ -328,7 +328,7 @@ def insert_knots(self, newKnots):
     if self.coefs is coefs:
         return self
     else: 
-        return type(self)(self.nInd, self.nDep, self.order, coefs.shape[1:], knots, coefs, self.accuracy, self.metadata)
+        return type(self)(self.nInd, self.nDep, self.order, coefs.shape[1:], knots, coefs, self.metadata)
 
 def join(splineList):
     # Make sure all the splines in the list are curves
@@ -365,7 +365,7 @@ def join(splineList):
         newKnots = [list(workingSpline.knots[0]) + list(spl.knots[0][maxOrder:])]
         newCoefs = [list(workingCoefs) + list(splCoefs) for workingCoefs, splCoefs in zip(workingSpline.coefs, spl.coefs)]
         workingSpline = type(workingSpline)(1, numDep, workingSpline.order, [workingSpline.nCoef[0] + spl.nCoef[0]],
-                                            newKnots, newCoefs, max(workingSpline.accuracy, spl.accuracy), workingSpline.metadata)
+                                            newKnots, newCoefs, workingSpline.metadata)
     return workingSpline.reparametrize([[0.0, 1.0]]).remove_knots()
 
 def remove_knot(self, iKnot):
@@ -471,7 +471,7 @@ def reparametrize(self, newDomain):
             for i in range(1-order, 0):
                 knots[i] = max(knots[i], nD[1])
         knotList.append(knots)
-    return type(self)(self.nInd, self.nDep, self.order, self.nCoef, knotList, self.coefs, self.accuracy, self.metadata)   
+    return type(self)(self.nInd, self.nDep, self.order, self.nCoef, knotList, self.coefs, self.metadata)   
 
 def reverse(self, variable = 0):
     # Check to make sure variable is in range
@@ -489,8 +489,8 @@ def reverse(self, variable = 0):
     newCoefs = []
     for iDep in range(folded.nDep):
         newCoefs.append(self.coefs[iDep][::-1])
-    newfolded = type(self)(folded.nInd, folded.nDep, folded.order, folded.nCoef, (newKnots,), newCoefs, folded.accuracy, folded.metadata)
-    return newfolded.unfold(myIndices, basisInfo)
+    newFolded = type(self)(folded.nInd, folded.nDep, folded.order, folded.nCoef, (newKnots,), newCoefs, folded.metadata)
+    return newFolded.unfold(myIndices, basisInfo)
 
 def transpose(self, axes=None):
     if axes is None:
@@ -504,7 +504,7 @@ def transpose(self, axes=None):
         nCoef.append(self.nCoef[axis])
         knots.append(self.knots[axis])
         coefAxes.append(axis + 1)
-    return type(self)(self.nInd, self.nDep, order, nCoef, knots, np.transpose(self.coefs, coefAxes), self.accuracy, self.metadata)
+    return type(self)(self.nInd, self.nDep, order, nCoef, knots, np.transpose(self.coefs, coefAxes), self.metadata)
 
 def trim(self, newDomain):
     if not(len(newDomain) == self.nInd): raise ValueError("Invalid newDomain")
@@ -553,7 +553,7 @@ def trim(self, newDomain):
         coefIndex.append(slice(leftIndex, rightIndex))
     coefs = spline.coefs[tuple(coefIndex)]
 
-    return type(spline)(spline.nInd, spline.nDep, spline.order, coefs.shape[1:], knotsList, coefs, spline.accuracy, spline.metadata)
+    return type(spline)(spline.nInd, spline.nDep, spline.order, coefs.shape[1:], knotsList, coefs, spline.metadata)
 
 def unfold(self, foldedInd, coefficientlessSpline):
     if not(len(foldedInd) == coefficientlessSpline.nInd): raise ValueError("Invalid coefficientlessSpline")
@@ -583,5 +583,5 @@ def unfold(self, foldedInd, coefficientlessSpline):
     coefficientMoveFrom = range(1, coefficientlessSpline.nInd + 1)
     unfoldedCoefs = np.moveaxis(self.coefs.reshape(unfoldedNDep, *coefficientlessSpline.nCoef, *self.nCoef), coefficientMoveFrom, coefficientMoveTo)
 
-    unfoldedSpline = type(self)(len(unfoldedOrder), unfoldedNDep, unfoldedOrder, unfoldedNCoef, unfoldedKnots, unfoldedCoefs, self.accuracy, self.metadata)
+    unfoldedSpline = type(self)(len(unfoldedOrder), unfoldedNDep, unfoldedOrder, unfoldedNCoef, unfoldedKnots, unfoldedCoefs, self.metadata)
     return unfoldedSpline

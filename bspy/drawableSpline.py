@@ -91,11 +91,6 @@ class DrawableSpline(Spline):
     coefs : array-like
         A list of the B-spline coefficients of the spline.
     
-    accuracy : `float`
-        Each spline function is presumed to be an approximation of something else. 
-        The `accuracy` stores the infinity norm error of the difference between 
-        the given spline function and that something else.
-
     metadata : `dict`
         A dictionary of ancillary data to store with the spline
 
@@ -135,7 +130,6 @@ class DrawableSpline(Spline):
             self.nCoef = spline.nCoef
             self.knots = spline.knots
             self.coefs = spline.coefs
-            self.accuracy = spline.accuracy
             self.metadata = spline.metadata
         else:
             Spline.__init__(self, *args, **kwargs)
@@ -225,7 +219,7 @@ class DrawableSpline(Spline):
         else:
             raise ValueError("Can't convert to drawable spline.")
         
-        drawable = DrawableSpline(spline.nInd, nDep, spline.order, spline.nCoef, knotList, coefs, spline.accuracy)
+        drawable = DrawableSpline(spline.nInd, nDep, spline.order, spline.nCoef, knotList, coefs)
         drawable.metadata = spline.metadata # Make the original spline share its metadata with its drawable spline
         if not "fillColor" in drawable.metadata:
             drawable.metadata["fillColor"] = np.array((0.0, 1.0, 0.0, 1.0), np.float32)
