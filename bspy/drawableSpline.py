@@ -198,7 +198,7 @@ class DrawableSpline(Spline):
                     if rangeCoef > 1.0e-8:
                         coefs[i] = (coefs[i] - minCoef) / rangeCoef
                     else:
-                        coefs[i] = 1.0
+                        coefs[i] = max(0.0, min(1.0, minCoef))
         elif spline.nInd == 3:
             if spline.nDep == 1:
                 spline = spline.graph()
@@ -215,7 +215,7 @@ class DrawableSpline(Spline):
                     if rangeCoef > 1.0e-8:
                         coefs[i] = (coefs[i] - minCoef) / rangeCoef
                     else:
-                        coefs[i] = 1.0
+                        coefs[i] = max(0.0, min(1.0, minCoef))
         else:
             raise ValueError("Can't convert to drawable spline.")
         
