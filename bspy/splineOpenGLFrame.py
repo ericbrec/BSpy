@@ -8,7 +8,7 @@ from bspy.drawableSpline import _set_color
 
 class SplineOpenGLFrame(OpenGLFrame):
     """
-    A tkinter `OpenGLFrame` with shaders to display a `DrawableSpline` list. 
+    A tkinter `OpenGLFrame` with shaders to display a `DrawableSpline`.
     """
 
     ROTATE = 1
@@ -939,10 +939,10 @@ class SplineOpenGLFrame(OpenGLFrame):
         }
     """
  
-    def __init__(self, *args, eye=(0.0, 0.0, 3.0), center=(0.0, 0.0, 0.0), up=(0.0, 1.0, 0.0), **kw):
+    def __init__(self, *args, eye=(0.0, 0.0, 3.0), center=(0.0, 0.0, 0.0), up=(0.0, 1.0, 0.0), draw_func=None, **kw):
         OpenGLFrame.__init__(self, *args, **kw)
 
-        self.splineDrawList = []
+        self.draw_func = draw_func
         self.animating = False
         self.animate = 0 # Set to number of milliseconds before showing next frame (0 means no animation)
         self.frameCount = 0
@@ -994,12 +994,6 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.backgroundColor = _set_color(r, g, b, a)
         if self.glInitialized:
             glClearColor(self.backgroundColor[0], self.backgroundColor[1], self.backgroundColor[2], self.backgroundColor[3])
-
-    def SetSplineList(self, list):
-        """
-        Set the `DrawableSpline` list which determines the splines to display.
-        """
-        self.splineDrawList = list
     
     def ResetView(self):
         """
@@ -1174,8 +1168,8 @@ class SplineOpenGLFrame(OpenGLFrame):
             (self.horizon[2], self.vertical[2], self.look[2], 0.0),
             (-np.dot(self.horizon, self.eye), -np.dot(self.vertical, self.eye), -np.dot(self.look, self.eye), 1.0)), np.float32)
 
-        for spline in self.splineDrawList:
-            spline._Draw(self, transform)
+        if self.draw_func is not None:
+            self.draw_func(self, transform)
 
         glFlush()
 
