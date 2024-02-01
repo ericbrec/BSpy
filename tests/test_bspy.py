@@ -1263,6 +1263,33 @@ def test_section():
         for i in range(3):
             rate.append(math.log2(maxErrors[i] / maxErrors[i + 1]))
 
+def test_solve_ODE():
+    # Test u' = u, u(0) = 1
+    myGuess = bspy.Spline.line([1.0], [2.0])
+    newKnots = np.linspace(0.0, 1.0, 21)[1 : -1]
+    myGuess = myGuess.elevate_and_insert_knots([2], [newKnots])
+    def myF(t, u):
+        return np.array([u[0, 0]]), np.array([1.0]).reshape((1, 1, 1))
+    fit = myGuess.solve_ODE(1, 0, myF)
+    myValue = fit(1.0)[0]
+    correctValue = np.exp(1.0)
+    assert abs(myValue - correctValue) < 1.0e-7
+
+    # Test u' = u, u(1) = 2
+    fit = myGuess.solve_ODE(0, 1, myF)
+    myValue = fit(0.0)[0]
+    correctValue = 2.0 / correctValue
+    assert abs(myValue - correctValue) < 1.0e-7
+
+    # Test u'' = u, u(0) = 1, u'(0) = 1
+    def myF(t, u):
+        return np.array([u[0, 0]]), np.array([1.0, 0.0]).reshape((1, 1, 2))
+    fit = myGuess.solve_ODE(2, 0, myF)
+    myValue = fit(1.0)[0]
+    correctValue = np.exp(1.0)
+    assert abs(myValue - correctValue) < 1.0e-7
+    return
+
 def test_sphere():
     mySphere = bspy.Spline.sphere(1.3, 1.0e-12)
     tValues = np.linspace(0.0, 1.0, 31)

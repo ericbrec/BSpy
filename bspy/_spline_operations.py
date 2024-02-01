@@ -157,7 +157,7 @@ def confine(self, range_bounds):
 def contract(self, uvw):
     domain = self.domain()
     section = [slice(None)]
-    indices = []
+    bValues = []
     contracting = False
     for iv in range(self.nInd):
         if uvw[iv] is not None:
@@ -165,12 +165,12 @@ def contract(self, uvw):
                 raise ValueError(f"Spline evaluation outside domain: {uvw}")
 
             # Grab all of the appropriate coefficients
-            ix = np.searchsorted(self.knots[iv], uvw[iv], 'right')
-            ix = min(ix, self.nCoef[iv])
-            indices.append(ix)
+            ix, indValues = bspy.Spline.bspline_values(None, self.knots[iv], self.order[iv], uvw[iv])
+            bValues.append(indValues)
             section.append(slice(ix - self.order[iv], ix))
             contracting = True
         else:
+            bValues.append([])
             section.append(slice(None))
 
     if not contracting:
@@ -188,9 +188,8 @@ def contract(self, uvw):
             del order[ix]
             del nCoef[ix]
             del knots[ix]
-            bValues = bspy.Spline.bspline_values(indices.pop(0), self.knots[iv], self.order[iv], uvw[iv])
             coefs = np.moveaxis(coefs, ix + 1, -1)
-            coefs = coefs @ bValues
+            coefs = coefs @ bValues[iv]
         else:
             ix += 1
     
@@ -515,12 +514,12 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
                         taylorCoefs = (coefs[ix1 - order1:ix1, ix2 - order2:ix2]).T # Transpose so we multiply on the left (due to matmul rules)
                         bValues = np.empty((order1, order1), knots1.dtype)
                         for derivativeOrder in range(order1):
-                            bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix1, self.knots[ind1], order1, knot, derivativeOrder, True)
+                            ix1, bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix1, self.knots[ind1], order1, knot, derivativeOrder, True)
                         taylorCoefs = taylorCoefs @ bValues
                         taylorCoefs = np.moveaxis(taylorCoefs, -1, 0) # Move ind1's taylor coefficients to the left side so we can compute ind2's
                         bValues = np.empty((order2, order2), knots2.dtype)
                         for derivativeOrder in range(order2):
-                            bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix2, other.knots[ind2], order2, yLeft, derivativeOrder, True)
+                            ix2, bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix2, other.knots[ind2], order2, yLeft, derivativeOrder, True)
                         taylorCoefs = taylorCoefs @ bValues
                         taylorCoefs = (np.moveaxis(taylorCoefs, 0, -1)).T # Move ind1's taylor coefficients back to the right side, and re-transpose
 
@@ -591,22 +590,20 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
                     # Next step in multiply:
                     # 2) Convert each spline segment into a polynomial (Taylor series).
                     # Isolate the appropriate segment coefficients
-                    ix1 = np.searchsorted(self.knots[ind1], knot, 'right')
-                    ix1 = min(ix1, self.nCoef[ind1])
-                    ix2 = np.searchsorted(other.knots[ind2], knot, 'right')
-                    ix2 = min(ix2, other.nCoef[ind2])
+                    ix1 = None
+                    ix2 = None
 
                     # Compute taylor coefficients for the segment
-                    taylorCoefs = (coefs[ix1 - order1:ix1, ix2 - order2:ix2]).T # Transpose so we multiply on the left (due to matmul rules)
-                    bValues = np.empty((order1, order1), knots1.dtype)
+                    bValues1 = np.empty((order1, order1), knots1.dtype)
                     for derivativeOrder in range(order1):
-                        bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix1, self.knots[ind1], order1, knot, derivativeOrder, True)
-                    taylorCoefs = taylorCoefs @ bValues
-                    taylorCoefs = np.moveaxis(taylorCoefs, -1, 0) # Move ind1's taylor coefficients to the left side so we can compute ind2's
-                    bValues = np.empty((order2, order2), knots2.dtype)
+                        ix1, bValues1[:,derivativeOrder] = bspy.Spline.bspline_values(ix1, self.knots[ind1], order1, knot, derivativeOrder, True)
+                    bValues2 = np.empty((order2, order2), knots2.dtype)
                     for derivativeOrder in range(order2):
-                        bValues[:,derivativeOrder] = bspy.Spline.bspline_values(ix2, other.knots[ind2], order2, knot, derivativeOrder, True)
-                    taylorCoefs = taylorCoefs @ bValues
+                        ix2, bValues2[:,derivativeOrder] = bspy.Spline.bspline_values(ix2, other.knots[ind2], order2, knot, derivativeOrder, True)
+                    taylorCoefs = (coefs[ix1 - order1:ix1, ix2 - order2:ix2]).T # Transpose so we multiply on the left (due to matmul rules)
+                    taylorCoefs = taylorCoefs @ bValues1
+                    taylorCoefs = np.moveaxis(taylorCoefs, -1, 0) # Move ind1's taylor coefficients to the left side so we can compute ind2's
+                    taylorCoefs = taylorCoefs @ bValues2
                     taylorCoefs = (np.moveaxis(taylorCoefs, 0, -1)).T # Move ind1's taylor coefficients back to the right side, and re-transpose
 
                     # 3) Sum coefficients of matching polynomial degree (the coefficients have already been multiplied together by the outer product).
