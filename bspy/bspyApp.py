@@ -139,11 +139,7 @@ class bspyApp(tk.Tk):
         
     def draw(self, spline, name = None):
         """Add a `Spline` to the listbox and draw it. Can be called before the app is running."""
-        spline = DrawableSpline.make_drawable(spline)
-        if name is not None:
-            spline.metadata["Name"] = name
-        self.splineList.append(spline)
-        self.listBox.insert(tk.END, spline)
+        self.list(spline, name)
         self.listBox.selection_set(self.listBox.size() - 1)
         self.update()
 
@@ -217,14 +213,13 @@ class bspyApp(tk.Tk):
 
         if gotOne:
             newRadius = 0.5 * np.max(splineMax - splineMin)
-            if not np.isclose(newRadius, self.splineRadius):
-                self.splineRadius = newRadius
-                atDefaultEye = np.allclose(self.frame.eye, self.frame.defaultEye)
-                center = 0.5 * (splineMax + splineMin)
-                self.frame.SetDefaultView(center + (0.0, 0.0, 3.0 * newRadius), center, (0.0, 1.0, 0.0))
-                self.frame.ResetBounds()
-                if atDefaultEye:
-                    self.frame.ResetView()
+            self.splineRadius = newRadius
+            atDefaultEye = np.allclose(self.frame.eye, self.frame.defaultEye)
+            center = 0.5 * (splineMax + splineMin)
+            self.frame.SetDefaultView(center + (0.0, 0.0, 3.0 * newRadius), center, (0.0, 1.0, 0.0))
+            self.frame.ResetBounds()
+            if atDefaultEye:
+                self.frame.ResetView()
         else:
             self.splineRadius = 0.0
 
