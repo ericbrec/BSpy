@@ -1210,14 +1210,22 @@ class SplineOpenGLFrame(OpenGLFrame):
     
     def SetScale(self, scale):
         """
-        Set the flying speed scale.
+        Set anchor distance and/or flying speed (depending on mode).
 
         Parameters
         ----------
         scale : `float`
-            Speed scale between 0 and 1.
+            Scale between 0 and 1.
         """
-        self.speed = 0.033 * self.anchorDistance * (100.0 ** float(scale) - 1.0) / 99.0
+        if self.mode == self.FLY:
+            self.speed = 0.033 * self.anchorDistance * (100.0 ** float(scale) - 1.0) / 99.0
+        else:
+            defaultAnchorDistance = np.linalg.norm(self.defaultEye - self.defaultCenter)
+            self.anchorDistance = 2.0 * float(scale) * defaultAnchorDistance
+            self.anchorDistance = max(self.anchorDistance, 0.01)
+            self.speed = 0.033 * self.anchorDistance
+            self.eye = self.anchorPosition + self.anchorDistance * self.look
+            self.Update()
     
     def SetAnimating(self, animating):
         self.animating = animating
