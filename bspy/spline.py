@@ -676,7 +676,10 @@ class Spline:
             def vectorized(*uvwInstance):
                 return tuple(bspy._spline_evaluation.derivative(self, with_respect_to, uvwInstance))
             uFunc = np.frompyfunc(vectorized, self.nInd, self.nDep)
-            return tuple([a.astype(self.coefs.dtype, copy=False) for a in uFunc(*uvw, **kwargs)])
+            if self.nDep > 1:
+                return tuple([a.astype(self.coefs.dtype, copy=False) for a in uFunc(*uvw, **kwargs)])
+            else:
+                return np.array([x[0] for x in uFunc(*uvw, **kwargs)], self.coefs.dtype)
         else:
             return bspy._spline_evaluation.derivative(self, with_respect_to, *uvw)
 
@@ -841,7 +844,10 @@ class Spline:
             def vectorized(*uvwInstance):
                 return tuple(bspy._spline_evaluation.evaluate(self, uvwInstance))
             uFunc = np.frompyfunc(vectorized, self.nInd, self.nDep)
-            return tuple([a.astype(self.coefs.dtype, copy=False) for a in uFunc(*uvw, **kwargs)])
+            if self.nDep > 1:
+                return tuple([a.astype(self.coefs.dtype, copy=False) for a in uFunc(*uvw, **kwargs)])
+            else:
+                return np.array([x[0] for x in uFunc(*uvw, **kwargs)], self.coefs.dtype)
         else:
             return bspy._spline_evaluation.evaluate(self, *uvw)
 
