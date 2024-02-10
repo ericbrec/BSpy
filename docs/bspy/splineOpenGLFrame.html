@@ -94,7 +94,7 @@
                                 <a class="variable" href="#SplineOpenGLFrame.surfaceFragmentShaderCode">surfaceFragmentShaderCode</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SplineOpenGLFrame.splineDrawList">splineDrawList</a>
+                                <a class="variable" href="#SplineOpenGLFrame.draw_func">draw_func</a>
                         </li>
                         <li>
                                 <a class="variable" href="#SplineOpenGLFrame.animating">animating</a>
@@ -125,9 +125,6 @@
                         </li>
                         <li>
                                 <a class="function" href="#SplineOpenGLFrame.SetBackgroundColor">SetBackgroundColor</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#SplineOpenGLFrame.SetSplineList">SetSplineList</a>
                         </li>
                         <li>
                                 <a class="function" href="#SplineOpenGLFrame.ResetView">ResetView</a>
@@ -274,14 +271,14 @@
     </div>
     <a class="headerlink" href="#SplineOpenGLFrame"></a>
     
-            <div class="docstring"><p>A tkinter <code>OpenGLFrame</code> with shaders to display a <code>DrawableSpline</code> list.</p>
+            <div class="docstring"><p>A tkinter <code>OpenGLFrame</code> with shaders to display a <code>DrawableSpline</code>.</p>
 </div>
 
 
                             <div id="SplineOpenGLFrame.__init__" class="classattr">
                                 <div class="attr function">
             
-        <span class="name">SplineOpenGLFrame</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="o">*</span><span class="n">args</span>,</span><span class="param">	<span class="n">eye</span><span class="o">=</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">)</span>,</span><span class="param">	<span class="n">center</span><span class="o">=</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>,</span><span class="param">	<span class="n">up</span><span class="o">=</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>,</span><span class="param">	<span class="o">**</span><span class="n">kw</span></span>)</span>
+        <span class="name">SplineOpenGLFrame</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="o">*</span><span class="n">args</span>,</span><span class="param">	<span class="n">eye</span><span class="o">=</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">)</span>,</span><span class="param">	<span class="n">center</span><span class="o">=</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>,</span><span class="param">	<span class="n">up</span><span class="o">=</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>,</span><span class="param">	<span class="n">draw_func</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="o">**</span><span class="n">kw</span></span>)</span>
 
         
     </div>
@@ -547,13 +544,13 @@ highlightcolor, highlightthickness, relief, takefocus, visual, width.</p>
     
 
                             </div>
-                            <div id="SplineOpenGLFrame.splineDrawList" class="classattr">
+                            <div id="SplineOpenGLFrame.draw_func" class="classattr">
                                 <div class="attr variable">
-            <span class="name">splineDrawList</span>
+            <span class="name">draw_func</span>
 
         
     </div>
-    <a class="headerlink" href="#SplineOpenGLFrame.splineDrawList"></a>
+    <a class="headerlink" href="#SplineOpenGLFrame.draw_func"></a>
     
     
 
@@ -685,21 +682,6 @@ The blue value [0, 1] as a float or [0, 255] as an int.</li>
 <li><strong>a</strong> (<code>float</code>, <code>int</code>, or None):
 The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> then alpha is set to 1.</li>
 </ul>
-</div>
-
-
-                            </div>
-                            <div id="SplineOpenGLFrame.SetSplineList" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">SetSplineList</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="nb">list</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#SplineOpenGLFrame.SetSplineList"></a>
-    
-            <div class="docstring"><p>Set the <code>DrawableSpline</code> list which determines the splines to display.</p>
 </div>
 
 
@@ -860,13 +842,13 @@ The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> th
     </div>
     <a class="headerlink" href="#SplineOpenGLFrame.SetScale"></a>
     
-            <div class="docstring"><p>Set the flying speed scale.</p>
+            <div class="docstring"><p>Set anchor distance and/or flying speed (depending on mode).</p>
 
 <h6 id="parameters">Parameters</h6>
 
 <ul>
 <li><strong>scale</strong> (<code>float</code>):
-Speed scale between 0 and 1.</li>
+Scale between 0 and 1.</li>
 </ul>
 </div>
 
