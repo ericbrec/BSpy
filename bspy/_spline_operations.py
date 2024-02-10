@@ -100,6 +100,15 @@ def confine(self, range_bounds):
     for i in range(spline.nDep):
         intersectBoundary(i, 0)
         intersectBoundary(i, 1)
+    
+    # Put the intersection points in order.
+    intersections.sort(key=lambda intersection: intersection[0])
+
+    # Remove repeat points at start and end.
+    if intersections[1][0] - intersections[0][0] < epsilon:
+        del intersections[1]
+    if intersections[-1][0] - intersections[-2][0] < epsilon:
+        del intersections[-2]
 
     # Insert order-1 knots at each intersection point.
     for (knot, boundaryPoint, headedOutside) in intersections:
@@ -110,9 +119,6 @@ def confine(self, range_bounds):
                 spline = spline.insert_knots(([knot] * count,))
         else:
             spline = spline.insert_knots(([knot] * (order - 1),))
-    
-    # Put the intersection points in order.
-    intersections.sort(key=lambda intersection: intersection[0])
 
     # Go through the boundary points, assigning boundary coefficients, interpolating between boundary points, 
     # and removing knots and coefficients where the curve stalls.

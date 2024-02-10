@@ -2,7 +2,10 @@ import numpy as np
 import tkinter as tk
 from OpenGL.GL import *
 import OpenGL.GL.shaders as shaders
-from pyopengltk import OpenGLFrame
+try:
+    from pyopengltk import OpenGLFrame
+except ImportError:
+    from tkinter import Frame as OpenGLFrame
 from bspy import DrawableSpline
 from bspy.drawableSpline import _set_color
 
@@ -1186,7 +1189,10 @@ class SplineOpenGLFrame(OpenGLFrame):
         """
         Update the frame, typically after updating the spline list.
         """
-        self.tkExpose(None)
+        try:
+            self.tkExpose(None)
+        except AttributeError:
+            pass
 
     def Reset(self):
         """
