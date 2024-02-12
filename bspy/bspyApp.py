@@ -63,11 +63,18 @@ class bspyApp(tk.Tk):
         controls = tk.Frame(self)
         controls.pack(side=tk.LEFT, fill=tk.Y)
 
-        tk.Button(controls, text='Adjust', command=self._Adjust).pack(side=tk.BOTTOM, fill=tk.X)
-        #tk.Button(controls, text='Empty', command=self.empty).pack(side=tk.BOTTOM, fill=tk.X)
-        tk.Button(controls, text='Erase', command=self.erase_all).pack(side=tk.BOTTOM, fill=tk.X)
-        tk.Button(controls, text='Save', command=self.save_splines).pack(side=tk.BOTTOM, fill=tk.X)
-        tk.Button(controls, text='Load', command=self.load_splines).pack(side=tk.BOTTOM, fill=tk.X)
+        buttons = tk.Frame(controls)
+        buttons.pack(side=tk.BOTTOM, fill=tk.X)
+        buttons.columnconfigure(0, weight=1)
+        buttons.columnconfigure(1, weight=1)
+        tk.Button(buttons, text='Load', command=self.load_splines).grid(row=0, column=0, sticky=tk.EW)
+        tk.Button(buttons, text='Save', command=self.save_splines).grid(row=0, column=1, sticky=tk.EW)
+        tk.Button(buttons, text='Erase', command=self.erase_all).grid(row=1, column=0, sticky=tk.EW)
+        tk.Button(buttons, text='Empty', command=self.empty).grid(row=1, column=1, sticky=tk.EW)
+        tk.Button(buttons, text='Adjust', command=self._Adjust).grid(row=2, column=0, columnspan=2, sticky=tk.EW)
+
+        horizontalScroll = tk.Scrollbar(controls, orient=tk.HORIZONTAL)
+        horizontalScroll.pack(side=tk.BOTTOM, fill=tk.X)
 
         self.listBox = tk.Listbox(controls, selectmode=tk.MULTIPLE)
         self.listBox.pack(side=tk.LEFT, fill=tk.Y)
@@ -75,8 +82,11 @@ class bspyApp(tk.Tk):
 
         verticalScroll = tk.Scrollbar(controls, orient=tk.VERTICAL)
         verticalScroll.pack(side=tk.LEFT, fill=tk.Y)
-        self.listBox.configure(yscrollcommand=verticalScroll.set)
+
+        horizontalScroll.config(command=self.listBox.xview)
+        self.listBox.configure(xscrollcommand=horizontalScroll.set)
         verticalScroll.config(command=self.listBox.yview)
+        self.listBox.configure(yscrollcommand=verticalScroll.set)
 
         # Controls on the right
         controls = tk.Frame(self)
