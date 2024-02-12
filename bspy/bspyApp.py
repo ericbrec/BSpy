@@ -69,8 +69,8 @@ class bspyApp(tk.Tk):
         buttons.columnconfigure(1, weight=1)
         tk.Button(buttons, text='Load', command=self.load_splines).grid(row=0, column=0, sticky=tk.EW)
         tk.Button(buttons, text='Save', command=self.save_splines).grid(row=0, column=1, sticky=tk.EW)
-        tk.Button(buttons, text='Erase', command=self.erase_all).grid(row=1, column=0, sticky=tk.EW)
-        tk.Button(buttons, text='Empty', command=self.empty).grid(row=1, column=1, sticky=tk.EW)
+        tk.Button(buttons, text='Remove', command=self.remove).grid(row=1, column=0, sticky=tk.EW)
+        tk.Button(buttons, text='Erase All', command=self.erase_all).grid(row=1, column=1, sticky=tk.EW)
         tk.Button(buttons, text='Adjust', command=self._Adjust).grid(row=2, column=0, columnspan=2, sticky=tk.EW)
 
         horizontalScroll = tk.Scrollbar(controls, orient=tk.HORIZONTAL)
@@ -176,12 +176,14 @@ class bspyApp(tk.Tk):
         self.frame.ResetView()
         self.update()
 
-    def empty(self):
-        """Stop drawing all splines and remove them from the listbox."""
-        self.splineList = []
-        self.listBox.delete(0, self.listBox.size() - 1)
-        self.splineRadius = 0.0
-        self.frame.ResetView()
+    def remove(self):
+        """Remove splines from the listbox."""
+        while self.listBox.curselection():
+            item = self.listBox.curselection()[0]
+            spline = self.splineList[item]
+            del self.splineList[item]
+            self.splineDrawList.remove(spline)
+            self.listBox.delete(item, item)
         self.update()
 
     def set_background_color(self, r, g=None, b=None, a=None):
