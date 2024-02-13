@@ -35,9 +35,9 @@ def add(self, other, indMap = None):
             permutation.append(i + 1) # Add 1 to account for dependent variables.
     for i in range(other.nInd - 1, -1, -1):
         if i not in otherMapped:
-            order.append(other.order[i])
-            nCoef.append(other.nCoef[i])
-            knots.append(other.knots[i])
+            order.append(other.order[other.nInd - 1 - i])
+            nCoef.append(other.nCoef[other.nInd - 1 - i])
+            knots.append(other.knots[other.nInd - 1 - i])
             permutation.append(self.nInd + i + 1) # Add 1 to account for dependent variables.
             nInd += 1
         else:
