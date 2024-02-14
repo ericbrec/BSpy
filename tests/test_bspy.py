@@ -858,6 +858,14 @@ def test_graph():
     assert abs(uvfPoint[1] - 0.83) <= 4.0 * np.finfo(float).eps
     assert abs(uvfPoint[2] - simpleFunc([0.27, 0.83])[0]) <= 4.0 * np.finfo(float).eps
 
+def test_greville():
+    piecewiseConstant = bspy.Spline(1, 1, [1], [3], [[0.0, 1.0, 3.0, 4.0]], [[0.0, 0.0, 0.0]])
+    averages = piecewiseConstant.greville()                                
+    assert averages[0] == 0.5
+    assert averages[1] == 2.0
+    assert averages[2] == 3.5
+    assert len(averages) == 3
+
 def test_insert_knots():
     maxError = 0.0
     newCurve = myCurve.insert_knots([[.2, .3]])

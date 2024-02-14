@@ -271,9 +271,13 @@ def greville(self, ind = 0):
     if ind < 0 or ind >= self.nInd:  raise ValueError("Invalid independent variable")
     myKnots = self.knots[ind]
     knotAverages = 0
-    for ix in range(1, self.order[ind]):
-        knotAverages = knotAverages + myKnots[ix : ix + self.nCoef[ind]]
-    return knotAverages / (self.order[ind] - 1)
+    if self.order[ind] == 1:
+        knotAverages = 0.5 * (myKnots[1:] + myKnots[:-1])
+    else:
+        for ix in range(1, self.order[ind]):
+            knotAverages = knotAverages + myKnots[ix : ix + self.nCoef[ind]]
+        knotAverages /= (self.order[ind] - 1)
+    return knotAverages
 
 def integrate(self, with_respect_to = 0):
     if not(0 <= with_respect_to < self.nInd): raise ValueError("Invalid with_respect_to")
