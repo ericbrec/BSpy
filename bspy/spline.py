@@ -998,7 +998,7 @@ class Spline:
         The Greville abscissae always satisfy the interlacing conditions, so can be used as
         valid collocation points, interpolation points, or quadrature points.
         """
-        return bspy._spline_operations.greville(self, ind)
+        return bspy._spline_evaluation.greville(self, ind)
         
     def insert_knots(self, newKnots):
         """

@@ -132,6 +132,18 @@ def evaluate(self, uvw):
         myCoefs = myCoefs @ bValues
     return myCoefs
 
+def greville(self, ind = 0):
+    if ind < 0 or ind >= self.nInd:  raise ValueError("Invalid independent variable")
+    myKnots = self.knots[ind]
+    knotAverages = 0
+    if self.order[ind] == 1:
+        knotAverages = 0.5 * (myKnots[1:] + myKnots[:-1])
+    else:
+        for ix in range(1, self.order[ind]):
+            knotAverages = knotAverages + myKnots[ix : ix + self.nCoef[ind]]
+        knotAverages /= (self.order[ind] - 1)
+    return knotAverages
+
 def integral(self, with_respect_to, uvw1, uvw2, returnSpline = False):
     # Make work for scalar valued functions
     uvw1 = np.atleast_1d(uvw1)
