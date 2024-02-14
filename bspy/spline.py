@@ -1732,7 +1732,7 @@ class Spline:
         """
         return bspy._spline_fitting.section(xytk)
     
-    def solve_ODE(self, nLeft, nRight, fBox, tolerance = 1.0e-6):
+    def solve_ODE(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6):
         """
         Numerically solve an ordinary differential equation with boundary conditions.
 
@@ -1741,7 +1741,7 @@ class Spline:
         self : `Spline`
             The initial guess for the solution to the spline.  All of the spline parameters, e.g.
             order, boundary conditions, domain, etc. are all established by the initial guess.  The
-            ODE itself must be of the form u^(nOrder)(t) = f(t, u, u', ... , u^(nOrder-1)).  self.nDep should
+            ODE itself must be of the form u^(nOrder)(t) = F(t, u, u', ... , u^(nOrder-1)).  self.nDep should
             be the same as the number of state variables in the ODE.
         
         nLeft : integer
@@ -1752,14 +1752,14 @@ class Spline:
             The number of boundary conditions to be imposed on the right sie of the domain.  The
             order of the differential equation is assumed to be the sum of nLeft and nRight.
         
-        fBox : Python function
-            fBox must have exactly this calling sequence:  fBox(t, uData).  t is a scalar set to the
+        FAndF_u : Python function
+            FAndF_u must have exactly this calling sequence:  FAndF_u(t, uData).  t is a scalar set to the
             desired value of the independent variable of the ODE.  uData will be a numpy matrix of shape
             (self.nDep, nOrder) whose columns are (u, ... , u^(nOrder - 1).  It must return a numpy
             vector of length self.nDep and a numpy array whose shape is (self.nDep, self.nDep, nOrder).
-            The first output vector is the value of the forcing function at (t, uData).  The numpy
+            The first output vector is the value of the forcing function F at (t, uData).  The numpy
             array is the array of partial derivatives with respect to all the numbers in uData.  Thus, if
-            this array is called jacob, then jacob[:, i, j] is the gradient of the forcing function with
+            this array is called jacobian, then jacobian[:, i, j] is the gradient of the forcing function with
             respect to uData[i, j].
         
         tolerance : scalar
@@ -1770,7 +1770,7 @@ class Spline:
         This method uses B-splines as finite elements.  The ODE itself is discretized using
         collocation.
         """
-        return bspy._spline_fitting.solve_ODE(self, nLeft, nRight, fBox, tolerance)
+        return bspy._spline_fitting.solve_ODE(self, nLeft, nRight, FAndF_u, tolerance)
 
     @staticmethod
     def sphere(radius, tolerance = None):

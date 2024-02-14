@@ -1,6 +1,6 @@
-import math
 import numpy as np
 import bspy
+
 #from bspy import DrawableSpline
 #from bspy import bspyApp
 

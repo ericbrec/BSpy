@@ -1266,8 +1266,7 @@ def test_section():
 def test_solve_ODE():
     # Test u' = u, u(0) = 1
     myGuess = bspy.Spline.line([1.0], [2.0])
-    newKnots = np.linspace(0.0, 1.0, 21)[1 : -1]
-    myGuess = myGuess.elevate_and_insert_knots([2], [newKnots])
+    myGuess = myGuess.elevate([2])
     def myF(t, u):
         return np.array([u[0, 0]]), np.array([1.0]).reshape((1, 1, 1))
     fit = myGuess.solve_ODE(1, 0, myF)
@@ -1288,7 +1287,44 @@ def test_solve_ODE():
     myValue = fit(1.0)[0]
     correctValue = np.exp(1.0)
     assert abs(myValue - correctValue) < 1.0e-7
-    return
+
+    # Test u'' = u, u(0) = 1, u(1) = 1
+    myGuess.coefs[0][-1] = 1.0
+    fit = myGuess.solve_ODE(1, 1, myF)
+    myValue = fit(0.5)[0]
+    eHalf = np.exp(0.5)
+    c0 = 1.0 / (correctValue + 1.0)
+    c1 = correctValue / (correctValue + 1.0)
+    correctValue = c0 * eHalf + c1 / eHalf
+    assert abs(myValue - correctValue) < 1.0e-7
+
+    # Test simple system (x', y') = pi * (-y, x), x(0) = 1, y(0) = 0
+    myGuess = bspy.Spline.line([1.0, 0.0], [0.0, 0.0]).elevate([2])
+    def myF(t, u):
+        return np.pi * np.array([-u[1,0], u[0,0]]), np.pi * np.array([[0.0, -1.0], [1.0, 0.0]]).reshape((2, 2, 1))
+    fit = myGuess.solve_ODE(1, 0, myF)
+    myValue = fit(1.0)
+    assert np.linalg.norm(myValue - np.array([-1.0, 0.0])) < 1.0e-7
+
+    # Test 2-body problem
+#    G = 8.6443e-13
+#    def nBodyF(t, u):
+#        rhs = []
+#        jacobian = np.zeros((nState, nState, 2))
+#        for iBody in range(nBody):
+#            forceSum = np.zeros((nDim,))
+#            for iTerm in range(nBody):
+#                    continue
+#                direction_ij = u[nDim * iTerm : nDim * (iTerm + 1), 0] - u[nDim * iBody : nDim * (iBody + 1), 0]
+#                rij = (direction_ij @ direction_ij) ** 0.5
+#                gij = G * mass[iTerm] / rij ** 3
+#                forceSum += gij * direction_ij
+#            rhs.append(forceSum)
+#        rhs = np.array(rhs)
+#        nState = nDim * nBody
+#        rhs = np.reshape(rhs, (nState,))
+#        jacobian = np.zeros((nState, nState, 2))
+#        return rhs, jacobian
 
 def test_sphere():
     mySphere = bspy.Spline.sphere(1.3, 1.0e-12)
