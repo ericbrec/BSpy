@@ -35,9 +35,9 @@ def add(self, other, indMap = None):
             permutation.append(i + 1) # Add 1 to account for dependent variables.
     for i in range(other.nInd - 1, -1, -1):
         if i not in otherMapped:
-            order.append(other.order[i])
-            nCoef.append(other.nCoef[i])
-            knots.append(other.knots[i])
+            order.append(other.order[other.nInd - 1 - i])
+            nCoef.append(other.nCoef[other.nInd - 1 - i])
+            knots.append(other.knots[other.nInd - 1 - i])
             permutation.append(self.nInd + i + 1) # Add 1 to account for dependent variables.
             nInd += 1
         else:
@@ -100,6 +100,15 @@ def confine(self, range_bounds):
     for i in range(spline.nDep):
         intersectBoundary(i, 0)
         intersectBoundary(i, 1)
+    
+    # Put the intersection points in order.
+    intersections.sort(key=lambda intersection: intersection[0])
+
+    # Remove repeat points at start and end.
+    if intersections[1][0] - intersections[0][0] < epsilon:
+        del intersections[1]
+    if intersections[-1][0] - intersections[-2][0] < epsilon:
+        del intersections[-2]
 
     # Insert order-1 knots at each intersection point.
     for (knot, boundaryPoint, headedOutside) in intersections:
@@ -110,9 +119,6 @@ def confine(self, range_bounds):
                 spline = spline.insert_knots(([knot] * count,))
         else:
             spline = spline.insert_knots(([knot] * (order - 1),))
-    
-    # Put the intersection points in order.
-    intersections.sort(key=lambda intersection: intersection[0])
 
     # Go through the boundary points, assigning boundary coefficients, interpolating between boundary points, 
     # and removing knots and coefficients where the curve stalls.
@@ -259,14 +265,6 @@ def graph(self):
         for i, knotAverage in enumerate(self.greville(nInd)):
             dep[i] = knotAverage
     return type(self)(self.nInd, self.nInd + self.nDep, self.order, self.nCoef, self.knots, coefs, self.metadata)
-
-def greville(self, ind = 0):
-    if ind < 0 or ind >= self.nInd:  raise ValueError("Invalid independent variable")
-    myKnots = self.knots[ind]
-    knotAverages = 0
-    for ix in range(1, self.order[ind]):
-        knotAverages = knotAverages + myKnots[ix : ix + self.nCoef[ind]]
-    return knotAverages / (self.order[ind] - 1)
 
 def integrate(self, with_respect_to = 0):
     if not(0 <= with_respect_to < self.nInd): raise ValueError("Invalid with_respect_to")

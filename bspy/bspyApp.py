@@ -63,11 +63,18 @@ class bspyApp(tk.Tk):
         controls = tk.Frame(self)
         controls.pack(side=tk.LEFT, fill=tk.Y)
 
-        tk.Button(controls, text='Adjust', command=self._Adjust).pack(side=tk.BOTTOM, fill=tk.X)
-        #tk.Button(controls, text='Empty', command=self.empty).pack(side=tk.BOTTOM, fill=tk.X)
-        tk.Button(controls, text='Erase', command=self.erase_all).pack(side=tk.BOTTOM, fill=tk.X)
-        tk.Button(controls, text='Save', command=self.save_splines).pack(side=tk.BOTTOM, fill=tk.X)
-        tk.Button(controls, text='Load', command=self.load_splines).pack(side=tk.BOTTOM, fill=tk.X)
+        buttons = tk.Frame(controls)
+        buttons.pack(side=tk.BOTTOM, fill=tk.X)
+        buttons.columnconfigure(0, weight=1)
+        buttons.columnconfigure(1, weight=1)
+        tk.Button(buttons, text='Load', command=self.load_splines).grid(row=0, column=0, sticky=tk.EW)
+        tk.Button(buttons, text='Save', command=self.save_splines).grid(row=0, column=1, sticky=tk.EW)
+        tk.Button(buttons, text='Remove', command=self.remove).grid(row=1, column=0, sticky=tk.EW)
+        tk.Button(buttons, text='Erase All', command=self.erase_all).grid(row=1, column=1, sticky=tk.EW)
+        tk.Button(buttons, text='Adjust', command=self._Adjust).grid(row=2, column=0, columnspan=2, sticky=tk.EW)
+
+        horizontalScroll = tk.Scrollbar(controls, orient=tk.HORIZONTAL)
+        horizontalScroll.pack(side=tk.BOTTOM, fill=tk.X)
 
         self.listBox = tk.Listbox(controls, selectmode=tk.MULTIPLE)
         self.listBox.pack(side=tk.LEFT, fill=tk.Y)
@@ -75,14 +82,17 @@ class bspyApp(tk.Tk):
 
         verticalScroll = tk.Scrollbar(controls, orient=tk.VERTICAL)
         verticalScroll.pack(side=tk.LEFT, fill=tk.Y)
-        self.listBox.configure(yscrollcommand=verticalScroll.set)
+
+        horizontalScroll.config(command=self.listBox.xview)
+        self.listBox.configure(xscrollcommand=horizontalScroll.set)
         verticalScroll.config(command=self.listBox.yview)
+        self.listBox.configure(yscrollcommand=verticalScroll.set)
 
         # Controls on the right
         controls = tk.Frame(self)
         controls.pack(side=tk.RIGHT, fill=tk.BOTH, expand=tk.YES)
 
-        self.frame = SplineOpenGLFrame(controls)
+        self.frame = SplineOpenGLFrame(controls, draw_func=self._DrawSplines)
         self.frame.pack(side=tk.TOP, fill=tk.BOTH, expand=tk.YES)
 
         buttons = tk.Frame(controls)
@@ -98,6 +108,7 @@ class bspyApp(tk.Tk):
         self.scale.set(0.5)
 
         self.splineList = []
+        self.splineDrawList = []
         self.splineRadius = 0.0
         self.adjust = None
         self.workQueue = workQueue
@@ -138,21 +149,17 @@ class bspyApp(tk.Tk):
         
     def draw(self, spline, name = None):
         """Add a `Spline` to the listbox and draw it. Can be called before the app is running."""
-        spline = DrawableSpline.make_drawable(spline)
-        if name is not None:
-            spline.metadata["Name"] = name
-        self.splineList.append(spline)
-        self.listBox.insert(tk.END, spline)
+        self.list(spline, name)
         self.listBox.selection_set(self.listBox.size() - 1)
         self.update()
 
     def save_splines(self):
-        if self.frame.splineDrawList:
-            initialName = self.frame.splineDrawList[0].metadata.get("Name", "spline") + ".json"
+        if self.splineDrawList:
+            initialName = self.splineDrawList[0].metadata.get("Name", "spline") + ".json"
             fileName = filedialog.asksaveasfilename(title="Save splines", initialfile=initialName,
                 defaultextension=".json", filetypes=(('Json files', '*.json'),('All files', '*.*')))
             if fileName:
-                self.frame.splineDrawList[0].save(fileName, *self.frame.splineDrawList[1:])
+                self.splineDrawList[0].save(fileName, *self.splineDrawList[1:])
 
     def load_splines(self):
         fileName = filedialog.askopenfilename(title="Load splines", 
@@ -169,12 +176,14 @@ class bspyApp(tk.Tk):
         self.frame.ResetView()
         self.update()
 
-    def empty(self):
-        """Stop drawing all splines and remove them from the listbox."""
-        self.splineList = []
-        self.listBox.delete(0, self.listBox.size() - 1)
-        self.splineRadius = 0.0
-        self.frame.ResetView()
+    def remove(self):
+        """Remove splines from the listbox."""
+        while self.listBox.curselection():
+            item = self.listBox.curselection()[0]
+            spline = self.splineList[item]
+            del self.splineList[item]
+            self.splineDrawList.remove(spline)
+            self.listBox.delete(item, item)
         self.update()
 
     def set_background_color(self, r, g=None, b=None, a=None):
@@ -200,7 +209,7 @@ class bspyApp(tk.Tk):
 
     def update(self):
         """Update the spline draw list, set the default view, reset the bounds, and refresh the frame."""
-        self.frame.splineDrawList = []
+        self.splineDrawList = []
         gotOne = False
         for item in self.listBox.curselection():
             spline = self.splineList[item]
@@ -212,25 +221,24 @@ class bspyApp(tk.Tk):
                 splineMin = spline.coefs[:3].min(axis=coefsAxis)
                 splineMax = spline.coefs[:3].max(axis=coefsAxis)
                 gotOne = True
-            self.frame.splineDrawList.append(spline)
+            self.splineDrawList.append(spline)
 
         if gotOne:
             newRadius = 0.5 * np.max(splineMax - splineMin)
-            if not np.isclose(newRadius, self.splineRadius):
-                self.splineRadius = newRadius
-                atDefaultEye = np.allclose(self.frame.eye, self.frame.defaultEye)
-                center = 0.5 * (splineMax + splineMin)
-                self.frame.SetDefaultView(center + (0.0, 0.0, 3.0 * newRadius), center, (0.0, 1.0, 0.0))
-                self.frame.ResetBounds()
-                if atDefaultEye:
-                    self.frame.ResetView()
+            self.splineRadius = newRadius
+            atDefaultEye = np.allclose(self.frame.eye, self.frame.defaultEye)
+            center = 0.5 * (splineMax + splineMin)
+            self.frame.SetDefaultView(center + (0.0, 0.0, 3.0 * newRadius), center, (0.0, 1.0, 0.0))
+            self.frame.ResetBounds()
+            if atDefaultEye:
+                self.frame.ResetView()
         else:
             self.splineRadius = 0.0
 
         if self.adjust is not None:
-            if self.frame.splineDrawList: 
-                self.bits.set(self.frame.splineDrawList[0].get_options())
-                animate = self.frame.splineDrawList[0].get_animate()
+            if self.splineDrawList: 
+                self.bits.set(self.splineDrawList[0].get_options())
+                animate = self.splineDrawList[0].get_animate()
             else:
                 self.bits.set(0)
                 animate = None
@@ -239,6 +247,10 @@ class bspyApp(tk.Tk):
             self.animate.set(next(key for key, value in self.animateOptions.items() if value == animate))
 
         self.frame.Update()
+
+    def _DrawSplines(self, frame, transform):
+        for spline in self.splineDrawList:
+            spline._Draw(frame, transform)
 
     def _ListSelectionChanged(self, event):
         """Handle when the listbox selection has changed."""
@@ -259,8 +271,8 @@ class bspyApp(tk.Tk):
             self.checkButtons.pack(side=tk.LEFT, fill=tk.BOTH, expand=tk.YES)
 
             self.bits = tk.IntVar()
-            if self.frame.splineDrawList:
-                self.bits.set(self.frame.splineDrawList[0].get_options())
+            if self.splineDrawList:
+                self.bits.set(self.splineDrawList[0].get_options())
             else:
                 self.bits.set(0)
             _BitCheckbutton(self.checkButtons, DrawableSpline.SHADED, text="Shaded", anchor=tk.W, variable=self.bits, command=self._ChangeOptions).pack(side=tk.TOP, fill=tk.X)
@@ -274,8 +286,8 @@ class bspyApp(tk.Tk):
             tk.Button(buttons, text='Line color', command=self._LineColorChange).pack(side=tk.TOP, fill=tk.X)
             self.animate = tk.StringVar()
             self.animateOptions = {"Animate: Off" : None, "Animate: u(0)" : 0, "Animate: v(1)" : 1, "Animate: w(2)" : 2}
-            if self.frame.splineDrawList:
-                animate = self.frame.splineDrawList[0].get_animate()
+            if self.splineDrawList:
+                animate = self.splineDrawList[0].get_animate()
             else:
                 animate = None
             self.animate.set(next(key for key, value in self.animateOptions.items() if value == animate))
@@ -299,7 +311,7 @@ class bspyApp(tk.Tk):
     
     def _ChangeOptions(self, options):
         """Handle when the spline options are changed."""
-        for spline in self.frame.splineDrawList:
+        for spline in self.splineDrawList:
             spline.set_options(options)
         self.frame.Update()
     
@@ -307,7 +319,7 @@ class bspyApp(tk.Tk):
         """Handle when the spline animation is changed."""
         nInd = self.animateOptions[value]
         animating = False
-        for spline in self.frame.splineDrawList:
+        for spline in self.splineDrawList:
             if nInd is None or nInd < spline.nInd:
                 spline.set_animate(nInd)
                 animating = True
@@ -316,21 +328,21 @@ class bspyApp(tk.Tk):
 
     def _FillColorChange(self):
         """Handle when the fill color changed."""
-        if self.frame.splineDrawList:
-            oldColor = 255.0 * self.frame.splineDrawList[0].get_fill_color()
+        if self.splineDrawList:
+            oldColor = 255.0 * self.splineDrawList[0].get_fill_color()
             newColor = askcolor(title="Set spline fill color", color="#%02x%02x%02x" % (int(oldColor[0]), int(oldColor[1]), int(oldColor[2])))
             if newColor[0] is not None:
-                for spline in self.frame.splineDrawList:
+                for spline in self.splineDrawList:
                     spline.set_fill_color(newColor[0])
                 self.frame.Update()
 
     def _LineColorChange(self):
         """Handle when the line color changed."""
-        if self.frame.splineDrawList:
-            oldColor = 255.0 * self.frame.splineDrawList[0].get_line_color()
+        if self.splineDrawList:
+            oldColor = 255.0 * self.splineDrawList[0].get_line_color()
             newColor = askcolor(title="Set spline line color", color="#%02x%02x%02x" % (int(oldColor[0]), int(oldColor[1]), int(oldColor[2])))
             if newColor[0] is not None:
-                for spline in self.frame.splineDrawList:
+                for spline in self.splineDrawList:
                     spline.set_line_color(newColor[0])
                 self.frame.Update()
     
