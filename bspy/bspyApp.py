@@ -76,7 +76,7 @@ class bspyApp(tk.Tk):
         horizontalScroll = tk.Scrollbar(controls, orient=tk.HORIZONTAL)
         horizontalScroll.pack(side=tk.BOTTOM, fill=tk.X)
 
-        self.listBox = tk.Listbox(controls, selectmode=tk.MULTIPLE)
+        self.listBox = tk.Listbox(controls, selectmode=tk.EXTENDED)
         self.listBox.pack(side=tk.LEFT, fill=tk.Y)
         self.listBox.bind('<<ListboxSelect>>', self._ListSelectionChanged)
 
