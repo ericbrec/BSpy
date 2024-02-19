@@ -4,7 +4,7 @@ from tkinter.colorchooser import askcolor
 from tkinter import filedialog
 import queue, threading
 from bspy import SplineOpenGLFrame
-from bspy import Spline, DrawableSpline
+from bspy import Spline
 
 class _BitCheckbutton(tk.Checkbutton):
     """A tkinter `CheckButton` that gets/sets its variable based on a given `bitmask`."""
@@ -35,23 +35,23 @@ class _BitCheckbutton(tk.Checkbutton):
         """Updates checkbutton state."""
         self.var.set(1 if self.variable.get() & self.bitMask else 0)
 
-class bspyApp(tk.Tk):
+class Viewer(tk.Tk):
     """
-    A tkinter app (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a listbox full of 
+    A tkinter viewer (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a listbox full of 
     splines, and a set of controls to adjust and view the selected splines.
 
     See Also
     --------
-    `bspyGraphics` : A graphics engine to display splines. It launches a `bspyApp` and issues commands to the app.
+    `Graphics` : A graphics engine to display splines. It launches a `Viewer` and issues commands to the viewer.
 
     Examples
     --------
-    Creates a bspyApp, show some splines, and launches the app (blocks on the main loop).
-    >>> app = bspyApp()
-    >>> app.show(spline1)
-    >>> app.show(spline2)
-    >>> app.show(spline3)
-    >>> app.mainloop()
+    Creates a Viewer, show some splines, and launches the viewer (blocks on the main loop).
+    >>> viewer = Viewer()
+    >>> viewer.show(spline1)
+    >>> viewer.show(spline2)
+    >>> viewer.show(spline3)
+    >>> viewer.mainloop()
     """
 
     def __init__(self, *args, SplineOpenGLFrame=SplineOpenGLFrame, workQueue=None, **kw):
@@ -136,19 +136,19 @@ class bspyApp(tk.Tk):
         self.after(200, self._check_for_work)
 
     def list(self, spline, name = None):
-        """List a `Spline` in the listbox. Can be called before app is running."""
-        spline = DrawableSpline.make_drawable(spline)
+        """List a `Spline` in the listbox. Can be called before viewer is running."""
+        self.frame.make_drawable(spline)
         if name is not None:
             spline.metadata["Name"] = name
         self.splineList.append(spline)
         self.listBox.insert(tk.END, spline)
 
     def show(self, spline, name = None):
-        """Show a `Spline` in the listbox (calls the list method, kept for compatibility). Can be called before app is running."""
+        """Show a `Spline` in the listbox (calls the list method, kept for compatibility). Can be called before viewer is running."""
         self.list(spline, name)
         
     def draw(self, spline, name = None):
-        """Add a `Spline` to the listbox and draw it. Can be called before the app is running."""
+        """Add a `Spline` to the listbox and draw it. Can be called before the viewer is running."""
         self.list(spline, name)
         self.listBox.selection_set(self.listBox.size() - 1)
         self.update()
@@ -165,7 +165,7 @@ class bspyApp(tk.Tk):
         fileName = filedialog.askopenfilename(title="Load splines", 
             defaultextension=".json", filetypes=(('Json files', '*.json'),('All files', '*.*')))
         if fileName:
-            splines = DrawableSpline.load(fileName)
+            splines = Spline.load(fileName)
             for spline in splines:
                 self.list(spline)
     
@@ -237,8 +237,8 @@ class bspyApp(tk.Tk):
 
         if self.adjust is not None:
             if self.splineDrawList: 
-                self.bits.set(self.splineDrawList[0].get_options())
-                animate = self.splineDrawList[0].get_animate()
+                self.bits.set(self.get_options(self.splineDrawList[0]))
+                animate = self.get_animate(self.splineDrawList[0])
             else:
                 self.bits.set(0)
                 animate = None
@@ -250,7 +250,7 @@ class bspyApp(tk.Tk):
 
     def _DrawSplines(self, frame, transform):
         for spline in self.splineDrawList:
-            spline._Draw(frame, transform)
+            frame.DrawSpline(spline, transform)
 
     def _ListSelectionChanged(self, event):
         """Handle when the listbox selection has changed."""
@@ -272,13 +272,13 @@ class bspyApp(tk.Tk):
 
             self.bits = tk.IntVar()
             if self.splineDrawList:
-                self.bits.set(self.splineDrawList[0].get_options())
+                self.bits.set(self.get_options(self.splineDrawList[0]))
             else:
                 self.bits.set(0)
-            _BitCheckbutton(self.checkButtons, DrawableSpline.SHADED, text="Shaded", anchor=tk.W, variable=self.bits, command=self._ChangeOptions).pack(side=tk.TOP, fill=tk.X)
-            _BitCheckbutton(self.checkButtons, DrawableSpline.BOUNDARY, text="Boundary", anchor=tk.W, variable=self.bits, command=self._ChangeOptions).pack(side=tk.TOP, fill=tk.X)
-            _BitCheckbutton(self.checkButtons, DrawableSpline.ISOPARMS, text="Isoparms", anchor=tk.W, variable=self.bits, command=self._ChangeOptions).pack(side=tk.TOP, fill=tk.X)
-            _BitCheckbutton(self.checkButtons, DrawableSpline.HULL, text="Hull", anchor=tk.W, variable=self.bits, command=self._ChangeOptions).pack(side=tk.TOP, fill=tk.X)
+            _BitCheckbutton(self.checkButtons, self.frame.SHADED, text="Shaded", anchor=tk.W, variable=self.bits, command=self._ChangeOptions).pack(side=tk.TOP, fill=tk.X)
+            _BitCheckbutton(self.checkButtons, self.frame.BOUNDARY, text="Boundary", anchor=tk.W, variable=self.bits, command=self._ChangeOptions).pack(side=tk.TOP, fill=tk.X)
+            _BitCheckbutton(self.checkButtons, self.frame.ISOPARMS, text="Isoparms", anchor=tk.W, variable=self.bits, command=self._ChangeOptions).pack(side=tk.TOP, fill=tk.X)
+            _BitCheckbutton(self.checkButtons, self.frame.HULL, text="Hull", anchor=tk.W, variable=self.bits, command=self._ChangeOptions).pack(side=tk.TOP, fill=tk.X)
 
             buttons = tk.LabelFrame(self.adjust, text="Options")
             buttons.pack(side=tk.LEFT, fill=tk.BOTH, expand=tk.YES)
@@ -287,7 +287,7 @@ class bspyApp(tk.Tk):
             self.animate = tk.StringVar()
             self.animateOptions = {"Animate: Off" : None, "Animate: u(0)" : 0, "Animate: v(1)" : 1, "Animate: w(2)" : 2}
             if self.splineDrawList:
-                animate = self.splineDrawList[0].get_animate()
+                animate = self.get_animate(self.splineDrawList[0])
             else:
                 animate = None
             self.animate.set(next(key for key, value in self.animateOptions.items() if value == animate))
@@ -312,7 +312,7 @@ class bspyApp(tk.Tk):
     def _ChangeOptions(self, options):
         """Handle when the spline options are changed."""
         for spline in self.splineDrawList:
-            spline.set_options(options)
+            self.set_options(spline, options)
         self.frame.Update()
     
     def _ChangeAnimate(self, value):
@@ -321,7 +321,7 @@ class bspyApp(tk.Tk):
         animating = False
         for spline in self.splineDrawList:
             if nInd is None or nInd < spline.nInd:
-                spline.set_animate(nInd)
+                self.set_animate(spline, nInd)
                 animating = True
         self.frame.SetAnimating(animating)
         self.frame.Update()
@@ -329,26 +329,146 @@ class bspyApp(tk.Tk):
     def _FillColorChange(self):
         """Handle when the fill color changed."""
         if self.splineDrawList:
-            oldColor = 255.0 * self.splineDrawList[0].get_fill_color()
+            oldColor = 255.0 * self.get_fill_color(self.splineDrawList[0])
             newColor = askcolor(title="Set spline fill color", color="#%02x%02x%02x" % (int(oldColor[0]), int(oldColor[1]), int(oldColor[2])))
             if newColor[0] is not None:
                 for spline in self.splineDrawList:
-                    spline.set_fill_color(newColor[0])
+                    self.set_fill_color(spline, newColor[0])
                 self.frame.Update()
 
     def _LineColorChange(self):
         """Handle when the line color changed."""
         if self.splineDrawList:
-            oldColor = 255.0 * self.splineDrawList[0].get_line_color()
+            oldColor = 255.0 * self.get_line_color(self.splineDrawList[0])
             newColor = askcolor(title="Set spline line color", color="#%02x%02x%02x" % (int(oldColor[0]), int(oldColor[1]), int(oldColor[2])))
             if newColor[0] is not None:
                 for spline in self.splineDrawList:
-                    spline.set_line_color(newColor[0])
+                    self.set_line_color(spline, newColor[0])
                 self.frame.Update()
     
-class bspyGraphics:
+    @staticmethod
+    def get_fill_color(spline):
+        """
+        Gets the fill color of the spline (only useful for nInd >= 2).
+
+        Returns
+        -------
+        fillColor : `numpy.array`
+            Array of four floats (r, g, b, a) in the range [0, 1].
+        """
+        return spline.metadata["fillColor"]
+
+    @staticmethod
+    def set_fill_color(spline, r, g=None, b=None, a=None):
+        """
+        Set the fill color of the spline (only useful for nInd >= 2).
+
+        Parameters
+        ----------
+        r : `float`, `int` or array-like of floats or ints
+            The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).
+        
+        g: `float` or `int`
+            The green value [0, 1] as a float or [0, 255] as an int.
+        
+        b: `float` or `int`
+            The blue value [0, 1] as a float or [0, 255] as an int.
+        
+        a: `float`, `int`, or None
+            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.
+        """
+        spline.metadata["fillColor"] = SplineOpenGLFrame.compute_color_vector(r, g, b, a)
+    
+    @staticmethod
+    def get_line_color(spline):
+        """
+        Gets the line color of the spline.
+
+        Returns
+        -------
+        lineColor : `numpy.array`
+            Array of four floats (r, g, b, a) in the range [0, 1].
+        """
+        return spline.metadata["lineColor"]
+
+    @staticmethod
+    def set_line_color(spline, r, g=None, b=None, a=None):
+        """
+        Set the line color of the spline.
+
+        Parameters
+        ----------
+        r : `float`, `int` or array-like of floats or ints
+            The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).
+        
+        g: `float` or `int`
+            The green value [0, 1] as a float or [0, 255] as an int.
+        
+        b: `float` or `int`
+            The blue value [0, 1] as a float or [0, 255] as an int.
+        
+        a: `float`, `int`, or None
+            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.
+        """
+        spline.metadata["lineColor"] = SplineOpenGLFrame.compute_color_vector(r, g, b, a)
+    
+    @staticmethod
+    def get_options(spline):
+        """
+        Gets the draw options for the spline.
+
+        Returns
+        -------
+        options : `int` bitwise or (`|`) of zero or more of the following values:
+            * `SplineOpenGLFrame.HULL` Draw the convex hull of the spline (the coefficients). Off by default.
+            * `SplineOpenGLFrame.SHADED` Draw the spline shaded (only useful for nInd >= 2). On by default.
+            * `SplineOpenGLFrame.BOUNDARY` Draw the boundary of the spline in the line color (only useful for nInd >= 2). On by default.
+            * `SplineOpenGLFrame.ISOPARMS` Draw the lines of constant knot values of the spline in the line color (only useful for nInd >= 2). Off by default.
+        """
+        return spline.metadata["options"]
+
+    @staticmethod
+    def set_options(spline, options):
+        """
+        Set the draw options for the spline.
+
+        Parameters
+        ----------
+        options : `int` bitwise or (`|`) of zero or more of the following values:
+            * `SplineOpenGLFrame.HULL` Draw the convex hull of the spline (the coefficients). Off by default.
+            * `SplineOpenGLFrame.SHADED` Draw the spline shaded (only useful for nInd >= 2). On by default.
+            * `SplineOpenGLFrame.BOUNDARY` Draw the boundary of the spline in the line color (only useful for nInd >= 2). On by default.
+            * `SplineOpenGLFrame.ISOPARMS` Draw the lines of constant knot values of the spline in the line color (only useful for nInd >= 2). Off by default.
+        """
+        spline.metadata["options"] = options
+    
+    @staticmethod
+    def get_animate(spline):
+        """
+        Get the independent variable that is animated (None if there is none).
+
+        Returns
+        -------
+        animate : `int` or `None`
+            The index of the independent variable that is animated (None is there is none).
+        """
+        return spline.metadata["animate"]
+
+    @staticmethod
+    def set_animate(spline, animate):
+        """
+        Set the independent variable that is animated (None if there is none).
+
+        Parameters
+        ----------
+        animate : `int` or `None`
+            The index of the independent variable that is animated (None is there is none).
+        """
+        spline.metadata["animate"] = animate
+
+class Graphics:
     """
-    A graphics engine to display splines. It launches a `bspyApp` and issues commands to the app.
+    A graphics engine to display splines. It launches a `Viewer` and issues commands to the viewer.
 
     Parameters
     ----------
@@ -357,13 +477,13 @@ class bspyGraphics:
 
     See Also
     --------
-    `bspyApp` : A tkinter app (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a listbox full of 
+    `Viewer` : A tkinter app (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a listbox full of 
         splines, and a set of controls to adjust and view the selected splines.
 
     Examples
     --------
-    Launch a bspyApp and tell it to draw some splines.
-    >>> graphics = bspyGraphics(locals())
+    Launch a Viewer and tell it to draw some splines.
+    >>> graphics = Graphics(locals())
     >>> graphics.draw(spline1)
     >>> graphics.draw(spline2)
     >>> graphics.draw(spline3)
@@ -376,8 +496,8 @@ class bspyGraphics:
         self.variableDictionary = variableDictionary
             
     def _app_thread(self):
-        app = bspyApp(workQueue=self.workQueue)
-        app.mainloop()        
+        viewer = Viewer(workQueue=self.workQueue)
+        viewer.mainloop()        
 
     def list(self, spline, name = None):
         """List a `Spline` in the listbox."""
@@ -436,3 +556,123 @@ class bspyGraphics:
     def update(self):
         """Update the spline draw list and refresh the frame."""
         self.workQueue.put(("update", ()))
+    
+    @staticmethod
+    def get_fill_color(spline):
+        """
+        Gets the fill color of the spline (only useful for nInd >= 2).
+
+        Returns
+        -------
+        fillColor : `numpy.array`
+            Array of four floats (r, g, b, a) in the range [0, 1].
+        """
+        return spline.metadata["fillColor"]
+
+    @staticmethod
+    def set_fill_color(spline, r, g=None, b=None, a=None):
+        """
+        Set the fill color of the spline (only useful for nInd >= 2).
+
+        Parameters
+        ----------
+        r : `float`, `int` or array-like of floats or ints
+            The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).
+        
+        g: `float` or `int`
+            The green value [0, 1] as a float or [0, 255] as an int.
+        
+        b: `float` or `int`
+            The blue value [0, 1] as a float or [0, 255] as an int.
+        
+        a: `float`, `int`, or None
+            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.
+        """
+        spline.metadata["fillColor"] = SplineOpenGLFrame.compute_color_vector(r, g, b, a)
+    
+    @staticmethod
+    def get_line_color(spline):
+        """
+        Gets the line color of the spline.
+
+        Returns
+        -------
+        lineColor : `numpy.array`
+            Array of four floats (r, g, b, a) in the range [0, 1].
+        """
+        return spline.metadata["lineColor"]
+
+    @staticmethod
+    def set_line_color(spline, r, g=None, b=None, a=None):
+        """
+        Set the line color of the spline.
+
+        Parameters
+        ----------
+        r : `float`, `int` or array-like of floats or ints
+            The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).
+        
+        g: `float` or `int`
+            The green value [0, 1] as a float or [0, 255] as an int.
+        
+        b: `float` or `int`
+            The blue value [0, 1] as a float or [0, 255] as an int.
+        
+        a: `float`, `int`, or None
+            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.
+        """
+        spline.metadata["lineColor"] = SplineOpenGLFrame.compute_color_vector(r, g, b, a)
+    
+    @staticmethod
+    def get_options(spline):
+        """
+        Gets the draw options for the spline.
+
+        Returns
+        -------
+        options : `int` bitwise or (`|`) of zero or more of the following values:
+            * `SplineOpenGLFrame.HULL` Draw the convex hull of the spline (the coefficients). Off by default.
+            * `SplineOpenGLFrame.SHADED` Draw the spline shaded (only useful for nInd >= 2). On by default.
+            * `SplineOpenGLFrame.BOUNDARY` Draw the boundary of the spline in the line color (only useful for nInd >= 2). On by default.
+            * `SplineOpenGLFrame.ISOPARMS` Draw the lines of constant knot values of the spline in the line color (only useful for nInd >= 2). Off by default.
+        """
+        return spline.metadata["options"]
+
+    @staticmethod
+    def set_options(spline, options):
+        """
+        Set the draw options for the spline.
+
+        Parameters
+        ----------
+        options : `int` bitwise or (`|`) of zero or more of the following values:
+            * `SplineOpenGLFrame.HULL` Draw the convex hull of the spline (the coefficients). Off by default.
+            * `SplineOpenGLFrame.SHADED` Draw the spline shaded (only useful for nInd >= 2). On by default.
+            * `SplineOpenGLFrame.BOUNDARY` Draw the boundary of the spline in the line color (only useful for nInd >= 2). On by default.
+            * `SplineOpenGLFrame.ISOPARMS` Draw the lines of constant knot values of the spline in the line color (only useful for nInd >= 2). Off by default.
+        """
+        spline.metadata["options"] = options
+    
+    @staticmethod
+    def get_animate(spline):
+        """
+        Get the independent variable that is animated (None if there is none).
+
+        Returns
+        -------
+        animate : `int` or `None`
+            The index of the independent variable that is animated (None is there is none).
+        """
+        return spline.metadata["animate"]
+
+    @staticmethod
+    def set_animate(spline, animate):
+        """
+        Set the independent variable that is animated (None if there is none).
+
+        Parameters
+        ----------
+        animate : `int` or `None`
+            The index of the independent variable that is animated (None is there is none).
+        """
+        spline.metadata["animate"] = animate
