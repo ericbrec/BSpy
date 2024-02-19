@@ -56,7 +56,7 @@ class Viewer(tk.Tk):
 
     def __init__(self, *args, SplineOpenGLFrame=SplineOpenGLFrame, workQueue=None, **kw):
         tk.Tk.__init__(self, *args, **kw)
-        self.title('bspy')
+        self.title('BSpy Viewer')
         self.geometry('600x500')
 
         # Controls on the left
