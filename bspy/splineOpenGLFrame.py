@@ -1669,18 +1669,31 @@ class SplineOpenGLFrame(OpenGLFrame):
         """
         Draw a spline within a `SplineOpenGLFrame`.
         """
+        # Retrieve transposed float32 coefficients.
+        coefs = spline.cache["coefs32"]
+
         # Contract spline if it's animating.
         nInd = spline.metadata["animate"]
         if nInd is not None:
-            uvw = spline.nInd * [None]
+            # Contraction value is set to cycle every 10 seconds (10000 ms).
             u1 = spline.knots[nInd][spline.order[nInd] - 1]
             u2 = spline.knots[nInd][spline.nCoef[nInd]]
-            # Contraction value is set to cycle every 10 seconds (10000 ms).
-            uvw[nInd] = u1 + 0.49999 * (u2 - u1) * (1.0 - np.cos(2.0 * np.pi * self.frameCount * self.MsPerFrame / 10000))
-            spline = spline.contract(uvw)
+            u = u1 + 0.49999 * (u2 - u1) * (1.0 - np.cos(2.0 * np.pi * self.frameCount * self.MsPerFrame / 10000))
+            # Contract spline.
+            knots = spline.cache["knots32"]
+            ix = np.searchsorted(knots[nInd], u, 'right')
+            ix = min(ix, spline.nCoef[nInd])
+            bValues = spline.bspline_values(ix, knots[nInd], spline.order[nInd], u)
+            coefs = np.moveaxis(coefs, spline.nInd - nInd - 1, -1) # Account for transpose
+            coefs = coefs[..., ix - spline.order[nInd]:ix] @ bValues
+            knots = [knots[i] for i in range(spline.nInd) if i != nInd]
+            spline = type(spline)(spline.nInd - 1, coefs.shape[-1], 
+                [spline.order[i] for i in range(spline.nInd) if i != nInd],
+                [spline.nCoef[i] for i in range(spline.nInd) if i != nInd],
+                knots, coefs.T, spline.metadata)
+            spline.cache = {"knots32": knots, "coefs32": coefs}
 
         # Transform coefs by view transform.
-        coefs = spline.cache["coefs32"]
         drawCoefficients = np.empty(coefs.shape, np.float32)
         drawCoefficients[..., :3] = coefs[..., :3] @ transform[:3,:3] + transform[3,:3]
         drawCoefficients[..., 3:] = coefs[..., 3:]
