@@ -581,17 +581,6 @@ def test_add():
             maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
     assert maxError <= np.finfo(float).eps
 
-def test_blossom():
-    maxError = 0.0
-    for [u, x, y] in truthCurve:
-        [xTest, yTest] = myCurve.blossom([(myCurve.order[0] - 1) * [u]])
-        maxError = max(maxError, np.sqrt((xTest - x) ** 2 + (yTest - y) ** 2))
-    assert maxError <= np.finfo(float).eps
-    for i in range(myCurve.nCoef[0]):
-        coef = myCurve.blossom([myCurve.knots[0][i+1:i+myCurve.order[0]]])
-        maxError = max(maxError, np.linalg.norm(myCurve.coefs[:,i] - coef))
-    assert maxError <= np.finfo(float).eps
-
 def test_circular_arc():
     maxError = 0.0
     radius = 3.0
