@@ -2,7 +2,7 @@ import numpy as np
 from os import path
 from OpenGL.GL import *
 from PIL import Image
-from bspy import Spline, DrawableSpline, bspyApp, SplineOpenGLFrame
+from bspy import Spline, Viewer, SplineOpenGLFrame
 
 class FunOpenGLFrame(SplineOpenGLFrame):
 
@@ -84,15 +84,15 @@ def CreateSplineFromMesh(xRange, zRange, yFunction):
             coefficients[1, i, j] = yFunction(knots[0][i], knots[1][j])
             coefficients[2, i, j] = knots[1][j]
     
-    return DrawableSpline(2, 3, order, (xRange[2], zRange[2]), knots, coefficients)
+    return Spline(2, 3, order, (xRange[2], zRange[2]), knots, coefficients)
 
 if __name__=='__main__':
-    app = bspyApp(SplineOpenGLFrame=FunOpenGLFrame)
-    app.list(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: np.sin(4*np.sqrt(x*x + y*y))))
-    app.list(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: x*x + y*y - 1))
-    app.list(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: x*x - y*y))
+    viewer = Viewer(SplineOpenGLFrame=FunOpenGLFrame)
+    viewer.list(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: np.sin(4*np.sqrt(x*x + y*y))))
+    viewer.list(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: x*x + y*y - 1))
+    viewer.list(CreateSplineFromMesh((-1, 1, 10), (-1, 1, 8), lambda x, y: x*x - y*y))
     for i in range(16):
-        app.list(DrawableSpline(1, 3, (3,), (5,), (np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.5, 0.5], np.float32),), np.array([[-1, 0, 0], [-0.5, i/16.0, 0], [0,0,0], [0.5, -i/16.0, 0], [1,0,0]], np.float32)))
+        viewer.list(Spline(1, 3, (3,), (5,), (np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.5, 0.5], np.float32),), np.array([[-1, 0, 0], [-0.5, i/16.0, 0], [0,0,0], [0.5, -i/16.0, 0], [1,0,0]], np.float32)))
     for spline in Spline.load("examples/TomsNasty.json"):
-        app.list(spline)
-    app.mainloop()
+        viewer.list(spline)
+    viewer.mainloop()

@@ -1,8 +1,6 @@
 import math
 import numpy as np
 import bspy
-#from bspy import DrawableSpline
-#from bspy import bspyApp
 
 mySphere = bspy.Spline.sphere(1.0, 1.0e-8)
 myTorus = bspy.Spline.torus(1.0, 2.0, 1.0e-8)
@@ -41,14 +39,14 @@ dataPoints = np.reshape(dataPoints, (3, 201, 201))
 fit = bspy.Spline.least_squares([uValues, uValues], dataPoints, tolerance = 1.0e-5)
 
 if __name__=='__main__':
-    app = bspy.bspyApp()
-    app.list(mySphere, 'mySphere')
-    app.list(myTorus, 'myTorus')
-    app.list(patch4, 'patch4')
-    app.list(mySolid, 'mySolid')
-    app.list(myCylinder, 'myCylinder')
-    app.list(rotCylinder, 'rotCylinder')
-    app.list(myCone, 'myCone')
-    app.list(surfThroughCurves, 'surfThroughCurves')
-    app.list(fit, 'ffe')
-    app.mainloop()
+    viewer = bspy.Viewer()
+    viewer.list(mySphere, 'mySphere')
+    viewer.list(myTorus, 'myTorus')
+    viewer.list(patch4, 'patch4')
+    viewer.list(mySolid, 'mySolid')
+    viewer.list(myCylinder, 'myCylinder')
+    viewer.list(rotCylinder, 'rotCylinder')
+    viewer.list(myCone, 'myCone')
+    viewer.list(surfThroughCurves, 'surfThroughCurves')
+    viewer.list(fit, 'ffe')
+    viewer.mainloop()
