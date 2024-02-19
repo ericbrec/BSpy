@@ -141,7 +141,7 @@ class Viewer(tk.Tk):
         if name is not None:
             spline.metadata["Name"] = name
         self.splineList.append(spline)
-        self.listBox.insert(tk.END, spline)
+        self.listBox.insert(tk.END, spline.metadata.get("Name", f"Spline({spline.nInd}, {spline.nDep})"))
 
     def show(self, spline, name = None):
         """Show a `Spline` in the listbox (calls the list method, kept for compatibility). Can be called before viewer is running."""
