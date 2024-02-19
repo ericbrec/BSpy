@@ -186,6 +186,14 @@ class Viewer(tk.Tk):
             self.listBox.delete(item, item)
         self.update()
 
+    def empty(self):
+        """Stop drawing all splines and remove them from the listbox."""
+        self.splineList = []
+        self.listBox.delete(0, self.listBox.size() - 1)
+        self.splineRadius = 0.0
+        self.frame.ResetView()
+        self.update()
+
     def set_background_color(self, r, g=None, b=None, a=None):
         """
         Set the background color.
