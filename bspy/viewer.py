@@ -213,13 +213,14 @@ class Viewer(tk.Tk):
         gotOne = False
         for item in self.listBox.curselection():
             spline = self.splineList[item]
-            coefsAxis = tuple(range(1,spline.nInd + 1))
+            coefs = spline.cache["coefs32"].T[:3]
+            coefsAxis = tuple(range(1, spline.nInd + 1))
             if gotOne:
-                splineMin = np.minimum(splineMin, spline.coefs[:3].min(axis=coefsAxis))
-                splineMax = np.maximum(splineMax, spline.coefs[:3].max(axis=coefsAxis))
+                splineMin = np.minimum(splineMin, coefs.min(axis=coefsAxis))
+                splineMax = np.maximum(splineMax, coefs.max(axis=coefsAxis))
             else:
-                splineMin = spline.coefs[:3].min(axis=coefsAxis)
-                splineMax = spline.coefs[:3].max(axis=coefsAxis)
+                splineMin = coefs.min(axis=coefsAxis)
+                splineMax = coefs.max(axis=coefsAxis)
                 gotOne = True
             self.splineDrawList.append(spline)
 
