@@ -1,16 +1,16 @@
 """
-bspy is a python library for manipulating and rendering non-uniform B-splines.
+BSpy is a python library for manipulating and rendering non-uniform B-splines.
 
 Available subpackages
 ---------------------
-`bspy.spline` : A class to model, represent, and process piecewise polynomial tensor product
+`bspy.spline` : Provides the `Spline` class that models, represents, and processes piecewise polynomial tensor product
     functions (spline functions) as linear combinations of B-splines.
 
-`bspy.splineOpenGLFrame` : A tkinter `OpenGLFrame` with shaders to display a `Spline` list.
+`bspy.splineOpenGLFrame` : Provides the `SplineOpenGLFrame` class, a tkinter `OpenGLFrame` with shaders to display splines.
 
-`bspy.viewer` : A tkinter app (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a listbox full of 
-    splines, and a set of controls to adjust and view the selected splines.
-"""
+`bspy.viewer` : Provides the `Viewer` tkinter app (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a listbox full of 
+    splines, and a set of controls to adjust and view the selected splines. It also provides the `Graphics` engine that creates 
+    an associated `Viewer`, allowing you to script splines and display them in the viewer."""
 from bspy.spline import Spline
 from bspy.splineOpenGLFrame import SplineOpenGLFrame
 from bspy.viewer import Viewer, Graphics

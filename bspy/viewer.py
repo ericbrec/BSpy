@@ -258,6 +258,7 @@ class Viewer(tk.Tk):
         self.frame.Update()
 
     def _DrawSplines(self, frame, transform):
+        """Handle when frame needs to be redrawn."""
         for spline in self.splineDrawList:
             frame.DrawSpline(spline, transform)
 
@@ -360,6 +361,11 @@ class Viewer(tk.Tk):
         """
         Gets the fill color of the spline (only useful for nInd >= 2).
 
+        Parameters
+        ----------
+        spline : `Spline`
+            The referenced spline.
+            
         Returns
         -------
         fillColor : `numpy.array`
@@ -374,6 +380,9 @@ class Viewer(tk.Tk):
 
         Parameters
         ----------
+        spline : `Spline`
+            The referenced spline.
+
         r : `float`, `int` or array-like of floats or ints
             The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).
         
@@ -393,6 +402,11 @@ class Viewer(tk.Tk):
         """
         Gets the line color of the spline.
 
+        Parameters
+        ----------
+        spline : `Spline`
+            The referenced spline.
+            
         Returns
         -------
         lineColor : `numpy.array`
@@ -407,6 +421,9 @@ class Viewer(tk.Tk):
 
         Parameters
         ----------
+        spline : `Spline`
+            The referenced spline.
+            
         r : `float`, `int` or array-like of floats or ints
             The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).
         
@@ -426,6 +443,11 @@ class Viewer(tk.Tk):
         """
         Gets the draw options for the spline.
 
+        Parameters
+        ----------
+        spline : `Spline`
+            The referenced spline.
+            
         Returns
         -------
         options : `int` bitwise or (`|`) of zero or more of the following values:
@@ -443,6 +465,9 @@ class Viewer(tk.Tk):
 
         Parameters
         ----------
+        spline : `Spline`
+            The referenced spline.
+            
         options : `int` bitwise or (`|`) of zero or more of the following values:
             * `SplineOpenGLFrame.HULL` Draw the convex hull of the spline (the coefficients). Off by default.
             * `SplineOpenGLFrame.SHADED` Draw the spline shaded (only useful for nInd >= 2). On by default.
@@ -456,6 +481,11 @@ class Viewer(tk.Tk):
         """
         Get the independent variable that is animated (None if there is none).
 
+        Parameters
+        ----------
+        spline : `Spline`
+            The referenced spline.
+            
         Returns
         -------
         animate : `int` or `None`
@@ -470,6 +500,9 @@ class Viewer(tk.Tk):
 
         Parameters
         ----------
+        spline : `Spline`
+            The referenced spline.
+            
         animate : `int` or `None`
             The index of the independent variable that is animated (None is there is none).
         """
@@ -477,7 +510,7 @@ class Viewer(tk.Tk):
 
 class Graphics:
     """
-    A graphics engine to display splines. It launches a `Viewer` and issues commands to the viewer.
+    A graphics engine to script and display splines. It launches a `Viewer` and issues commands to the viewer.
 
     Parameters
     ----------
@@ -571,6 +604,11 @@ class Graphics:
         """
         Gets the fill color of the spline (only useful for nInd >= 2).
 
+        Parameters
+        ----------
+        spline : `Spline`
+            The referenced spline.
+            
         Returns
         -------
         fillColor : `numpy.array`
@@ -585,6 +623,9 @@ class Graphics:
 
         Parameters
         ----------
+        spline : `Spline`
+            The referenced spline.
+            
         r : `float`, `int` or array-like of floats or ints
             The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).
         
@@ -604,6 +645,11 @@ class Graphics:
         """
         Gets the line color of the spline.
 
+        Parameters
+        ----------
+        spline : `Spline`
+            The referenced spline.
+            
         Returns
         -------
         lineColor : `numpy.array`
@@ -618,6 +664,9 @@ class Graphics:
 
         Parameters
         ----------
+        spline : `Spline`
+            The referenced spline.
+            
         r : `float`, `int` or array-like of floats or ints
             The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).
         
@@ -637,6 +686,11 @@ class Graphics:
         """
         Gets the draw options for the spline.
 
+        Parameters
+        ----------
+        spline : `Spline`
+            The referenced spline.
+            
         Returns
         -------
         options : `int` bitwise or (`|`) of zero or more of the following values:
@@ -654,6 +708,9 @@ class Graphics:
 
         Parameters
         ----------
+        spline : `Spline`
+            The referenced spline.
+            
         options : `int` bitwise or (`|`) of zero or more of the following values:
             * `SplineOpenGLFrame.HULL` Draw the convex hull of the spline (the coefficients). Off by default.
             * `SplineOpenGLFrame.SHADED` Draw the spline shaded (only useful for nInd >= 2). On by default.
@@ -667,6 +724,11 @@ class Graphics:
         """
         Get the independent variable that is animated (None if there is none).
 
+        Parameters
+        ----------
+        spline : `Spline`
+            The referenced spline.
+            
         Returns
         -------
         animate : `int` or `None`
@@ -681,6 +743,9 @@ class Graphics:
 
         Parameters
         ----------
+        spline : `Spline`
+            The referenced spline.
+            
         animate : `int` or `None`
             The index of the independent variable that is animated (None is there is none).
         """

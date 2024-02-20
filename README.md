@@ -11,13 +11,13 @@ The [SplineOpenGLFrame](https://ericbrec.github.io/BSpy/bspy/splineOpenGLFrame.h
 than 3 dependent variables will have their added dimensions rendered as colors (up to 6 dependent variables are supported). Only tested on Windows systems.
 
 
-The [Viewer](https://ericbrec.github.io/BSpy/bspy/Viewer.html) class is a 
+The [Viewer](https://ericbrec.github.io/BSpy/bspy/viewer.html) class is a 
 [tkinter.Tk](https://docs.python.org/3/library/tkinter.html) app that hosts a 
 [SplineOpenGLFrame](https://ericbrec.github.io/BSpy/bspy/splineOpenGLFrame.html), 
 a listbox full of splines, and a set of controls to adjust and view the selected splines. Only tested on Windows systems.
 
-The [Graphics](https://ericbrec.github.io/BSpy/bspy/Viewer.html#Graphics) class is a graphics engine to display splines.
-It launches a [Viewer](https://ericbrec.github.io/BSpy/bspy/Viewer.html) and issues commands to the viewer for use 
+The [Graphics](https://ericbrec.github.io/BSpy/bspy/viewer.html#Graphics) class is a graphics engine to display splines.
+It launches a [Viewer](https://ericbrec.github.io/BSpy/bspy/viewer.html) and issues commands to the viewer for use 
 in [jupyter](https://jupyter.org/) notebooks and other scripting environments. Only tested on Windows systems.
 
 ![Viewer rendering the Utah teapot](https://ericbrec.github.io/BSpy/viewer.png "Viewer rendering the Utah teapot")
