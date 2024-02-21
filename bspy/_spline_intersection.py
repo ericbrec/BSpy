@@ -267,7 +267,7 @@ def _refine_projected_polyhedron(interval):
         domain.append(xInterval)
     
     # Compute new slope, intercept, and unknowns.
-    domain = np.array(domain).T
+    domain = np.array(domain, spline.knots[0].dtype).T
     width = domain[1] - domain[0]
     newSlope = interval.slope.copy()
     newIntercept = interval.intercept.copy()
