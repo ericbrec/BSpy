@@ -513,6 +513,8 @@ def transpose(self, axes=None):
 
 def trim(self, newDomain):
     if not(len(newDomain) == self.nInd): raise ValueError("Invalid newDomain")
+    if self.nInd < 1: return self
+    newDomain = np.array(newDomain, self.knots[0].dtype) # Force dtype and convert None to nan
 
     # Step 1: Determine the knots to insert at the new domain bounds.
     newKnotsList = []
@@ -522,7 +524,7 @@ def trim(self, newDomain):
         leftBound = False # Do we have a left bound?
         newKnots = []
 
-        if bounds[0] is not None and not np.isnan(bounds[0]):
+        if not np.isnan(bounds[0]):
             if not(knots[order - 1] <= bounds[0] <= knots[-order]): raise ValueError("Invalid newDomain")
             leftBound = True
             multiplicity = order
@@ -531,7 +533,7 @@ def trim(self, newDomain):
                 multiplicity -= counts[i]
             newKnots += multiplicity * [bounds[0]]
 
-        if bounds[1] is not None and not np.isnan(bounds[1]):
+        if not np.isnan(bounds[1]):
             if not(knots[order - 1] <= bounds[1] <= knots[-order]): raise ValueError("Invalid newDomain")
             if leftBound:
                 if not(bounds[0] < bounds[1]): raise ValueError("Invalid newDomain")
@@ -552,9 +554,8 @@ def trim(self, newDomain):
     knotsList = []
     coefIndex = [slice(None)] # First index is for nDep
     for (order, knots, bounds) in zip(spline.order, spline.knots, newDomain):
-        bounds = np.array(bounds, knots.dtype) # Ensure bounds are the same type as the inserted knots
-        leftIndex = 0 if bounds[0] is None or np.isnan(bounds[0]) else np.searchsorted(knots, bounds[0])
-        rightIndex = len(knots) - order if bounds[1] is None or np.isnan(bounds[1]) else np.searchsorted(knots, bounds[1])
+        leftIndex = 0 if np.isnan(bounds[0]) else np.searchsorted(knots, bounds[0])
+        rightIndex = len(knots) - order if np.isnan(bounds[1]) else np.searchsorted(knots, bounds[1])
         knotsList.append(knots[leftIndex:rightIndex + order])
         coefIndex.append(slice(leftIndex, rightIndex))
     coefs = spline.coefs[tuple(coefIndex)]
