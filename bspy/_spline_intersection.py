@@ -746,6 +746,7 @@ def contours(self):
                                 currentContourPoints[index] = [upperConnection] + upperHalf + [point.uvw] + lowerHalf + currentContourPoints[index][2:]
                         else: 
                             # It's an ending point on an other boundary (same steps as uv boundary).
+                            adjustment = -1
                             fullList = currentContourPoints.pop(i) + [point.uvw]
                             connection = fullList.pop(0)
                             if connection == 0:
