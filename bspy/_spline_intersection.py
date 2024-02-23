@@ -7,7 +7,7 @@ from multiprocessing import Pool
 def zeros_using_interval_newton(self):
     if not(self.nInd == self.nDep): raise ValueError("The number of independent variables (nInd) must match the number of dependent variables (nDep).")
     if not(self.nInd == 1): raise ValueError("Only works for curves (nInd == 1).")
-    epsilon = np.finfo(self.coefs.dtype).eps
+    epsilon = np.finfo(self.knots[0].dtype).eps
 
     # Set initial spline and domain
  
@@ -347,7 +347,7 @@ class _Region:
 
 def zeros_using_projected_polyhedron(self, epsilon=None):
     if not(self.nInd == self.nDep): raise ValueError("The number of independent variables (nInd) must match the number of dependent variables (nDep).")
-    machineEpsilon = np.finfo(self.coefs.dtype).eps
+    machineEpsilon = np.finfo(self.knots[0].dtype).eps
     if epsilon is None:
         epsilon = 0.0
     epsilon = max(epsilon, np.sqrt(machineEpsilon))
