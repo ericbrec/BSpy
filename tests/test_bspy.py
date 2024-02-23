@@ -634,11 +634,12 @@ def test_contours():
     order = 9
     knots = [0.0] * order + [1.0] * order
     nCoef = order
-    points = []
-    for u in np.linspace(0.0, 1.0, nCoef):
-        for v in np.linspace(0.0, 1.0, nCoef):
-            points.append((u, v, F(u, v)))
-    spline = bspy.Spline.least_squares(2, 1, (order, order), points, (knots, knots))
+    dataPoints = np.empty((1, nCoef, nCoef), float)
+    uValues = [np.linspace(0.0, 1.0, nCoef), np.linspace(0.0, 1.0, nCoef)]
+    for i, u in enumerate(uValues[0]):
+        for j, v in enumerate(uValues[1]):
+            dataPoints[0, i, j] = F(u, v)
+    spline = bspy.Spline.least_squares(uValues, dataPoints, (order, order), (knots, knots))
     contours = spline.contours()
     for contour in contours:
         for t in np.linspace(0.0, 1.0, 11):
@@ -857,6 +858,14 @@ def test_graph():
     assert abs(uvfPoint[1] - 0.83) <= 4.0 * np.finfo(float).eps
     assert abs(uvfPoint[2] - simpleFunc([0.27, 0.83])[0]) <= 4.0 * np.finfo(float).eps
 
+def test_greville():
+    piecewiseConstant = bspy.Spline(1, 1, [1], [3], [[0.0, 1.0, 3.0, 4.0]], [[0.0, 0.0, 0.0]])
+    averages = piecewiseConstant.greville()                                
+    assert averages[0] == 0.5
+    assert averages[1] == 2.0
+    assert averages[2] == 3.5
+    assert len(averages) == 3
+
 def test_insert_knots():
     maxError = 0.0
     newCurve = myCurve.insert_knots([[.2, .3]])
@@ -894,20 +903,26 @@ def test_intersect():
     order = 9
     knots = [0.0] * order + [1.0] * order
     nCoef = order
-    points = []
-    for u in np.linspace(0.0, 1.0, nCoef):
-        for v in np.linspace(0.0, 1.0, nCoef):
-            points.append((u, v, u, v, F(u, v)))
-    spline = bspy.Spline.least_squares(2, 3, (order, order), points, (knots, knots))
+    dataPoints = np.empty((3, nCoef, nCoef), float)
+    uValues = [np.linspace(0.0, 1.0, nCoef), np.linspace(0.0, 1.0, nCoef)]
+    for i, u in enumerate(uValues[0]):
+        for j, v in enumerate(uValues[1]):
+            dataPoints[0, i, j] = u
+            dataPoints[1, i, j] = v
+            dataPoints[2, i, j] = F(u, v)
+    spline = bspy.Spline.least_squares(uValues, dataPoints, (order, order), (knots, knots))
 
     order = 4
     knots = [0.0] * order + [1.0] * order
     nCoef = order
-    points = []
-    for u in np.linspace(0.0, 1.0, nCoef):
-        for v in np.linspace(0.0, 1.0, nCoef):
-            points.append((u, v, 2*u - 0.5, 2*v - 0.5, 0.0))
-    plane = bspy.Spline.least_squares(2, 3, (order, order), points, (knots, knots))
+    dataPoints = np.empty((3, nCoef, nCoef), float)
+    uValues = [np.linspace(0.0, 1.0, nCoef), np.linspace(0.0, 1.0, nCoef)]
+    for i, u in enumerate(uValues[0]):
+        for j, v in enumerate(uValues[1]):
+            dataPoints[0, i, j] = 2*u - 0.5
+            dataPoints[1, i, j] = 2*v - 0.5
+            dataPoints[2, i, j] = 0.0
+    plane = bspy.Spline.least_squares(uValues, dataPoints, (order, order), (knots, knots))
 
     contours = spline.intersect(plane)
     for contour in contours:
@@ -984,7 +999,7 @@ def test_least_squares():
     fit = bspy.Spline.least_squares([0.0, 0.5, 1.0], [crv1, crv2, crv3])
     assert fit.nInd == 2 and fit.nDep == 3 and fit.order[0] == 5 and fit.order[1] == 3
  
-    # Reproduce a bivariate tensor product quadratic using a Taylor series
+    # Reproduce a bi-variate tensor product quadratic using a Taylor series
     quadKnots = 2 * [[0.0, 0.0, 0.0, 1.0, 1.0, 1.0]]
     spline = bspy.Spline(2, 3, [3, 3], [3, 3], quadKnots,
                          [[0.0, 0.0, 0.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0],
@@ -1012,7 +1027,7 @@ def test_least_squares():
     maxError = max(-coefErrors.min(), coefErrors.max()) / 2.0
     assert maxError < 1.0e-14
 
-    # Create knots and fit data taken from 2D spline. Should match returned accuracy at data points.
+    # Create knots and fit data taken from 2D spline.
     fit = bspy.Spline.least_squares(uValues, dataPoints, order = [3, 4])
     commonSpline, commonFit = bspy.Spline.common_basis([spline, fit])
     coefErrors = commonFit.coefs - commonSpline.coefs

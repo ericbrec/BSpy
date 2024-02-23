@@ -145,10 +145,14 @@ class DrawableSpline(Spline):
                 floatCount += 2 + self.order[i] + self.nCoef[i]
                 coefficientCount *= self.nCoef[i]
             if not(floatCount + self.nDep * coefficientCount <= self._maxFloats): raise ValueError("Spline to large to draw")
-            self.metadata["fillColor"] = np.array((0.0, 1.0, 0.0, 1.0), np.float32)
-            self.metadata["lineColor"] = np.array((0.0, 0.0, 0.0, 1.0) if self.nInd > 1 else (1.0, 1.0, 1.0, 1.0), np.float32)
-            self.metadata["options"] = self.SHADED | self.BOUNDARY
-            self.metadata["animate"] = None
+            if not "fillColor" in self.metadata:
+                self.metadata["fillColor"] = np.array((0.0, 1.0, 0.0, 1.0), np.float32)
+            if not "lineColor" in self.metadata:
+                self.metadata["lineColor"] = np.array((0.0, 0.0, 0.0, 1.0) if self.nInd > 1 else (1.0, 1.0, 1.0, 1.0), np.float32)
+            if not "options" in self.metadata:
+                self.metadata["options"] = self.SHADED | self.BOUNDARY
+            if not "animate" in self.metadata:
+                self.metadata["animate"] = None
 
     def __str__(self):
         return self.metadata.get("Name", "[{0}, {1}]".format(self.coefs[0], self.coefs[1]))
@@ -198,7 +202,7 @@ class DrawableSpline(Spline):
                     if rangeCoef > 1.0e-8:
                         coefs[i] = (coefs[i] - minCoef) / rangeCoef
                     else:
-                        coefs[i] = 1.0
+                        coefs[i] = max(0.0, min(1.0, minCoef))
         elif spline.nInd == 3:
             if spline.nDep == 1:
                 spline = spline.graph()
@@ -215,7 +219,7 @@ class DrawableSpline(Spline):
                     if rangeCoef > 1.0e-8:
                         coefs[i] = (coefs[i] - minCoef) / rangeCoef
                     else:
-                        coefs[i] = 1.0
+                        coefs[i] = max(0.0, min(1.0, minCoef))
         else:
             raise ValueError("Can't convert to drawable spline.")
         

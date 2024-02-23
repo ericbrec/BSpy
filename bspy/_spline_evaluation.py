@@ -62,14 +62,14 @@ def curvature(self, uv):
             self = self.graph()
         fp = self.derivative([1], uv)
         fpp = self.derivative([2], uv)
-        fpdotfp = fp @ fp
-        fpdotfpp = fp @ fpp
-        denom = fpdotfp ** 1.5
+        fpDotFp = fp @ fp
+        fpDotFpp = fp @ fpp
+        denom = fpDotFp ** 1.5
         if self.nDep == 2:
-            numer = fp[0] * fpp[1] - fp[1] * fpp[0]
+            numerator = fp[0] * fpp[1] - fp[1] * fpp[0]
         else:
-            numer = np.sqrt((fpp @ fpp) * fpdotfp - fpdotfpp ** 2)
-        return numer / denom 
+            numerator = np.sqrt((fpp @ fpp) * fpDotFp - fpDotFpp ** 2)
+        return numerator / denom 
 
 def derivative(self, with_respect_to, uvw):
     # Make work for scalar valued functions
@@ -131,6 +131,18 @@ def evaluate(self, uvw):
         bValues = bspline_values(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv])
         myCoefs = myCoefs @ bValues
     return myCoefs
+
+def greville(self, ind = 0):
+    if ind < 0 or ind >= self.nInd:  raise ValueError("Invalid independent variable")
+    myKnots = self.knots[ind]
+    knotAverages = 0
+    if self.order[ind] == 1:
+        knotAverages = 0.5 * (myKnots[1:] + myKnots[:-1])
+    else:
+        for ix in range(1, self.order[ind]):
+            knotAverages = knotAverages + myKnots[ix : ix + self.nCoef[ind]]
+        knotAverages /= (self.order[ind] - 1)
+    return knotAverages
 
 def integral(self, with_respect_to, uvw1, uvw2, returnSpline = False):
     # Make work for scalar valued functions

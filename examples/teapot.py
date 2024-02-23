@@ -350,12 +350,12 @@ if __name__=='__main__':
     app = bspyApp()
     knots = np.array((0,0,0,0,1,1,1,1), np.float32)
     for patch in teapotPatches:
-        coefficients = np.ones((4, 4, 4), np.float32)
+        coefficients = np.empty((3, 4, 4), np.float32)
         for i in range(4):
             for j in range(4):
                 vertex = patch[4*i + j + 1] - 1
                 coefficients[0,i,j] = teapotVertices[vertex][0]
                 coefficients[1,i,j] = 1.3 * teapotVertices[vertex][2]
                 coefficients[2,i,j] = teapotVertices[vertex][1]
-        app.draw(DrawableSpline(2, 4, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=patch[0])))
+        app.draw(DrawableSpline(2, 3, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=patch[0])))
     app.mainloop()
