@@ -311,29 +311,29 @@ def fold(self, foldedInd):
 
 def insert_knots(self, newKnots):
     if not(len(newKnots) == self.nInd): raise ValueError("Invalid newKnots")
-    knots = list(self.knots)
+    knotsList = list(self.knots)
     coefs = self.coefs
-    for ind in range(self.nInd):
+    for ind, (order, knots) in enumerate(zip(self.order, self.knots)):
         # We can't reference self.nCoef[ind] in this loop because we are expanding the knots and coefs arrays.
         for knot in newKnots[ind]:
-            if knot < knots[ind][self.order[ind]-1] or knot > knots[ind][-self.order[ind]]:
+            if knot < knots[order-1] or knot > knots[-order]:
                 raise ValueError(f"Knot insertion outside domain: {knot}")
-            if knot == knots[ind][-self.order[ind]]:
-                position = len(knots[ind]) - self.order[ind]
+            if knot == knots[-order]:
+                position = len(knots) - order
             else:
-                position = np.searchsorted(knots[ind], knot, 'right')
+                position = np.searchsorted(knots, knot, 'right')
             coefs = coefs.swapaxes(0, ind + 1) # Swap dependent and independent variable (swap back later)
             newCoefs = np.insert(coefs, position - 1, 0.0, axis=0)
-            for i in range(position - self.order[ind] + 1, position):
-                alpha = (knot - knots[ind][i]) / (knots[ind][i + self.order[ind] - 1] - knots[ind][i])
+            for i in range(position - order + 1, position):
+                alpha = (knot - knots[i]) / (knots[i + order - 1] - knots[i])
                 newCoefs[i] = (1.0 - alpha) * coefs[i - 1] + alpha * coefs[i]
-            knots[ind] = np.insert(knots[ind], position, knot)
+            knotsList[ind] = knots = np.insert(knots, position, knot)
             coefs = newCoefs.swapaxes(0, ind + 1)
 
     if self.coefs is coefs:
         return self
     else: 
-        return type(self)(self.nInd, self.nDep, self.order, coefs.shape[1:], knots, coefs, self.metadata)
+        return type(self)(self.nInd, self.nDep, self.order, coefs.shape[1:], knotsList, coefs, self.metadata)
 
 def join(splineList):
     # Make sure all the splines in the list are curves
@@ -560,6 +560,7 @@ def trim(self, newDomain):
     knotsList = []
     coefIndex = [slice(None)] # First index is for nDep
     for (order, knots, bounds) in zip(spline.order, spline.knots, newDomain):
+        bounds = np.array(bounds, knots.dtype) # Ensure bounds are the same type as the inserted knots
         leftIndex = 0 if bounds[0] is None or np.isnan(bounds[0]) else np.searchsorted(knots, bounds[0])
         rightIndex = len(knots) - order if bounds[1] is None or np.isnan(bounds[1]) else np.searchsorted(knots, bounds[1])
         knotsList.append(knots[leftIndex:rightIndex + order])
