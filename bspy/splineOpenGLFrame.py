@@ -1681,9 +1681,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             u = u1 + 0.49999 * (u2 - u1) * (1.0 - np.cos(2.0 * np.pi * self.frameCount * self.MsPerFrame / 10000))
             # Contract spline.
             knots = spline.cache["knots32"]
-            ix = np.searchsorted(knots[nInd], u, 'right')
-            ix = min(ix, spline.nCoef[nInd])
-            bValues = spline.bspline_values(ix, knots[nInd], spline.order[nInd], u)
+            ix, bValues = spline.bspline_values(None, knots[nInd], spline.order[nInd], u)
             coefs = np.moveaxis(coefs, spline.nInd - nInd - 1, -1) # Account for transpose
             coefs = coefs[..., ix - spline.order[nInd]:ix] @ bValues
             knots = [knots[i] for i in range(spline.nInd) if i != nInd]
