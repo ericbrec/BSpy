@@ -354,7 +354,7 @@ if __name__=='__main__':
             for j in range(4):
                 vertex = patch[4*i + j + 1] - 1
                 coefficients[0,i,j] = teapotVertices[vertex][0]
-                coefficients[1,i,j] = 1.3 * teapotVertices[vertex][2]
+                coefficients[1,i,j] = teapotVertices[vertex][2]
                 coefficients[2,i,j] = teapotVertices[vertex][1]
         viewer.draw(Spline(2, 3, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=patch[0])))
     viewer.mainloop()
