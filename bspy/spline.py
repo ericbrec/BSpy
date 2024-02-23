@@ -1738,7 +1738,7 @@ class Spline:
         """
         return bspy._spline_fitting.section(xytk)
     
-    def solve_ODE(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6):
+    def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
         """
         Numerically solve an ordinary differential equation with boundary conditions.
 
@@ -1759,8 +1759,8 @@ class Spline:
             order of the differential equation is assumed to be the sum of nLeft and nRight.
         
         FAndF_u : Python function
-            FAndF_u must have exactly this calling sequence:  FAndF_u(t, uData).  t is a scalar set to the
-            desired value of the independent variable of the ODE.  uData will be a numpy matrix of shape
+            FAndF_u must have exactly this calling sequence:  FAndF_u(t, uData, *args).  t is a scalar set
+            to the desired value of the independent variable of the ODE.  uData will be a numpy matrix of shape
             (self.nDep, nOrder) whose columns are (u, ... , u^(nOrder - 1).  It must return a numpy
             vector of length self.nDep and a numpy array whose shape is (self.nDep, self.nDep, nOrder).
             The first output vector is the value of the forcing function F at (t, uData).  The numpy
@@ -1771,12 +1771,16 @@ class Spline:
         tolerance : scalar
             The relative error to which the ODE should get solved.
         
+        args : tuple
+            Additional arguments to pass to the user-defined function FAndF_u.  For example, if FAndF_u has the
+            FAndF_u(t, uData, a, b, c), then args must be a tuple of length 3.
+
         Notes
         =====
         This method uses B-splines as finite elements.  The ODE itself is discretized using
         collocation.
         """
-        return bspy._spline_fitting.solve_ODE(self, nLeft, nRight, FAndF_u, tolerance)
+        return bspy._spline_fitting.solve_ode(self, nLeft, nRight, FAndF_u, tolerance, args)
 
     @staticmethod
     def sphere(radius, tolerance = None):

@@ -636,7 +636,7 @@ def section(xytk):
     # Join the pieces together and return
     return bspy.Spline.join(mySections)
 
-def solve_ODE(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6):
+def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
     # Ensure that the ODE is properly formulated
 
     if nLeft < 0:  raise ValueError("Invalid number of left hand boundary conditions")
@@ -647,6 +647,9 @@ def solve_ODE(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6):
     # Make sure that there are full multiplicity knots on the ends
 
     currentGuess = self.copy().clamp((0,), (0,))
+    scale = 1.0
+    for lower, upper in currentGuess.range_bounds():
+        scale = max(scale, upper - lower)
     nDep = currentGuess.nDep
 
     # Insert and remove knots so initial guess conforms to de Boor - Swartz setup
@@ -688,7 +691,14 @@ def solve_ODE(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6):
 
     # Construct the collocation matrix and the residual vector
 
+        done = False
+        continuation = 1.0
+        bestContinuation = 0.0
+        continuationBest = bestGuess
+        previous = 0.5 * np.finfo(bestGuess[0]).max
+        iteration = 0
         while True:
+            iteration += 1
             collocationMatrix = np.zeros((n, n))
             residuals = np.array([])
             workingSpline = bspy.Spline(1, nDep, currentGuess.order, currentGuess.nCoef,
@@ -700,8 +710,8 @@ def solve_ODE(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6):
                     collocationMatrix[iRowColumn, iRowColumn] = 1.0
             for iPoint, t in enumerate(collocationPoints):
                 uData = np.array([workingSpline.derivative([i], t) for i in range(nOrder)]).T
-                F, F_u = FAndF_u(t, uData)
-                residuals = np.append(residuals, workingSpline.derivative([nOrder], t) - F)
+                F, F_u = FAndF_u(t, uData, *args)
+                residuals = np.append(residuals, workingSpline.derivative([nOrder], t) - continuation * F)
                 ix = None
                 bValues = np.array([])
                 for iDerivative in range(nOrder + 1):
@@ -716,30 +726,55 @@ def solve_ODE(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6):
                     for iF_uRow in range(nDep):
                         indices = slice((ix - workingSpline.order[0]) * nDep + iF_uRow, ix * nDep + iF_uRow, nDep)
                         for iF_uColumn in range(nOrder):
-                            collocationMatrix[iRow, indices] += F_u[iDep, iF_uRow, iF_uColumn] * bValues[iF_uColumn]
+                            collocationMatrix[iRow, indices] += continuation * F_u[iDep, iF_uRow, iF_uColumn] * bValues[iF_uColumn]
             for iCondition in range(nRight):
                 residuals = np.append(residuals, np.zeros((nDep,)))
                 for iColumn in range(nDep):
                     iRowColumn = iCondition * nDep + iColumn + 1
                     collocationMatrix[-iRowColumn, -iRowColumn] = 1.0
 
-    # Check if done
-                
-            if np.linalg.norm(residuals) < 0.01 * tolerance:
-                break
-
     # Solve the collocation linear system
 
             update = np.linalg.solve(collocationMatrix, residuals)
+            updateSize = np.linalg.norm(update)
+            if updateSize > 1.25 * previous and iteration >= 4:
+                continuation = 0.5 * (continuation + bestContinuation)
+                bestGuess = continuationBest
+                if continuation - bestContinuation < 0.01:
+                    break
+                previous = 0.5 * np.finfo(bestGuess[0]).max
+                iteration = 0
+                continue
             bestGuess += update
+            previous = updateSize
+            if done or iteration > 50:
+                break
+
+    # Check to see if we're almost done
+
+            if updateSize < math.sqrt(n) * scale * math.sqrt(np.finfo(update.dtype).eps):
+                if continuation < 1.0:
+                    bestContinuation = continuation
+                    continuationBest = bestGuess
+                    continuation = min(1.0, 1.2 * continuation)
+                    previous = 0.5 * np.finfo(bestGuess[0]).max
+                    iteration = 0
+                else:
+                    done = True
+    
+    # Is it time to give up?
+
+        if (not done or continuation < 1.0) and n > 1000:
+            raise RuntimeError("Can't find solution with given initial guess")
 
     # Estimate the error
 
-        currentGuess = bspy.Spline(1, nDep, currentGuess.order, currentGuess.nCoef, currentGuess.knots, workingSpline.coefs)
+        currentGuess = bspy.Spline(1, nDep, currentGuess.order, currentGuess.nCoef, currentGuess.knots,
+                                   np.reshape(bestGuess, (currentGuess.nCoef[0], nDep)).T)
         errorRange = (previousGuess - currentGuess).range_bounds()
         refine = False
         for lower, upper in errorRange:
-            if lower < -tolerance or upper > tolerance:
+            if upper - lower > 2.0 * scale * tolerance:
                 refine = True
 
     # Insert new knots if refinement is needed
@@ -754,7 +789,7 @@ def solve_ODE(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6):
 
     # Simplify the result and return
 
-    return currentGuess.remove_knots(0.1 * tolerance)
+    return currentGuess.remove_knots(0.1 * scale * tolerance)
     
 def sphere(radius, tolerance = None):
     if radius <= 0.0:  raise ValueError("Radius must be positive")

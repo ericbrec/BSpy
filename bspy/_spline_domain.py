@@ -440,12 +440,20 @@ def remove_knots(self, tolerance):
         currentFold, foldedBasis = currentSpline.fold(foldedIndices)
         while True:
             bestError = np.finfo(scaleDep[0].dtype).max
-            for ix in range(currentFold.order[0], currentFold.nCoef[0]):
+            bestSpline = currentFold
+            ix = currentFold.order[0]
+            while ix < currentFold.nCoef[0]:
                 newSpline, residual = currentFold.remove_knot(ix)
                 error = np.max(residual)
+                if error < 0.001 * tolerance:
+                    currentFold = newSpline
+                    continue
                 if error < bestError:
                     bestError = error
                     bestSpline = newSpline
+                ix += 1
+            if currentFold.nCoef[0] < bestSpline.nCoef[0]:
+                continue
             if bestError > tolerance:
                 break
             errorSpline = truthSpline - bestSpline.unfold(foldedIndices, foldedBasis)

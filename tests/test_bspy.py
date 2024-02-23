@@ -1271,19 +1271,19 @@ def test_section():
         for i in range(3):
             rate.append(math.log2(maxErrors[i] / maxErrors[i + 1]))
 
-def test_solve_ODE():
+def test_solve_ode():
     # Test u' = u, u(0) = 1
     myGuess = bspy.Spline.line([1.0], [2.0])
     myGuess = myGuess.elevate([2])
     def myF(t, u):
         return np.array([u[0, 0]]), np.array([1.0]).reshape((1, 1, 1))
-    fit = myGuess.solve_ODE(1, 0, myF)
+    fit = myGuess.solve_ode(1, 0, myF)
     myValue = fit(1.0)[0]
     correctValue = np.exp(1.0)
     assert abs(myValue - correctValue) < 1.0e-7
 
     # Test u' = u, u(1) = 2
-    fit = myGuess.solve_ODE(0, 1, myF)
+    fit = myGuess.solve_ode(0, 1, myF)
     myValue = fit(0.0)[0]
     correctValue = 2.0 / correctValue
     assert abs(myValue - correctValue) < 1.0e-7
@@ -1291,14 +1291,14 @@ def test_solve_ODE():
     # Test u'' = u, u(0) = 1, u'(0) = 1
     def myF(t, u):
         return np.array([u[0, 0]]), np.array([1.0, 0.0]).reshape((1, 1, 2))
-    fit = myGuess.solve_ODE(2, 0, myF)
+    fit = myGuess.solve_ode(2, 0, myF)
     myValue = fit(1.0)[0]
     correctValue = np.exp(1.0)
     assert abs(myValue - correctValue) < 1.0e-7
 
     # Test u'' = u, u(0) = 1, u(1) = 1
     myGuess.coefs[0][-1] = 1.0
-    fit = myGuess.solve_ODE(1, 1, myF)
+    fit = myGuess.solve_ode(1, 1, myF)
     myValue = fit(0.5)[0]
     eHalf = np.exp(0.5)
     c0 = 1.0 / (correctValue + 1.0)
@@ -1310,29 +1310,44 @@ def test_solve_ODE():
     myGuess = bspy.Spline.line([1.0, 0.0], [0.0, 0.0]).elevate([2])
     def myF(t, u):
         return np.pi * np.array([-u[1,0], u[0,0]]), np.pi * np.array([[0.0, -1.0], [1.0, 0.0]]).reshape((2, 2, 1))
-    fit = myGuess.solve_ODE(1, 0, myF)
+    fit = myGuess.solve_ode(1, 0, myF)
     myValue = fit(1.0)
     assert np.linalg.norm(myValue - np.array([-1.0, 0.0])) < 1.0e-7
 
-    # Test 2-body problem
-#    G = 8.6443e-13
-#    def nBodyF(t, u):
-#        rhs = []
-#        jacobian = np.zeros((nState, nState, 2))
-#        for iBody in range(nBody):
-#            forceSum = np.zeros((nDim,))
-#            for iTerm in range(nBody):
-#                    continue
-#                direction_ij = u[nDim * iTerm : nDim * (iTerm + 1), 0] - u[nDim * iBody : nDim * (iBody + 1), 0]
-#                rij = (direction_ij @ direction_ij) ** 0.5
-#                gij = G * mass[iTerm] / rij ** 3
-#                forceSum += gij * direction_ij
-#            rhs.append(forceSum)
-#        rhs = np.array(rhs)
-#        nState = nDim * nBody
-#        rhs = np.reshape(rhs, (nState,))
-#        jacobian = np.zeros((nState, nState, 2))
-#        return rhs, jacobian
+    # Test 2 body problem
+    def nBodyF(t, u, nBody, nDim, mass):
+        G = 8.6443e-13
+        nState = nDim * nBody
+        rhs = np.zeros((nState,))
+        jacobian = np.zeros((nState, nState, 2))
+        for iBody in range(nBody):
+            bodySlice = slice(iBody * nDim, (iBody + 1) * nDim)
+            for iTerm in range(nBody):
+                if iBody == iTerm:
+                    continue
+                termSlice = slice(iTerm * nDim, (iTerm + 1) * nDim)
+                direction_ij = u[termSlice, 0] - u[bodySlice, 0]
+                rij = (direction_ij @ direction_ij) ** 0.5
+                gij = G * mass[iTerm] / rij ** 3
+                gijPrime = 3.0 * gij / rij ** 2
+                rhs[bodySlice] += gij * direction_ij
+                jacobian[bodySlice, bodySlice, 0] -= gij * np.identity(nDim)
+                jacobian[bodySlice, termSlice, 0] += gij * np.identity(nDim)
+                jacobian[bodySlice, bodySlice, 0] += gijPrime * direction_ij * direction_ij
+                jacobian[bodySlice, termSlice, 0] -= gijPrime * direction_ij * direction_ij
+        return rhs, jacobian
+    nBody = 2
+    nDim = 2
+    mass = np.array([3.0e+19, 1.0e+19])
+    finalTime = 10.0
+    mass = np.array([3.0e+19, 1.0e+19])
+    u = [0.0, 0.0, finalTime, finalTime]
+    data = np.array([[100.0, 0.0, 900.0, 900.0], [0.0, 100.0, 0.0, -100.0],
+                     [900.0, 100.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]]).T
+    initialGuess = bspy.Spline.least_squares(u, data)
+    solution = initialGuess.solve_ode(2, 0, nBodyF, 1.0e-4, (nBody, nDim, mass))
+    assert np.linalg.norm(solution(finalTime) - [564.4440815382061, 710.6925403980654,
+                                                 -493.3322446145843, 767.9223788058102]) < 1.0e-4
 
 def test_sphere():
     mySphere = bspy.Spline.sphere(1.3, 1.0e-12)
