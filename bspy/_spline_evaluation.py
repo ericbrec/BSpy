@@ -39,6 +39,9 @@ def blossom(self, uvw):
 def bspline_values(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs = False):
     basis = np.zeros(splineOrder, knots.dtype)
     basis[-1] = 1.0
+    if knot is None:
+        knot = np.searchsorted(knots, u, side = 'right')
+        knot = min(knot, len(knots) - splineOrder)
     for degree in range(1, splineOrder - derivativeOrder):
         b = splineOrder - degree
         for i in range(knot - degree, knot):
@@ -54,7 +57,7 @@ def bspline_values(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs
             basis[b - 1] += -alpha * basis[b]
             basis[b] *= alpha
             b += 1
-    return basis
+    return knot, basis
 
 def curvature(self, uv):
     if self.nInd == 1:
@@ -87,16 +90,14 @@ def derivative(self, with_respect_to, uvw):
 
     # Grab all of the appropriate coefficients
     mySection = [slice(0, self.nDep)]
-    myIndices = []
+    bValues = []
     for iv in range(self.nInd):
-        ix = np.searchsorted(self.knots[iv], uvw[iv], 'right')
-        ix = min(ix, self.nCoef[iv])
-        myIndices.append(ix)
+        ix, indValues = bspline_values(None, self.knots[iv], self.order[iv], uvw[iv], with_respect_to[iv])
+        bValues.append(indValues)
         mySection.append(slice(ix - self.order[iv], ix))
     myCoefs = self.coefs[tuple(mySection)]
     for iv in range(self.nInd - 1, -1, -1):
-        bValues = bspline_values(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv], with_respect_to[iv])
-        myCoefs = myCoefs @ bValues
+        myCoefs = myCoefs @ bValues[iv]
     return myCoefs
 
 def domain(self):
@@ -120,16 +121,14 @@ def evaluate(self, uvw):
 
     # Grab all of the appropriate coefficients
     mySection = [slice(0, self.nDep)]
-    myIndices = []
+    bValues = []
     for iv in range(self.nInd):
-        ix = np.searchsorted(self.knots[iv], uvw[iv], 'right')
-        ix = min(ix, self.nCoef[iv])
-        myIndices.append(ix)
+        ix, indValues = bspline_values(None, self.knots[iv], self.order[iv], uvw[iv])
+        bValues.append(indValues)
         mySection.append(slice(ix - self.order[iv], ix))
     myCoefs = self.coefs[tuple(mySection)]
     for iv in range(self.nInd - 1, -1, -1):
-        bValues = bspline_values(myIndices[iv], self.knots[iv], self.order[iv], uvw[iv])
-        myCoefs = myCoefs @ bValues
+        myCoefs = myCoefs @ bValues[iv]
     return myCoefs
 
 def greville(self, ind = 0):

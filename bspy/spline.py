@@ -211,7 +211,8 @@ class Spline:
         Parameters
         ----------
         knot : `int`
-            The rightmost knot in the bspline segment.
+            The rightmost knot in the bspline segment.  If knot is None, then this value is
+            determined by binary search
 
         knots : array-like
             The array of knots for the bspline.
@@ -231,6 +232,10 @@ class Spline:
 
         Returns
         -------
+        knot : `int`
+            The rightmost knot in the bspline segment.  If this is specified on input, then this
+            valued is returned.  Otherwise, it is computed and then returned.
+
         value : `numpy.array`
             The value of the bspline or its derivative at the given parameter.
 
@@ -1733,6 +1738,50 @@ class Spline:
         """
         return bspy._spline_fitting.section(xytk)
     
+    def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
+        """
+        Numerically solve an ordinary differential equation with boundary conditions.
+
+        Parameters
+        ==========
+        self : `Spline`
+            The initial guess for the solution to the spline.  All of the spline parameters, e.g.
+            order, boundary conditions, domain, etc. are all established by the initial guess.  The
+            ODE itself must be of the form u^(nOrder)(t) = F(t, u, u', ... , u^(nOrder-1)).  self.nDep should
+            be the same as the number of state variables in the ODE.
+        
+        nLeft : integer
+            The number of boundary conditions to be imposed on the left side of the domain.  The
+            order of the differential equation is assumed to be the sum of nLeft and nRight.
+        
+        nRight : integer
+            The number of boundary conditions to be imposed on the right sie of the domain.  The
+            order of the differential equation is assumed to be the sum of nLeft and nRight.
+        
+        FAndF_u : Python function
+            FAndF_u must have exactly this calling sequence:  FAndF_u(t, uData, *args).  t is a scalar set
+            to the desired value of the independent variable of the ODE.  uData will be a numpy matrix of shape
+            (self.nDep, nOrder) whose columns are (u, ... , u^(nOrder - 1).  It must return a numpy
+            vector of length self.nDep and a numpy array whose shape is (self.nDep, self.nDep, nOrder).
+            The first output vector is the value of the forcing function F at (t, uData).  The numpy
+            array is the array of partial derivatives with respect to all the numbers in uData.  Thus, if
+            this array is called jacobian, then jacobian[:, i, j] is the gradient of the forcing function with
+            respect to uData[i, j].
+        
+        tolerance : scalar
+            The relative error to which the ODE should get solved.
+        
+        args : tuple
+            Additional arguments to pass to the user-defined function FAndF_u.  For example, if FAndF_u has the
+            FAndF_u(t, uData, a, b, c), then args must be a tuple of length 3.
+
+        Notes
+        =====
+        This method uses B-splines as finite elements.  The ODE itself is discretized using
+        collocation.
+        """
+        return bspy._spline_fitting.solve_ode(self, nLeft, nRight, FAndF_u, tolerance, args)
+
     @staticmethod
     def sphere(radius, tolerance = None):
         """

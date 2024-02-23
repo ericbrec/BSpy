@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.optimize as opt
 import bspy.spline
 import math
 
@@ -144,9 +145,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         dGCoefs = np.zeros((nUnknownCoefs, nDep, nDep, nCoef), contourDtype)
         i = 0
         for t, i in zip(tValues, range(nUnknownCoefs)):
-            ix = np.searchsorted(knots, t, 'right')
-            ix = min(ix, nCoef)
-            bValues = bspy.Spline.bspline_values(ix, knots, order, t)
+            ix, bValues = bspy.Spline.bspline_values(None, knots, order, t)
             for j in range(nDep):
                 dGCoefs[i, j, j, ix - order:ix] = bValues
         GSamples -= dGCoefs[:, :, :, 0] @ knownXValues[0] + dGCoefs[:, :, :, -1] @ knownXValues[-1]
@@ -172,12 +171,10 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             # Fill in FSamples and its Jacobian (dFCoefs) with respect to the coefficients of x(t).
             for t, i in zip(tValues, range(nUnknownCoefs)):
                 # Isolate coefficients and compute bspline values and their first two derivatives at t.
-                ix = np.searchsorted(knots, t, 'right')
-                ix = min(ix, nCoef)
+                ix, bValues = bspy.Spline.bspline_values(None, knots, order, t)
+                ix, dValues = bspy.Spline.bspline_values(ix, knots, order, t, 1)
+                ix, d2Values = bspy.Spline.bspline_values(ix, knots, order, t, 2)
                 compactCoefs = coefs[:, ix - order:ix]
-                bValues = bspy.Spline.bspline_values(ix, knots, order, t)
-                dValues = bspy.Spline.bspline_values(ix, knots, order, t, 1)
-                d2Values = bspy.Spline.bspline_values(ix, knots, order, t, 2)
 
                 # Compute the dot constraint for x(t) and check for divergence from solution.
                 dotValues = np.dot(compactCoefs @ d2Values, compactCoefs @ dValues)
@@ -255,19 +252,19 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             # Place tValues at Gauss points for the intervals [previousKnot, newKnot] and [newKnot, knot].
             for rho in reversed(rhos):
                 tValues[i] = t = 0.5 * (previousKnot + newKnot - rho * (newKnot - previousKnot))
-                GSamples[i] = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)
+                GSamples[i] = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
                 i += 1
             for rho in rhos[0 if degree % 2 == 1 else 1:]:
                 tValues[i] = t = 0.5 * (previousKnot + newKnot + rho * (newKnot - previousKnot))
-                GSamples[i] = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)
+                GSamples[i] = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
                 i += 1
             for rho in reversed(rhos):
                 tValues[i] = t = 0.5 * (newKnot + knot - rho * (knot - newKnot))
-                GSamples[i] = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)
+                GSamples[i] = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
                 i += 1
             for rho in rhos[0 if degree % 2 == 1 else 1:]:
                 tValues[i] = t = 0.5 * (newKnot + knot + rho * (knot - newKnot))
-                GSamples[i] = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)
+                GSamples[i] = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
                 i += 1
             
             newKnots += [newKnot] * (order - 2) # C1 continuity
@@ -482,11 +479,10 @@ def least_squares(uValues, dataPoints, order = None, knots = None, compression =
                 if uNew != u:
                     iDerivative = 0
                     u = uNew
-                    ix = np.searchsorted(knots[iInd], u, 'right')
-                    ix = min(ix, nCols)
+                    ix = None
                 else:
                     iDerivative += 1
-                row = bspy.Spline.bspline_values(ix, knots[iInd], order[iInd], u, iDerivative)
+                ix, row = bspy.Spline.bspline_values(ix, knots[iInd], order[iInd], u, iDerivative)
                 A[iRow, ix - order[iInd] : ix] = row
                 if fixEnds and (u == uValues[iInd][0] or u == uValues[iInd][-1]):
                     fixedRows.append(iRow)
@@ -640,6 +636,161 @@ def section(xytk):
     # Join the pieces together and return
     return bspy.Spline.join(mySections)
 
+def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
+    # Ensure that the ODE is properly formulated
+
+    if nLeft < 0:  raise ValueError("Invalid number of left hand boundary conditions")
+    if nRight < 0:  raise ValueError("Invalid number of right hand boundary conditions")
+    if self.nInd != 1:  raise ValueError("Initial guess must have exactly one independent variable")
+    nOrder = nLeft + nRight
+
+    # Make sure that there are full multiplicity knots on the ends
+
+    currentGuess = self.copy().clamp((0,), (0,))
+    scale = 1.0
+    for lower, upper in currentGuess.range_bounds():
+        scale = max(scale, upper - lower)
+    nDep = currentGuess.nDep
+
+    # Insert and remove knots so initial guess conforms to de Boor - Swartz setup
+
+    uniqueKnots, indices = np.unique(currentGuess.knots[0], True)
+    uniqueKnots = uniqueKnots[1 : -1]
+    indices = indices[1:]
+    knotsToAdd = []
+    knotsToRemove = []
+    for i, knot in enumerate(uniqueKnots):
+        howMany = currentGuess.order[0] - indices[i + 1] + indices[i] - nOrder
+        if howMany > 0:
+            knotsToAdd += howMany * [knot]
+        if howMany < 0:
+            knotsToRemove += [[knot, abs(howMany)]]
+    currentGuess = currentGuess.insert_knots([knotsToAdd])
+    for [knot, howMany] in knotsToRemove:
+        ix = np.searchsorted(currentGuess.knots[0], knot, side = 'left')
+        for iy in range(howMany):
+            currentGuess, residual = currentGuess.remove_knot(ix)
+    previousGuess = 0.0 * currentGuess
+
+    # Use the Gauss Legendre points as the collocation points
+
+    gaussNodes, weights = _legendre_polynomial_zeros(currentGuess.order[0] - nOrder)
+    refine = True
+    while refine:
+        collocationPoints = []
+        for knot0, knot1 in zip(currentGuess.knots[0][:-1], currentGuess.knots[0][1:]):
+            if knot0 < knot1:
+                for gaussNode in gaussNodes:
+                    alpha = 0.5 * (1.0 - gaussNode)
+                    collocationPoints.append((1.0 - alpha) * knot0 + alpha * knot1)
+                    if abs(gaussNode) > 1.0e-5:
+                        collocationPoints.append(alpha * knot0 + (1.0 - alpha) * knot1)
+        collocationPoints = np.sort(collocationPoints)
+        n = nDep * currentGuess.nCoef[0]
+        bestGuess = np.reshape(currentGuess.coefs.T, (n,))
+
+    # Construct the collocation matrix and the residual vector
+
+        done = False
+        continuation = 1.0
+        bestContinuation = 0.0
+        continuationBest = bestGuess
+        previous = 0.5 * np.finfo(bestGuess[0]).max
+        iteration = 0
+        while True:
+            iteration += 1
+            collocationMatrix = np.zeros((n, n))
+            residuals = np.array([])
+            workingSpline = bspy.Spline(1, nDep, currentGuess.order, currentGuess.nCoef,
+                                        currentGuess.knots, np.reshape(bestGuess, (currentGuess.nCoef[0], nDep)).T)
+            for iCondition in range(nLeft):
+                residuals = np.append(residuals, np.zeros((nDep,)))
+                for iColumn in range(nDep):
+                    iRowColumn = iCondition * nDep + iColumn
+                    collocationMatrix[iRowColumn, iRowColumn] = 1.0
+            for iPoint, t in enumerate(collocationPoints):
+                uData = np.array([workingSpline.derivative([i], t) for i in range(nOrder)]).T
+                F, F_u = FAndF_u(t, uData, *args)
+                residuals = np.append(residuals, workingSpline.derivative([nOrder], t) - continuation * F)
+                ix = None
+                bValues = np.array([])
+                for iDerivative in range(nOrder + 1):
+                    ix, iValues = bspy.Spline.bspline_values(ix, workingSpline.knots[0], workingSpline.order[0],
+                                                             t, derivativeOrder = iDerivative)
+                    bValues = np.append(bValues, iValues)
+                bValues = np.reshape(bValues, (nOrder + 1, workingSpline.order[0]))
+                for iDep in range(nDep):
+                    iRow = (nLeft + iPoint) * nDep + iDep
+                    indices = slice((ix - workingSpline.order[0]) * nDep + iDep, ix * nDep + iDep, nDep)
+                    collocationMatrix[iRow, indices] -= bValues[nOrder]
+                    for iF_uRow in range(nDep):
+                        indices = slice((ix - workingSpline.order[0]) * nDep + iF_uRow, ix * nDep + iF_uRow, nDep)
+                        for iF_uColumn in range(nOrder):
+                            collocationMatrix[iRow, indices] += continuation * F_u[iDep, iF_uRow, iF_uColumn] * bValues[iF_uColumn]
+            for iCondition in range(nRight):
+                residuals = np.append(residuals, np.zeros((nDep,)))
+                for iColumn in range(nDep):
+                    iRowColumn = iCondition * nDep + iColumn + 1
+                    collocationMatrix[-iRowColumn, -iRowColumn] = 1.0
+
+    # Solve the collocation linear system
+
+            update = np.linalg.solve(collocationMatrix, residuals)
+            updateSize = np.linalg.norm(update)
+            if updateSize > 1.25 * previous and iteration >= 4:
+                continuation = 0.5 * (continuation + bestContinuation)
+                bestGuess = continuationBest
+                if continuation - bestContinuation < 0.01:
+                    break
+                previous = 0.5 * np.finfo(bestGuess[0]).max
+                iteration = 0
+                continue
+            bestGuess += update
+            previous = updateSize
+            if done or iteration > 50:
+                break
+
+    # Check to see if we're almost done
+
+            if updateSize < math.sqrt(n) * scale * math.sqrt(np.finfo(update.dtype).eps):
+                if continuation < 1.0:
+                    bestContinuation = continuation
+                    continuationBest = bestGuess
+                    continuation = min(1.0, 1.2 * continuation)
+                    previous = 0.5 * np.finfo(bestGuess[0]).max
+                    iteration = 0
+                else:
+                    done = True
+    
+    # Is it time to give up?
+
+        if (not done or continuation < 1.0) and n > 1000:
+            raise RuntimeError("Can't find solution with given initial guess")
+
+    # Estimate the error
+
+        currentGuess = bspy.Spline(1, nDep, currentGuess.order, currentGuess.nCoef, currentGuess.knots,
+                                   np.reshape(bestGuess, (currentGuess.nCoef[0], nDep)).T)
+        errorRange = (previousGuess - currentGuess).range_bounds()
+        refine = False
+        for lower, upper in errorRange:
+            if upper - lower > 2.0 * scale * tolerance:
+                refine = True
+
+    # Insert new knots if refinement is needed
+
+        if refine:
+            knotsToAdd = []
+            for knot0, knot1 in zip(currentGuess.knots[0][:-1], currentGuess.knots[0][1:]):
+                if knot0 < knot1:
+                    knotsToAdd += (currentGuess.order[0] - nOrder) * [0.5 * (knot0 + knot1)]
+            previousGuess = currentGuess
+            currentGuess = currentGuess.insert_knots([knotsToAdd])
+
+    # Simplify the result and return
+
+    return currentGuess.remove_knots(0.1 * scale * tolerance)
+    
 def sphere(radius, tolerance = None):
     if radius <= 0.0:  raise ValueError("Radius must be positive")
     if tolerance == None:
