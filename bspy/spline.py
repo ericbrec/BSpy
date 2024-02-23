@@ -178,31 +178,6 @@ class Spline:
             indMap = [(mapping, mapping) if np.isscalar(mapping) else mapping for mapping in indMap]
         return bspy._spline_operations.add(self, other, indMap)
 
-    def blossom(self, uvw):
-        """
-        Compute the blossom of the spline at given parameter values.
-
-        Parameters
-        ----------
-        uvwValues : `iterable`
-            An iterable of length `nInd` that specifies the degree-sized vectors of blossom parameters for each independent variable.
-
-        Returns
-        -------
-        value : `numpy.array`
-            The value of the spline's blossom at the given blossom parameters.
-
-        See Also
-        --------
-        `evaluate` : Compute the value of the spline at a given parameter value.
-
-        Notes
-        -----
-        Evaluates the blossom based on blossoming algorithm 1 found in Goldman, Ronald N. "Blossoming and knot insertion algorithms for B-spline curves." 
-        Computer Aided Geometric Design 7, no. 1-4 (1990): 69-81.
-        """
-        return bspy._spline_evaluation.blossom(self, uvw)
-
     @staticmethod
     def bspline_values(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs = False):
         """

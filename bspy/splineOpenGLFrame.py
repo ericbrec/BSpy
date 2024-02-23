@@ -6,12 +6,11 @@ try:
     from pyopengltk import OpenGLFrame
 except ImportError:
     from tkinter import Frame as OpenGLFrame
-from bspy import DrawableSpline
-from bspy.drawableSpline import _set_color
+from bspy import Spline
 
 class SplineOpenGLFrame(OpenGLFrame):
     """
-    A tkinter `OpenGLFrame` with shaders to display a `DrawableSpline`.
+    A tkinter `OpenGLFrame` with shaders to display a `Spline`.
     """
 
     ROTATE = 1
@@ -23,6 +22,24 @@ class SplineOpenGLFrame(OpenGLFrame):
 
     MsPerFrame = 50 # Update every 20th of a second
     """Milliseconds per frame when animating or flying."""
+
+    maxOrder = 9
+    """Maximum order for drawable splines."""
+    maxCoefficients = 120
+    """Maximum number of coefficients for drawable splines."""
+    maxKnots = maxCoefficients + maxOrder
+    """Maximum number of knots for drawable splines."""
+    _maxFloats = 4 + 2 * maxKnots + 4 * maxCoefficients * maxCoefficients
+    """Maximum total number of floats for drawable splines."""
+
+    HULL = (1 << 0)
+    """Option to draw the convex hull of the spline (the coefficients). Off by default."""
+    SHADED = (1 << 1)
+    """Option to draw the spline shaded (only useful for nInd >= 2). On by default."""
+    BOUNDARY = (1 << 2)
+    """Option to draw the boundary of the spline in the line color (only useful for nInd >= 2). On by default."""
+    ISOPARMS = (1 << 3)
+    """Option to draw the lines of constant knot values of the spline in the line color (only useful for nInd >= 2). Off by default."""
 
     computeBSplineCode = """
         void ComputeBSpline(in int offset, in int order, in int n, in int knot, in float u, 
@@ -967,6 +984,68 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.bind("<MouseWheel>", self.MouseWheel)
         self.bind("<Unmap>", self.Unmap)
 
+    @staticmethod
+    def compute_color_vector(r, g=None, b=None, a=None):
+        """
+        Return an float32 array with the specified color.
+
+        Parameters
+        ----------
+        r : `float`, `int` or array-like of floats or ints
+            The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).
+        
+        g: `float` or `int`
+            The green value [0, 1] as a float or [0, 255] as an int.
+        
+        b: `float` or `int`
+            The blue value [0, 1] as a float or [0, 255] as an int.
+        
+        a: `float`, `int`, or None
+            The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.
+
+        Returns
+        -------
+        color : `numpy.array`
+            The specified color as an array of 4 float32 values between 0 and 1.
+        """
+        if isinstance(r, (int, np.integer)):
+            red = float(r) / 255.0
+            green = red
+            blue = red
+            alpha = 1.0
+        elif np.isscalar(r):
+            red = r
+            green = red
+            blue = red
+            alpha = 1.0
+        elif isinstance(r[0], (int, np.integer)):
+            red = float(r[0]) / 255.0
+            green = float(r[1]) / 255.0
+            blue = float(r[2]) / 255.0
+            alpha = float(r[3]) / 255.0 if len(r) >= 4 else 1.0
+        else:
+            red = r[0]
+            green = r[1]
+            blue = r[2]
+            alpha = r[3] if len(r) >= 4 else 1.0
+
+        if isinstance(g, (int, np.integer)):
+            green = float(g) / 255.0
+        elif np.isscalar(g):
+            green = g
+
+        if isinstance(b, (int, np.integer)):
+            blue = float(b) / 255.0
+        elif np.isscalar(b):
+            blue = b
+
+        if isinstance(a, (int, np.integer)):
+            alpha = float(a) / 255.0
+        elif np.isscalar(a):
+            alpha = a
+        
+        return np.array((red, green, blue, alpha), np.float32)
+
     def SetDefaultView(self, eye, center, up):
         """
         Set the default view values used when resetting the view.
@@ -994,7 +1073,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         a: `float`, `int`, or None
             The alpha value [0, 1] as a float or [0, 255] as an int. If `None` then alpha is set to 1.
         """
-        self.backgroundColor = _set_color(r, g, b, a)
+        self.backgroundColor = self.compute_color_vector(r, g, b, a)
         if self.glInitialized:
             glClearColor(self.backgroundColor[0], self.backgroundColor[1], self.backgroundColor[2], self.backgroundColor[3])
     
@@ -1041,7 +1120,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         glBindBuffer(GL_TEXTURE_BUFFER, self.splineDataBuffer)
         glBindTexture(GL_TEXTURE_BUFFER, self.splineTextureBuffer)
         glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, self.splineDataBuffer)
-        glBufferData(GL_TEXTURE_BUFFER, 4 * DrawableSpline._maxFloats, None, GL_STATIC_READ)
+        glBufferData(GL_TEXTURE_BUFFER, 4 * self._maxFloats, None, GL_STATIC_READ)
 
         # Set light direction
         self.lightDirection = np.array((0.63960218, 0.63960218, 0.42640144), np.float32)
@@ -1053,8 +1132,8 @@ class SplineOpenGLFrame(OpenGLFrame):
         glBufferData(GL_ARRAY_BUFFER, 4 * 4, np.array([0,0,0,0], np.float32), GL_STATIC_DRAW)
 
         # Compile shaders and link programs
-        self.computeBSplineCode = self.computeBSplineCode.format(maxOrder=DrawableSpline.maxOrder)
-        self.computeSurfaceSamplesCode = self.computeSurfaceSamplesCode.format(maxOrder=DrawableSpline.maxOrder)
+        self.computeBSplineCode = self.computeBSplineCode.format(maxOrder=self.maxOrder)
+        self.computeSurfaceSamplesCode = self.computeSurfaceSamplesCode.format(maxOrder=self.maxOrder)
         try:
             # Must create CurveProgram first, because it checks and potentially resets tessellationEnabled flag.
             self.curveProgram = CurveProgram(self)
@@ -1290,6 +1369,345 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.eye = self.anchorPosition + self.anchorDistance * self.look
         self.Update()
 
+    @staticmethod
+    def make_drawable(spline):
+        """
+        Ensure a `Spline` can be drawn in a `SplineOpenGLFrame`. Converts 1D splines into 3D drawable curves, 
+        2D splines into drawable surfaces (y-axis hold amplitude), and 3D splines into drawable solids.
+
+        Spline surfaces and solids with more than 3 dependent variables will have their added dimensions rendered 
+        as colors (up to 6 dependent variables are supported).
+        """
+        if not(isinstance(spline, Spline)): raise ValueError("Invalid spline")
+        if spline.nInd > 3: raise ValueError("Spline must have no more than 3 independent variables")
+        if spline.nDep > 6: raise ValueError("Spline must have no more than 6 dependent variables")
+
+        if not hasattr(spline, "cache"):
+            spline.cache = {}
+        
+        if not "knots32" in spline.cache:
+            knotList = [knots.astype(np.float32, copy=False) for knots in spline.knots]
+            spline.cache["knots32"] = knotList  # Shaders expect float32 knots
+
+        if not "coefs32" in spline.cache:
+            nDep = 3
+            if spline.nInd >= 2 and spline.nDep > 3:
+                nDep = 4 if spline.nDep == 4 else 6 # No nDep of 5
+            
+            coefs = np.zeros((nDep, *spline.nCoef), np.float32)
+            if spline.nInd == 1:
+                if spline.nDep == 1:
+                    graph = spline.graph()
+                    coefs[0] = graph.coefs[0]
+                    coefs[1] = graph.coefs[1]
+                else:
+                    coefs[:min(spline.nDep, 3)] = spline.coefs[:min(spline.nDep, 3)]
+            elif spline.nInd == 2:
+                if spline.nDep == 1:
+                    graph = spline.graph()
+                    coefs[0] = graph.coefs[0]
+                    coefs[1] = graph.coefs[2]
+                    coefs[2] = graph.coefs[1]
+                else:
+                    coefs[:spline.nDep] = spline.coefs
+                    # For dimensions above three, rescale dependent variables to [0, 1].
+                    for i in range(3, spline.nDep):
+                        minCoef = coefs[i].min()
+                        rangeCoef = coefs[i].max() - minCoef
+                        if rangeCoef > 1.0e-8:
+                            coefs[i] = (coefs[i] - minCoef) / rangeCoef
+                        else:
+                            coefs[i] = max(0.0, min(1.0, minCoef))
+            elif spline.nInd == 3:
+                if spline.nDep == 1:
+                    graph = spline.graph()
+                    coefs[0] = graph.coefs[0]
+                    coefs[1] = graph.coefs[3]
+                    coefs[2] = graph.coefs[1]
+                    coefs[3] = graph.coefs[2]
+                else:
+                    coefs[:spline.nDep] = spline.coefs
+                    # For dimensions above three, rescale dependent variables to [0, 1].
+                    for i in range(3, spline.nDep):
+                        minCoef = coefs[i].min()
+                        rangeCoef = coefs[i].max() - minCoef
+                        if rangeCoef > 1.0e-8:
+                            coefs[i] = (coefs[i] - minCoef) / rangeCoef
+                        else:
+                            coefs[i] = max(0.0, min(1.0, minCoef))
+            else:
+                raise ValueError("Can't convert to drawable spline.")
+        
+            spline.cache["coefs32"] = coefs.T # Shaders expect transpose of float32 coefs
+    
+        if not "fillColor" in spline.metadata:
+            spline.metadata["fillColor"] = np.array((0.0, 1.0, 0.0, 1.0), np.float32)
+        if not "lineColor" in spline.metadata:
+            spline.metadata["lineColor"] = np.array((0.0, 0.0, 0.0, 1.0) if spline.nInd > 1 else (1.0, 1.0, 1.0, 1.0), np.float32)
+        if not "options" in spline.metadata:
+            spline.metadata["options"] = SplineOpenGLFrame.SHADED | SplineOpenGLFrame.BOUNDARY
+        if not "animate" in spline.metadata:
+            spline.metadata["animate"] = None
+
+    def _DrawPoints(self, spline, drawCoefficients):
+        """
+        Draw spline points for an nInd == 0 or order == 1 spline within a `SplineOpenGLFrame`. The self will call this method for you.
+        """
+        glColor4fv(spline.metadata["lineColor"])
+        glBegin(GL_POINTS)
+        if spline.nInd == 0:
+            glVertex3fv(drawCoefficients)
+        else:
+            for point in drawCoefficients:
+                glVertex3fv(point)
+        glEnd()
+
+    def _DrawCurve(self, spline, drawCoefficients):
+        """
+        Draw a spline curve (nInd == 1) within a `SplineOpenGLFrame`. The self will call this method for you.
+        """
+        if spline.metadata["options"] & self.HULL:
+            glColor3f(0.0, 0.0, 1.0)
+            glBegin(GL_LINE_STRIP)
+            for point in drawCoefficients:
+                glVertex3f(point[0], point[1], point[2])
+            glEnd()
+
+        program = self.curveProgram
+        glUseProgram(program.curveProgram)
+        glUniform4fv(program.uCurveLineColor, 1, spline.metadata["lineColor"])
+        glBindBuffer(GL_TEXTURE_BUFFER, self.splineDataBuffer)
+        offset = 0
+        size = 4 * 2
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, np.array((spline.order[0], spline.nCoef[0]), np.float32))
+        offset += size
+        knots = spline.cache["knots32"]
+        size = 4 * len(knots[0])
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, knots[0])
+        offset += size
+        size = 3 * 4 * spline.nCoef[0]
+        drawCoefficients = drawCoefficients[..., :3]
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
+        glEnableVertexAttribArray(program.aCurveParameters)
+        if self.tessellationEnabled:
+            glPatchParameteri(GL_PATCH_VERTICES, 1)
+            glDrawArraysInstanced(GL_PATCHES, 0, 1, spline.nCoef[0] - spline.order[0] + 1)
+        else:
+            glDrawArraysInstanced(GL_POINTS, 0, 1, spline.nCoef[0] - spline.order[0] + 1)
+            glFlush() # Old graphics card
+        glDisableVertexAttribArray(program.aCurveParameters)
+        glUseProgram(0)
+
+    @staticmethod
+    def ConvertRGBToHSV(r, g, b, a):
+        # Taken from http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
+        K = 0.0
+        if g < b:
+            tmp = g
+            g = b
+            b = tmp
+            K = -1.0
+        if r < g:
+            tmp = r
+            r = g
+            g = tmp
+            K = -2.0 / 6.0 - K
+        chroma = r - min(g, b)
+        return np.array((abs(K + (g - b) / (6.0 * chroma + 1e-20)), chroma / (r + 1e-20), r, a), np.float32)
+    
+    def _DrawSurface(self, spline, drawCoefficients):
+        """
+        Draw a spline surface (nInd == 2) within a `SplineOpenGLFrame`.
+        """
+        if spline.metadata["options"] & self.HULL:
+            glColor3f(0.0, 0.0, 1.0)
+            for pointList in drawCoefficients:
+                glBegin(GL_LINE_STRIP)
+                for point in pointList:
+                    glVertex3f(point[0], point[1], point[2])
+                glEnd()
+
+        fillColor = spline.metadata["fillColor"]
+        if spline.nDep <= 3:
+            nDep = 3
+            program = self.surface3Program
+        elif spline.nDep == 4:
+            nDep = 4
+            program = self.surface4Program
+            fillColor = self.ConvertRGBToHSV(fillColor[0], fillColor[1], fillColor[2], fillColor[3])
+        elif spline.nDep <= 6:
+            nDep = 6
+            program = self.surface6Program
+        else:
+            raise ValueError("Can't draw surface.")
+        
+        useBlending = fillColor[3] < 1.0
+        if useBlending:
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+            glEnable( GL_BLEND )
+            glDisable( GL_DEPTH_TEST )
+
+        glUseProgram(program.surfaceProgram)
+        glUniform4fv(program.uSurfaceFillColor, 1, fillColor)
+        glUniform4fv(program.uSurfaceLineColor, 1, spline.metadata["lineColor"])
+        glUniform1i(program.uSurfaceOptions, spline.metadata["options"])
+        glBindBuffer(GL_TEXTURE_BUFFER, self.splineDataBuffer)
+        offset = 0
+        size = 4 * 4
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, np.array((spline.order[0], spline.order[1], spline.nCoef[0], spline.nCoef[1]), np.float32))
+        offset += size
+        knots = spline.cache["knots32"]
+        size = 4 * len(knots[0])
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, knots[0])
+        offset += size
+        size = 4 * len(knots[1])
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, knots[1])
+        offset += size
+        size = nDep * 4 * spline.nCoef[0] * spline.nCoef[1]
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
+        glEnableVertexAttribArray(program.aSurfaceParameters)
+        if self.tessellationEnabled:
+            glPatchParameteri(GL_PATCH_VERTICES, 1)
+            glDrawArraysInstanced(GL_PATCHES, 0, 1, (spline.nCoef[0] - spline.order[0] + 1) * (spline.nCoef[1] - spline.order[1] + 1))
+        else:
+            glDrawArraysInstanced(GL_POINTS, 0, 1, (spline.nCoef[0] - spline.order[0] + 1) * (spline.nCoef[1] - spline.order[1] + 1))
+            glFlush() # Old graphics card
+        glDisableVertexAttribArray(program.aSurfaceParameters)
+        glUseProgram(0)
+        if useBlending:
+            glDisable( GL_BLEND )
+            glEnable( GL_DEPTH_TEST )
+    
+    def _DrawSolid(self, spline, drawCoefficients):
+        """
+        Draw a spline solid (nInd == 3) within a `SplineOpenGLFrame`.
+        """
+        if spline.metadata["options"] & self.HULL:
+            glColor3f(0.0, 0.0, 1.0)
+            for pointSet in drawCoefficients:
+                for pointList in pointSet:
+                    glBegin(GL_LINE_STRIP)
+                    for point in pointList:
+                        glVertex3f(point[0], point[1], point[2])
+                    glEnd()
+
+        fillColor = spline.metadata["fillColor"].copy()
+        lineColor = spline.metadata["lineColor"].copy()
+        if spline.nDep <= 3:
+            nDep = 3
+            program = self.surface3Program
+        elif spline.nDep == 4:
+            nDep = 4
+            program = self.surface4Program
+            fillColor = self.ConvertRGBToHSV(fillColor[0], fillColor[1], fillColor[2], fillColor[3])
+        elif spline.nDep <= 6:
+            nDep = 6
+            program = self.surface6Program
+        else:
+            raise ValueError("Can't draw surface.")
+        fillColor[3] *= 0.5
+        lineColor[3] *= 0.5
+        knots = spline.cache["knots32"]
+
+        def _DrawBoundarySurface(axis, index):
+            fullSlice = slice(None)
+            if axis == 0:
+                i1 = 1
+                i2 = 2
+                coefSlice = (fullSlice, fullSlice, index, fullSlice)
+            elif axis == 1:
+                i1 = 0
+                i2 = 2
+                coefSlice = (fullSlice, index, fullSlice, fullSlice)
+            else:
+                i1 = 0
+                i2 = 1
+                coefSlice = (index, fullSlice, fullSlice, fullSlice)
+
+            glBindBuffer(GL_TEXTURE_BUFFER, self.splineDataBuffer)
+            offset = 0
+            size = 4 * 4
+            glBufferSubData(GL_TEXTURE_BUFFER, offset, size, np.array((spline.order[i1], spline.order[i2], spline.nCoef[i1], spline.nCoef[i2]), np.float32))
+            offset += size
+            size = 4 * len(knots[i1])
+            glBufferSubData(GL_TEXTURE_BUFFER, offset, size, knots[i1])
+            offset += size
+            size = 4 * len(knots[i2])
+            glBufferSubData(GL_TEXTURE_BUFFER, offset, size, knots[i2])
+            offset += size
+            size = nDep * 4 * spline.nCoef[i1] * spline.nCoef[i2]
+            glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients[coefSlice])
+            glEnableVertexAttribArray(program.aSurfaceParameters)
+            if self.tessellationEnabled:
+                glPatchParameteri(GL_PATCH_VERTICES, 1)
+                glDrawArraysInstanced(GL_PATCHES, 0, 1, (spline.nCoef[i1] - spline.order[i1] + 1) * (spline.nCoef[i2] - spline.order[i2] + 1))
+            else:
+                glDrawArraysInstanced(GL_POINTS, 0, 1, (spline.nCoef[i1] - spline.order[i1] + 1) * (spline.nCoef[i2] - spline.order[i2] + 1))
+                glFlush() # Old graphics card
+            glDisableVertexAttribArray(program.aSurfaceParameters)
+
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glEnable( GL_BLEND )
+        glDisable( GL_DEPTH_TEST )
+        glUseProgram(program.surfaceProgram)
+        glUniform4fv(program.uSurfaceFillColor, 1, fillColor)
+        glUniform4fv(program.uSurfaceLineColor, 1, lineColor)
+        glUniform1i(program.uSurfaceOptions, spline.metadata["options"])
+
+        _DrawBoundarySurface(0, 0)
+        _DrawBoundarySurface(0, -1)
+        _DrawBoundarySurface(1, 0)
+        _DrawBoundarySurface(1, -1)
+        _DrawBoundarySurface(2, 0)
+        _DrawBoundarySurface(2, -1)
+
+        glUseProgram(0)
+        glDisable( GL_BLEND )
+        glEnable( GL_DEPTH_TEST )
+
+    def DrawSpline(self, spline, transform):
+        """
+        Draw a spline within a `SplineOpenGLFrame`.
+        """
+        # Retrieve transposed float32 coefficients.
+        coefs = spline.cache["coefs32"]
+
+        # Contract spline if it's animating.
+        nInd = spline.metadata["animate"]
+        if nInd is not None:
+            # Contraction value is set to cycle every 10 seconds (10000 ms).
+            u1 = spline.knots[nInd][spline.order[nInd] - 1]
+            u2 = spline.knots[nInd][spline.nCoef[nInd]]
+            u = u1 + 0.49999 * (u2 - u1) * (1.0 - np.cos(2.0 * np.pi * self.frameCount * self.MsPerFrame / 10000))
+            # Contract spline.
+            knots = spline.cache["knots32"]
+            ix = np.searchsorted(knots[nInd], u, 'right')
+            ix = min(ix, spline.nCoef[nInd])
+            bValues = spline.bspline_values(ix, knots[nInd], spline.order[nInd], u)
+            coefs = np.moveaxis(coefs, spline.nInd - nInd - 1, -1) # Account for transpose
+            coefs = coefs[..., ix - spline.order[nInd]:ix] @ bValues
+            knots = [knots[i] for i in range(spline.nInd) if i != nInd]
+            spline = type(spline)(spline.nInd - 1, coefs.shape[-1], 
+                [spline.order[i] for i in range(spline.nInd) if i != nInd],
+                [spline.nCoef[i] for i in range(spline.nInd) if i != nInd],
+                knots, coefs.T, spline.metadata)
+            spline.cache = {"knots32": knots, "coefs32": coefs}
+
+        # Transform coefs by view transform.
+        drawCoefficients = np.empty(coefs.shape, np.float32)
+        drawCoefficients[..., :3] = coefs[..., :3] @ transform[:3,:3] + transform[3,:3]
+        drawCoefficients[..., 3:] = coefs[..., 3:]
+
+        # Draw spline.
+        if spline.nInd == 0 or spline.order[0] == 1:
+            self._DrawPoints(spline, drawCoefficients)
+        elif spline.nInd == 1:
+            self._DrawCurve(spline, drawCoefficients)
+        elif spline.nInd == 2:
+            self._DrawSurface(spline, drawCoefficients)
+        elif spline.nInd == 3:
+            self._DrawSolid(spline, drawCoefficients)
+
 class CurveProgram:
     """ Compile curve program """
     def __init__(self, frame):
@@ -1306,7 +1724,7 @@ class CurveProgram:
                 curveTCShader, 
                 shaders.compileShader(frame.curveTEShaderCode.format(
                     computeBSplineCode=frame.computeBSplineCode,
-                    maxOrder=DrawableSpline.maxOrder), GL_TESS_EVALUATION_SHADER), 
+                    maxOrder=frame.maxOrder), GL_TESS_EVALUATION_SHADER), 
                 shaders.compileShader(frame.curveFragmentShaderCode, GL_FRAGMENT_SHADER))
         else:
             self.curveProgram = shaders.compileProgram(
@@ -1315,7 +1733,7 @@ class CurveProgram:
                     computeSampleRateCode=frame.computeSampleRateCode,
                     computeCurveSamplesCode=frame.computeCurveSamplesCode,
                     computeBSplineCode=frame.computeBSplineCode,
-                    maxOrder=DrawableSpline.maxOrder), GL_GEOMETRY_SHADER), 
+                    maxOrder=frame.maxOrder), GL_GEOMETRY_SHADER), 
                 shaders.compileShader(frame.curveFragmentShaderCode, GL_FRAGMENT_SHADER))
 
         glUseProgram(self.curveProgram)
@@ -1353,7 +1771,7 @@ class SurfaceProgram:
                     initializeSplineColor=initializeSplineColor,
                     computeSplineColor=computeSplineColor,
                     postProcessSplineColor=postProcessSplineColor,
-                    maxOrder=DrawableSpline.maxOrder), GL_TESS_EVALUATION_SHADER), 
+                    maxOrder=frame.maxOrder), GL_TESS_EVALUATION_SHADER), 
                 shaders.compileShader(frame.surfaceFragmentShaderCode, GL_FRAGMENT_SHADER),
                 validate = False)
         else:
@@ -1368,7 +1786,7 @@ class SurfaceProgram:
                     initializeSplineColor=initializeSplineColor,
                     computeSplineColor=computeSplineColor,
                     postProcessSplineColor=postProcessSplineColor,
-                    maxOrder=DrawableSpline.maxOrder), GL_GEOMETRY_SHADER), 
+                    maxOrder=frame.maxOrder), GL_GEOMETRY_SHADER), 
                 shaders.compileShader(frame.surfaceSimpleFragmentShaderCode, GL_FRAGMENT_SHADER))
 
         glUseProgram(self.surfaceProgram)

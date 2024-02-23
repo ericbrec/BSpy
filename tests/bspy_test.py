@@ -581,17 +581,6 @@ def test_add():
             maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
     assert maxError <= np.finfo(float).eps
 
-def test_blossom():
-    maxError = 0.0
-    for [u, x, y] in truthCurve:
-        [xTest, yTest] = myCurve.blossom([(myCurve.order[0] - 1) * [u]])
-        maxError = max(maxError, np.sqrt((xTest - x) ** 2 + (yTest - y) ** 2))
-    assert maxError <= np.finfo(float).eps
-    for i in range(myCurve.nCoef[0]):
-        coef = myCurve.blossom([myCurve.knots[0][i+1:i+myCurve.order[0]]])
-        maxError = max(maxError, np.linalg.norm(myCurve.coefs[:,i] - coef))
-    assert maxError <= np.finfo(float).eps
-
 def test_circular_arc():
     maxError = 0.0
     radius = 3.0
@@ -623,29 +612,6 @@ def test_contours():
             uvw = contour((t,))
             maxError = max(maxError, np.linalg.norm(spline(uvw)))
     assert maxError <= 0.055
-
-    return # Comment this line to run the following lengthy test
-
-    maxError = 0.0
-    F = lambda u , v : (u ** 2 + (v - 3/4) ** 2 - 1/25) * \
-        ((u - 2/5) ** 2 + (v - 3/5) ** 2 - 1/25) * \
-        (u ** 2 + (v - 3/2) ** 2 - 25/16) * \
-        ((u - 1) ** 2 + (v - 3/10) ** 2 - 1/25)
-    order = 9
-    knots = [0.0] * order + [1.0] * order
-    nCoef = order
-    dataPoints = np.empty((1, nCoef, nCoef), float)
-    uValues = [np.linspace(0.0, 1.0, nCoef), np.linspace(0.0, 1.0, nCoef)]
-    for i, u in enumerate(uValues[0]):
-        for j, v in enumerate(uValues[1]):
-            dataPoints[0, i, j] = F(u, v)
-    spline = bspy.Spline.least_squares(uValues, dataPoints, (order, order), (knots, knots))
-    contours = spline.contours()
-    for contour in contours:
-        for t in np.linspace(0.0, 1.0, 11):
-            uvw = contour((t,))
-            maxError = max(maxError, np.linalg.norm(spline(uvw)))
-    assert maxError <= 0.05
 
 def test_contract():
     maxError = 0.0
@@ -890,46 +856,6 @@ def test_integral():
         xTest = myCurve.integral([1], [limits[0][0]], [u])[0]
         maxError = max(maxError, (xTest - x) ** 2)
     assert maxError <= np.finfo(float).eps
-
-def test_intersect():
-
-    return # Comment this line to run the following additional really lengthy test
-
-    maxError = 0.0
-    F = lambda u , v : (u ** 2 + (v - 3/4) ** 2 - 1/25) * \
-        ((u - 2/5) ** 2 + (v - 3/5) ** 2 - 1/25) * \
-        (u ** 2 + (v - 3/2) ** 2 - 25/16) * \
-        ((u - 1) ** 2 + (v - 3/10) ** 2 - 1/25)
-    order = 9
-    knots = [0.0] * order + [1.0] * order
-    nCoef = order
-    dataPoints = np.empty((3, nCoef, nCoef), float)
-    uValues = [np.linspace(0.0, 1.0, nCoef), np.linspace(0.0, 1.0, nCoef)]
-    for i, u in enumerate(uValues[0]):
-        for j, v in enumerate(uValues[1]):
-            dataPoints[0, i, j] = u
-            dataPoints[1, i, j] = v
-            dataPoints[2, i, j] = F(u, v)
-    spline = bspy.Spline.least_squares(uValues, dataPoints, (order, order), (knots, knots))
-
-    order = 4
-    knots = [0.0] * order + [1.0] * order
-    nCoef = order
-    dataPoints = np.empty((3, nCoef, nCoef), float)
-    uValues = [np.linspace(0.0, 1.0, nCoef), np.linspace(0.0, 1.0, nCoef)]
-    for i, u in enumerate(uValues[0]):
-        for j, v in enumerate(uValues[1]):
-            dataPoints[0, i, j] = 2*u - 0.5
-            dataPoints[1, i, j] = 2*v - 0.5
-            dataPoints[2, i, j] = 0.0
-    plane = bspy.Spline.least_squares(uValues, dataPoints, (order, order), (knots, knots))
-
-    contours = spline.intersect(plane)
-    for contour in contours:
-        for t in np.linspace(0.0, 1.0, 11):
-            uvst = contour((t,))
-            maxError = max(maxError, np.linalg.norm(spline(uvst[:2]) - plane(uvst[2:])))
-    assert maxError <= np.finfo(float).eps ** 0.2
 
 def test_least_squares():
     # Replicate 1D spline using its knots. Should be precise to nearly machine epsilon.

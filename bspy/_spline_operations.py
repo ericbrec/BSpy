@@ -67,19 +67,19 @@ def confine(self, range_bounds):
     degree = order - 1
     domain = spline.domain()
     unique, counts = np.unique(spline.knots[0], return_counts=True)
-    machineEpsilon = 10.0 * np.finfo(self.coefs.dtype).eps
+    machineEpsilon = np.finfo(self.coefs.dtype).eps
     epsilon = np.sqrt(machineEpsilon)
     intersections = [] # List of tuples (u, boundaryPoint, headingOutside)
 
     def addIntersection(u, headedOutside = False):
         boundaryPoint = spline(np.atleast_1d(u))
         for i in range(spline.nDep):
-            if boundaryPoint[i] < range_bounds[i][0] + machineEpsilon:
+            if boundaryPoint[i] < range_bounds[i][0]:
                 headedOutside = True if boundaryPoint[i] < range_bounds[i][0] - epsilon else headedOutside
-                boundaryPoint[i] = range_bounds[i][0] + machineEpsilon # Avoids error in spline evaluation
-            if boundaryPoint[i] > range_bounds[i][1] - machineEpsilon:
+                boundaryPoint[i] = range_bounds[i][0]
+            if boundaryPoint[i] > range_bounds[i][1]:
                 headedOutside = True if boundaryPoint[i] > range_bounds[i][1] + epsilon else headedOutside
-                boundaryPoint[i] = range_bounds[i][1] - machineEpsilon # Avoids error in spline evaluation
+                boundaryPoint[i] = range_bounds[i][1]
         intersections.append((u, boundaryPoint, headedOutside))
 
     def intersectBoundary(i, j):

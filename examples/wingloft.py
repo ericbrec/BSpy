@@ -1,8 +1,6 @@
 import math
 import numpy as np
 import bspy
-#from bspy import DrawableSpline
-#from bspy import bspyApp
 
 
 airfoilData = [[1.0, 0.00322, [-0.756, 0.655], 0.0677],
@@ -40,11 +38,11 @@ cubic = bspy.Spline(1, 2, [4], [4], [[0.0, 0.0, 0, 0, 1, 1, 1, 1]],
 cubic.metadata = dict(Name = 'cubic_curve')
 
 if __name__=='__main__':
-    app = bspy.bspyApp()
-    app.show(wingLoft)
-    app.show([[1.0, 0, 0], [0.0, 0, 1]] @ rootFoil)
-    app.show(tipFoil)
-    app.show(road)
-    app.show(controlPgon)
-    app.show(cubic)
-    app.mainloop()
+    viewer = bspy.Viewer()
+    viewer.show(wingLoft)
+    viewer.show([[1.0, 0, 0], [0.0, 0, 1]] @ rootFoil)
+    viewer.show(tipFoil)
+    viewer.show(road)
+    viewer.show(controlPgon)
+    viewer.show(cubic)
+    viewer.mainloop()

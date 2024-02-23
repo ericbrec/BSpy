@@ -267,7 +267,7 @@ def _refine_projected_polyhedron(interval):
         domain.append(xInterval)
     
     # Compute new slope, intercept, and unknowns.
-    domain = np.array(domain).T
+    domain = np.array(domain, spline.knots[0].dtype).T
     width = domain[1] - domain[0]
     newSlope = interval.slope.copy()
     newIntercept = interval.intercept.copy()
@@ -746,6 +746,7 @@ def contours(self):
                                 currentContourPoints[index] = [upperConnection] + upperHalf + [point.uvw] + lowerHalf + currentContourPoints[index][2:]
                         else: 
                             # It's an ending point on an other boundary (same steps as uv boundary).
+                            adjustment = -1
                             fullList = currentContourPoints.pop(i) + [point.uvw]
                             connection = fullList.pop(0)
                             if connection == 0:
