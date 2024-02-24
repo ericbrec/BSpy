@@ -111,34 +111,24 @@ def zeros_using_interval_newton(self):
             return mySolution
     return refine(spline, 1.0, 1.0)
 
-def _convex_hull_2D(xData, yData, epsilon = 1.0e-8, evaluationEpsilon = 1.0e-4, xInterval = None):
+def _convex_hull_2D(xData, yData, yBounds, epsilon = 1.0e-8):
     # Allow xData to be repeated for longer yData, but only if yData is a multiple.
-    if not(len(yData) % len(xData) == 0): raise ValueError("Size of xData does not divide evenly in size of yData")
+    if not(yData.shape[0] % xData.shape[0] == 0): raise ValueError("Size of xData does not divide evenly in size of yData")
 
-    # Assign p0 to the leftmost lowest point. Also compute xMin, xMax, and yMax.
-    xMin = xMax = x0 = xData[0]
-    yMax = y0 = yData[0]
-    xIter = iter(xData[1:])
-    for y in yData[1:]:
-        x = next(xIter, None)
-        if x is None:
-            xIter = iter(xData)
-            x = next(xIter)
-            
-        if y < y0 or (y == y0 and x < x0):
-            (x0, y0) = (x, y)
-        xMin = min(xMin, x)
-        xMax = max(xMax, x)
-        yMax = max(yMax, y)
+    # Assign (x0, y0) to the lowest point.
+    yMinIndex = np.argmin(yData)
+    x0 = xData[yMinIndex % xData.shape[0]]
+    y0 = yData[yMinIndex]
 
-    # Only return convex null if it contains y = 0 and x within xInterval.
-    if xInterval is not None and (y0 > evaluationEpsilon or yMax < -evaluationEpsilon or xMin > xInterval[1] or xMax < xInterval[0]):
-        return None
+    # Calculate y adjustment as needed for values close to zero
+    yAdjustment = -yBounds[0] if yBounds[0] > 0.0 else -yBounds[1] if yBounds[1] < 0.0 else 0.0
+    y0 += yAdjustment
 
     # Sort points by angle around p0.
     sortedPoints = []
     xIter = iter(xData)
     for y in yData:
+        y += yAdjustment
         x = next(xIter, None)
         if x is None:
             xIter = iter(xData)
@@ -146,7 +136,7 @@ def _convex_hull_2D(xData, yData, epsilon = 1.0e-8, evaluationEpsilon = 1.0e-4, 
         sortedPoints.append((math.atan2(y - y0, x - x0), x, y))
     sortedPoints.sort()
 
-    # Trim away points with the same angle (keep furthest point from p0), and then remove angle.
+    # Trim away points with the same angle (keep furthest point from p0), removing the angle from the list.
     trimmedPoints = [sortedPoints[0][1:]] # Ensure we keep the first point
     previousPoint = None
     previousDistance = -1.0
@@ -212,50 +202,49 @@ def _refine_projected_polyhedron(interval):
 
     # Remove dependent variables that are near zero and compute newScale.
     spline = interval.spline.copy()
-    coefs = spline.coefs
-    newScale = 0.0
-    nDep = 0
-    while nDep < len(coefs):
-        coefsMin = coefs[nDep].min() * interval.scale
-        coefsMax = coefs[nDep].max() * interval.scale
+    bounds = spline.range_bounds()
+    keepDep = []
+    for nDep, (coefsMin, coefsMax) in enumerate(bounds * interval.scale):
         if coefsMax < -epsilon or coefsMin > epsilon:
             # No roots in this interval.
             return roots, intervals
-        if -epsilon < coefsMin and coefsMax < epsilon:
-            # Near zero along this axis for entire interval.
-            coefs = np.delete(coefs, nDep, axis = 0)
-        else:
-            nDep += 1
-            newScale = max(newScale, abs(coefsMin), abs(coefsMax))
+        if coefsMin < -epsilon or coefsMax > epsilon:
+            # Dependent variable not near zero for entire interval.
+            keepDep.append(nDep)
 
-    if nDep == 0:
+    spline.nDep = len(keepDep)
+    if spline.nDep == 0:
         # Return the interval center and radius.
         roots.append((interval.intercept + 0.5 * interval.slope, 0.5 * np.linalg.norm(interval.slope)))
         return roots, intervals
 
-    # Rescale the spline to max 1.0.
-    spline.nDep = nDep
-    coefs *= interval.scale / newScale
-    spline.coefs = coefs
+    # Rescale remaining spline coefficients to max 1.0.
+    bounds = bounds[keepDep]
+    newScale = np.abs(bounds).max()
+    spline.coefs = spline.coefs[keepDep]
+    spline.coefs *= 1.0 / newScale
+    bounds *= 1.0 / newScale
+    newScale *= interval.scale
     
     # Loop through each independent variable to determine a tighter domain around roots.
     domain = []
+    coefs = spline.coefs
     for nInd, order, knots, nCoef, s in zip(range(spline.nInd), spline.order, spline.knots, spline.nCoef, interval.slope):
         # Move independent variable to the last (fastest) axis, adding 1 to account for the dependent variables.
         coefs = np.moveaxis(spline.coefs, nInd + 1, -1)
 
         # Compute the coefficients for f(x) = x for the independent variable and its knots.
         degree = order - 1
-        knotCoefs = np.empty((nCoef,), knots.dtype)
-        knotCoefs[0] = knots[1]
+        xData = np.empty((nCoef,), knots.dtype)
+        xData[0] = knots[1]
         for i in range(1, nCoef):
-            knotCoefs[i] = knotCoefs[i - 1] + (knots[i + degree] - knots[i])/degree
+            xData[i] = xData[i - 1] + (knots[i + degree] - knots[i])/degree
         
         # Loop through each dependent variable to compute the interval containing the root for this independent variable.
         xInterval = (0.0, 1.0)
-        for nDep in range(spline.nDep):
+        for yData, yBounds in zip(coefs, bounds):
             # Compute the 2D convex hull of the knot coefficients and the spline's coefficients
-            hull = _convex_hull_2D(knotCoefs, coefs[nDep].ravel(), epsilon, evaluationEpsilon, xInterval)
+            hull = _convex_hull_2D(xData, yData.ravel(), yBounds, epsilon)
             if hull is None:
                 return roots, intervals
             
