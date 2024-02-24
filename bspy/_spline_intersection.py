@@ -40,23 +40,25 @@ def zeros_using_interval_newton(self):
         (myDomain,) = scaledSpline.domain()
         intervalSize *= myDomain[1] - myDomain[0]
         functionMax *= scaleFactor
-        mySpline = scaledSpline.reparametrize([[0.0, 1.0]])
-        midPoint = 0.5
-        [functionValue] = mySpline([midPoint])
+        midPoint = 0.5 * (myDomain[0] + myDomain[1])
+        [functionValue] = scaledSpline(midPoint)
 
         # Root found
 
         if intervalSize < epsilon or abs(functionValue) * functionMax < epsilon:
             if intervalSize < epsilon ** 0.25:
-                return [0.5 * (myDomain[0] + myDomain[1])]
+                return [midPoint]
             else:
-                myZeros = refine(mySpline.trim(((0.0, midPoint - np.sqrt(epsilon)),)), intervalSize, functionMax)
-                myZeros += [0.5 * (myDomain[0] + myDomain[1])]
-                myZeros += refine(mySpline.trim(((midPoint + np.sqrt(epsilon), 1.0),)), intervalSize, functionMax)
+                mySpline = scaledSpline.reparametrize([[0.0, 1.0]])
+                myZeros = refine(mySpline.trim(((0.0, 0.5 - np.sqrt(epsilon)),)), intervalSize, functionMax)
+                myZeros.append(midPoint)
+                myZeros += refine(mySpline.trim(((0.5 + np.sqrt(epsilon), 1.0),)), intervalSize, functionMax)
                 return myZeros
 
         # Calculate Newton update
 
+        mySpline = scaledSpline.reparametrize([[0.0, 1.0]])
+        midPoint = 0.5
         (derivativeBounds,) = mySpline.differentiate().range_bounds()
         if derivativeBounds[0] == 0.0:
             derivativeBounds[0] = epsilon
