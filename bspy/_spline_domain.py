@@ -416,14 +416,9 @@ def remove_knot(self, iKnot):
     
     # Create new spline
     newNCoef = [self.nCoef[0] - 1]
-    newKnots = [list(self.knots[0][:iKnot]) + list(self.knots[0][iKnot + 1:])]
-    newCoefs = []
-    for ix in range(self.nDep):
-        oldCoefs = self.coefs[ix]
-        firstCoefs = oldCoefs[:iKnot - self.order[0] + 1]
-        lastCoefs = oldCoefs[iKnot:]
-        middleCoefs = rhs[:-1,ix]
-        newCoefs.append(list(firstCoefs) + list(middleCoefs) + list(lastCoefs))
+    newKnots = [np.delete(self.knots[0], iKnot)]
+    newCoefs = np.delete(self.coefs, iKnot - self.order[0] + 1, 1)
+    newCoefs[: , iKnot - self.order[0] + 1 : iKnot - 1] = rhs[:-1].T
     withoutKnot = type(self)(self.nInd, self.nDep, self.order, newNCoef, newKnots, newCoefs)
     return withoutKnot, abs(rhs[-1])
 
