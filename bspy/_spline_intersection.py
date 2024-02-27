@@ -536,8 +536,10 @@ def contours(self):
         if not abort:
             break # We're done!
     
-    if attempts <= 0:
-        raise ValueError("No contours. Degenerate equations.")
+    if attempts <= 0: raise ValueError("No contours. Degenerate equations.")
+
+    if not points:
+        return [] # No contours
     
     # We've got all the contour points, now we bucket them into individual contours using the algorithm 
     # from Grandine, Thomas A., and Frederick W. Klein IV. "A new approach to the surface intersection problem." 
@@ -567,6 +569,20 @@ def contours(self):
     # Next, sort the edge and turning points by panel distance (d) and then by the determinant (det)
     # (3) Take all the points found in Step (1) and Step (2) and order them by distance in the theta direction from the origin.
     points.sort()
+
+    # Extra step not in paper.
+    # Run a checksum on the points, ensuring starting and ending points balance.
+    # Start by flipping endpoints as needed, since we can miss turning points near endpoints.
+    if points[0].det < 0.0:
+        point = points[0]
+        points[0] = Point(point.d, -point.det, point.onUVBoundary, point.turningPoint, point.uvw)
+    if points[-1].det > 0.0:
+        point = points[-1]
+        points[-1] = Point(point.d, -point.det, point.onUVBoundary, point.turningPoint, point.uvw)
+    checksum = 0
+    for i, point in enumerate(points): # Ensure checksum stays non-negative front to back
+        checksum += (1 if point.det > 0 else -1) * (2 if point.turningPoint else 1)
+    if checksum != 0: raise ValueError("No contours. Inconsistent contour topology.")
 
     # Extra step not in the paper:
     # Add a panel between two consecutive open/close turning points to uniquely determine contours between them.
