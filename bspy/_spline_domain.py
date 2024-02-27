@@ -274,7 +274,7 @@ def extrapolate(self, newDomain, continuityOrder):
         # Swap dependent and independent variables back.
         dCoefs = dCoefs.swapaxes(1, ind + 2) 
 
-    return type(self)(self.nInd, self.nDep, self.order, nCoef, knots, dCoefs[0], self.metadata)
+    return type(self)(self.nInd, self.nDep, self.order, nCoef, knots, dCoefs[0], self.metadata).remove_knots()
 
 def fold(self, foldedInd):
     if not(0 <= len(foldedInd) <= self.nInd): raise ValueError("Invalid foldedInd")
