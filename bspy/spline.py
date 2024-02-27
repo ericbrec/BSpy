@@ -1452,14 +1452,24 @@ class Spline:
         """
         return bspy._spline_evaluation.range_bounds(self)
 
-    def remove_knot(self, iKnot):
+    def remove_knot(self, iKnot, nLeft = 0, nRight = 0):
         """
         Remove a single knot from a univariate spline.
         
         Parameters
         ----------
         iKnot : integer
-            index of the knot to remove from the spline
+            Index of the knot to remove from the spline
+        
+        nLeft : integer
+            Number of continuity conditions to enforce on the left end.  For example, if nLeft = 2,
+            then remove_knot will leave the function value and first derivative unchanged on the
+            left end of the domain.
+        
+        nRight : integer
+            Number of continuity conditions to enforce on the right end.  For example, if
+            nRight = 3, then remove_knot will leave the function value and first and second
+            derivative values unchanged on the right end of the domain.
         
         Returns
         -------
@@ -1476,9 +1486,9 @@ class Spline:
         -----
         Solves a simple least squares problem
         """
-        return bspy._spline_domain.remove_knot(self, iKnot)
+        return bspy._spline_domain.remove_knot(self, iKnot, nLeft, nRight)
     
-    def remove_knots(self, tolerance = 1.0e-14):
+    def remove_knots(self, tolerance = 1.0e-14, nLeft = 0, nRight = 0):
         """
         Remove interior knots from a spline.
 
@@ -1488,6 +1498,17 @@ class Spline:
             The maximum pointwise relative error permitted after removing all the knots. Knots will be
             removed until removal of the next knot would put the pointwise error above the threshold.
             The default is 1.0e-14 which is relative to the size of each of the dependent variables.
+
+        nLeft : integer
+            Number of continuity conditions to enforce on the left end.  For example, if nLeft = 2,
+            then remove_knot will leave the function value and first derivative unchanged on the
+            left end of the domain.
+        
+        nRight : integer
+            Number of continuity conditions to enforce on the right end.  For example, if
+            nRight = 3, then remove_knot will leave the function value and first and second
+            derivative values unchanged on the right end of the domain.
+        
 
         Returns
         -------
@@ -1504,7 +1525,7 @@ class Spline:
         -----
         Calls `remove_knot` repeatedly until no longer possible.
         """
-        return bspy._spline_domain.remove_knots(self, tolerance)
+        return bspy._spline_domain.remove_knots(self, tolerance, nLeft, nRight)
     
     def reparametrize(self, newDomain):
         """

@@ -1093,7 +1093,7 @@ def test_remove_knot():
     rhs = np.array([[0.3, 0.5, 0.4], [1.0, 0.0, -0.8]]).T
     newCoefs, residuals, rank, sigmas = np.linalg.lstsq(a, rhs, rcond = None)
     correctSlimmed = bspy.Spline(1, 2, [4], [4], [[0.0,0,0,0,1,1,1,1]], [[0, 0], newCoefs[0], newCoefs[1], [1, 1]])
-    attempt, residuals = myCurve.remove_knot(4)
+    attempt, residuals = myCurve.remove_knot(4, 1, 1)
     coefDiff = correctSlimmed.coefs - attempt.coefs
     assert np.linalg.norm(coefDiff) < noDiff
 
@@ -1272,9 +1272,8 @@ def test_solve_ode():
                      [900.0, 100.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]]).T
     initialGuess = bspy.Spline.least_squares(u, data)
     solution = initialGuess.solve_ode(2, 0, nBodyF, 1.0e-4, (nBody, nDim, mass))
-    assert np.linalg.norm(solution(finalTime) - [564.4440815382061, 710.6925403980654,
-                                                 -493.3322446145843, 767.9223788058102]) < 1.0e-4
-
+    assert np.linalg.norm(solution(finalTime) - [564.63236348, 711.04783803,
+                                                 -493.89709045, 766.8564859]) < 1.0e-4
 def test_sphere():
     mySphere = bspy.Spline.sphere(1.3, 1.0e-12)
     tValues = np.linspace(0.0, 1.0, 31)
