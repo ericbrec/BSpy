@@ -156,11 +156,12 @@ def normal(self, uvw, normalize=True, indices=None):
         tangentSpace[i] = self.derivative(with_respect_to, uvw)
         with_respect_to[i] = 0
     
-    # If self.nInd > self.nDep, transpose the tangent space and adjust the length of the normal.
-    nDep = self.nDep
-    if self.nInd > nDep:
-        tangentSpace = tangentSpace.T
+    # Record the larger dimension and ensure it comes first.
+    if self.nInd > self.nDep:
         nDep = self.nInd
+    else:
+        nDep = self.nDep
+        tangentSpace = tangentSpace.T
     
     # Compute the normal using cofactors (determinants of subsets of the tangent space).
     sign = 1
@@ -170,7 +171,7 @@ def normal(self, uvw, normalize=True, indices=None):
     else:
         normal = np.empty(len(indices), self.coefs.dtype)
     for i in indices:
-        normal[i] = sign * np.linalg.det(np.delete(tangentSpace, i, 1))
+        normal[i] = sign * np.linalg.det(tangentSpace[[j for j in range(nDep) if i != j]])
         sign *= -1
     
     # Normalize the result as needed.
