@@ -38,5 +38,5 @@ a set of examples, including a jupyter notebook, can be found [here](https://git
 * Changed bspyApp class name to Viewer
 * Changed bspyGraphics class name to Graphics
 * Moved DrawableSpine methods for adjusting spline appearance to Viewer (see documentation for details)
-* Changed arguments to Spline.bspline_values (see documentation for details)
+* Spline.bspline_values changed arguments (see documentation for details)
 * Changed Viewer listbox to use extended selection (shift and ctrl keys)
