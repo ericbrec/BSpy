@@ -185,8 +185,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                 # Do the same for F(x(t)).
                 x = coefsMin + (compactCoefs @ bValues) * coefsMaxMinusMin
                 FValues = F(x)
-                for FValue in FValues:
-                    FSamplesNorm = max(FSamplesNorm, abs(FValue))
+                FSamplesNorm = max(FSamplesNorm, np.linalg.norm(FValues, np.inf))
                 if previousFSamplesNorm > 0.0 and FSamplesNorm > previousFSamplesNorm * (1.0 - evaluationEpsilon):
                     break
 
@@ -251,30 +250,22 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             for rho in reversed(rhos):
                 tValues[i] = t = 0.5 * (previousKnot + newKnot - rho * (newKnot - previousKnot))
                 GSamples[i] = x = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
-                FValues = F(coefsMin + x * coefsMaxMinusMin)
-                for FValue in FValues:
-                    FSamplesNorm = max(FSamplesNorm, abs(FValue))
+                FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
                 i += 1
             for rho in rhos[0 if degree % 2 == 1 else 1:]:
                 tValues[i] = t = 0.5 * (previousKnot + newKnot + rho * (newKnot - previousKnot))
                 GSamples[i] = x = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
-                FValues = F(coefsMin + x * coefsMaxMinusMin)
-                for FValue in FValues:
-                    FSamplesNorm = max(FSamplesNorm, abs(FValue))
+                FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
                 i += 1
             for rho in reversed(rhos):
                 tValues[i] = t = 0.5 * (newKnot + knot - rho * (knot - newKnot))
                 GSamples[i] = x = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
-                FValues = F(coefsMin + x * coefsMaxMinusMin)
-                for FValue in FValues:
-                    FSamplesNorm = max(FSamplesNorm, abs(FValue))
+                FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
                 i += 1
             for rho in rhos[0 if degree % 2 == 1 else 1:]:
                 tValues[i] = t = 0.5 * (newKnot + knot + rho * (knot - newKnot))
                 GSamples[i] = x = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
-                FValues = F(coefsMin + x * coefsMaxMinusMin)
-                for FValue in FValues:
-                    FSamplesNorm = max(FSamplesNorm, abs(FValue))
+                FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
                 i += 1
             
             newKnots += [newKnot] * (order - 2) # C1 continuity
