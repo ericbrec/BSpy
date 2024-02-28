@@ -229,18 +229,16 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                     coefs[:, 1:-1] += coefDelta # Don't update endpoints
                 break
 
-        # Newton steps are done. Now check if we need to subdivide.
-        # TODO: This would be FSamplesNorm / dHCoefs norm, but dHCoefs was divided by FSamplesNorm earlier.
-        if FSamplesNorm / np.linalg.norm(dHCoefs, np.inf) < epsilon:
-            break # We're done!
-        
-        # We need to subdivide, so build new knots, tValues, and GSamples arrays.
-        nCoef = 2 * (nCoef - 1)
-        nUnknownCoefs = nCoef - 2
+        # Newton steps are done. Now, check if we need to subdivide.
+        # We do this by building new subdivided knots, tValues, and GSamples (x(tValues)).
+        # If F(GSamples) is close enough to zero, we're done.
+        # Otherwise, re-run Newton's method using the new knots, tValues, and GSamples.
+        nUnknownCoefs = 2 * (nCoef - 2)
         tValues = np.empty(nUnknownCoefs, contourDtype)
         GSamples = np.empty((nUnknownCoefs, nDep), contourDtype)
         previousKnot = knots[degree]
         newKnots = [previousKnot] * order
+        FSamplesNorm = 0.0
         i = 0
         for ix in range(order, len(knots) - degree, order - 2):
             knot = knots[ix]
@@ -252,26 +250,43 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             # Place tValues at Gauss points for the intervals [previousKnot, newKnot] and [newKnot, knot].
             for rho in reversed(rhos):
                 tValues[i] = t = 0.5 * (previousKnot + newKnot - rho * (newKnot - previousKnot))
-                GSamples[i] = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
+                GSamples[i] = x = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
+                FValues = F(coefsMin + x * coefsMaxMinusMin)
+                for FValue in FValues:
+                    FSamplesNorm = max(FSamplesNorm, abs(FValue))
                 i += 1
             for rho in rhos[0 if degree % 2 == 1 else 1:]:
                 tValues[i] = t = 0.5 * (previousKnot + newKnot + rho * (newKnot - previousKnot))
-                GSamples[i] = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
+                GSamples[i] = x = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
+                FValues = F(coefsMin + x * coefsMaxMinusMin)
+                for FValue in FValues:
+                    FSamplesNorm = max(FSamplesNorm, abs(FValue))
                 i += 1
             for rho in reversed(rhos):
                 tValues[i] = t = 0.5 * (newKnot + knot - rho * (knot - newKnot))
-                GSamples[i] = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
+                GSamples[i] = x = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
+                FValues = F(coefsMin + x * coefsMaxMinusMin)
+                for FValue in FValues:
+                    FSamplesNorm = max(FSamplesNorm, abs(FValue))
                 i += 1
             for rho in rhos[0 if degree % 2 == 1 else 1:]:
                 tValues[i] = t = 0.5 * (newKnot + knot + rho * (knot - newKnot))
-                GSamples[i] = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
+                GSamples[i] = x = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
+                FValues = F(coefsMin + x * coefsMaxMinusMin)
+                for FValue in FValues:
+                    FSamplesNorm = max(FSamplesNorm, abs(FValue))
                 i += 1
             
             newKnots += [newKnot] * (order - 2) # C1 continuity
             newKnots += [knot] * (order - 2) # C1 continuity
             previousKnot = knot
         
-        # Update knots array.
+        # Test if F(GSamples) is close enough to zero.
+        if FSamplesNorm / np.linalg.norm(dHCoefs, np.inf) < epsilon:
+            break # We're done! Exit subdivision loop and return x(t).
+
+        # Otherwise, update nCoef and knots array, and then re-run Newton's method.
+        nCoef = nUnknownCoefs + 2
         newKnots += [knot] * 2 # Clamp last knot
         knots = np.array(newKnots, contourDtype)
         assert i == nUnknownCoefs
