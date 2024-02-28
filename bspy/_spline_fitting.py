@@ -684,7 +684,7 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
     for [knot, howMany] in knotsToRemove:
         ix = np.searchsorted(currentGuess.knots[0], knot, side = 'left')
         for iy in range(howMany):
-            currentGuess, residual = currentGuess.remove_knot(ix)
+            currentGuess, residual = currentGuess.remove_knot(ix, nLeft, nRight)
     previousGuess = 0.0 * currentGuess
 
     # Use the Gauss Legendre points as the collocation points
@@ -804,7 +804,8 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
 
     # Simplify the result and return
 
-    return currentGuess.remove_knots(0.1 * scale * tolerance)
+    currentGuess = currentGuess.remove_knots(0.1 * scale * tolerance, nLeft, nRight)
+    return currentGuess
     
 def sphere(radius, tolerance = None):
     if radius <= 0.0:  raise ValueError("Radius must be positive")
