@@ -1,5 +1,5 @@
 import numpy as np
-import scipy.optimize as opt
+import scipy.linalg as band
 import bspy.spline
 import math
 
@@ -678,9 +678,15 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
             currentGuess, residual = currentGuess.remove_knot(ix, nLeft, nRight)
     previousGuess = 0.0 * currentGuess
 
+    # Determine whether an initial value problem or boundary value problem
+
+    IVP = nLeft == 0 or nRight == 0
+
     # Use the Gauss Legendre points as the collocation points
 
-    gaussNodes, weights = _legendre_polynomial_zeros(currentGuess.order[0] - nOrder)
+    perInterval = currentGuess.order[0] - nOrder
+    gaussNodes, weights = _legendre_polynomial_zeros(perInterval)
+    linear = False
     refine = True
     while refine:
         collocationPoints = []
@@ -695,79 +701,126 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
         n = nDep * currentGuess.nCoef[0]
         bestGuess = np.reshape(currentGuess.coefs.T, (n,))
 
-    # Construct the collocation matrix and the residual vector
+    # Set up for next pass at this refinement level
 
-        done = False
-        continuation = 1.0
-        bestContinuation = 0.0
-        continuationBest = bestGuess
-        previous = 0.5 * np.finfo(bestGuess[0]).max
-        iteration = 0
+        nCollocation = len(collocationPoints)
+        if IVP:
+            n = nDep * currentGuess.order[0]
+            if nLeft != 0:
+                iFirstPoint = 0
+                iNextPoint = perInterval
+            else:
+                iNextPoint = nCollocation
+                iFirstPoint = iNextPoint - perInterval
+        else:
+            iFirstPoint = 0
+            iNextPoint = nCollocation
+
+    # Perform the loop through all the IVP intervals
+
         while True:
-            iteration += 1
-            collocationMatrix = np.zeros((n, n))
-            residuals = np.array([])
-            workingSpline = bspy.Spline(1, nDep, currentGuess.order, currentGuess.nCoef,
-                                        currentGuess.knots, np.reshape(bestGuess, (currentGuess.nCoef[0], nDep)).T)
-            for iCondition in range(nLeft):
-                residuals = np.append(residuals, np.zeros((nDep,)))
-                for iColumn in range(nDep):
-                    iRowColumn = iCondition * nDep + iColumn
-                    collocationMatrix[iRowColumn, iRowColumn] = 1.0
-            for iPoint, t in enumerate(collocationPoints):
-                uData = np.array([workingSpline.derivative([i], t) for i in range(nOrder)]).T
-                F, F_u = FAndF_u(t, uData, *args)
-                residuals = np.append(residuals, workingSpline.derivative([nOrder], t) - continuation * F)
-                ix = None
-                bValues = np.array([])
-                for iDerivative in range(nOrder + 1):
-                    ix, iValues = bspy.Spline.bspline_values(ix, workingSpline.knots[0], workingSpline.order[0],
-                                                             t, derivativeOrder = iDerivative)
-                    bValues = np.append(bValues, iValues)
-                bValues = np.reshape(bValues, (nOrder + 1, workingSpline.order[0]))
-                for iDep in range(nDep):
-                    iRow = (nLeft + iPoint) * nDep + iDep
-                    indices = slice((ix - workingSpline.order[0]) * nDep + iDep, ix * nDep + iDep, nDep)
-                    collocationMatrix[iRow, indices] -= bValues[nOrder]
-                    for iF_uRow in range(nDep):
-                        indices = slice((ix - workingSpline.order[0]) * nDep + iF_uRow, ix * nDep + iF_uRow, nDep)
-                        for iF_uColumn in range(nOrder):
-                            collocationMatrix[iRow, indices] += continuation * F_u[iDep, iF_uRow, iF_uColumn] * bValues[iF_uColumn]
-            for iCondition in range(nRight):
-                residuals = np.append(residuals, np.zeros((nDep,)))
-                for iColumn in range(nDep):
-                    iRowColumn = iCondition * nDep + iColumn + 1
-                    collocationMatrix[-iRowColumn, -iRowColumn] = 1.0
+            done = linear
+            continuation = 1.0
+            bestContinuation = 0.0
+            continuationBest = bestGuess
+            previous = 0.5 * np.finfo(bestGuess[0]).max
+            iteration = 0
+    
+    # Perform nonlinear Newton iteration
+
+            while True:
+                iteration += 1
+                collocationMatrix = np.zeros((n, n))
+                residuals = np.array([])
+                workingSpline = bspy.Spline(1, nDep, currentGuess.order, currentGuess.nCoef,
+                                            currentGuess.knots, np.reshape(bestGuess, (currentGuess.nCoef[0], nDep)).T)
+                for iCondition in range(nLeft):
+                    residuals = np.append(residuals, np.zeros((nDep,)))
+                    for iColumn in range(nDep):
+                        iRowColumn = iCondition * nDep + iColumn
+                        collocationMatrix[iRowColumn, iRowColumn] = 1.0
+                for iPoint, t in enumerate(collocationPoints[iFirstPoint : iNextPoint]):
+                    uData = np.array([workingSpline.derivative([i], t) for i in range(nOrder)]).T
+                    F, F_u = FAndF_u(t, uData, *args)
+                    residuals = np.append(residuals, workingSpline.derivative([nOrder], t) - continuation * F)
+                    ix = None
+                    bValues = np.array([])
+                    for iDerivative in range(nOrder + 1):
+                        ix, iValues = bspy.Spline.bspline_values(ix, workingSpline.knots[0], workingSpline.order[0],
+                                                                 t, derivativeOrder = iDerivative)
+                        bValues = np.append(bValues, iValues)
+                    bValues = np.reshape(bValues, (nOrder + 1, workingSpline.order[0]))
+                    for iDep in range(nDep):
+                        iRow = (nLeft + iPoint) * nDep + iDep
+                        startSlice = nDep * (ix - workingSpline.order[0] - iFirstPoint)
+                        endSlice = nDep * (ix - iFirstPoint)
+                        indices = slice(startSlice + iDep, endSlice + iDep, nDep)
+                        collocationMatrix[iRow, indices] -= bValues[nOrder]
+                        for iF_uRow in range(nDep):
+                            indices = slice(startSlice + iF_uRow, endSlice + iF_uRow, nDep)
+                            for iF_uColumn in range(nOrder):
+                                collocationMatrix[iRow, indices] += continuation * F_u[iDep, iF_uRow, iF_uColumn] * bValues[iF_uColumn]
+                for iCondition in range(nRight):
+                    residuals = np.append(residuals, np.zeros((nDep,)))
+                    for iColumn in range(nDep):
+                        iRowColumn = iCondition * nDep + iColumn + 1
+                        collocationMatrix[-iRowColumn, -iRowColumn] = 1.0
 
     # Solve the collocation linear system
 
-            update = np.linalg.solve(collocationMatrix, residuals)
-            updateSize = np.linalg.norm(update)
-            if updateSize > 1.25 * previous and iteration >= 4:
-                continuation = 0.5 * (continuation + bestContinuation)
-                bestGuess = continuationBest
-                if continuation - bestContinuation < 0.01:
+                bandWidth = nDep * (workingSpline.order[0] - 1)
+                banded = np.zeros((2 * bandWidth + 1, n))
+                for iDiagonal in range(bandWidth + 1):
+                    banded[bandWidth - iDiagonal, iDiagonal : n]= np.diagonal(collocationMatrix, iDiagonal)
+                    banded[bandWidth + iDiagonal, : n - iDiagonal] = np.diagonal(collocationMatrix, -iDiagonal)
+                update = band.solve_banded((bandWidth, bandWidth), banded, residuals)
+                bestGuess[nDep * iFirstPoint : nDep * (iNextPoint + nOrder)] += update
+                updateSize = np.linalg.norm(update)
+                if updateSize > 1.25 * previous and iteration >= 4:
+                    continuation = 0.5 * (continuation + bestContinuation)
+                    bestGuess = continuationBest
+                    if continuation - bestContinuation < 0.01:
+                        break
+                    previous = 0.5 * np.finfo(bestGuess[0]).max
+                    iteration = 0
+                    continue
+                previous = updateSize
+                if done or iteration > 50:
                     break
-                previous = 0.5 * np.finfo(bestGuess[0]).max
-                iteration = 0
-                continue
-            bestGuess += update
-            previous = updateSize
-            if done or iteration > 50:
-                break
 
     # Check to see if we're almost done
 
-            if updateSize < math.sqrt(n) * scale * math.sqrt(np.finfo(update.dtype).eps):
-                if continuation < 1.0:
-                    bestContinuation = continuation
-                    continuationBest = bestGuess
-                    continuation = min(1.0, 1.2 * continuation)
-                    previous = 0.5 * np.finfo(bestGuess[0]).max
-                    iteration = 0
-                else:
-                    done = True
+                if updateSize < math.sqrt(n) * scale * math.sqrt(np.finfo(update.dtype).eps):
+                    if continuation < 1.0:
+                        bestContinuation = continuation
+                        continuationBest = bestGuess
+                        continuation = min(1.0, 1.2 * continuation)
+                        previous = 0.5 * np.finfo(bestGuess[0]).max
+                        iteration = 0
+                    else:
+                        done = True
     
+    # Check to see if this is a linear problem
+
+                if not linear and iteration == 2 and updateSize < 100.0 * scale * np.finfo(update[0]).eps:
+                    linear = True
+                    done = True
+
+    # Set up for one more pass through an IVP
+
+            if IVP:
+                if nLeft != 0:
+                    iFirstPoint = iNextPoint
+                    iNextPoint += perInterval
+                    if iFirstPoint < nCollocation:
+                        continue
+                else:
+                    iNextPoint = iFirstPoint
+                    iFirstPoint -= perInterval
+                    if iFirstPoint >= 0:
+                        continue
+            break;
+
     # Is it time to give up?
 
         if (not done or continuation < 1.0) and n > 1000:
