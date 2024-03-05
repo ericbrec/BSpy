@@ -25,11 +25,11 @@ You'll likely want to use a virtual environment (.venv) for the BSpy project so 
 
 BSpy depends on a few Python packages (found on PyPi.org). You’ll want to pip install them.
 
-    pip install numpy PyOpenGL Pyopengltk
+    pip install numpy scipy PyOpenGL pyopengltk
  
 We also use the following Python packages for testing.
 
-    pip install pytest scipy
+    pip install pytest
 
 Finally, we use the following standard Python packages for building and deploying documentation and PyPI packages. You probably won't do that, so **installing them is optional**.
 
