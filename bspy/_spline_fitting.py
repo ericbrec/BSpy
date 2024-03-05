@@ -1,5 +1,5 @@
 import numpy as np
-import scipy.linalg as band
+from scipy.linalg import solve_banded
 import bspy.spline
 import math
 
@@ -677,6 +677,7 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
         for iy in range(howMany):
             currentGuess, residual = currentGuess.remove_knot(ix, nLeft, nRight)
     previousGuess = 0.0 * currentGuess
+    bandWidth = nDep * currentGuess.order[0] - 1
 
     # Determine whether an initial value problem or boundary value problem
 
@@ -730,15 +731,12 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
 
             while True:
                 iteration += 1
-                collocationMatrix = np.zeros((n, n))
+                collocationMatrix = np.zeros((2 * bandWidth + 1, n))
                 residuals = np.array([])
                 workingSpline = bspy.Spline(1, nDep, currentGuess.order, currentGuess.nCoef,
                                             currentGuess.knots, np.reshape(bestGuess, (currentGuess.nCoef[0], nDep)).T)
-                for iCondition in range(nLeft):
-                    residuals = np.append(residuals, np.zeros((nDep,)))
-                    for iColumn in range(nDep):
-                        iRowColumn = iCondition * nDep + iColumn
-                        collocationMatrix[iRowColumn, iRowColumn] = 1.0
+                residuals = np.append(residuals, np.zeros((nLeft * nDep,)))
+                collocationMatrix[bandWidth, 0 : nLeft * nDep] = 1.0
                 for iPoint, t in enumerate(collocationPoints[iFirstPoint : iNextPoint]):
                     uData = np.array([workingSpline.derivative([i], t) for i in range(nOrder)]).T
                     F, F_u = FAndF_u(t, uData, *args)
@@ -754,26 +752,18 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
                         iRow = (nLeft + iPoint) * nDep + iDep
                         startSlice = nDep * (ix - workingSpline.order[0] - iFirstPoint)
                         endSlice = nDep * (ix - iFirstPoint)
-                        indices = slice(startSlice + iDep, endSlice + iDep, nDep)
-                        collocationMatrix[iRow, indices] -= bValues[nOrder]
+                        indices = np.arange(startSlice + iDep, endSlice + iDep, nDep)
+                        collocationMatrix[bandWidth + iRow - indices, indices] -= bValues[nOrder]
                         for iF_uRow in range(nDep):
-                            indices = slice(startSlice + iF_uRow, endSlice + iF_uRow, nDep)
+                            indices = np.arange(startSlice + iF_uRow, endSlice + iF_uRow, nDep)
                             for iF_uColumn in range(nOrder):
-                                collocationMatrix[iRow, indices] += continuation * F_u[iDep, iF_uRow, iF_uColumn] * bValues[iF_uColumn]
-                for iCondition in range(nRight):
-                    residuals = np.append(residuals, np.zeros((nDep,)))
-                    for iColumn in range(nDep):
-                        iRowColumn = iCondition * nDep + iColumn + 1
-                        collocationMatrix[-iRowColumn, -iRowColumn] = 1.0
+                                collocationMatrix[bandWidth + iRow - indices, indices] += continuation * F_u[iDep, iF_uRow, iF_uColumn] * bValues[iF_uColumn]
+                residuals = np.append(residuals, np.zeros((nRight * nDep,)))
+                collocationMatrix[bandWidth, -1 : -(nRight * nDep + 1) : -1] = 1.0
 
     # Solve the collocation linear system
 
-                bandWidth = nDep * (workingSpline.order[0] - 1)
-                banded = np.zeros((2 * bandWidth + 1, n))
-                for iDiagonal in range(bandWidth + 1):
-                    banded[bandWidth - iDiagonal, iDiagonal : n]= np.diagonal(collocationMatrix, iDiagonal)
-                    banded[bandWidth + iDiagonal, : n - iDiagonal] = np.diagonal(collocationMatrix, -iDiagonal)
-                update = band.solve_banded((bandWidth, bandWidth), banded, residuals)
+                update = solve_banded((bandWidth, bandWidth), collocationMatrix, residuals)
                 bestGuess[nDep * iFirstPoint : nDep * (iNextPoint + nOrder)] += update
                 updateSize = np.linalg.norm(update)
                 if updateSize > 1.25 * previous and iteration >= 4:
