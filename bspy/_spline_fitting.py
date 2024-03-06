@@ -142,25 +142,25 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         # where dGCoefs and GSamples are the B-spline values and sample points, respectively, for x(t).
         # The dGCoefs matrix is banded due to B-spline local support, so initialize it to zero.
         # Solving for coefs provides us our initial coefficients of x(t).
-        dGCoefs = np.zeros((nUnknownCoefs, nDep, nDep, nCoef), contourDtype)
+        dGCoefs = np.zeros((nUnknownCoefs, nDep, nCoef, nDep), contourDtype)
         i = 0
-        for t, i in zip(tValues, range(nUnknownCoefs)):
+        for i, t in enumerate(tValues):
             ix, bValues = bspy.Spline.bspline_values(None, knots, order, t)
             for j in range(nDep):
-                dGCoefs[i, j, j, ix - order:ix] = bValues
-        GSamples -= dGCoefs[:, :, :, 0] @ knownXValues[0] + dGCoefs[:, :, :, -1] @ knownXValues[-1]
+                dGCoefs[i, j, ix - order:ix, j] = bValues
+        GSamples -= dGCoefs[:, :, 0, :] @ knownXValues[0] + dGCoefs[:, :, -1, :] @ knownXValues[-1]
         GSamples = GSamples.reshape(nUnknownCoefs * nDep)
-        dGCoefs = dGCoefs[:, :, :, 1:-1].reshape(nUnknownCoefs * nDep, nDep * nUnknownCoefs)
-        coefs = np.empty((nDep, nCoef), contourDtype)
-        coefs[:, 0] = knownXValues[0]
-        coefs[:, -1] = knownXValues[-1]
-        coefs[:, 1:-1] = np.linalg.solve(dGCoefs, GSamples).reshape(nDep, nUnknownCoefs)
+        dGCoefs = dGCoefs[:, :, 1:-1, :].reshape(nUnknownCoefs * nDep, nUnknownCoefs * nDep)
+        coefs = np.empty((nCoef, nDep), contourDtype)
+        coefs[0, :] = knownXValues[0]
+        coefs[-1, :] = knownXValues[-1]
+        coefs[1:-1, :] = np.linalg.solve(dGCoefs, GSamples).reshape(nUnknownCoefs, nDep)
 
         # Array to hold the values of F and contour dot for each t, excluding endpoints.
         FSamples = np.empty((nUnknownCoefs, nDep), contourDtype)
         # Array to hold the Jacobian of the FSamples with respect to the coefficients.
         # The Jacobian is banded due to B-spline local support, so initialize it to zero.
-        dFCoefs = np.zeros((nUnknownCoefs, nDep, nDep, nCoef), contourDtype)
+        dFCoefs = np.zeros((nUnknownCoefs, nDep, nCoef, nDep), contourDtype)
         # Working array to hold the transpose of the Jacobian of F for a particular x(t).
         dFX = np.empty((nDep, nDep - 1), contourDtype)
 
@@ -169,21 +169,21 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         while True:
             FSamplesNorm = 0.0
             # Fill in FSamples and its Jacobian (dFCoefs) with respect to the coefficients of x(t).
-            for t, i in zip(tValues, range(nUnknownCoefs)):
+            for i, t in enumerate(tValues):
                 # Isolate coefficients and compute bspline values and their first two derivatives at t.
                 ix, bValues = bspy.Spline.bspline_values(None, knots, order, t)
                 ix, dValues = bspy.Spline.bspline_values(ix, knots, order, t, 1)
                 ix, d2Values = bspy.Spline.bspline_values(ix, knots, order, t, 2)
-                compactCoefs = coefs[:, ix - order:ix]
+                compactCoefs = coefs[ix - order:ix, :]
 
                 # Compute the dot constraint for x(t) and check for divergence from solution.
-                dotValues = np.dot(compactCoefs @ d2Values, compactCoefs @ dValues)
+                dotValues = np.dot(compactCoefs.T @ d2Values, compactCoefs.T @ dValues)
                 FSamplesNorm = max(FSamplesNorm, abs(dotValues))
                 if previousFSamplesNorm > 0.0 and FSamplesNorm > previousFSamplesNorm * (1.0 - evaluationEpsilon):
                     break
 
                 # Do the same for F(x(t)).
-                x = coefsMin + (compactCoefs @ bValues) * coefsMaxMinusMin
+                x = coefsMin + (compactCoefs.T @ bValues) * coefsMaxMinusMin
                 FValues = F(x)
                 FSamplesNorm = max(FSamplesNorm, np.linalg.norm(FValues, np.inf))
                 if previousFSamplesNorm > 0.0 and FSamplesNorm > previousFSamplesNorm * (1.0 - evaluationEpsilon):
@@ -196,16 +196,16 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                 # Compute the Jacobian of FSamples with respect to the coefficients of x(t).
                 for j in range(nDep):
                     dFX[j] = dF[j](x) * coefsMaxMinusMin[j]
-                FValues = np.outer(dFX.T, bValues).reshape(nDep - 1, nDep, order)
-                dotValues = (np.outer(compactCoefs @ dValues, d2Values) + np.outer(compactCoefs @ d2Values, dValues)).reshape(nDep, order)
-                dFCoefs[i, :-1, :, ix - order:ix] = FValues
-                dFCoefs[i, -1, :, ix - order:ix] = dotValues
+                FValues = np.outer(dFX.T, bValues).reshape(nDep - 1, nDep, order).swapaxes(1, 2)
+                dotValues = (np.outer(d2Values, compactCoefs.T @ dValues) + np.outer(dValues, compactCoefs.T @ d2Values)).reshape(order, nDep)
+                dFCoefs[i, :-1, ix - order:ix, :] = FValues
+                dFCoefs[i, -1, ix - order:ix, :] = dotValues
             
             # Check if we got closer to the solution.
             if previousFSamplesNorm > 0.0 and FSamplesNorm > previousFSamplesNorm * (1.0 - evaluationEpsilon):
                 # No we didn't, take a dampened step.
                 coefDelta *= 0.5
-                coefs[:, 1:-1] += coefDelta # Don't update endpoints
+                coefs[1:-1, :] += coefDelta # Don't update endpoints
             else:
                 # Yes we did, rescale FSamples and its Jacobian.
                 if FSamplesNorm >= evaluationEpsilon:
@@ -214,9 +214,15 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                 
                 # Perform a Newton iteration.
                 HSamples = FSamples.reshape(nUnknownCoefs * nDep)
-                dHCoefs = dFCoefs[:, :, :, 1:-1].reshape((nUnknownCoefs * nDep, nDep * nUnknownCoefs))
-                coefDelta = np.linalg.solve(dHCoefs, HSamples).reshape(nDep, nUnknownCoefs)
-                coefs[:, 1:-1] -= coefDelta # Don't update endpoints
+                dHCoefs = dFCoefs[:, :, 1:-1, :].reshape((nUnknownCoefs * nDep, nUnknownCoefs * nDep))
+                bandWidth = order * nDep - 1
+                n = nUnknownCoefs * nDep
+                banded = np.zeros((2 * bandWidth + 1, n))
+                for iDiagonal in range(min(bandWidth + 1, n)):
+                    banded[bandWidth - iDiagonal, iDiagonal : n]= np.diagonal(dHCoefs, iDiagonal)
+                    banded[bandWidth + iDiagonal, : n - iDiagonal] = np.diagonal(dHCoefs, -iDiagonal)
+                coefDelta = solve_banded((bandWidth, bandWidth), banded, HSamples).reshape(nUnknownCoefs, nDep)
+                coefs[1:-1, :] -= coefDelta # Don't update endpoints
 
                 # Record FSamples norm to ensure this Newton step is productive.
                 previousFSamplesNorm = FSamplesNorm
@@ -225,7 +231,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             if np.linalg.norm(coefDelta) < epsilon:
                 # If step didn't improve the solution, remove it.
                 if previousFSamplesNorm > 0.0 and FSamplesNorm > previousFSamplesNorm * (1.0 - evaluationEpsilon):
-                    coefs[:, 1:-1] += coefDelta # Don't update endpoints
+                    coefs[1:-1, :] += coefDelta # Don't update endpoints
                 break
 
         # Newton steps are done. Now, check if we need to subdivide.
@@ -241,7 +247,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         i = 0
         for ix in range(order, len(knots) - degree, order - 2):
             knot = knots[ix]
-            compactCoefs = coefs[:, ix - order:ix]
+            compactCoefs = coefs[ix - order:ix, :]
 
             # New knots are at the midpoint between old knots.
             newKnot = 0.5 * (previousKnot + knot)
@@ -249,22 +255,22 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             # Place tValues at Gauss points for the intervals [previousKnot, newKnot] and [newKnot, knot].
             for rho in reversed(rhos):
                 tValues[i] = t = 0.5 * (previousKnot + newKnot - rho * (newKnot - previousKnot))
-                GSamples[i] = x = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
+                GSamples[i] = x = compactCoefs.T @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
                 FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
                 i += 1
             for rho in rhos[0 if degree % 2 == 1 else 1:]:
                 tValues[i] = t = 0.5 * (previousKnot + newKnot + rho * (newKnot - previousKnot))
-                GSamples[i] = x = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
+                GSamples[i] = x = compactCoefs.T @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
                 FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
                 i += 1
             for rho in reversed(rhos):
                 tValues[i] = t = 0.5 * (newKnot + knot - rho * (knot - newKnot))
-                GSamples[i] = x = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
+                GSamples[i] = x = compactCoefs.T @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
                 FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
                 i += 1
             for rho in rhos[0 if degree % 2 == 1 else 1:]:
                 tValues[i] = t = 0.5 * (newKnot + knot + rho * (knot - newKnot))
-                GSamples[i] = x = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
+                GSamples[i] = x = compactCoefs.T @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
                 FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
                 i += 1
             
@@ -284,7 +290,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         assert len(knots) == nCoef + order
 
     # Rescale x(t) back to original data points.
-    coefs = (coefsMin + coefs.T * coefsMaxMinusMin).T
+    coefs = (coefsMin + coefs * coefsMaxMinusMin).T
     spline = bspy.Spline(1, nDep, (order,), (nCoef,), (knots,), coefs, metadata)
     if isinstance(F, bspy.Spline):
         spline = spline.confine(F.domain())
