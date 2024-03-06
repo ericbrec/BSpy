@@ -213,10 +213,10 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                     dFCoefs /= FSamplesNorm
                 
                 # Perform a Newton iteration.
-                HSamples = FSamples.reshape(nUnknownCoefs * nDep)
-                dHCoefs = dFCoefs[:, :, 1:-1, :].reshape((nUnknownCoefs * nDep, nUnknownCoefs * nDep))
-                bandWidth = order * nDep - 1
                 n = nUnknownCoefs * nDep
+                HSamples = FSamples.reshape(n)
+                dHCoefs = dFCoefs[:, :, 1:-1, :].reshape((n, n))
+                bandWidth = order * nDep - 1
                 banded = np.zeros((2 * bandWidth + 1, n))
                 for iDiagonal in range(min(bandWidth + 1, n)):
                     banded[bandWidth - iDiagonal, iDiagonal : n]= np.diagonal(dHCoefs, iDiagonal)
