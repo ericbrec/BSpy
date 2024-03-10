@@ -867,7 +867,7 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
     # Solve the collocation linear system
 
                 update = sp.linalg.solve_banded((bandWidth, bandWidth), collocationMatrix, residuals)
-                bestGuess[nDep * iFirstPoint : nDep * (iNextPoint + nOrder)] += update
+                bestGuess[nDep * (iFirstPoint + nLeft) : nDep * (iNextPoint + nLeft)] += update[nDep * nLeft : nDep * (iNextPoint - iFirstPoint + nLeft)]
                 updateSize = np.linalg.norm(update)
                 if updateSize > 1.25 * previous and iteration >= 4:
                     continuation = 0.5 * (continuation + bestContinuation)
