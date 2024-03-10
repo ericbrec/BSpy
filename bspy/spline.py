@@ -936,13 +936,46 @@ class Spline:
         """
         return bspy._spline_fitting.four_sided_patch(bottom, right, top, left, surfParam)
 
+    def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-6):
+        """
+        Determine a geodesic between two points on a surface
+
+        Parameters
+        ----------
+        uvStart : `array-like`
+            The parameter values for the surface at one end of the desired geodesic.
+        
+        uvEnd : `array-like`
+            The parameter values for the surface at the other end of the desired geodesic.
+        
+        tolerance : scalar
+            The maximum error in parameter space to which the geodesic should get computed.
+            Defaults to 1.0e-6.
+
+        Returns
+        -------
+        geodesic : `Spline`
+            A spline curve whose range is in the domain of the given surface.  The range of the
+            curve is the locus of points whose image under the surface map form the curve of
+            minimum distance between the two given points.
+        
+        See Also
+        --------
+        `solve_ode` : Solve an ordinary differential equation using spline collocation.
+
+        Notes
+        -----
+        Solves the second order ODE which are the geodesic equations over the surface.
+        """
+        return bspy._spline_fitting.geodesic(self, uvStart, uvEnd, tolerance)
+    
     def graph(self):
         """
         Generate the spline which is the graph of the given spline.
         
         Returns
         -------
-        spline: `Spline`
+        spline : `Spline`
             A spline with nInd independent variables and nInd + nDep dependent variables, the first nInd of
             which are just the independent variables themselves. For example, given a scalar
             valued function f of two variables u and v, returns the spline of two independent variables whose
