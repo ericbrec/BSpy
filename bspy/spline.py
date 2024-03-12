@@ -1,13 +1,14 @@
 import numpy as np
 from os import path
 import json
+from bspy.manifold import Manifold
 import bspy._spline_domain
 import bspy._spline_evaluation
 import bspy._spline_intersection
 import bspy._spline_fitting
 import bspy._spline_operations
 
-class Spline:
+class Spline(Manifold):
     """
     A class to model, represent, and process piecewise polynomial tensor product
     functions (splines) as linear combinations of B-splines. 
@@ -1105,21 +1106,32 @@ class Spline:
 
     def intersect(self, other):
         """
-        Intersect two splines.
+        Intersect a spline or hyperplane.
 
         Parameters
         ----------
-        other : `Spline`
-            The spline to intersect with self (`other.nDep` match match `self.nDep`).
+        other : `Spline` or `Hyperplane`
+            The `Manifold` to intersect with self (must have same range dimension as self).
 
         Returns
         -------
-        intersection : `iterable` or `NotImplemented`
-            If `self.nInd + other.nInd - self.nDep` is 0, returns an iterable of intersection points in the 
-            parameter space of the two splines (a vector of size `self.nInd + other.nInd`).
-            If `self.nInd + other.nInd - self.nDep` is 1, returns an iterable of `Spline` curves, each of whose domain is [0, 1] 
-            and each of whose range is in the parameter space of the two splines (a vector of size `self.nInd + other.nInd`).
-            If `self.nInd + other.nInd - self.nDep` is < 0 or > 1, `NotImplemented` is returned.
+        intersections : `iterable` (or `NotImplemented` if other is an unknown type of Manifold)
+            A list of intersections between the two manifolds. 
+            Each intersection records either a crossing or a coincident region.
+
+            For a crossing, intersection is a `Manifold.Crossing`: (left, right)
+            * left : `Manifold` in the manifold's domain where the manifold and the other cross.
+            * right : `Manifold` in the other's domain where the manifold and the other cross.
+            * Both intersection manifolds have the same domain and range (the crossing between the manifold and the other).
+
+            For a coincident region, intersection is a `Manifold.Coincidence`: (left, right, alignment, transform, inverse, translation)
+            * left : `Solid` in the manifold's domain within which the manifold and the other are coincident.
+            * right : `Solid` in the other's domain within which the manifold and the other are coincident.
+            * alignment : scalar value holding the normal alignment between the manifold and the other (the dot product of their unit normals).
+            * transform : `numpy.array` holding the transform matrix from the manifold's domain to the other's domain.
+            * inverse : `numpy.array` holding the inverse transform matrix from the other's domain to the boundary's domain.
+            * translation : `numpy.array` holding the translation vector from the manifold's domain to the other's domain.
+            * Together transform, inverse, and translation form the mapping from the manifold's domain to the other's domain and vice-versa.
         
         See Also
         --------
@@ -1131,13 +1143,7 @@ class Spline:
         Uses `zeros` to find all intersection points and `contours` to find all the intersection curves.
         """
         if not(self.nDep == other.nDep): raise ValueError("The number of dependent variables for both splines much match.")
-        freeParameters = self.nInd + other.nInd - self.nDep
-        if freeParameters == 0:
-            return self.subtract(other).zeros()
-        elif freeParameters == 1:
-            return self.subtract(other).contours()
-        else:
-            return NotImplemented
+        return bspy._spline_intersection.intersect(self, other)
 
     def jacobian(self, uvw):
         """

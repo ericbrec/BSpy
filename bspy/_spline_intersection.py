@@ -1,6 +1,8 @@
+import logging
 import math
 import numpy as np
 import bspy.spline
+from bspy.manifold import Manifold, Hyperplane
 from collections import namedtuple
 from multiprocessing import Pool
 
@@ -775,3 +777,102 @@ def contours(self):
         splineContours.append(contour)
     
     return splineContours
+
+def intersect(self, other):
+    #assert self.range_dimension() == other.range_dimension() TODO: Put back this assertion
+    intersections = []
+    nDep = self.nInd # The dimension of the intersection's range
+
+    # Spline-Spline intersection.
+    if isinstance(other, bspy.Spline):
+        # Construct a new spline that represents the intersection.
+        spline = self.subtract(other)
+
+        # Curve-Curve intersection.
+        if nDep == 1:
+            # Find the intersection points and intervals.
+            zeros = spline.zeros()
+            # Convert each intersection point into a Manifold.Crossing and each intersection interval into a Manifold.Coincidence.
+            for zero in zeros:
+                if isinstance(zero, tuple):
+                    # Intersection is an interval, so create a Manifold.Coincidence.
+
+                    # First, check for crossings at the boundaries of the coincidence, since splines can have discontinuous tangents.
+                    # We do this first to match the approach for Curve-Line intersections.
+                    (boundsSelf,) = self.domain()
+                    (boundsOther,) = other.domain()
+                    epsilon = 0.1 * Manifold.minSeparation
+                    if zero[0][0] - epsilon > boundsSelf[0]:
+                        intersections.append(Manifold.Crossing(Hyperplane(1.0, zero[0][0] - epsilon, 0.0), Hyperplane(1.0, zero[0][1], 0.0)))
+                    elif zero[0][1] - epsilon > boundsOther[0]:
+                        intersections.append(Manifold.Crossing(Hyperplane(1.0, zero[0][0], 0.0), Hyperplane(1.0, zero[0][1] - epsilon, 0.0)))
+                    if zero[1][0] + epsilon < boundsSelf[1]:
+                        intersections.append(Manifold.Crossing(Hyperplane(1.0, zero[1][0] + epsilon, 0.0), Hyperplane(1.0, zero[1][1], 0.0)))
+                    elif zero[1][1] + epsilon < boundsOther[1]:
+                        intersections.append(Manifold.Crossing(Hyperplane(1.0, zero[1][0], 0.0), Hyperplane(1.0, zero[1][1] + epsilon, 0.0)))
+
+                    # Now, create the coincidence.
+                    # TODO: Remove the quoted section.
+                    """
+                    left = Solid(nDep, False)
+                    left.boundaries.append(Boundary(Hyperplane(-1.0, zero[0][0], 0.0), Solid(0, True)))
+                    left.boundaries.append(Boundary(Hyperplane(1.0, zero[1][0], 0.0), Solid(0, True)))
+                    right = Solid(nDep, False)
+                    right.boundaries.append(Boundary(Hyperplane(-1.0, zero[0][1], 0.0), Solid(0, True)))
+                    right.boundaries.append(Boundary(Hyperplane(1.0, zero[1][1], 0.0), Solid(0, True)))
+                    alignment = np.dot(self.normal(zero[0][0]), other.normal(zero[0][1])) # Use the first zeros, since B-splines are closed on the left
+                    width = zero[1][0] - zero[0][0]
+                    transform = (zero[1][1] - zero[0][1]) / width
+                    translation = (zero[0][1] * zero[1][0] - zero[1][1] * zero[0][0]) / width
+                    intersections.append(Manifold.Coincidence(left, right, alignment, np.atleast_2d(transform), np.atleast_2d(1.0 / transform), np.atleast_1d(translation)))
+                    """
+                else:
+                    # Intersection is a point, so create a Manifold.Crossing.
+                    intersections.append(Manifold.Crossing(Hyperplane(1.0, zero[:nDep], 0.0), Hyperplane(1.0, zero[nDep:], 0.0)))
+        
+        # Surface-Surface intersection.
+        elif nDep == 2:
+            #logging.info(f"intersect_manifold({self.metadata['Name']}, {other.metadata['Name']})")
+            # Find the intersection contours, which are returned as splines.
+            swap = False
+            try:
+                # First try the intersection as is.
+                contours = spline.contours()
+            except ValueError:
+                # If that fails, swap the manifolds. Worth a shot since intersections are touchy.
+                swap = True
+
+            # Convert each contour into a Manifold.Crossing.
+            if swap:
+                spline = other.subtract(self)
+                #logging.info(f"intersect_manifold({other.metadata['Name']}, {self.metadata['Name']})")
+                contours = spline.contours()
+                for contour in contours:
+                    # Swap left and right, compared to not swapped.
+                    left = bspy.Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[nDep:], contour.metadata)
+                    right = bspy.Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[:nDep], contour.metadata)
+                    intersections.append(Manifold.Crossing(left, right))
+            else:
+                for contour in contours:
+                    left = bspy.Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[:nDep], contour.metadata)
+                    right = bspy.Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[nDep:], contour.metadata)
+                    intersections.append(Manifold.Crossing(left, right))
+        else:
+            return NotImplemented
+    else:
+        return NotImplemented
+
+    # Ensure the normals point outwards for both Manifolds in each crossing intersection.
+    # Note that evaluating left and right at 0.5 is always valid because either they are points or curves with [0.0, 1.0] domains.
+    # TODO: Remove quoted section.
+    """
+    domainPoint = np.atleast_1d(0.5)
+    for intersection in intersections:
+        if isinstance(intersection, Manifold.Crossing):
+            if np.dot(self.tangent_space(intersection.left.point(domainPoint)) @ intersection.left.normal(domainPoint), other.normal(intersection.right.point(domainPoint))) < 0.0:
+                intersection.left.flip_normal()
+            if np.dot(other.tangent_space(intersection.right.point(domainPoint)) @ intersection.right.normal(domainPoint), self.normal(intersection.left.point(domainPoint))) < 0.0:
+                intersection.right.flip_normal()
+    """
+
+    return intersections
