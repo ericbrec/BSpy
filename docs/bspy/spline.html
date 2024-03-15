@@ -61,9 +61,6 @@
                                 <a class="function" href="#Spline.add">add</a>
                         </li>
                         <li>
-                                <a class="function" href="#Spline.blossom">blossom</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#Spline.bspline_values">bspline_values</a>
                         </li>
                         <li>
@@ -134,6 +131,9 @@
                         </li>
                         <li>
                                 <a class="function" href="#Spline.four_sided_patch">four_sided_patch</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.geodesic">geodesic</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.graph">graph</a>
@@ -214,6 +214,9 @@
                                 <a class="function" href="#Spline.section">section</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.solve_ode">solve_ode</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.sphere">sphere</a>
                         </li>
                         <li>
@@ -268,7 +271,7 @@
                     <div class="attr class">
             
     <span class="def">class</span>
-    <span class="name">Spline</span>:
+    <span class="name">Spline</span><wbr>(<span class="base"><a href="manifold.html#Manifold">bspy.manifold.Manifold</a></span>):
 
         
     </div>
@@ -439,44 +442,6 @@ The result of adding self and other.</li>
 
 
                             </div>
-                            <div id="Spline.blossom" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">blossom</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">uvw</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Spline.blossom"></a>
-    
-            <div class="docstring"><p>Compute the blossom of the spline at given parameter values.</p>
-
-<h6 id="parameters">Parameters</h6>
-
-<ul>
-<li><strong>uvwValues</strong> (<code>iterable</code>):
-An iterable of length <code><a href="#Spline.nInd">nInd</a></code> that specifies the degree-sized vectors of blossom parameters for each independent variable.</li>
-</ul>
-
-<h6 id="returns">Returns</h6>
-
-<ul>
-<li><strong>value</strong> (<code>numpy.array</code>):
-The value of the spline's blossom at the given blossom parameters.</li>
-</ul>
-
-<h6 id="see-also">See Also</h6>
-
-<p><code><a href="#Spline.evaluate">evaluate</a></code>:  Compute the value of the spline at a given parameter value.  </p>
-
-<h6 id="notes">Notes</h6>
-
-<p>Evaluates the blossom based on blossoming algorithm 1 found in Goldman, Ronald N. "Blossoming and knot insertion algorithms for B-spline curves." 
-Computer Aided Geometric Design 7, no. 1-4 (1990): 69-81.</p>
-</div>
-
-
-                            </div>
                             <div id="Spline.bspline_values" class="classattr">
                                 <div class="attr function">
                     <div class="decorator">@staticmethod</div>
@@ -494,7 +459,8 @@ Computer Aided Geometric Design 7, no. 1-4 (1990): 69-81.</p>
 
 <ul>
 <li><strong>knot</strong> (<code>int</code>):
-The rightmost knot in the bspline segment.</li>
+The rightmost knot in the bspline segment.  If knot is None, then this value is
+determined by binary search</li>
 <li><strong>knots</strong> (array-like):
 The array of knots for the bspline.</li>
 <li><strong>splineOrder</strong> (<code>int</code>):
@@ -511,6 +477,9 @@ the taylor coefficients at the given parameter values. Default is false.</li>
 <h6 id="returns">Returns</h6>
 
 <ul>
+<li><strong>knot</strong> (<code>int</code>):
+The rightmost knot in the bspline segment.  If this is specified on input, then this
+valued is returned.  Otherwise, it is computed and then returned.</li>
 <li><strong>value</strong> (<code>numpy.array</code>):
 The value of the bspline or its derivative at the given parameter.</li>
 </ul>
@@ -1479,6 +1448,50 @@ parametrization of the curves may also get reversed in order to best match endpo
 
 
                             </div>
+                            <div id="Spline.geodesic" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">geodesic</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">uvStart</span>, </span><span class="param"><span class="n">uvEnd</span>, </span><span class="param"><span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-06</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.geodesic"></a>
+    
+            <div class="docstring"><p>Determine a geodesic between two points on a surface</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>uvStart</strong> (<code>array-like</code>):
+The parameter values for the surface at one end of the desired geodesic.</li>
+<li><strong>uvEnd</strong> (<code>array-like</code>):
+The parameter values for the surface at the other end of the desired geodesic.</li>
+<li><strong>tolerance</strong> (scalar):
+The maximum error in parameter space to which the geodesic should get computed.
+Defaults to 1.0e-6.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>geodesic</strong> (<code><a href="#Spline">Spline</a></code>):
+A spline curve whose range is in the domain of the given surface.  The range of the
+curve is the locus of points whose image under the surface map form the curve of
+minimum distance between the two given points.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.solve_ode">solve_ode</a></code>:  Solve an ordinary differential equation using spline collocation.  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>Solves the second order ODE which are the geodesic equations over the surface.</p>
+</div>
+
+
+                            </div>
                             <div id="Spline.graph" class="classattr">
                                 <div class="attr function">
             
@@ -1682,24 +1695,41 @@ The spline that results from integrating the original spline with respect to the
     </div>
     <a class="headerlink" href="#Spline.intersect"></a>
     
-            <div class="docstring"><p>Intersect two splines.</p>
+            <div class="docstring"><p>Intersect a spline or hyperplane.</p>
 
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>other</strong> (<code><a href="#Spline">Spline</a></code>):
-The spline to intersect with self (<code>other.nDep</code> match match <code>self.nDep</code>).</li>
+<li><strong>other</strong> (<code><a href="#Spline">Spline</a></code> or <code>Hyperplane</code>):
+The <code>Manifold</code> to intersect with self (must have same range dimension as self).</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
 
 <ul>
-<li><strong>intersection</strong> (<code>iterable</code> or <code>NotImplemented</code>):
-If <code>self.nInd + other.nInd - self.nDep</code> is 0, returns an iterable of intersection points in the 
-parameter space of the two splines (a vector of size <code>self.nInd + other.nInd</code>).
-If <code>self.nInd + other.nInd - self.nDep</code> is 1, returns an iterable of <code><a href="#Spline">Spline</a></code> curves, each of whose domain is [0, 1] 
-and each of whose range is in the parameter space of the two splines (a vector of size <code>self.nInd + other.nInd</code>).
-If <code>self.nInd + other.nInd - self.nDep</code> is &lt; 0 or &gt; 1, <code>NotImplemented</code> is returned.</li>
+<li><p><strong>intersections</strong> (<code>iterable</code> (or <code>NotImplemented</code> if other is an unknown type of Manifold)):
+A list of intersections between the two manifolds. 
+Each intersection records either a crossing or a coincident region.</p>
+
+<p>For a crossing, intersection is a <code>Manifold.Crossing</code>: (left, right)</p>
+
+<ul>
+<li>left : <code>Manifold</code> in the manifold's domain where the manifold and the other cross.</li>
+<li>right : <code>Manifold</code> in the other's domain where the manifold and the other cross.</li>
+<li>Both intersection manifolds have the same domain and range (the crossing between the manifold and the other).</li>
+</ul>
+
+<p>For a coincident region, intersection is a <code>Manifold.Coincidence</code>: (left, right, alignment, transform, inverse, translation)</p>
+
+<ul>
+<li>left : <code>Solid</code> in the manifold's domain within which the manifold and the other are coincident.</li>
+<li>right : <code>Solid</code> in the other's domain within which the manifold and the other are coincident.</li>
+<li>alignment : scalar value holding the normal alignment between the manifold and the other (the dot product of their unit normals).</li>
+<li>transform : <code>numpy.array</code> holding the transform matrix from the manifold's domain to the other's domain.</li>
+<li>inverse : <code>numpy.array</code> holding the inverse transform matrix from the other's domain to the boundary's domain.</li>
+<li>translation : <code>numpy.array</code> holding the translation vector from the manifold's domain to the other's domain.</li>
+<li>Together transform, inverse, and translation form the mapping from the manifold's domain to the other's domain and vice-versa.</li>
+</ul></li>
 </ul>
 
 <h6 id="see-also">See Also</h6>
@@ -2151,7 +2181,7 @@ dependent variables</p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">remove_knot</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">iKnot</span></span><span class="return-annotation">):</span></span>
+        <span class="name">remove_knot</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">iKnot</span>, </span><span class="param"><span class="n">nLeft</span><span class="o">=</span><span class="mi">0</span>, </span><span class="param"><span class="n">nRight</span><span class="o">=</span><span class="mi">0</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -2163,7 +2193,15 @@ dependent variables</p>
 
 <ul>
 <li><strong>iKnot</strong> (integer):
-index of the knot to remove from the spline</li>
+Index of the knot to remove from the spline</li>
+<li><strong>nLeft</strong> (integer):
+Number of continuity conditions to enforce on the left end.  For example, if nLeft = 2,
+then remove_knot will leave the function value and first derivative unchanged on the
+left end of the domain.</li>
+<li><strong>nRight</strong> (integer):
+Number of continuity conditions to enforce on the right end.  For example, if
+nRight = 3, then remove_knot will leave the function value and first and second
+derivative values unchanged on the right end of the domain.</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -2190,7 +2228,7 @@ A vector containing the least squares residuals for each dependent variable</li>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">remove_knots</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-14</span></span><span class="return-annotation">):</span></span>
+        <span class="name">remove_knots</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-14</span>, </span><span class="param"><span class="n">nLeft</span><span class="o">=</span><span class="mi">0</span>, </span><span class="param"><span class="n">nRight</span><span class="o">=</span><span class="mi">0</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -2205,6 +2243,14 @@ A vector containing the least squares residuals for each dependent variable</li>
 The maximum pointwise relative error permitted after removing all the knots. Knots will be
 removed until removal of the next knot would put the pointwise error above the threshold.
 The default is 1.0e-14 which is relative to the size of each of the dependent variables.</li>
+<li><strong>nLeft</strong> (integer):
+Number of continuity conditions to enforce on the left end.  For example, if nLeft = 2,
+then remove_knot will leave the function value and first derivative unchanged on the
+left end of the domain.</li>
+<li><strong>nRight</strong> (integer):
+Number of continuity conditions to enforce on the right end.  For example, if
+nRight = 3, then remove_knot will leave the function value and first and second
+derivative values unchanged on the right end of the domain.</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -2509,6 +2555,59 @@ with an error.</p>
 <h6 id="see-also">See Also</h6>
 
 <p><code><a href="#Spline.circular_arc">circular_arc</a></code>:  Create a 2D circular arc for a given radius and angle accurate to within a given tolerance.  </p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.solve_ode" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">solve_ode</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nLeft</span>, </span><span class="param"><span class="n">nRight</span>, </span><span class="param"><span class="n">FAndF_u</span>, </span><span class="param"><span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-06</span>, </span><span class="param"><span class="n">args</span><span class="o">=</span><span class="p">()</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.solve_ode"></a>
+    
+            <div class="docstring"><p>Numerically solve an ordinary differential equation with boundary conditions.</p>
+
+<h1 id="parameters">Parameters</h1>
+
+<p>self : <code><a href="#Spline">Spline</a></code>
+    The initial guess for the solution to the spline.  All of the spline parameters, e.g.
+    order, boundary conditions, domain, etc. are all established by the initial guess.  The
+    ODE itself must be of the form u^(nOrder)(t) = F(t, u, u', ... , u^(nOrder-1)).  self.nDep should
+    be the same as the number of state variables in the ODE.</p>
+
+<p>nLeft : integer
+    The number of boundary conditions to be imposed on the left side of the domain.  The
+    order of the differential equation is assumed to be the sum of nLeft and nRight.</p>
+
+<p>nRight : integer
+    The number of boundary conditions to be imposed on the right sie of the domain.  The
+    order of the differential equation is assumed to be the sum of nLeft and nRight.</p>
+
+<p>FAndF_u : Python function
+    FAndF_u must have exactly this calling sequence:  FAndF_u(t, uData, *args).  t is a scalar set
+    to the desired value of the independent variable of the ODE.  uData will be a numpy matrix of shape
+    (self.nDep, nOrder) whose columns are (u, ... , u^(nOrder - 1).  It must return a numpy
+    vector of length self.nDep and a numpy array whose shape is (self.nDep, self.nDep, nOrder).
+    The first output vector is the value of the forcing function F at (t, uData).  The numpy
+    array is the array of partial derivatives with respect to all the numbers in uData.  Thus, if
+    this array is called jacobian, then jacobian[:, i, j] is the gradient of the forcing function with
+    respect to uData[i, j].</p>
+
+<p>tolerance : scalar
+    The relative error to which the ODE should get solved.</p>
+
+<p>args : tuple
+    Additional arguments to pass to the user-defined function FAndF_u.  For example, if FAndF_u has the
+    FAndF_u(t, uData, a, b, c), then args must be a tuple of length 3.</p>
+
+<h1 id="notes">Notes</h1>
+
+<p>This method uses B-splines as finite elements.  The ODE itself is discretized using
+collocation.</p>
 </div>
 
 
@@ -2900,6 +2999,17 @@ For all higher dimensions, it implements the projected-polyhedron technique from
 </div>
 
 
+                            </div>
+                            <div class="inherited">
+                                <h5>Inherited Members</h5>
+                                <dl>
+                                    <div><dt><a href="manifold.html#Manifold">bspy.manifold.Manifold</a></dt>
+                                <dd id="Spline.minSeparation" class="variable"><a href="manifold.html#Manifold.minSeparation">minSeparation</a></dd>
+                <dd id="Spline.Crossing" class="class"><a href="manifold.html#Manifold.Crossing">Crossing</a></dd>
+                <dd id="Spline.Coincidence" class="class"><a href="manifold.html#Manifold.Coincidence">Coincidence</a></dd>
+
+            </div>
+                                </dl>
                             </div>
                 </section>
     </main>

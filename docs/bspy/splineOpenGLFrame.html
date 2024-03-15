@@ -49,6 +49,27 @@
                                 <a class="variable" href="#SplineOpenGLFrame.MsPerFrame">MsPerFrame</a>
                         </li>
                         <li>
+                                <a class="variable" href="#SplineOpenGLFrame.maxOrder">maxOrder</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#SplineOpenGLFrame.maxCoefficients">maxCoefficients</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#SplineOpenGLFrame.maxKnots">maxKnots</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#SplineOpenGLFrame.HULL">HULL</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#SplineOpenGLFrame.SHADED">SHADED</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#SplineOpenGLFrame.BOUNDARY">BOUNDARY</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#SplineOpenGLFrame.ISOPARMS">ISOPARMS</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#SplineOpenGLFrame.computeBSplineCode">computeBSplineCode</a>
                         </li>
                         <li>
@@ -121,6 +142,9 @@
                                 <a class="variable" href="#SplineOpenGLFrame.mode">mode</a>
                         </li>
                         <li>
+                                <a class="function" href="#SplineOpenGLFrame.compute_color_vector">compute_color_vector</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#SplineOpenGLFrame.SetDefaultView">SetDefaultView</a>
                         </li>
                         <li>
@@ -170,6 +194,15 @@
                         </li>
                         <li>
                                 <a class="function" href="#SplineOpenGLFrame.MouseWheel">MouseWheel</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SplineOpenGLFrame.make_drawable">make_drawable</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SplineOpenGLFrame.ConvertRGBToHSV">ConvertRGBToHSV</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SplineOpenGLFrame.DrawSpline">DrawSpline</a>
                         </li>
                 </ul>
 
@@ -271,7 +304,7 @@
     </div>
     <a class="headerlink" href="#SplineOpenGLFrame"></a>
     
-            <div class="docstring"><p>A tkinter <code>OpenGLFrame</code> with shaders to display a <code>DrawableSpline</code>.</p>
+            <div class="docstring"><p>A tkinter <code>OpenGLFrame</code> with shaders to display a <code>Spline</code>.</p>
 </div>
 
 
@@ -345,6 +378,104 @@ highlightcolor, highlightthickness, relief, takefocus, visual, width.</p>
     <a class="headerlink" href="#SplineOpenGLFrame.MsPerFrame"></a>
     
             <div class="docstring"><p>Milliseconds per frame when animating or flying.</p>
+</div>
+
+
+                            </div>
+                            <div id="SplineOpenGLFrame.maxOrder" class="classattr">
+                                <div class="attr variable">
+            <span class="name">maxOrder</span>        =
+<span class="default_value">9</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SplineOpenGLFrame.maxOrder"></a>
+    
+            <div class="docstring"><p>Maximum order for drawable splines.</p>
+</div>
+
+
+                            </div>
+                            <div id="SplineOpenGLFrame.maxCoefficients" class="classattr">
+                                <div class="attr variable">
+            <span class="name">maxCoefficients</span>        =
+<span class="default_value">120</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SplineOpenGLFrame.maxCoefficients"></a>
+    
+            <div class="docstring"><p>Maximum number of coefficients for drawable splines.</p>
+</div>
+
+
+                            </div>
+                            <div id="SplineOpenGLFrame.maxKnots" class="classattr">
+                                <div class="attr variable">
+            <span class="name">maxKnots</span>        =
+<span class="default_value">129</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SplineOpenGLFrame.maxKnots"></a>
+    
+            <div class="docstring"><p>Maximum number of knots for drawable splines.</p>
+</div>
+
+
+                            </div>
+                            <div id="SplineOpenGLFrame.HULL" class="classattr">
+                                <div class="attr variable">
+            <span class="name">HULL</span>        =
+<span class="default_value">1</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SplineOpenGLFrame.HULL"></a>
+    
+            <div class="docstring"><p>Option to draw the convex hull of the spline (the coefficients). Off by default.</p>
+</div>
+
+
+                            </div>
+                            <div id="SplineOpenGLFrame.SHADED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">SHADED</span>        =
+<span class="default_value">2</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SplineOpenGLFrame.SHADED"></a>
+    
+            <div class="docstring"><p>Option to draw the spline shaded (only useful for nInd &gt;= 2). On by default.</p>
+</div>
+
+
+                            </div>
+                            <div id="SplineOpenGLFrame.BOUNDARY" class="classattr">
+                                <div class="attr variable">
+            <span class="name">BOUNDARY</span>        =
+<span class="default_value">4</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SplineOpenGLFrame.BOUNDARY"></a>
+    
+            <div class="docstring"><p>Option to draw the boundary of the spline in the line color (only useful for nInd &gt;= 2). On by default.</p>
+</div>
+
+
+                            </div>
+                            <div id="SplineOpenGLFrame.ISOPARMS" class="classattr">
+                                <div class="attr variable">
+            <span class="name">ISOPARMS</span>        =
+<span class="default_value">8</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SplineOpenGLFrame.ISOPARMS"></a>
+    
+            <div class="docstring"><p>Option to draw the lines of constant knot values of the spline in the line color (only useful for nInd &gt;= 2). Off by default.</p>
 </div>
 
 
@@ -643,6 +774,42 @@ highlightcolor, highlightthickness, relief, takefocus, visual, width.</p>
     
 
                             </div>
+                            <div id="SplineOpenGLFrame.compute_color_vector" class="classattr">
+                                <div class="attr function">
+                    <div class="decorator">@staticmethod</div>
+
+        <span class="def">def</span>
+        <span class="name">compute_color_vector</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">r</span>, </span><span class="param"><span class="n">g</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">b</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">a</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SplineOpenGLFrame.compute_color_vector"></a>
+    
+            <div class="docstring"><p>Return an float32 array with the specified color.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>r</strong> (<code>float</code>, <code>int</code> or array-like of floats or ints):
+The red value [0, 1] as a float, [0, 255] as an int, or the rgb or rgba value as floats or ints (default).</li>
+<li><strong>g</strong> (<code>float</code> or <code>int</code>):
+The green value [0, 1] as a float or [0, 255] as an int.</li>
+<li><strong>b</strong> (<code>float</code> or <code>int</code>):
+The blue value [0, 1] as a float or [0, 255] as an int.</li>
+<li><strong>a</strong> (<code>float</code>, <code>int</code>, or None):
+The alpha value [0, 1] as a float or [0, 255] as an int. If <code>None</code> then alpha is set to 1.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>color</strong> (<code>numpy.array</code>):
+The specified color as an array of 4 float32 values between 0 and 1.</li>
+</ul>
+</div>
+
+
+                            </div>
                             <div id="SplineOpenGLFrame.SetDefaultView" class="classattr">
                                 <div class="attr function">
             
@@ -923,6 +1090,55 @@ Scale between 0 and 1.</li>
     <a class="headerlink" href="#SplineOpenGLFrame.MouseWheel"></a>
     
             <div class="docstring"><p>Handle mouse wheel event.</p>
+</div>
+
+
+                            </div>
+                            <div id="SplineOpenGLFrame.make_drawable" class="classattr">
+                                <div class="attr function">
+                    <div class="decorator">@staticmethod</div>
+
+        <span class="def">def</span>
+        <span class="name">make_drawable</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">spline</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SplineOpenGLFrame.make_drawable"></a>
+    
+            <div class="docstring"><p>Ensure a <code>Spline</code> can be drawn in a <code><a href="#SplineOpenGLFrame">SplineOpenGLFrame</a></code>. Converts 1D splines into 3D drawable curves, 
+2D splines into drawable surfaces (y-axis hold amplitude), and 3D splines into drawable solids.</p>
+
+<p>Spline surfaces and solids with more than 3 dependent variables will have their added dimensions rendered 
+as colors (up to 6 dependent variables are supported).</p>
+</div>
+
+
+                            </div>
+                            <div id="SplineOpenGLFrame.ConvertRGBToHSV" class="classattr">
+                                <div class="attr function">
+                    <div class="decorator">@staticmethod</div>
+
+        <span class="def">def</span>
+        <span class="name">ConvertRGBToHSV</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">r</span>, </span><span class="param"><span class="n">g</span>, </span><span class="param"><span class="n">b</span>, </span><span class="param"><span class="n">a</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SplineOpenGLFrame.ConvertRGBToHSV"></a>
+    
+    
+
+                            </div>
+                            <div id="SplineOpenGLFrame.DrawSpline" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">DrawSpline</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">spline</span>, </span><span class="param"><span class="n">transform</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SplineOpenGLFrame.DrawSpline"></a>
+    
+            <div class="docstring"><p>Draw a spline within a <code><a href="#SplineOpenGLFrame">SplineOpenGLFrame</a></code>.</p>
 </div>
 
 

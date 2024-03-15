@@ -38,6 +38,7 @@ Finally, we use the following standard Python packages for building and deployin
 The repo directory structure is as follows:
 * bspy (the library code)
 	* `__init__.py` (bspy configuration)
+	* `manifold.py` (primary manifold file that contains Manifold and Hyperplane classes)
 	* `_spline_domain.py` (methods that change the domain of splines)
 	* `_spline_evaluation.py` (methods that evaluate splines)
 	* `_spline_fitting.py` (methods that create splines from input data)
