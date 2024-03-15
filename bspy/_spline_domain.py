@@ -274,7 +274,7 @@ def extrapolate(self, newDomain, continuityOrder):
         # Swap dependent and independent variables back.
         dCoefs = dCoefs.swapaxes(1, ind + 2) 
 
-    return type(self)(self.nInd, self.nDep, self.order, nCoef, knots, dCoefs[0], self.metadata)
+    return type(self)(self.nInd, self.nDep, self.order, nCoef, knots, dCoefs[0], self.metadata).remove_knots()
 
 def fold(self, foldedInd):
     if not(0 <= len(foldedInd) <= self.nInd): raise ValueError("Invalid foldedInd")
@@ -373,13 +373,13 @@ def join(splineList):
                                             newKnots, newCoefs, workingSpline.metadata)
     return workingSpline.reparametrize([[0.0, 1.0]]).remove_knots()
 
-def remove_knot(self, iKnot):
+def remove_knot(self, iKnot, nLeft = 0, nRight = 0):
     if self.nInd != 1:  raise ValueError("Must have one independent variable")
     myOrder = self.order[0]
     if iKnot < myOrder or iKnot >= self.nCoef[0]:  raise ValueError("Must specify interior knots for removal")
     diag0 = []
-    diag1 = []
-    rhs = []
+    diag1 = [1.0]
+    rhs = [np.ndarray.copy(self.coefs[:, iKnot - myOrder])]
     myKnots = self.knots[0]
     thisKnot = myKnots[iKnot]
 
@@ -389,45 +389,57 @@ def remove_knot(self, iKnot):
         diag0.append(alpha)
         diag1.append(1.0 - alpha)
         rhs.append(np.ndarray.copy(self.coefs[:, iKnot - myOrder + ix]))
-    
-    # Adjust right hand side because first and last coefficients are known
+    diag0.append(1.0)
+    diag1.append(0.0)
+    rhs.append(np.ndarray.copy(self.coefs[:, iKnot]))
     rhs = np.array(rhs)
-    rhs[0] -= diag0[0] * self.coefs[:, iKnot - myOrder]
-    rhs[-1] -= diag1[-1] * self.coefs[:, iKnot]
+
+    # Take care of the extra known conditions on the left
+    extraLeft = max(0, nLeft - iKnot + myOrder)
+    for ix in range(extraLeft):
+        rhs[ix] /= diag1[ix]
+        rhs[ix + 1] -= diag0[ix] * rhs[ix]
+    
+    # Take care of the extra known conditions on the right
+    extraRight = max(0, nRight - self.nCoef[0] + iKnot + 1)
+    for ix in range(extraRight):
+        rhs[-1 - ix] /= diag0[-1 - ix]
+        rhs[-2 - ix] -= diag1[-2 - ix] * rhs[-1 - ix]
 
     # Use Givens rotations to factor the matrix and track right hand side
-    for ix in range(1, myOrder - 1):
-        cos = diag1[ix - 1]
+    for ix in range(extraLeft, myOrder - extraRight):
+        cos = diag1[ix]
         sin = diag0[ix]
         denom = np.sqrt(cos ** 2 + sin ** 2)
         cos /= denom
         sin /= denom
-        diag1[ix - 1] = denom
-        diag0[ix - 1] = sin * diag1[ix]
-        diag1[ix] *= cos
-        tempRow = cos * rhs[ix - 1] + sin * rhs[ix]
-        rhs[ix] = cos * rhs[ix] - sin * rhs[ix - 1]
-        rhs[ix - 1] = tempRow
+        diag1[ix] = denom
+        diag0[ix] = sin * diag1[ix + 1]
+        diag1[ix + 1] *= cos
+        tempRow = cos * rhs[ix] + sin * rhs[ix + 1]
+        rhs[ix + 1] = cos * rhs[ix + 1] - sin * rhs[ix]
+        rhs[ix] = tempRow
     
     # Perform back substitution
-    rhs[-2] /= diag1[-2] 
-    for ix in range(1, myOrder - 2):
-        rhs[-ix - 2] = (rhs[-ix - 2] - diag0[-ix - 2] * rhs[-ix - 1]) / diag1[-ix - 2]
+    for ix in range(1 + extraRight, myOrder - extraLeft):
+        rhs[-1 - ix] /= diag1[-1 - ix]
+        rhs[-2 - ix] -= diag0[-1 - ix] * rhs[-1 - ix]
+    rhs[-1 - myOrder + extraLeft] /= diag1[-1 - myOrder + extraLeft]
+    
+    # Save residual and adjust solution
+    residual = abs(rhs[-1 - extraRight])
+    for ix in range(extraRight):
+        rhs[-1 - extraRight+ ix] = rhs[-extraRight + ix]
     
     # Create new spline
     newNCoef = [self.nCoef[0] - 1]
-    newKnots = [list(self.knots[0][:iKnot]) + list(self.knots[0][iKnot + 1:])]
-    newCoefs = []
-    for ix in range(self.nDep):
-        oldCoefs = self.coefs[ix]
-        firstCoefs = oldCoefs[:iKnot - self.order[0] + 1]
-        lastCoefs = oldCoefs[iKnot:]
-        middleCoefs = rhs[:-1,ix]
-        newCoefs.append(list(firstCoefs) + list(middleCoefs) + list(lastCoefs))
+    newKnots = [np.delete(self.knots[0], iKnot)]
+    newCoefs = np.delete(self.coefs, iKnot - self.order[0] + 1, 1)
+    newCoefs[: , iKnot - self.order[0] : iKnot] = rhs[: -1].T
     withoutKnot = type(self)(self.nInd, self.nDep, self.order, newNCoef, newKnots, newCoefs)
-    return withoutKnot, abs(rhs[-1])
+    return withoutKnot, residual
 
-def remove_knots(self, tolerance):
+def remove_knots(self, tolerance, nLeft = 0, nRight = 0):
     scaleDep = [max(np.abs(bound[0]), np.abs(bound[1])) for bound in self.range_bounds()]
     scaleDep = [1.0 if factor == 0.0 else factor for factor in scaleDep]
     rScaleDep = np.array([1.0 / factor for factor in scaleDep])
@@ -440,12 +452,20 @@ def remove_knots(self, tolerance):
         currentFold, foldedBasis = currentSpline.fold(foldedIndices)
         while True:
             bestError = np.finfo(scaleDep[0].dtype).max
-            for ix in range(currentFold.order[0], currentFold.nCoef[0]):
-                newSpline, residual = currentFold.remove_knot(ix)
+            bestSpline = currentFold
+            ix = currentFold.order[0]
+            while ix < currentFold.nCoef[0]:
+                newSpline, residual = currentFold.remove_knot(ix, nLeft, nRight)
                 error = np.max(residual)
+                if error < 0.001 * tolerance:
+                    currentFold = newSpline
+                    continue
                 if error < bestError:
                     bestError = error
                     bestSpline = newSpline
+                ix += 1
+            if currentFold.nCoef[0] < bestSpline.nCoef[0]:
+                continue
             if bestError > tolerance:
                 break
             errorSpline = truthSpline - bestSpline.unfold(foldedIndices, foldedBasis)
@@ -513,6 +533,8 @@ def transpose(self, axes=None):
 
 def trim(self, newDomain):
     if not(len(newDomain) == self.nInd): raise ValueError("Invalid newDomain")
+    if self.nInd < 1: return self
+    newDomain = np.array(newDomain, self.knots[0].dtype) # Force dtype and convert None to nan
 
     # Step 1: Determine the knots to insert at the new domain bounds.
     newKnotsList = []
@@ -522,7 +544,7 @@ def trim(self, newDomain):
         leftBound = False # Do we have a left bound?
         newKnots = []
 
-        if bounds[0] is not None and not np.isnan(bounds[0]):
+        if not np.isnan(bounds[0]):
             if not(knots[order - 1] <= bounds[0] <= knots[-order]): raise ValueError("Invalid newDomain")
             leftBound = True
             multiplicity = order
@@ -531,7 +553,7 @@ def trim(self, newDomain):
                 multiplicity -= counts[i]
             newKnots += multiplicity * [bounds[0]]
 
-        if bounds[1] is not None and not np.isnan(bounds[1]):
+        if not np.isnan(bounds[1]):
             if not(knots[order - 1] <= bounds[1] <= knots[-order]): raise ValueError("Invalid newDomain")
             if leftBound:
                 if not(bounds[0] < bounds[1]): raise ValueError("Invalid newDomain")
@@ -552,9 +574,8 @@ def trim(self, newDomain):
     knotsList = []
     coefIndex = [slice(None)] # First index is for nDep
     for (order, knots, bounds) in zip(spline.order, spline.knots, newDomain):
-        bounds = np.array(bounds, knots.dtype) # Ensure bounds are the same type as the inserted knots
-        leftIndex = 0 if bounds[0] is None or np.isnan(bounds[0]) else np.searchsorted(knots, bounds[0])
-        rightIndex = len(knots) - order if bounds[1] is None or np.isnan(bounds[1]) else np.searchsorted(knots, bounds[1])
+        leftIndex = 0 if np.isnan(bounds[0]) else np.searchsorted(knots, bounds[0])
+        rightIndex = len(knots) - order if np.isnan(bounds[1]) else np.searchsorted(knots, bounds[1])
         knotsList.append(knots[leftIndex:rightIndex + order])
         coefIndex.append(slice(leftIndex, rightIndex))
     coefs = spline.coefs[tuple(coefIndex)]

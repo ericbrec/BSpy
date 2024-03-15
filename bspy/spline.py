@@ -1,13 +1,14 @@
 import numpy as np
 from os import path
 import json
+from bspy.manifold import Manifold
 import bspy._spline_domain
 import bspy._spline_evaluation
 import bspy._spline_intersection
 import bspy._spline_fitting
 import bspy._spline_operations
 
-class Spline:
+class Spline(Manifold):
     """
     A class to model, represent, and process piecewise polynomial tensor product
     functions (splines) as linear combinations of B-splines. 
@@ -178,31 +179,6 @@ class Spline:
             indMap = [(mapping, mapping) if np.isscalar(mapping) else mapping for mapping in indMap]
         return bspy._spline_operations.add(self, other, indMap)
 
-    def blossom(self, uvw):
-        """
-        Compute the blossom of the spline at given parameter values.
-
-        Parameters
-        ----------
-        uvwValues : `iterable`
-            An iterable of length `nInd` that specifies the degree-sized vectors of blossom parameters for each independent variable.
-
-        Returns
-        -------
-        value : `numpy.array`
-            The value of the spline's blossom at the given blossom parameters.
-
-        See Also
-        --------
-        `evaluate` : Compute the value of the spline at a given parameter value.
-
-        Notes
-        -----
-        Evaluates the blossom based on blossoming algorithm 1 found in Goldman, Ronald N. "Blossoming and knot insertion algorithms for B-spline curves." 
-        Computer Aided Geometric Design 7, no. 1-4 (1990): 69-81.
-        """
-        return bspy._spline_evaluation.blossom(self, uvw)
-
     @staticmethod
     def bspline_values(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs = False):
         """
@@ -211,7 +187,8 @@ class Spline:
         Parameters
         ----------
         knot : `int`
-            The rightmost knot in the bspline segment.
+            The rightmost knot in the bspline segment.  If knot is None, then this value is
+            determined by binary search
 
         knots : array-like
             The array of knots for the bspline.
@@ -231,6 +208,10 @@ class Spline:
 
         Returns
         -------
+        knot : `int`
+            The rightmost knot in the bspline segment.  If this is specified on input, then this
+            valued is returned.  Otherwise, it is computed and then returned.
+
         value : `numpy.array`
             The value of the bspline or its derivative at the given parameter.
 
@@ -956,13 +937,46 @@ class Spline:
         """
         return bspy._spline_fitting.four_sided_patch(bottom, right, top, left, surfParam)
 
+    def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-6):
+        """
+        Determine a geodesic between two points on a surface
+
+        Parameters
+        ----------
+        uvStart : `array-like`
+            The parameter values for the surface at one end of the desired geodesic.
+        
+        uvEnd : `array-like`
+            The parameter values for the surface at the other end of the desired geodesic.
+        
+        tolerance : scalar
+            The maximum error in parameter space to which the geodesic should get computed.
+            Defaults to 1.0e-6.
+
+        Returns
+        -------
+        geodesic : `Spline`
+            A spline curve whose range is in the domain of the given surface.  The range of the
+            curve is the locus of points whose image under the surface map form the curve of
+            minimum distance between the two given points.
+        
+        See Also
+        --------
+        `solve_ode` : Solve an ordinary differential equation using spline collocation.
+
+        Notes
+        -----
+        Solves the second order ODE which are the geodesic equations over the surface.
+        """
+        return bspy._spline_fitting.geodesic(self, uvStart, uvEnd, tolerance)
+    
     def graph(self):
         """
         Generate the spline which is the graph of the given spline.
         
         Returns
         -------
-        spline: `Spline`
+        spline : `Spline`
             A spline with nInd independent variables and nInd + nDep dependent variables, the first nInd of
             which are just the independent variables themselves. For example, given a scalar
             valued function f of two variables u and v, returns the spline of two independent variables whose
@@ -1092,21 +1106,32 @@ class Spline:
 
     def intersect(self, other):
         """
-        Intersect two splines.
+        Intersect a spline or hyperplane.
 
         Parameters
         ----------
-        other : `Spline`
-            The spline to intersect with self (`other.nDep` match match `self.nDep`).
+        other : `Spline` or `Hyperplane`
+            The `Manifold` to intersect with self (must have same range dimension as self).
 
         Returns
         -------
-        intersection : `iterable` or `NotImplemented`
-            If `self.nInd + other.nInd - self.nDep` is 0, returns an iterable of intersection points in the 
-            parameter space of the two splines (a vector of size `self.nInd + other.nInd`).
-            If `self.nInd + other.nInd - self.nDep` is 1, returns an iterable of `Spline` curves, each of whose domain is [0, 1] 
-            and each of whose range is in the parameter space of the two splines (a vector of size `self.nInd + other.nInd`).
-            If `self.nInd + other.nInd - self.nDep` is < 0 or > 1, `NotImplemented` is returned.
+        intersections : `iterable` (or `NotImplemented` if other is an unknown type of Manifold)
+            A list of intersections between the two manifolds. 
+            Each intersection records either a crossing or a coincident region.
+
+            For a crossing, intersection is a `Manifold.Crossing`: (left, right)
+            * left : `Manifold` in the manifold's domain where the manifold and the other cross.
+            * right : `Manifold` in the other's domain where the manifold and the other cross.
+            * Both intersection manifolds have the same domain and range (the crossing between the manifold and the other).
+
+            For a coincident region, intersection is a `Manifold.Coincidence`: (left, right, alignment, transform, inverse, translation)
+            * left : `Solid` in the manifold's domain within which the manifold and the other are coincident.
+            * right : `Solid` in the other's domain within which the manifold and the other are coincident.
+            * alignment : scalar value holding the normal alignment between the manifold and the other (the dot product of their unit normals).
+            * transform : `numpy.array` holding the transform matrix from the manifold's domain to the other's domain.
+            * inverse : `numpy.array` holding the inverse transform matrix from the other's domain to the boundary's domain.
+            * translation : `numpy.array` holding the translation vector from the manifold's domain to the other's domain.
+            * Together transform, inverse, and translation form the mapping from the manifold's domain to the other's domain and vice-versa.
         
         See Also
         --------
@@ -1118,13 +1143,7 @@ class Spline:
         Uses `zeros` to find all intersection points and `contours` to find all the intersection curves.
         """
         if not(self.nDep == other.nDep): raise ValueError("The number of dependent variables for both splines much match.")
-        freeParameters = self.nInd + other.nInd - self.nDep
-        if freeParameters == 0:
-            return self.subtract(other).zeros()
-        elif freeParameters == 1:
-            return self.subtract(other).contours()
-        else:
-            return NotImplemented
+        return bspy._spline_intersection.intersect(self, other)
 
     def jacobian(self, uvw):
         """
@@ -1472,14 +1491,24 @@ class Spline:
         """
         return bspy._spline_evaluation.range_bounds(self)
 
-    def remove_knot(self, iKnot):
+    def remove_knot(self, iKnot, nLeft = 0, nRight = 0):
         """
         Remove a single knot from a univariate spline.
         
         Parameters
         ----------
         iKnot : integer
-            index of the knot to remove from the spline
+            Index of the knot to remove from the spline
+        
+        nLeft : integer
+            Number of continuity conditions to enforce on the left end.  For example, if nLeft = 2,
+            then remove_knot will leave the function value and first derivative unchanged on the
+            left end of the domain.
+        
+        nRight : integer
+            Number of continuity conditions to enforce on the right end.  For example, if
+            nRight = 3, then remove_knot will leave the function value and first and second
+            derivative values unchanged on the right end of the domain.
         
         Returns
         -------
@@ -1496,9 +1525,9 @@ class Spline:
         -----
         Solves a simple least squares problem
         """
-        return bspy._spline_domain.remove_knot(self, iKnot)
+        return bspy._spline_domain.remove_knot(self, iKnot, nLeft, nRight)
     
-    def remove_knots(self, tolerance = 1.0e-14):
+    def remove_knots(self, tolerance = 1.0e-14, nLeft = 0, nRight = 0):
         """
         Remove interior knots from a spline.
 
@@ -1508,6 +1537,17 @@ class Spline:
             The maximum pointwise relative error permitted after removing all the knots. Knots will be
             removed until removal of the next knot would put the pointwise error above the threshold.
             The default is 1.0e-14 which is relative to the size of each of the dependent variables.
+
+        nLeft : integer
+            Number of continuity conditions to enforce on the left end.  For example, if nLeft = 2,
+            then remove_knot will leave the function value and first derivative unchanged on the
+            left end of the domain.
+        
+        nRight : integer
+            Number of continuity conditions to enforce on the right end.  For example, if
+            nRight = 3, then remove_knot will leave the function value and first and second
+            derivative values unchanged on the right end of the domain.
+        
 
         Returns
         -------
@@ -1524,7 +1564,7 @@ class Spline:
         -----
         Calls `remove_knot` repeatedly until no longer possible.
         """
-        return bspy._spline_domain.remove_knots(self, tolerance)
+        return bspy._spline_domain.remove_knots(self, tolerance, nLeft, nRight)
     
     def reparametrize(self, newDomain):
         """
@@ -1733,6 +1773,50 @@ class Spline:
         """
         return bspy._spline_fitting.section(xytk)
     
+    def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
+        """
+        Numerically solve an ordinary differential equation with boundary conditions.
+
+        Parameters
+        ==========
+        self : `Spline`
+            The initial guess for the solution to the spline.  All of the spline parameters, e.g.
+            order, boundary conditions, domain, etc. are all established by the initial guess.  The
+            ODE itself must be of the form u^(nOrder)(t) = F(t, u, u', ... , u^(nOrder-1)).  self.nDep should
+            be the same as the number of state variables in the ODE.
+        
+        nLeft : integer
+            The number of boundary conditions to be imposed on the left side of the domain.  The
+            order of the differential equation is assumed to be the sum of nLeft and nRight.
+        
+        nRight : integer
+            The number of boundary conditions to be imposed on the right sie of the domain.  The
+            order of the differential equation is assumed to be the sum of nLeft and nRight.
+        
+        FAndF_u : Python function
+            FAndF_u must have exactly this calling sequence:  FAndF_u(t, uData, *args).  t is a scalar set
+            to the desired value of the independent variable of the ODE.  uData will be a numpy matrix of shape
+            (self.nDep, nOrder) whose columns are (u, ... , u^(nOrder - 1).  It must return a numpy
+            vector of length self.nDep and a numpy array whose shape is (self.nDep, self.nDep, nOrder).
+            The first output vector is the value of the forcing function F at (t, uData).  The numpy
+            array is the array of partial derivatives with respect to all the numbers in uData.  Thus, if
+            this array is called jacobian, then jacobian[:, i, j] is the gradient of the forcing function with
+            respect to uData[i, j].
+        
+        tolerance : scalar
+            The relative error to which the ODE should get solved.
+        
+        args : tuple
+            Additional arguments to pass to the user-defined function FAndF_u.  For example, if FAndF_u has the
+            FAndF_u(t, uData, a, b, c), then args must be a tuple of length 3.
+
+        Notes
+        =====
+        This method uses B-splines as finite elements.  The ODE itself is discretized using
+        collocation.
+        """
+        return bspy._spline_fitting.solve_ode(self, nLeft, nRight, FAndF_u, tolerance, args)
+
     @staticmethod
     def sphere(radius, tolerance = None):
         """

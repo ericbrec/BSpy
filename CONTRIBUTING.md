@@ -25,11 +25,11 @@ You'll likely want to use a virtual environment (.venv) for the BSpy project so 
 
 BSpy depends on a few Python packages (found on PyPi.org). You’ll want to pip install them.
 
-    pip install numpy PyOpenGL Pyopengltk
+    pip install numpy scipy PyOpenGL pyopengltk
  
 We also use the following Python packages for testing.
 
-    pip install pytest scipy
+    pip install pytest
 
 Finally, we use the following standard Python packages for building and deploying documentation and PyPI packages. You probably won't do that, so **installing them is optional**.
 
@@ -43,10 +43,9 @@ The repo directory structure is as follows:
 	* `_spline_fitting.py` (methods that create splines from input data)
 	* `_spline_intersection.py` (methods that intersect splines and find their zeros)
 	* `_spline_operations.py` (methods that perform spline operations, such as addition and differentiation)
-	* `bspyApp.py` (UI for bspy)
-	* `drawableSpline.py` (convert a spline into one OpenGL can render)
 	* `spline.py` (primary spline file that also holds all spline documentation)
-	* `splineOpenGLFrame.py` (rendering and shading for drawableSpline)
+	* `viewer,py` (UI app for displaying splines)
+	* `splineOpenGLFrame.py` (rendering and shading frame for splines)
 * docs (the automatically generated documentation)
 * examples (the top-level programs that use bspy)
 	* `main.py` (the primary program, if you want to select Tom’s nasty spline, you’ll need to use TomsNasty.py to generate the file and update the path to the file in main.py)

@@ -581,17 +581,6 @@ def test_add():
             maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
     assert maxError <= np.finfo(float).eps
 
-def test_blossom():
-    maxError = 0.0
-    for [u, x, y] in truthCurve:
-        [xTest, yTest] = myCurve.blossom([(myCurve.order[0] - 1) * [u]])
-        maxError = max(maxError, np.sqrt((xTest - x) ** 2 + (yTest - y) ** 2))
-    assert maxError <= np.finfo(float).eps
-    for i in range(myCurve.nCoef[0]):
-        coef = myCurve.blossom([myCurve.knots[0][i+1:i+myCurve.order[0]]])
-        maxError = max(maxError, np.linalg.norm(myCurve.coefs[:,i] - coef))
-    assert maxError <= np.finfo(float).eps
-
 def test_circular_arc():
     maxError = 0.0
     radius = 3.0
@@ -609,7 +598,7 @@ def test_contours():
     for t in np.linspace(0.0, 1.0, 21):
         x = spline((t,))
         maxError = max(maxError, np.linalg.norm(F(x)))
-    assert maxError <= 0.055
+    assert maxError <= np.finfo(float).eps ** 0.25
 
     maxError = 0.0
     order = 3
@@ -622,30 +611,7 @@ def test_contours():
         for t in np.linspace(0.0, 1.0, 11):
             uvw = contour((t,))
             maxError = max(maxError, np.linalg.norm(spline(uvw)))
-    assert maxError <= 0.055
-
-    return # Comment this line to run the following lengthy test
-
-    maxError = 0.0
-    F = lambda u , v : (u ** 2 + (v - 3/4) ** 2 - 1/25) * \
-        ((u - 2/5) ** 2 + (v - 3/5) ** 2 - 1/25) * \
-        (u ** 2 + (v - 3/2) ** 2 - 25/16) * \
-        ((u - 1) ** 2 + (v - 3/10) ** 2 - 1/25)
-    order = 9
-    knots = [0.0] * order + [1.0] * order
-    nCoef = order
-    dataPoints = np.empty((1, nCoef, nCoef), float)
-    uValues = [np.linspace(0.0, 1.0, nCoef), np.linspace(0.0, 1.0, nCoef)]
-    for i, u in enumerate(uValues[0]):
-        for j, v in enumerate(uValues[1]):
-            dataPoints[0, i, j] = F(u, v)
-    spline = bspy.Spline.least_squares(uValues, dataPoints, (order, order), (knots, knots))
-    contours = spline.contours()
-    for contour in contours:
-        for t in np.linspace(0.0, 1.0, 11):
-            uvw = contour((t,))
-            maxError = max(maxError, np.linalg.norm(spline(uvw)))
-    assert maxError <= 0.05
+    assert maxError <= np.finfo(float).eps ** 0.25
 
 def test_contract():
     maxError = 0.0
@@ -848,6 +814,14 @@ def test_four_sided_patch():
         coonsPt = mySurf(uv, uv)
         assert (np.linalg.norm(truthPt - coonsPt)) < 1.0e-15
 
+def test_geodesic():
+    surface = bspy.Spline(2, 3, [4, 4], [4, 4], 2 * [[0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0]],
+                      [[0.0, 0.0, 0.0, 0.0, 0.3, 0.3, 0.3, 0.3, 0.7, 0.7, 0.7, 0.7, 1.0, 1.0, 1.0, 1.0],
+                       [0.0, 0.3, 0.7, 1.0, 0.0, 0.3, 0.7, 1.0, 0.0, 0.3, 0.7, 1.0, 0.0, 0.3, 0.7, 1.0],
+                       [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 0.0, 0.0, 3.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]])
+    solution = surface.geodesic([0.0, 0.5], [1.0, 0.5], 1.0e-5)
+    assert np.linalg.norm(solution(0.5) - [0.52681133, 0.44433632]) < 1.0e-5
+
 def test_graph():
     simpleFunc = bspy.Spline(2, 1, [3, 4], [4, 5], [[0.0, 0, 0, 0.4, 1, 1, 1],
                              [0.0, 0, 0, 0, 0.6, 1, 1, 1, 1]], [[1.0, 2, 3, 4, 2, 3, 4, 5,
@@ -890,46 +864,6 @@ def test_integral():
         xTest = myCurve.integral([1], [limits[0][0]], [u])[0]
         maxError = max(maxError, (xTest - x) ** 2)
     assert maxError <= np.finfo(float).eps
-
-def test_intersect():
-
-    return # Comment this line to run the following additional really lengthy test
-
-    maxError = 0.0
-    F = lambda u , v : (u ** 2 + (v - 3/4) ** 2 - 1/25) * \
-        ((u - 2/5) ** 2 + (v - 3/5) ** 2 - 1/25) * \
-        (u ** 2 + (v - 3/2) ** 2 - 25/16) * \
-        ((u - 1) ** 2 + (v - 3/10) ** 2 - 1/25)
-    order = 9
-    knots = [0.0] * order + [1.0] * order
-    nCoef = order
-    dataPoints = np.empty((3, nCoef, nCoef), float)
-    uValues = [np.linspace(0.0, 1.0, nCoef), np.linspace(0.0, 1.0, nCoef)]
-    for i, u in enumerate(uValues[0]):
-        for j, v in enumerate(uValues[1]):
-            dataPoints[0, i, j] = u
-            dataPoints[1, i, j] = v
-            dataPoints[2, i, j] = F(u, v)
-    spline = bspy.Spline.least_squares(uValues, dataPoints, (order, order), (knots, knots))
-
-    order = 4
-    knots = [0.0] * order + [1.0] * order
-    nCoef = order
-    dataPoints = np.empty((3, nCoef, nCoef), float)
-    uValues = [np.linspace(0.0, 1.0, nCoef), np.linspace(0.0, 1.0, nCoef)]
-    for i, u in enumerate(uValues[0]):
-        for j, v in enumerate(uValues[1]):
-            dataPoints[0, i, j] = 2*u - 0.5
-            dataPoints[1, i, j] = 2*v - 0.5
-            dataPoints[2, i, j] = 0.0
-    plane = bspy.Spline.least_squares(uValues, dataPoints, (order, order), (knots, knots))
-
-    contours = spline.intersect(plane)
-    for contour in contours:
-        for t in np.linspace(0.0, 1.0, 11):
-            uvst = contour((t,))
-            maxError = max(maxError, np.linalg.norm(spline(uvst[:2]) - plane(uvst[2:])))
-    assert maxError <= np.finfo(float).eps ** 0.2
 
 def test_least_squares():
     # Replicate 1D spline using its knots. Should be precise to nearly machine epsilon.
@@ -1167,7 +1101,7 @@ def test_remove_knot():
     rhs = np.array([[0.3, 0.5, 0.4], [1.0, 0.0, -0.8]]).T
     newCoefs, residuals, rank, sigmas = np.linalg.lstsq(a, rhs, rcond = None)
     correctSlimmed = bspy.Spline(1, 2, [4], [4], [[0.0,0,0,0,1,1,1,1]], [[0, 0], newCoefs[0], newCoefs[1], [1, 1]])
-    attempt, residuals = myCurve.remove_knot(4)
+    attempt, residuals = myCurve.remove_knot(4, 1, 1)
     coefDiff = correctSlimmed.coefs - attempt.coefs
     assert np.linalg.norm(coefDiff) < noDiff
 
@@ -1271,6 +1205,83 @@ def test_section():
         for i in range(3):
             rate.append(math.log2(maxErrors[i] / maxErrors[i + 1]))
 
+def test_solve_ode():
+    # Test u' = u, u(0) = 1
+    myGuess = bspy.Spline.line([1.0], [2.0])
+    myGuess = myGuess.elevate([2])
+    def myF(t, u):
+        return np.array([u[0, 0]]), np.array([1.0]).reshape((1, 1, 1))
+    fit = myGuess.solve_ode(1, 0, myF)
+    myValue = fit(1.0)[0]
+    correctValue = np.exp(1.0)
+    assert abs(myValue - correctValue) < 1.0e-7
+
+    # Test u' = u, u(1) = 2
+    fit = myGuess.solve_ode(0, 1, myF)
+    myValue = fit(0.0)[0]
+    correctValue = 2.0 / correctValue
+    assert abs(myValue - correctValue) < 1.0e-7
+
+    # Test u'' = u, u(0) = 1, u'(0) = 1
+    def myF(t, u):
+        return np.array([u[0, 0]]), np.array([1.0, 0.0]).reshape((1, 1, 2))
+    fit = myGuess.solve_ode(2, 0, myF)
+    myValue = fit(1.0)[0]
+    correctValue = np.exp(1.0)
+    assert abs(myValue - correctValue) < 1.0e-7
+
+    # Test u'' = u, u(0) = 1, u(1) = 1
+    myGuess.coefs[0][-1] = 1.0
+    fit = myGuess.solve_ode(1, 1, myF)
+    myValue = fit(0.5)[0]
+    eHalf = np.exp(0.5)
+    c0 = 1.0 / (correctValue + 1.0)
+    c1 = correctValue / (correctValue + 1.0)
+    correctValue = c0 * eHalf + c1 / eHalf
+    assert abs(myValue - correctValue) < 1.0e-7
+
+    # Test simple system (x', y') = pi * (-y, x), x(0) = 1, y(0) = 0
+    myGuess = bspy.Spline.line([1.0, 0.0], [0.0, 0.0]).elevate([2])
+    def myF(t, u):
+        return np.pi * np.array([-u[1,0], u[0,0]]), np.pi * np.array([[0.0, -1.0], [1.0, 0.0]]).reshape((2, 2, 1))
+    fit = myGuess.solve_ode(1, 0, myF)
+    myValue = fit(1.0)
+    assert np.linalg.norm(myValue - np.array([-1.0, 0.0])) < 1.0e-7
+
+    # Test 2 body problem
+    def nBodyF(t, u, nBody, nDim, mass):
+        G = 8.6443e-13
+        nState = nDim * nBody
+        rhs = np.zeros((nState,))
+        jacobian = np.zeros((nState, nState, 2))
+        for iBody in range(nBody):
+            bodySlice = slice(iBody * nDim, (iBody + 1) * nDim)
+            for iTerm in range(nBody):
+                if iBody == iTerm:
+                    continue
+                termSlice = slice(iTerm * nDim, (iTerm + 1) * nDim)
+                direction_ij = u[termSlice, 0] - u[bodySlice, 0]
+                rij = (direction_ij @ direction_ij) ** 0.5
+                gij = G * mass[iTerm] / rij ** 3
+                gijPrime = 3.0 * gij / rij ** 2
+                rhs[bodySlice] += gij * direction_ij
+                jacobian[bodySlice, bodySlice, 0] -= gij * np.identity(nDim)
+                jacobian[bodySlice, termSlice, 0] += gij * np.identity(nDim)
+                jacobian[bodySlice, bodySlice, 0] += gijPrime * direction_ij * direction_ij
+                jacobian[bodySlice, termSlice, 0] -= gijPrime * direction_ij * direction_ij
+        return rhs, jacobian
+    nBody = 2
+    nDim = 2
+    mass = np.array([3.0e+19, 1.0e+19])
+    finalTime = 10.0
+    mass = np.array([3.0e+19, 1.0e+19])
+    u = [0.0, 0.0, finalTime, finalTime]
+    data = np.array([[100.0, 0.0, 900.0, 900.0], [0.0, 100.0, 0.0, -100.0],
+                     [900.0, 100.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]]).T
+    initialGuess = bspy.Spline.least_squares(u, data)
+    solution = initialGuess.solve_ode(2, 0, nBodyF, 1.0e-4, (nBody, nDim, mass))
+    assert np.linalg.norm(solution(finalTime) - [564.63236348, 711.04783803,
+                                                 -493.89709045, 766.8564859]) < 1.0e-4
 def test_sphere():
     mySphere = bspy.Spline.sphere(1.3, 1.0e-12)
     tValues = np.linspace(0.0, 1.0, 31)

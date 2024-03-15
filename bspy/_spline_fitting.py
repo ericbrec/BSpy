@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 import bspy.spline
 import math
 
@@ -141,27 +142,25 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         # where dGCoefs and GSamples are the B-spline values and sample points, respectively, for x(t).
         # The dGCoefs matrix is banded due to B-spline local support, so initialize it to zero.
         # Solving for coefs provides us our initial coefficients of x(t).
-        dGCoefs = np.zeros((nUnknownCoefs, nDep, nDep, nCoef), contourDtype)
+        dGCoefs = np.zeros((nUnknownCoefs, nDep, nCoef, nDep), contourDtype)
         i = 0
-        for t, i in zip(tValues, range(nUnknownCoefs)):
-            ix = np.searchsorted(knots, t, 'right')
-            ix = min(ix, nCoef)
-            bValues = bspy.Spline.bspline_values(ix, knots, order, t)
+        for i, t in enumerate(tValues):
+            ix, bValues = bspy.Spline.bspline_values(None, knots, order, t)
             for j in range(nDep):
-                dGCoefs[i, j, j, ix - order:ix] = bValues
-        GSamples -= dGCoefs[:, :, :, 0] @ knownXValues[0] + dGCoefs[:, :, :, -1] @ knownXValues[-1]
+                dGCoefs[i, j, ix - order:ix, j] = bValues
+        GSamples -= dGCoefs[:, :, 0, :] @ knownXValues[0] + dGCoefs[:, :, -1, :] @ knownXValues[-1]
         GSamples = GSamples.reshape(nUnknownCoefs * nDep)
-        dGCoefs = dGCoefs[:, :, :, 1:-1].reshape(nUnknownCoefs * nDep, nDep * nUnknownCoefs)
-        coefs = np.empty((nDep, nCoef), contourDtype)
-        coefs[:, 0] = knownXValues[0]
-        coefs[:, -1] = knownXValues[-1]
-        coefs[:, 1:-1] = np.linalg.solve(dGCoefs, GSamples).reshape(nDep, nUnknownCoefs)
+        dGCoefs = dGCoefs[:, :, 1:-1, :].reshape(nUnknownCoefs * nDep, nUnknownCoefs * nDep)
+        coefs = np.empty((nCoef, nDep), contourDtype)
+        coefs[0, :] = knownXValues[0]
+        coefs[-1, :] = knownXValues[-1]
+        coefs[1:-1, :] = np.linalg.solve(dGCoefs, GSamples).reshape(nUnknownCoefs, nDep)
 
         # Array to hold the values of F and contour dot for each t, excluding endpoints.
         FSamples = np.empty((nUnknownCoefs, nDep), contourDtype)
         # Array to hold the Jacobian of the FSamples with respect to the coefficients.
         # The Jacobian is banded due to B-spline local support, so initialize it to zero.
-        dFCoefs = np.zeros((nUnknownCoefs, nDep, nDep, nCoef), contourDtype)
+        dFCoefs = np.zeros((nUnknownCoefs, nDep, nCoef, nDep), contourDtype)
         # Working array to hold the transpose of the Jacobian of F for a particular x(t).
         dFX = np.empty((nDep, nDep - 1), contourDtype)
 
@@ -170,26 +169,23 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         while True:
             FSamplesNorm = 0.0
             # Fill in FSamples and its Jacobian (dFCoefs) with respect to the coefficients of x(t).
-            for t, i in zip(tValues, range(nUnknownCoefs)):
+            for i, t in enumerate(tValues):
                 # Isolate coefficients and compute bspline values and their first two derivatives at t.
-                ix = np.searchsorted(knots, t, 'right')
-                ix = min(ix, nCoef)
-                compactCoefs = coefs[:, ix - order:ix]
-                bValues = bspy.Spline.bspline_values(ix, knots, order, t)
-                dValues = bspy.Spline.bspline_values(ix, knots, order, t, 1)
-                d2Values = bspy.Spline.bspline_values(ix, knots, order, t, 2)
+                ix, bValues = bspy.Spline.bspline_values(None, knots, order, t)
+                ix, dValues = bspy.Spline.bspline_values(ix, knots, order, t, 1)
+                ix, d2Values = bspy.Spline.bspline_values(ix, knots, order, t, 2)
+                compactCoefs = coefs[ix - order:ix, :]
 
                 # Compute the dot constraint for x(t) and check for divergence from solution.
-                dotValues = np.dot(compactCoefs @ d2Values, compactCoefs @ dValues)
+                dotValues = np.dot(compactCoefs.T @ d2Values, compactCoefs.T @ dValues)
                 FSamplesNorm = max(FSamplesNorm, abs(dotValues))
                 if previousFSamplesNorm > 0.0 and FSamplesNorm > previousFSamplesNorm * (1.0 - evaluationEpsilon):
                     break
 
                 # Do the same for F(x(t)).
-                x = coefsMin + (compactCoefs @ bValues) * coefsMaxMinusMin
+                x = coefsMin + (compactCoefs.T @ bValues) * coefsMaxMinusMin
                 FValues = F(x)
-                for FValue in FValues:
-                    FSamplesNorm = max(FSamplesNorm, abs(FValue))
+                FSamplesNorm = max(FSamplesNorm, np.linalg.norm(FValues, np.inf))
                 if previousFSamplesNorm > 0.0 and FSamplesNorm > previousFSamplesNorm * (1.0 - evaluationEpsilon):
                     break
 
@@ -200,16 +196,16 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                 # Compute the Jacobian of FSamples with respect to the coefficients of x(t).
                 for j in range(nDep):
                     dFX[j] = dF[j](x) * coefsMaxMinusMin[j]
-                FValues = np.outer(dFX.T, bValues).reshape(nDep - 1, nDep, order)
-                dotValues = (np.outer(compactCoefs @ dValues, d2Values) + np.outer(compactCoefs @ d2Values, dValues)).reshape(nDep, order)
-                dFCoefs[i, :-1, :, ix - order:ix] = FValues
-                dFCoefs[i, -1, :, ix - order:ix] = dotValues
+                FValues = np.outer(dFX.T, bValues).reshape(nDep - 1, nDep, order).swapaxes(1, 2)
+                dotValues = (np.outer(d2Values, compactCoefs.T @ dValues) + np.outer(dValues, compactCoefs.T @ d2Values)).reshape(order, nDep)
+                dFCoefs[i, :-1, ix - order:ix, :] = FValues
+                dFCoefs[i, -1, ix - order:ix, :] = dotValues
             
             # Check if we got closer to the solution.
             if previousFSamplesNorm > 0.0 and FSamplesNorm > previousFSamplesNorm * (1.0 - evaluationEpsilon):
                 # No we didn't, take a dampened step.
                 coefDelta *= 0.5
-                coefs[:, 1:-1] += coefDelta # Don't update endpoints
+                coefs[1:-1, :] += coefDelta # Don't update endpoints
             else:
                 # Yes we did, rescale FSamples and its Jacobian.
                 if FSamplesNorm >= evaluationEpsilon:
@@ -217,10 +213,16 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                     dFCoefs /= FSamplesNorm
                 
                 # Perform a Newton iteration.
-                HSamples = FSamples.reshape(nUnknownCoefs * nDep)
-                dHCoefs = dFCoefs[:, :, :, 1:-1].reshape((nUnknownCoefs * nDep, nDep * nUnknownCoefs))
-                coefDelta = np.linalg.solve(dHCoefs, HSamples).reshape(nDep, nUnknownCoefs)
-                coefs[:, 1:-1] -= coefDelta # Don't update endpoints
+                n = nUnknownCoefs * nDep
+                HSamples = FSamples.reshape(n)
+                dHCoefs = dFCoefs[:, :, 1:-1, :].reshape((n, n))
+                bandWidth = order * nDep - 1
+                banded = np.zeros((2 * bandWidth + 1, n))
+                for iDiagonal in range(min(bandWidth + 1, n)):
+                    banded[bandWidth - iDiagonal, iDiagonal : n]= np.diagonal(dHCoefs, iDiagonal)
+                    banded[bandWidth + iDiagonal, : n - iDiagonal] = np.diagonal(dHCoefs, -iDiagonal)
+                coefDelta = sp.linalg.solve_banded((bandWidth, bandWidth), banded, HSamples).reshape(nUnknownCoefs, nDep)
+                coefs[1:-1, :] -= coefDelta # Don't update endpoints
 
                 # Record FSamples norm to ensure this Newton step is productive.
                 previousFSamplesNorm = FSamplesNorm
@@ -229,25 +231,23 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             if np.linalg.norm(coefDelta) < epsilon:
                 # If step didn't improve the solution, remove it.
                 if previousFSamplesNorm > 0.0 and FSamplesNorm > previousFSamplesNorm * (1.0 - evaluationEpsilon):
-                    coefs[:, 1:-1] += coefDelta # Don't update endpoints
+                    coefs[1:-1, :] += coefDelta # Don't update endpoints
                 break
 
-        # Newton steps are done. Now check if we need to subdivide.
-        # TODO: This would be FSamplesNorm / dHCoefs norm, but dHCoefs was divided by FSamplesNorm earlier.
-        if FSamplesNorm / np.linalg.norm(dHCoefs, np.inf) < epsilon:
-            break # We're done!
-        
-        # We need to subdivide, so build new knots, tValues, and GSamples arrays.
-        nCoef = 2 * (nCoef - 1)
-        nUnknownCoefs = nCoef - 2
+        # Newton steps are done. Now, check if we need to subdivide.
+        # We do this by building new subdivided knots, tValues, and GSamples (x(tValues)).
+        # If F(GSamples) is close enough to zero, we're done.
+        # Otherwise, re-run Newton's method using the new knots, tValues, and GSamples.
+        nUnknownCoefs = 2 * (nCoef - 2)
         tValues = np.empty(nUnknownCoefs, contourDtype)
         GSamples = np.empty((nUnknownCoefs, nDep), contourDtype)
         previousKnot = knots[degree]
         newKnots = [previousKnot] * order
+        FSamplesNorm = 0.0
         i = 0
         for ix in range(order, len(knots) - degree, order - 2):
             knot = knots[ix]
-            compactCoefs = coefs[:, ix - order:ix]
+            compactCoefs = coefs[ix - order:ix, :]
 
             # New knots are at the midpoint between old knots.
             newKnot = 0.5 * (previousKnot + knot)
@@ -255,33 +255,42 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             # Place tValues at Gauss points for the intervals [previousKnot, newKnot] and [newKnot, knot].
             for rho in reversed(rhos):
                 tValues[i] = t = 0.5 * (previousKnot + newKnot - rho * (newKnot - previousKnot))
-                GSamples[i] = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)
+                GSamples[i] = x = compactCoefs.T @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
+                FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
                 i += 1
             for rho in rhos[0 if degree % 2 == 1 else 1:]:
                 tValues[i] = t = 0.5 * (previousKnot + newKnot + rho * (newKnot - previousKnot))
-                GSamples[i] = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)
+                GSamples[i] = x = compactCoefs.T @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
+                FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
                 i += 1
             for rho in reversed(rhos):
                 tValues[i] = t = 0.5 * (newKnot + knot - rho * (knot - newKnot))
-                GSamples[i] = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)
+                GSamples[i] = x = compactCoefs.T @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
+                FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
                 i += 1
             for rho in rhos[0 if degree % 2 == 1 else 1:]:
                 tValues[i] = t = 0.5 * (newKnot + knot + rho * (knot - newKnot))
-                GSamples[i] = compactCoefs @ bspy.Spline.bspline_values(ix, knots, order, t)
+                GSamples[i] = x = compactCoefs.T @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
+                FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
                 i += 1
             
             newKnots += [newKnot] * (order - 2) # C1 continuity
             newKnots += [knot] * (order - 2) # C1 continuity
             previousKnot = knot
         
-        # Update knots array.
+        # Test if F(GSamples) is close enough to zero.
+        if FSamplesNorm / np.linalg.norm(dHCoefs, np.inf) < epsilon:
+            break # We're done! Exit subdivision loop and return x(t).
+
+        # Otherwise, update nCoef and knots array, and then re-run Newton's method.
+        nCoef = nUnknownCoefs + 2
         newKnots += [knot] * 2 # Clamp last knot
         knots = np.array(newKnots, contourDtype)
         assert i == nUnknownCoefs
         assert len(knots) == nCoef + order
 
     # Rescale x(t) back to original data points.
-    coefs = (coefsMin + coefs.T * coefsMaxMinusMin).T
+    coefs = (coefsMin + coefs * coefsMaxMinusMin).T
     spline = bspy.Spline(1, nDep, (order,), (nCoef,), (knots,), coefs, metadata)
     if isinstance(F, bspy.Spline):
         spline = spline.confine(F.domain())
@@ -383,6 +392,103 @@ def four_sided_patch(bottom, right, top, left, surfParam = 0.5):
     
     return (1.0 - surfParam) * coons + surfParam * laplace
 
+def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-6):
+    # Check validity of input
+    if self.nInd != 2:  raise ValueError("Surface must have two independent variables")
+    if len(uvStart) != 2:  raise ValueError("uvStart must have two components")
+    if len(uvEnd) != 2:  raise ValueError("uvEnd must have two components")
+    uvDomain = self.domain()
+    if uvStart[0] < uvDomain[0, 0] or uvStart[0] > uvDomain[0, 1] or \
+       uvStart[1] < uvDomain[1, 0] or uvStart[1] > uvDomain[1, 1]:
+        raise ValueError("uvStart is outside domain of the surface")
+    if uvEnd[0] < uvDomain[0, 0] or uvEnd[0] > uvDomain[0, 1] or \
+       uvEnd[1] < uvDomain[1, 0] or uvEnd[1] > uvDomain[1, 1]:
+        raise ValueError("uvEnd is outside domain of the surface")
+    
+    # Define the callback function for the ODE solver
+    def geodesicCallback(t, u, surface, uvDomain):
+        # Evaluate the surface information needed for the Christoffel symbols
+        u[0, 0] = max(uvDomain[0, 0], min(uvDomain[0, 1], u[0, 0]))
+        u[1, 0] = max(uvDomain[1, 0], min(uvDomain[1, 1], u[1, 0]))
+        su = surface.derivative([1, 0], u[:, 0])
+        sv = surface.derivative([0, 1], u[:, 0])
+        suu = surface.derivative([2, 0], u[:, 0])
+        suv = surface.derivative([1, 1], u[:, 0])
+        svv = surface.derivative([0, 2], u[:, 0])
+
+        # Calculate the first fundamental form
+        E = su @ su
+        F = su @ sv
+        G = sv @ sv
+        A = np.array([[E, F], [F, G]])
+
+        # Compute right hand side entries
+        R_uuu = suu @ su
+        R_uuv = suu @ sv
+        R_uvu = suv @ su
+        R_uvv = suv @ sv
+        R_vvu = svv @ su
+        R_vvv = svv @ sv
+        R = np.array([[R_uuu, R_uvu, R_vvu], [R_uuv, R_uvv, R_vvv]])
+
+        # Solve for the Christoffel symbols
+        luAndPivot = sp.linalg.lu_factor(A)
+        Gamma = sp.linalg.lu_solve(luAndPivot, R)
+
+        # Compute the right hand side for the ODE
+        rhs = -np.array([Gamma[0, 0] * u[0, 1] ** 2 + 2.0 * Gamma[0, 1] * u[0, 1] * u[1, 1] + Gamma[0, 2] * u[1, 1] ** 2,
+                         Gamma[1, 0] * u[0, 1] ** 2 + 2.0 * Gamma[1, 1] * u[0, 1] * u[1, 1] + Gamma[1, 2] * u[1, 1] ** 2])
+        
+        # Now we need the derivatives of the Christoffel symbols with respect to u
+        suuu = surface.derivative([3, 0], u[:, 0])
+        suuv = surface.derivative([2, 1], u[:, 0])
+        suvv = surface.derivative([1, 2], u[:, 0])
+        svvv = surface.derivative([0, 3], u[:, 0])
+        E_u = 2.0 * R_uuu
+        F_u = R_uuv + R_uvu
+        G_u = 2.0 * R_uvv
+        A_u = np.array([[E_u, F_u], [F_u, G_u]])
+        R_uuu_u = suuu @ su + suu @ suu
+        R_uuv_u = suuu @ sv + suu @ suv
+        R_uvu_u = suuv @ su + suv @ suu
+        R_uvv_u = suuv @ sv + suv @ suv
+        R_vvu_u = suvv @ su + svv @ suu
+        R_vvv_u = suvv @ sv + svv @ suv
+        R_u = np.array([[R_uuu_u, R_uvu_u, R_vvu_u], [R_uuv_u, R_uvv_u, R_vvv_u]])
+        Gamma_u = sp.linalg.lu_solve(luAndPivot, R_u - A_u @ Gamma)
+
+        # . . . And the derivatives of the Christoffel symbols with respect to v
+        E_v = 2.0 * R_uvu
+        F_v = R_uvv + R_vvu
+        G_v = 2.0 * R_vvv
+        A_v = np.array([[E_v, F_v], [F_v, G_v]])
+        R_uuu_v = suuv @ su + suu @ suv
+        R_uuv_v = suuv @ sv + suu @ svv
+        R_uvu_v = suvv @ su + suv @ suv
+        R_uvv_v = suvv @ sv + suv @ svv
+        R_vvu_v = svvv @ su + svv @ suv
+        R_vvv_v = svvv @ sv + svv @ svv
+        R_v = np.array([[R_uuu_v, R_uvu_v, R_vvu_v], [R_uuv_v, R_uvv_v, R_vvv_v]])
+        Gamma_v = sp.linalg.lu_solve(luAndPivot, R_v - A_v @ Gamma)
+
+        # Compute the Jacobian matrix of the right hand side of the ODE
+        jacobian = -np.array([[[Gamma_u[0, 0] * u[0, 1] ** 2 + 2.0 * Gamma_u[0, 1] * u[0, 1] * u[1, 1] + Gamma_u[0, 2] * u[1, 1] ** 2,
+                                2.0 * Gamma[0, 0] * u[0, 1] + 2.0 * Gamma[0, 1] * u[1, 1]],
+                               [Gamma_v[0, 0] * u[0, 1] ** 2 + 2.0 * Gamma_v[0, 1] * u[0, 1] * u[1, 1] + Gamma_v[0, 2] * u[1, 1] ** 2,
+                                2.0 * Gamma[0, 1] * u[0, 1] + 2.0 * Gamma[0, 2] * u[1, 1]]],
+                              [[Gamma_u[1, 0] * u[0, 1] ** 2 + 2.0 * Gamma_u[1, 1] * u[0, 1] * u[1, 1] + Gamma_u[1, 2] * u[1, 1] ** 2,
+                                2.0 * Gamma[1, 0] * u[0, 1] + 2.0 * Gamma[1, 1] * u[1, 1]],
+                               [Gamma_v[1, 0] * u[0, 1] ** 2 + 2.0 * Gamma_v[1, 1] * u[0, 1] * u[1, 1] + Gamma_v[1, 2] * u[1, 1] ** 2,
+                                2.0 * Gamma[1, 1] * u[1, 1] + 2.0 * Gamma[1, 2] * u[1, 1]]]])
+        return rhs, jacobian
+
+    # Generate the initial guess for the contour
+    initialGuess = line(uvStart, uvEnd).elevate([2])
+
+    # Solve the ODE and return the geodesic
+    solution = initialGuess.solve_ode(1, 1, geodesicCallback, 1.0e-5, (self, uvDomain))
+    return solution
+
 def least_squares(uValues, dataPoints, order = None, knots = None, compression = 0.0,
                   tolerance = None, fixEnds = False, metadata = {}):
 
@@ -482,11 +588,10 @@ def least_squares(uValues, dataPoints, order = None, knots = None, compression =
                 if uNew != u:
                     iDerivative = 0
                     u = uNew
-                    ix = np.searchsorted(knots[iInd], u, 'right')
-                    ix = min(ix, nCols)
+                    ix = None
                 else:
                     iDerivative += 1
-                row = bspy.Spline.bspline_values(ix, knots[iInd], order[iInd], u, iDerivative)
+                ix, row = bspy.Spline.bspline_values(ix, knots[iInd], order[iInd], u, iDerivative)
                 A[iRow, ix - order[iInd] : ix] = row
                 if fixEnds and (u == uValues[iInd][0] or u == uValues[iInd][-1]):
                     fixedRows.append(iRow)
@@ -640,6 +745,205 @@ def section(xytk):
     # Join the pieces together and return
     return bspy.Spline.join(mySections)
 
+def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
+    # Ensure that the ODE is properly formulated
+
+    if nLeft < 0:  raise ValueError("Invalid number of left hand boundary conditions")
+    if nRight < 0:  raise ValueError("Invalid number of right hand boundary conditions")
+    if self.nInd != 1:  raise ValueError("Initial guess must have exactly one independent variable")
+    nOrder = nLeft + nRight
+
+    # Make sure that there are full multiplicity knots on the ends
+
+    currentGuess = self.copy().clamp((0,), (0,))
+    scale = 1.0
+    for lower, upper in currentGuess.range_bounds():
+        scale = max(scale, upper - lower)
+    nDep = currentGuess.nDep
+
+    # Insert and remove knots so initial guess conforms to de Boor - Swartz setup
+
+    uniqueKnots, indices = np.unique(currentGuess.knots[0], True)
+    uniqueKnots = uniqueKnots[1 : -1]
+    indices = indices[1:]
+    knotsToAdd = []
+    knotsToRemove = []
+    for i, knot in enumerate(uniqueKnots):
+        howMany = currentGuess.order[0] - indices[i + 1] + indices[i] - nOrder
+        if howMany > 0:
+            knotsToAdd += howMany * [knot]
+        if howMany < 0:
+            knotsToRemove += [[knot, abs(howMany)]]
+    currentGuess = currentGuess.insert_knots([knotsToAdd])
+    for [knot, howMany] in knotsToRemove:
+        ix = np.searchsorted(currentGuess.knots[0], knot, side = 'left')
+        for iy in range(howMany):
+            currentGuess, residual = currentGuess.remove_knot(ix, nLeft, nRight)
+    previousGuess = 0.0 * currentGuess
+    bandWidth = nDep * currentGuess.order[0] - 1
+
+    # Determine whether an initial value problem or boundary value problem
+
+    IVP = nLeft == 0 or nRight == 0
+
+    # Use the Gauss Legendre points as the collocation points
+
+    perInterval = currentGuess.order[0] - nOrder
+    gaussNodes, weights = _legendre_polynomial_zeros(perInterval)
+    linear = False
+    refine = True
+    while refine:
+        collocationPoints = []
+        for knot0, knot1 in zip(currentGuess.knots[0][:-1], currentGuess.knots[0][1:]):
+            if knot0 < knot1:
+                for gaussNode in gaussNodes:
+                    alpha = 0.5 * (1.0 - gaussNode)
+                    collocationPoints.append((1.0 - alpha) * knot0 + alpha * knot1)
+                    if abs(gaussNode) > 1.0e-5:
+                        collocationPoints.append(alpha * knot0 + (1.0 - alpha) * knot1)
+        collocationPoints = np.sort(collocationPoints)
+        n = nDep * currentGuess.nCoef[0]
+        bestGuess = np.reshape(currentGuess.coefs.T, (n,))
+
+    # Set up for next pass at this refinement level
+
+        nCollocation = len(collocationPoints)
+        if IVP:
+            n = nDep * currentGuess.order[0]
+            if nLeft != 0:
+                iFirstPoint = 0
+                iNextPoint = perInterval
+            else:
+                iNextPoint = nCollocation
+                iFirstPoint = iNextPoint - perInterval
+        else:
+            iFirstPoint = 0
+            iNextPoint = nCollocation
+
+    # Perform the loop through all the IVP intervals
+
+        while True:
+            done = linear
+            continuation = 1.0
+            bestContinuation = 0.0
+            continuationBest = bestGuess
+            previous = 0.5 * np.finfo(bestGuess[0]).max
+            iteration = 0
+    
+    # Perform nonlinear Newton iteration
+
+            while True:
+                iteration += 1
+                collocationMatrix = np.zeros((2 * bandWidth + 1, n))
+                residuals = np.array([])
+                workingSpline = bspy.Spline(1, nDep, currentGuess.order, currentGuess.nCoef,
+                                            currentGuess.knots, np.reshape(bestGuess, (currentGuess.nCoef[0], nDep)).T)
+                residuals = np.append(residuals, np.zeros((nLeft * nDep,)))
+                collocationMatrix[bandWidth, 0 : nLeft * nDep] = 1.0
+                for iPoint, t in enumerate(collocationPoints[iFirstPoint : iNextPoint]):
+                    uData = np.array([workingSpline.derivative([i], t) for i in range(nOrder)]).T
+                    F, F_u = FAndF_u(t, uData, *args)
+                    residuals = np.append(residuals, workingSpline.derivative([nOrder], t) - continuation * F)
+                    ix = None
+                    bValues = np.array([])
+                    for iDerivative in range(nOrder + 1):
+                        ix, iValues = bspy.Spline.bspline_values(ix, workingSpline.knots[0], workingSpline.order[0],
+                                                                 t, derivativeOrder = iDerivative)
+                        bValues = np.append(bValues, iValues)
+                    bValues = np.reshape(bValues, (nOrder + 1, workingSpline.order[0]))
+                    for iDep in range(nDep):
+                        iRow = (nLeft + iPoint) * nDep + iDep
+                        startSlice = nDep * (ix - workingSpline.order[0] - iFirstPoint)
+                        endSlice = nDep * (ix - iFirstPoint)
+                        indices = np.arange(startSlice + iDep, endSlice + iDep, nDep)
+                        collocationMatrix[bandWidth + iRow - indices, indices] -= bValues[nOrder]
+                        for iF_uRow in range(nDep):
+                            indices = np.arange(startSlice + iF_uRow, endSlice + iF_uRow, nDep)
+                            for iF_uColumn in range(nOrder):
+                                collocationMatrix[bandWidth + iRow - indices, indices] += continuation * F_u[iDep, iF_uRow, iF_uColumn] * bValues[iF_uColumn]
+                residuals = np.append(residuals, np.zeros((nRight * nDep,)))
+                collocationMatrix[bandWidth, -1 : -(nRight * nDep + 1) : -1] = 1.0
+
+    # Solve the collocation linear system
+
+                update = sp.linalg.solve_banded((bandWidth, bandWidth), collocationMatrix, residuals)
+                bestGuess[nDep * (iFirstPoint + nLeft) : nDep * (iNextPoint + nLeft)] += update[nDep * nLeft : nDep * (iNextPoint - iFirstPoint + nLeft)]
+                updateSize = np.linalg.norm(update)
+                if updateSize > 1.25 * previous and iteration >= 4:
+                    continuation = 0.5 * (continuation + bestContinuation)
+                    bestGuess = continuationBest
+                    if continuation - bestContinuation < 0.01:
+                        break
+                    previous = 0.5 * np.finfo(bestGuess[0]).max
+                    iteration = 0
+                    continue
+                previous = updateSize
+                if done or iteration > 50:
+                    break
+
+    # Check to see if we're almost done
+
+                if updateSize < math.sqrt(n) * scale * math.sqrt(np.finfo(update.dtype).eps):
+                    if continuation < 1.0:
+                        bestContinuation = continuation
+                        continuationBest = bestGuess
+                        continuation = min(1.0, 1.2 * continuation)
+                        previous = 0.5 * np.finfo(bestGuess[0]).max
+                        iteration = 0
+                    else:
+                        done = True
+    
+    # Check to see if this is a linear problem
+
+                if not linear and iteration == 2 and updateSize < 100.0 * scale * np.finfo(update[0]).eps:
+                    linear = True
+                    done = True
+
+    # Set up for one more pass through an IVP
+
+            if IVP:
+                if nLeft != 0:
+                    iFirstPoint = iNextPoint
+                    iNextPoint += perInterval
+                    if iFirstPoint < nCollocation:
+                        continue
+                else:
+                    iNextPoint = iFirstPoint
+                    iFirstPoint -= perInterval
+                    if iFirstPoint >= 0:
+                        continue
+            break;
+
+    # Is it time to give up?
+
+        if (not done or continuation < 1.0) and n > 1000:
+            raise RuntimeError("Can't find solution with given initial guess")
+
+    # Estimate the error
+
+        currentGuess = bspy.Spline(1, nDep, currentGuess.order, currentGuess.nCoef, currentGuess.knots,
+                                   np.reshape(bestGuess, (currentGuess.nCoef[0], nDep)).T)
+        errorRange = (previousGuess - currentGuess).range_bounds()
+        refine = False
+        for lower, upper in errorRange:
+            if upper - lower > 2.0 * scale * tolerance:
+                refine = True
+
+    # Insert new knots if refinement is needed
+
+        if refine:
+            knotsToAdd = []
+            for knot0, knot1 in zip(currentGuess.knots[0][:-1], currentGuess.knots[0][1:]):
+                if knot0 < knot1:
+                    knotsToAdd += (currentGuess.order[0] - nOrder) * [0.5 * (knot0 + knot1)]
+            previousGuess = currentGuess
+            currentGuess = currentGuess.insert_knots([knotsToAdd])
+
+    # Simplify the result and return
+
+    currentGuess = currentGuess.remove_knots(0.1 * scale * tolerance, nLeft, nRight)
+    return currentGuess
+    
 def sphere(radius, tolerance = None):
     if radius <= 0.0:  raise ValueError("Radius must be positive")
     if tolerance == None:

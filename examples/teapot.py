@@ -1,6 +1,5 @@
 import numpy as np
-from bspy import DrawableSpline
-from bspy import bspyApp
+from bspy import Viewer, Spline
 
 teapotPatches = (
 	("Upper rim 1", 1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13,  14,  15,  16),
@@ -347,7 +346,7 @@ teapotVertices = (
 )
 
 if __name__=='__main__':
-    app = bspyApp()
+    viewer = Viewer()
     knots = np.array((0,0,0,0,1,1,1,1), np.float32)
     for patch in teapotPatches:
         coefficients = np.empty((3, 4, 4), np.float32)
@@ -355,7 +354,7 @@ if __name__=='__main__':
             for j in range(4):
                 vertex = patch[4*i + j + 1] - 1
                 coefficients[0,i,j] = teapotVertices[vertex][0]
-                coefficients[1,i,j] = 1.3 * teapotVertices[vertex][2]
+                coefficients[1,i,j] = teapotVertices[vertex][2]
                 coefficients[2,i,j] = teapotVertices[vertex][1]
-        app.draw(DrawableSpline(2, 3, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=patch[0])))
-    app.mainloop()
+        viewer.draw(Spline(2, 3, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=patch[0])))
+    viewer.mainloop()
