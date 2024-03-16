@@ -702,6 +702,17 @@ class Spline(Manifold):
         """
         return bspy._spline_evaluation.domain(self)
 
+    def domain_dimension(self):
+        """
+        Return the domain dimension of a spline (nInd).
+
+        Returns
+        -------
+        dimension : `int`
+            The dimension of the spline's domain (nInd)
+        """
+        return self.nInd
+
     def dot(self, vector):
         """
         Dot product a spline by the given vector.
@@ -1491,6 +1502,17 @@ class Spline(Manifold):
         """
         return bspy._spline_evaluation.range_bounds(self)
 
+    def range_dimension(self):
+        """
+        Return the range dimension of a spline (nDep).
+
+        Returns
+        -------
+        dimension : `int`
+            The dimension of the spline's range (nDep)
+        """
+        return self.nDep
+
     def remove_knot(self, iKnot, nLeft = 0, nRight = 0):
         """
         Remove a single knot from a univariate spline.
@@ -1890,6 +1912,22 @@ class Spline(Manifold):
         if indMap is not None:
             indMap = [(mapping, mapping) if np.isscalar(mapping) else mapping for mapping in indMap]
         return self.add(other.scale(-1.0), indMap)
+
+    def tangent_space(self, uvw):
+        """
+        Return the tangent space of the spline.
+
+        Parameters
+        ----------
+        uvw : array-like
+            The value at which to evaluate the tangent space.
+
+        Returns
+        -------
+        tangentSpace : `numpy.array`
+            The nDep x nInd matrix of tangent vectors (tangents are the columns).
+        """
+        return bspy._spline_evaluation.tangent_space(self, uvw)
 
     @staticmethod
     def torus(innerRadius, outerRadius, tolerance = None):

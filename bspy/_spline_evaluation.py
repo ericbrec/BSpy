@@ -184,3 +184,12 @@ def range_bounds(self):
     # Assumes self.nDep is the first value in self.coefs.shape
     bounds = [[coefficient.min(), coefficient.max()] for coefficient in self.coefs]
     return np.array(bounds, self.coefs.dtype)
+
+def tangent_space(self, uvw):
+    tangentSpace = np.empty((self.nDep, self.nInd), self.coefs.dtype)
+    wrt = [0] * self.nInd
+    for i in range(self.nInd):
+        wrt[i] = 1
+        tangentSpace[:, i] = self.derivative(wrt, uvw)
+        wrt[i] = 0
+    return tangentSpace

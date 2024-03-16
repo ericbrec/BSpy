@@ -36,7 +36,7 @@ class Manifold:
         -------
         dimension : `int`
         """
-        return self.range_dimension() - 1
+        return None
 
     def range_dimension(self):
         """
@@ -355,6 +355,16 @@ class Hyperplane(Manifold):
         if hasattr(self, "material"):
             hyperplane.material = self.material
         return hyperplane
+
+    def domain_dimension(self):
+        """
+        Return the domain dimension.
+
+        Returns
+        -------
+        dimension : `int`
+        """
+        return len(self._normal) - 1
 
     def range_dimension(self):
         """
