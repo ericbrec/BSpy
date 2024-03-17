@@ -128,15 +128,17 @@ class Manifold:
         matrixInverseTranspose : `numpy.array`, optional
             The inverse transpose of matrix (computed if not provided).
 
-        Notes
-        -----
-        Transforms the manifold in place, so create a copy as needed.
+        Returns
+        -------
+        manifold : `Manifold`
+            The transformed manifold.
 
         See Also
         --------
         `solid.Solid.transform` : transform the range of the solid.
         """
         assert np.shape(matrix) == (self.range_dimension(), self.range_dimension())
+        return None
 
     def translate(self, delta):
         """
@@ -147,29 +149,32 @@ class Manifold:
         delta : `numpy.array`
             A 1D array translation.
 
-        Notes
-        -----
-        Translates the manifold in place, so create a copy as needed.
+        Returns
+        -------
+        manifold : `Manifold`
+            The translated manifold.
 
         See Also
         --------
         `solid.Solid.translate` : translate the range of the solid.
         """
         assert len(delta) == self.range_dimension()
+        return None
 
     def flip_normal(self):
         """
         Flip the direction of the normal.
 
-        Notes
-        -----
-        Negates the normal in place, so create a copy as needed.
+        Returns
+        -------
+        manifold : `Manifold`
+            The manifold with flipped normal. The manifold retains the same tangent space.
 
         See Also
         --------
         `solid.Solid.complement` : Return the complement of the solid: whatever was inside is outside and vice-versa.
         """
-        pass
+        return None
 
     def intersect(self, other):
         """
@@ -225,7 +230,7 @@ class Manifold:
 
         Returns
         -------
-        intersections : `list` (Or `NotImplemented` if other is an unknown type of Manifold)
+        intersections : `list` (or `NotImplemented` if other is an unknown type of Manifold)
             A list of intersections between the two manifolds. 
             Each intersection records either a crossing or a coincident region.
 
@@ -330,9 +335,7 @@ class Hyperplane(Manifold):
     """
 
     maxAlignment = 0.99 # 1 - 1/10^2
-    """
-    If a shift of 1 in the normal direction of one manifold yields a shift of 10 in the tangent plane intersection, the manifolds are parallel.
-    """
+    """ If a shift of 1 in the normal direction of one manifold yields a shift of 10 in the tangent plane intersection, the manifolds are parallel."""
 
     def __init__(self, normal, point, tangentSpace):
         self._normal = np.atleast_1d(np.array(normal))
@@ -467,9 +470,10 @@ class Hyperplane(Manifold):
         matrixInverseTranspose : `numpy.array`, optional
             The inverse transpose of matrix (computed if not provided).
 
-        Notes
-        -----
-        Transforms the hyperplane in place, so create a copy as needed.
+        Returns
+        -------
+        hyperplane : `Hyperplane`
+            The transformed hyperplane.
 
         See Also
         --------
@@ -481,15 +485,16 @@ class Hyperplane(Manifold):
             if matrixInverseTranspose is None:
                 matrixInverseTranspose = np.transpose(np.linalg.inv(matrix))
 
-            self._normal = matrixInverseTranspose @ self._normal
-            self._normal = self._normal / np.linalg.norm(self._normal)
-            if hasattr(self, '_cofactorNormal'):
-                self._cofactorNormal = abs(np.linalg.det(matrix)) * (matrixInverseTranspose @ self._cofactorNormal)
-
-            self._tangentSpace = matrix @ self._tangentSpace
-
-        self._point = matrix @ self._point
-
+            normal = matrixInverseTranspose @ self._normal
+            normal = normal / np.linalg.norm(normal)
+            hyperplane = Hyperplane(normal, matrix @ self._point, matrix @ self._tangentSpace)
+        else:
+            hyperplane = Hyperplane(self._normal, matrix @ self._point, self._tangentSpace)
+    
+        if hasattr(self, "material"):
+            hyperplane.material = self.material
+        return hyperplane
+    
     def translate(self, delta):
         """
         translate the range of the hyperplane.
@@ -499,33 +504,38 @@ class Hyperplane(Manifold):
         delta : `numpy.array`
             A 1D array translation.
 
-        Notes
-        -----
-        Translates the hyperplane in place, so create a copy as needed.
+        Returns
+        -------
+        hyperplane : `Hyperplane`
+            The translated hyperplane.
 
         See Also
         --------
         `solid.Solid.translate` : translate the range of the solid.
         """
         assert len(delta) == self.range_dimension()
-
-        self._point += delta
+        hyperplane = Hyperplane(self._normal, self._point + delta, self._tangentSpace)
+        if hasattr(self, "material"):
+            hyperplane.material = self.material
+        return hyperplane
 
     def flip_normal(self):
         """
         Flip the direction of the normal.
 
-        Notes
-        -----
-        Negates the normal in place, so create a copy as needed.
+        Returns
+        -------
+        hyperplane : `Hyperplane`
+            The hyperplane with flipped normal. The hyperplane retains the same tangent space.
 
         See Also
         --------
         `solid.Solid.complement` : Return the complement of the solid: whatever was inside is outside and vice-versa.
         """
-        self._normal = -self._normal
-        if hasattr(self, '_cofactorNormal'):
-            self._cofactorNormal = -self._cofactorNormal
+        hyperplane = Hyperplane(-self._normal, self._point, self._tangentSpace)
+        if hasattr(self, "material"):
+            hyperplane.material = self.material
+        return hyperplane
 
     def intersect(self, other):
         """
@@ -538,7 +548,7 @@ class Hyperplane(Manifold):
 
         Returns
         -------
-        intersections : `list` (Or `NotImplemented` if other is not a `Hyperplane`)
+        intersections : `list` (or `NotImplemented` if other is not a `Hyperplane`)
             A list of intersections between the two hyperplanes. 
             (Hyperplanes will have at most one intersection, but other types of manifolds can have several.)
             Each intersection records either a crossing or a coincident region.

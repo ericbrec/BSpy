@@ -112,9 +112,7 @@ class Solid:
         """
         solid = Solid(self.dimension, not self.containsInfinity)
         for boundary in self.boundaries:
-            manifold = boundary.manifold.copy()
-            manifold.flip_normal()
-            solid.boundaries.append(Boundary(manifold,boundary.domain))
+            solid.boundaries.append(Boundary(boundary.manifold.flip_normal(), boundary.domain))
         return solid
 
     def __neg__(self):
@@ -132,17 +130,20 @@ class Solid:
         matrixInverseTranspose : `numpy.array`, optional
             The inverse transpose of matrix (computed if not provided).
 
-        Notes
-        -----
-        Transforms the solid in place, so create a copy as needed.
+        Returns
+        -------
+        solid : `Solid`
+            The transformed solid.
         """
         assert np.shape(matrix) == (self.dimension, self.dimension)
 
         if matrixInverseTranspose is None:
             matrixInverseTranspose = np.transpose(np.linalg.inv(matrix))
 
+        solid = Solid(self.dimension, self.containsInfinity)
         for boundary in self.boundaries:
-            boundary.manifold.transform(matrix, matrixInverseTranspose)
+            solid.boundaries.append(Boundary(boundary.manifold.transform(matrix, matrixInverseTranspose), boundary.domain))
+        return solid
 
     def translate(self, delta):
         """
@@ -153,14 +154,17 @@ class Solid:
         delta : `numpy.array`
             A 1D array translation.
 
-        Notes
-        -----
-        Translates the solid in place, so create a copy as needed.
+        Returns
+        -------
+        solid : `Solid`
+            The translated solid.
         """
         assert len(delta) == self.dimension
 
+        solid = Solid(self.dimension, self.containsInfinity)
         for boundary in self.boundaries:
-            boundary.manifold.translate(delta)
+            solid.boundaries.append(Boundary(boundary.manifold.translate(delta), boundary.domain))
+        return solid
 
     def any_point(self):
         """
@@ -519,15 +523,15 @@ class Solid:
                     # Next, transform the domain coincidence from the boundary to the given manifold.
                     # Create copies of the manifolds and boundaries, since we are changing them.
                     for i in range(len(coincidence.boundaries)):
-                        domainManifold = coincidence.boundaries[i].manifold.copy()
+                        domainManifold = coincidence.boundaries[i].manifold
                         if invertCoincidence:
-                            domainManifold.flip_normal()
+                            domainManifold = domainManifold.flip_normal()
                         if isTwin:
-                            domainManifold.translate(-intersection.translation)
-                            domainManifold.transform(intersection.inverse, intersection.transform.T)
+                            domainManifold = domainManifold.translate(-intersection.translation)
+                            domainManifold = domainManifold.transform(intersection.inverse, intersection.transform.T)
                         else:
-                            domainManifold.transform(intersection.transform, intersection.inverse.T)
-                            domainManifold.translate(intersection.translation)
+                            domainManifold = domainManifold.transform(intersection.transform, intersection.inverse.T)
+                            domainManifold = domainManifold.translate(intersection.translation)
                         coincidence.boundaries[i] = Boundary(domainManifold, coincidence.boundaries[i].domain)
                     # Finally, add the domain coincidence to the list of coincidences.
                     coincidences.append((invertCoincidence, coincidence))
