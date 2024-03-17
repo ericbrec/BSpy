@@ -1,6 +1,6 @@
 import numpy as np
 from collections import namedtuple
-from solid import Solid, Boundary
+from bspy.solid import Solid, Boundary
 
 class Manifold:
     """

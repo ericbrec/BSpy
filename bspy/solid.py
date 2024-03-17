@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.integrate as integrate
-from manifold import Manifold
+from bspy.manifold import Manifold
 
 class Boundary:
     """

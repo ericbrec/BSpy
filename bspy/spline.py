@@ -865,6 +865,23 @@ class Spline(Manifold):
         """
         return bspy._spline_domain.extrapolate(self, newDomain, continuityOrder)
 
+    def flip_normal(self):
+        """
+        Flip the direction of the normal.
+
+        Returns
+        -------
+        spline : `Spline`
+            The spline with flipped normal. The spline retains the same tangent space.
+
+        See Also
+        --------
+        `solid.Solid.complement` : Return the complement of the solid: whatever was inside is outside and vice-versa.
+        """
+        spline = self.copy()
+        spline.metadata["flipNormal"] = not self.metadata.get("flipNormal", False)
+        return spline
+
     def fold(self, foldedInd):
         """
         Fold the coefficients of a spline's indicated independent variables into the coefficients of the remaining independent variables, retaining the 
