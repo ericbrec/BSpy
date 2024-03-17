@@ -354,10 +354,7 @@ class Hyperplane(Manifold):
         -------
         hyperplane : `Hyperplane`
         """
-        hyperplane = Hyperplane(self._normal, self._point, self._tangentSpace)
-        if hasattr(self, "material"):
-            hyperplane.material = self.material
-        return hyperplane
+        return Hyperplane(self._normal, self._point, self._tangentSpace)
 
     def domain_dimension(self):
         """
@@ -479,8 +476,6 @@ class Hyperplane(Manifold):
         --------
         `solid.Solid.transform` : Transform the range of the solid.
         """
-        assert np.shape(matrix) == (self.range_dimension(), self.range_dimension())
-
         if self.range_dimension() > 1:
             if matrixInverseTranspose is None:
                 matrixInverseTranspose = np.transpose(np.linalg.inv(matrix))
@@ -491,8 +486,6 @@ class Hyperplane(Manifold):
         else:
             hyperplane = Hyperplane(self._normal, matrix @ self._point, self._tangentSpace)
     
-        if hasattr(self, "material"):
-            hyperplane.material = self.material
         return hyperplane
     
     def translate(self, delta):
@@ -513,11 +506,7 @@ class Hyperplane(Manifold):
         --------
         `solid.Solid.translate` : translate the range of the solid.
         """
-        assert len(delta) == self.range_dimension()
-        hyperplane = Hyperplane(self._normal, self._point + delta, self._tangentSpace)
-        if hasattr(self, "material"):
-            hyperplane.material = self.material
-        return hyperplane
+        return Hyperplane(self._normal, self._point + delta, self._tangentSpace)
 
     def flip_normal(self):
         """
@@ -532,10 +521,7 @@ class Hyperplane(Manifold):
         --------
         `solid.Solid.complement` : Return the complement of the solid: whatever was inside is outside and vice-versa.
         """
-        hyperplane = Hyperplane(-self._normal, self._point, self._tangentSpace)
-        if hasattr(self, "material"):
-            hyperplane.material = self.material
-        return hyperplane
+        return Hyperplane(-self._normal, self._point, self._tangentSpace)
 
     def intersect(self, other):
         """

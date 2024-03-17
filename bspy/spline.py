@@ -518,21 +518,16 @@ class Spline(Manifold):
             indMap = [(mapping, mapping, True) if np.isscalar(mapping) else (*mapping, True) for mapping in indMap]
         return bspy._spline_operations.multiplyAndConvolve(self, other, indMap, productType)
 
-    def copy(self, metadata={}):
+    def copy(self):
         """
         Create a copy of a spline.
-
-        Parameters
-        ----------
-        metadata : `dict`, optional
-            A dictionary of ancillary data to store with the spline. Default is {}.
         
         Returns
         -------
         spline : `Spline`
             The spline copy.
         """
-        return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, self.coefs, metadata)
+        return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, self.coefs, self.metadata)
 
     def cross(self, vector):
         """
