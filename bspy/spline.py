@@ -313,6 +313,35 @@ class Spline(Manifold):
         """
         return bspy._spline_domain.common_basis(splines, indMap)
 
+    def complete_slice(self, slice, solid):
+        """
+        Add any missing inherent (implicit) boundaries of this spline's domain to the given slice of the 
+        given solid that are needed to make the slice valid and complete.
+
+        Parameters
+        ----------
+        slice : `solid.Solid`
+            The slice of the given solid formed by the spline. The slice may be incomplete, missing some of the 
+            spline's inherent domain boundaries. Its dimension must match `self.domain_dimension()`.
+
+        solid : `solid.Solid`
+            The solid being sliced by the manifold. Its dimension must match `self.range_dimension()`.
+
+        See Also
+        --------
+        `solid.Solid.slice` : slice the solid by a manifold.
+        `domain` : Return the domain of a spline.
+
+        Notes
+        -----
+        A spline's inherent domain is determined by its knot array for each dimension. This method only works for 
+        nInd of 1 or 2.
+        """
+        if self.domain_dimension() != slice.dimension: raise ValueError("Spline domain dimension must match slice dimension")
+        if self.range_dimension() != solid.dimension: raise ValueError("Spline range dimension must match solid dimension")
+        if slice.dimension != 1 and slice.dimension != 2: raise ValueError("Only works for nInd = 1 or 2")
+        return bspy._spline_intersection.complete_slice(self, slice, solid)
+
     @staticmethod
     def cone(radius1, radius2, height, tolerance = None):
         """
@@ -1160,6 +1189,7 @@ class Spline(Manifold):
         --------
         `zeros` : Find the roots of a spline (nInd must match nDep).
         `contours` : Find all the contour curves of a spline.
+        `solid.Solid.slice` : slice the solid by a manifold.
 
         Notes
         -----
