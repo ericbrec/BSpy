@@ -154,9 +154,9 @@ def normal(self, uvw, normalize=True, indices=None):
     # Record the larger dimension and ensure it comes first.
     if self.nInd > self.nDep:
         nDep = self.nInd
+        tangentSpace = tangentSpace.T
     else:
         nDep = self.nDep
-        tangentSpace = tangentSpace.T
     
     # Compute the normal using cofactors (determinants of subsets of the tangent space).
     sign = -1 if self.metadata.get("flipNormal", False) else 1

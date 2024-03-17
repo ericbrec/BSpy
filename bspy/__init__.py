@@ -17,7 +17,8 @@ Available subpackages
     an associated `Viewer`, allowing you to script splines and display them in the viewer.
 """
 from bspy.solid import Solid, Boundary
-from bspy.manifold import Manifold, Hyperplane
+from bspy.manifold import Manifold
+from bspy.hyperplane import Hyperplane
 from bspy.spline import Spline
 from bspy.splineOpenGLFrame import SplineOpenGLFrame
 from bspy.viewer import Viewer, Graphics

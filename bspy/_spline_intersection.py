@@ -2,7 +2,8 @@ import logging
 import math
 import numpy as np
 import bspy.spline
-from bspy.manifold import Manifold, Hyperplane
+from bspy.manifold import Manifold
+from bspy.hyperplane import Hyperplane
 from collections import namedtuple
 from multiprocessing import Pool
 
