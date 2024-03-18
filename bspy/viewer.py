@@ -4,6 +4,7 @@ from tkinter.colorchooser import askcolor
 from tkinter import filedialog
 import queue, threading
 from bspy import SplineOpenGLFrame
+from bspy import Hyperplane
 from bspy import Spline
 
 class _BitCheckbutton(tk.Checkbutton):
@@ -152,6 +153,51 @@ class Viewer(tk.Tk):
         self.list(spline, name)
         self.listBox.selection_set(self.listBox.size() - 1)
         self.update()
+    
+    list_spline = list
+    draw_spline = draw
+    show_spline = show
+
+    def list_boundary(self, boundary, name="Boundary", fillColor=None, lineColor=None, options=None, inherit=True, draw=False):
+        if boundary.manifold.range_dimension() != 3:
+            return
+        vertices = self.frame.tessellate2DSolid(boundary.domain)
+        if isinstance(boundary.manifold, Hyperplane):
+            uvMin = vertices.min(axis=0)
+            uvMax = vertices.max(axis=0)
+            xyzMinMin = boundary.manifold.evaluate(uvMin)
+            xyzMinMax = boundary.manifold.evaluate((uvMin[0], uvMax[1]))
+            xyzMaxMin = boundary.manifold.evaluate((uvMax[0], uvMin[1]))
+            xyzMaxMax = boundary.manifold.evaluate(uvMax)
+            spline = Spline(2, 3, (2, 2), (2, 2), 
+                np.array((uvMin, uvMin, uvMax, uvMax), np.float32).T,
+                np.array(((xyzMinMin, xyzMaxMin), (xyzMinMax, xyzMaxMax)), np.float32).T)
+        elif isinstance(boundary.manifold, Spline):
+            spline = boundary.manifold
+        if "Name" not in spline.metadata:
+            spline.metadata["Name"] = name
+        if fillColor is not None:
+            spline.metadata["fillColor"] = fillColor
+        if lineColor is not None:
+            spline.metadata["lineColor"] = lineColor
+        if options is not None:
+            spline.metadata["options"] = options
+        spline.metadata["trim"] = vertices
+        self.frame.make_drawable(spline)
+        if draw:
+            self.draw(spline)
+        else:
+            self.list(spline)
+
+    def draw_boundary(self, boundary, name="Boundary", fillColor=None, lineColor=None, options=None, inherit=True):
+        self.list_boundary(boundary, name, fillColor, lineColor, options, inherit, draw=True)
+
+    def list_solid(self, solid, name="Solid", fillColor=None, lineColor=None, options=None, inherit=True, draw=False):
+        for i, surface in enumerate(solid.boundaries):
+            self.list_boundary(surface, f"{name} boundary {i+1}", fillColor, lineColor, options, inherit, draw)
+
+    def draw_solid(self, solid, name="Solid", fillColor=None, lineColor=None, options=None, inherit=True):
+        self.list_solid(solid, name, fillColor, lineColor, options, inherit, draw=True)
 
     def save_splines(self):
         if self.splineDrawList:

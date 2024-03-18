@@ -149,22 +149,17 @@ def normal(self, uvw, normalize=True, indices=None):
     if abs(self.nInd - self.nDep) != 1: raise ValueError("The number of independent variables must be one different than the number of dependent variables.")
 
     # Evaluate the tangents at the point.
-    tangentSpace = np.empty((self.nInd, self.nDep), self.coefs.dtype)
-    with_respect_to = [0] * self.nInd
-    for i in range(self.nInd):
-        with_respect_to[i] = 1
-        tangentSpace[i] = self.derivative(with_respect_to, uvw)
-        with_respect_to[i] = 0
+    tangentSpace = self.tangent_space(uvw)
     
     # Record the larger dimension and ensure it comes first.
     if self.nInd > self.nDep:
         nDep = self.nInd
+        tangentSpace = tangentSpace.T
     else:
         nDep = self.nDep
-        tangentSpace = tangentSpace.T
     
     # Compute the normal using cofactors (determinants of subsets of the tangent space).
-    sign = 1
+    sign = -1 if self.metadata.get("flipNormal", False) else 1
     if indices is None:
         indices = range(nDep)
         normal = np.empty(nDep, self.coefs.dtype)
@@ -184,3 +179,12 @@ def range_bounds(self):
     # Assumes self.nDep is the first value in self.coefs.shape
     bounds = [[coefficient.min(), coefficient.max()] for coefficient in self.coefs]
     return np.array(bounds, self.coefs.dtype)
+
+def tangent_space(self, uvw):
+    tangentSpace = np.empty((self.nDep, self.nInd), self.coefs.dtype)
+    wrt = [0] * self.nInd
+    for i in range(self.nInd):
+        wrt[i] = 1
+        tangentSpace[:, i] = self.derivative(wrt, uvw)
+        wrt[i] = 0
+    return tangentSpace

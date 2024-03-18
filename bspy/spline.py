@@ -313,6 +313,35 @@ class Spline(Manifold):
         """
         return bspy._spline_domain.common_basis(splines, indMap)
 
+    def complete_slice(self, slice, solid):
+        """
+        Add any missing inherent (implicit) boundaries of this spline's domain to the given slice of the 
+        given solid that are needed to make the slice valid and complete.
+
+        Parameters
+        ----------
+        slice : `solid.Solid`
+            The slice of the given solid formed by the spline. The slice may be incomplete, missing some of the 
+            spline's inherent domain boundaries. Its dimension must match `self.domain_dimension()`.
+
+        solid : `solid.Solid`
+            The solid being sliced by the manifold. Its dimension must match `self.range_dimension()`.
+
+        See Also
+        --------
+        `solid.Solid.slice` : slice the solid by a manifold.
+        `domain` : Return the domain of a spline.
+
+        Notes
+        -----
+        A spline's inherent domain is determined by its knot array for each dimension. This method only works for 
+        nInd of 1 or 2.
+        """
+        if self.domain_dimension() != slice.dimension: raise ValueError("Spline domain dimension must match slice dimension")
+        if self.range_dimension() != solid.dimension: raise ValueError("Spline range dimension must match solid dimension")
+        if slice.dimension != 1 and slice.dimension != 2: raise ValueError("Only works for nInd = 1 or 2")
+        return bspy._spline_intersection.complete_slice(self, slice, solid)
+
     @staticmethod
     def cone(radius1, radius2, height, tolerance = None):
         """
@@ -518,21 +547,16 @@ class Spline(Manifold):
             indMap = [(mapping, mapping, True) if np.isscalar(mapping) else (*mapping, True) for mapping in indMap]
         return bspy._spline_operations.multiplyAndConvolve(self, other, indMap, productType)
 
-    def copy(self, metadata={}):
+    def copy(self):
         """
         Create a copy of a spline.
-
-        Parameters
-        ----------
-        metadata : `dict`, optional
-            A dictionary of ancillary data to store with the spline. Default is {}.
         
         Returns
         -------
         spline : `Spline`
             The spline copy.
         """
-        return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, self.coefs, metadata)
+        return type(self)(self.nInd, self.nDep, self.order, self.nCoef, self.knots, self.coefs, self.metadata)
 
     def cross(self, vector):
         """
@@ -702,6 +726,17 @@ class Spline(Manifold):
         """
         return bspy._spline_evaluation.domain(self)
 
+    def domain_dimension(self):
+        """
+        Return the domain dimension of a spline (nInd).
+
+        Returns
+        -------
+        dimension : `int`
+            The dimension of the spline's domain (nInd)
+        """
+        return self.nInd
+
     def dot(self, vector):
         """
         Dot product a spline by the given vector.
@@ -858,6 +893,23 @@ class Spline(Manifold):
         `trim` : Trim the domain of a spline.
         """
         return bspy._spline_domain.extrapolate(self, newDomain, continuityOrder)
+
+    def flip_normal(self):
+        """
+        Flip the direction of the normal.
+
+        Returns
+        -------
+        spline : `Spline`
+            The spline with flipped normal. The spline retains the same tangent space.
+
+        See Also
+        --------
+        `solid.Solid.complement` : Return the complement of the solid: whatever was inside is outside and vice-versa.
+        """
+        spline = self.copy()
+        spline.metadata["flipNormal"] = not self.metadata.get("flipNormal", False)
+        return spline
 
     def fold(self, foldedInd):
         """
@@ -1137,12 +1189,13 @@ class Spline(Manifold):
         --------
         `zeros` : Find the roots of a spline (nInd must match nDep).
         `contours` : Find all the contour curves of a spline.
+        `solid.Solid.slice` : slice the solid by a manifold.
 
         Notes
         -----
         Uses `zeros` to find all intersection points and `contours` to find all the intersection curves.
         """
-        if not(self.nDep == other.nDep): raise ValueError("The number of dependent variables for both splines much match.")
+        if not(self.range_dimension() == other.range_dimension()): raise ValueError("The number of dependent variables for both splines much match.")
         return bspy._spline_intersection.intersect(self, other)
 
     def jacobian(self, uvw):
@@ -1490,6 +1543,17 @@ class Spline(Manifold):
         dependent variables
         """
         return bspy._spline_evaluation.range_bounds(self)
+
+    def range_dimension(self):
+        """
+        Return the range dimension of a spline (nDep).
+
+        Returns
+        -------
+        dimension : `int`
+            The dimension of the spline's range (nDep)
+        """
+        return self.nDep
 
     def remove_knot(self, iKnot, nLeft = 0, nRight = 0):
         """
@@ -1891,6 +1955,22 @@ class Spline(Manifold):
             indMap = [(mapping, mapping) if np.isscalar(mapping) else mapping for mapping in indMap]
         return self.add(other.scale(-1.0), indMap)
 
+    def tangent_space(self, uvw):
+        """
+        Return the tangent space of the spline.
+
+        Parameters
+        ----------
+        uvw : array-like
+            The value at which to evaluate the tangent space.
+
+        Returns
+        -------
+        tangentSpace : `numpy.array`
+            The nDep x nInd matrix of tangent vectors (tangents are the columns).
+        """
+        return bspy._spline_evaluation.tangent_space(self, uvw)
+
     @staticmethod
     def torus(innerRadius, outerRadius, tolerance = None):
         """
@@ -1929,7 +2009,7 @@ class Spline(Manifold):
         """
         return bspy._spline_fitting.torus(innerRadius, outerRadius, tolerance)
     
-    def transform(self, matrix):
+    def transform(self, matrix, matrixInverseTranspose = None):
         """
         Transform a spline by the given matrix.
 
@@ -1937,6 +2017,9 @@ class Spline(Manifold):
         ----------
         matrix : array-like
             An array of size `newNDep`x`nDep` that specifies the transform matrix.
+
+        matrixInverseTranspose : `numpy.array`, optional
+            The inverse transpose of matrix (not used for splines).
 
         Returns
         -------
