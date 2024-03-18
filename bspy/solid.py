@@ -8,7 +8,7 @@ class Boundary:
 
     Parameters
     ----------
-    manifold : `manifold.Manifold`
+    manifold : `Manifold`
         The differentiable function whose range is one dimension higher than its domain that defines the range of the boundary.
     
     domain : `Solid`
@@ -106,8 +106,8 @@ class Solid:
 
         See Also
         --------
-        `Intersect` : Intersect two solids.
-        `union` : union two solids.
+        `intersection` : Intersect two solids.
+        `union` : Union two solids.
         `difference` : Subtract one solid from another. 
         """
         solid = Solid(self.dimension, not self.containsInfinity)
@@ -374,7 +374,7 @@ class Solid:
 
         `winding_number` uses two different implementations:
         * A simple fast implementation if the solid is a number line (dimension <= 1). This is the default for dimension <= 1.
-        * A surface integral with integrand: `(x - point) / norm(x - point)**dimension`. This is just for fun, though it's more robust for boundaries with gaps. 
+        * A surface integral with integrand: `(x - point) / norm(x - point)**dimension`.
         """
         windingNumber = 0.0
         onBoundaryNormal = None
@@ -452,7 +452,7 @@ class Solid:
 
         Parameters
         ----------
-        manifold : `manifold.Manifold`
+        manifold : `Manifold`
             The `Manifold` used to slice the solid.
         
         cache : `dict`, optional
@@ -470,9 +470,9 @@ class Solid:
         See Also
         --------
         `intersection` : Intersect two solids.
-        `manifold.Manifold.intersect` : Intersect two manifolds.
-        `manifold.Manifold.cached_intersect` : Intersect two manifolds, caching the result for twins.
-        `manifold.Manifold.complete_slice` : Add any missing inherent (implicit) boundaries of this manifold's domain to the given slice.
+        `Manifold.intersect` : Intersect two manifolds.
+        `Manifold.cached_intersect` : Intersect two manifolds, caching the result for twins.
+        `Manifold.complete_slice` : Add any missing inherent (implicit) boundaries of this manifold's domain to the given slice.
 
         Notes
         -----
@@ -573,8 +573,8 @@ class Solid:
         `union` : Union two solids.
         `difference` : Subtract one solid from another.
 
-        Notes:
-        ------
+        Notes
+        -----
         To intersect two solids, we slice each solid with the boundaries of the other solid. The slices are the region
         of the domain that intersect the solid. We then intersect the domain of each boundary with its slice of the other solid. Thus,
         the intersection of two solids becomes a set of intersections within the domains of their boundaries. This recursion continues
@@ -633,7 +633,7 @@ class Solid:
 
         See Also
         --------
-        `Intersect` : Intersect two solids.
+        `intersection` : Intersect two solids.
         `difference` : Subtract one solid from another. 
         """
         return self.complement().intersection(other.complement()).complement()
@@ -658,7 +658,7 @@ class Solid:
         See Also
         --------
         `intersection` : Intersect two solids.
-        `union` : union two solids.
+        `union` : Union two solids.
         """
         return self.intersection(other.complement())
 

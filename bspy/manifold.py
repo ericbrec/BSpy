@@ -134,7 +134,7 @@ class Manifold:
 
         See Also
         --------
-        `solid.Solid.transform` : transform the range of the solid.
+        `Solid.transform` : transform the range of the solid.
         """
         assert np.shape(matrix) == (self.range_dimension(), self.range_dimension())
         return None
@@ -155,7 +155,7 @@ class Manifold:
 
         See Also
         --------
-        `solid.Solid.translate` : translate the range of the solid.
+        `Solid.translate` : translate the range of the solid.
         """
         assert len(delta) == self.range_dimension()
         return None
@@ -171,7 +171,7 @@ class Manifold:
 
         See Also
         --------
-        `solid.Solid.complement` : Return the complement of the solid: whatever was inside is outside and vice-versa.
+        `Solid.complement` : Return the complement of the solid: whatever was inside is outside and vice-versa.
         """
         return None
 
@@ -207,7 +207,7 @@ class Manifold:
         See Also
         --------
         `cached_intersect` : Intersect two manifolds, caching the result for twins (same intersection but swapping self and other).
-        `solid.Solid.slice` : slice the solid by a manifold.
+        `Solid.slice` : slice the solid by a manifold.
 
         Notes
         -----
@@ -253,7 +253,7 @@ class Manifold:
         See Also
         --------
         `intersect` : Intersect two manifolds.
-        `solid.Solid.slice` : slice the solid by a manifold.
+        `Solid.slice` : slice the solid by a manifold.
 
         Notes
         -----
@@ -294,16 +294,16 @@ class Manifold:
 
         Parameters
         ----------
-        slice : `solid.Solid`
+        slice : `Solid`
             The slice of the given solid formed by the manifold. The slice may be incomplete, missing some of the 
             manifold's inherent domain boundaries. Its dimension must match `self.domain_dimension()`.
 
-        solid : `solid.Solid`
+        solid : `Solid`
             The solid being sliced by the manifold. Its dimension must match `self.range_dimension()`.
 
         See Also
         --------
-        `solid.Solid.slice` : Slice the solid by a manifold.
+        `Solid.slice` : Slice the solid by a manifold.
 
         Notes
         -----

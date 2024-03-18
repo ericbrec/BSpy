@@ -164,7 +164,7 @@ class Hyperplane(Manifold):
 
         See Also
         --------
-        `solid.Solid.transform` : Transform the range of the solid.
+        `Solid.transform` : Transform the range of the solid.
         """
         if self.range_dimension() > 1:
             if matrixInverseTranspose is None:
@@ -194,7 +194,7 @@ class Hyperplane(Manifold):
 
         See Also
         --------
-        `solid.Solid.translate` : translate the range of the solid.
+        `Solid.translate` : translate the range of the solid.
         """
         return Hyperplane(self._normal, self._point + delta, self._tangentSpace)
 
@@ -209,7 +209,7 @@ class Hyperplane(Manifold):
 
         See Also
         --------
-        `solid.Solid.complement` : Return the complement of the solid: whatever was inside is outside and vice-versa.
+        `Solid.complement` : Return the complement of the solid: whatever was inside is outside and vice-versa.
         """
         return Hyperplane(-self._normal, self._point, self._tangentSpace)
 
@@ -245,7 +245,7 @@ class Hyperplane(Manifold):
 
         See Also
         --------
-        `solid.Solid.slice` : slice the solid by a manifold.
+        `Solid.slice` : slice the solid by a manifold.
         `numpy.linalg.svd` : Compute the singular value decomposition of a matrix array.
 
         Notes
@@ -353,22 +353,22 @@ class Hyperplane(Manifold):
 
         Parameters
         ----------
-        slice : `solid.Solid`
+        slice : `Solid`
             The slice of the given solid formed by the manifold. The slice may be incomplete, missing some of the 
             manifold's inherent domain boundaries. Its dimension must match `self.domain_dimension()`.
 
-        solid : `solid.Solid`
+        solid : `Solid`
             The solid being sliced by the manifold. Its dimension must match `self.range_dimension()`.
 
         Parameters
         ----------
-        domain : `solid.Solid`
+        domain : `Solid`
             A domain for this manifold that may be incomplete, missing some of the manifold's inherent domain boundaries. 
             Its dimension must match `self.domain_dimension()`.
 
         See Also
         --------
-        `solid.Solid.slice` : Slice the solid by a manifold.
+        `Solid.slice` : Slice the solid by a manifold.
 
         Notes
         -----

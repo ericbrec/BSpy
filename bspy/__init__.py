@@ -5,7 +5,9 @@ Available subpackages
 ---------------------
 `bspy.solid` : Provides the `Solid` and `Boundary` classes that model solids.
 
-`bspy.manifold` : Provides the `Manifold` base class for manifolds, and the `Hyperplane` subclass for hyperplanes.
+`bspy.manifold` : Provides the `Manifold` base class for manifolds.
+
+`bspy.hyperplane` : Provides the `Hyperplane` subclass of `Manifold` that models hyperplanes.
 
 `bspy.spline` : Provides the `Spline` subclass of `Manifold` that models, represents, and processes 
     piecewise polynomial tensor product functions (spline functions) as linear combinations of B-splines.
