@@ -954,11 +954,6 @@ def establish_domain_bounds(domain, bounds):
     --------
     `solid.Solid.slice` : slice the solid by a manifold.
     `complete_slice` : Add any missing inherent (implicit) boundaries of this manifold's domain to the given slice.
-
-    Notes
-    -----
-    A spline's inherent domain is determined by its knot array for each dimension. 
-    If you pass in an empty domain, it will remain empty.
     """
     dimension = len(bounds)
     assert len(bounds[0]) == 2
