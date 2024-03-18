@@ -3,7 +3,7 @@ import math
 import numpy as np
 from bspy.manifold import Manifold
 from bspy.hyperplane import Hyperplane
-from bspy.spline import Spline
+import bspy.spline
 from bspy.solid import Solid, Boundary
 from collections import namedtuple
 from multiprocessing import Pool
@@ -517,7 +517,7 @@ def contours(self):
             continue # Try a different theta
 
         # Find turning points by combining self and turningPointDeterminant into a system and processing its zeros.
-        systemSelf, systemTurningPointDeterminant = Spline.common_basis((self, turningPointDeterminant))
+        systemSelf, systemTurningPointDeterminant = bspy.Spline.common_basis((self, turningPointDeterminant))
         system = type(systemSelf)(self.nInd, self.nInd, systemSelf.order, systemSelf.nCoef, systemSelf.knots, \
             np.concatenate((systemSelf.coefs, systemTurningPointDeterminant.coefs)), systemSelf.metadata)
         zeros = system.zeros()
@@ -770,10 +770,10 @@ def contours(self):
                     currentContourPoints[i + adjustment].append(uvw)
 
     # We've determined a bunch of points along all the contours, including starting and ending points.
-    # Now we just need to create splines for those contours using the Spline.contour method.
+    # Now we just need to create splines for those contours using the bspy.Spline.contour method.
     splineContours = []
     for points in contourPoints:
-        contour = Spline.contour(self, points)
+        contour = bspy.Spline.contour(self, points)
         # Transform the contour to self's original domain.
         contour.coefs = (contour.coefs.T * (domain[1] - domain[0]) + domain[0]).T
         splineContours.append(contour)
@@ -843,13 +843,13 @@ def intersect(self, other):
                 for t in tValues:
                     zero = contour((t,))
                     points.append(projection @ (self.spline(zero) - other._point))
-                right = Spline.least_squares(tValues, np.array(points).T, contour.order, contour.knots)
+                right = bspy.Spline.least_squares(tValues, np.array(points).T, contour.order, contour.knots)
                 intersections.append(Manifold.Crossing(left, right))
         else:
             return NotImplemented
     
     # Spline-Spline intersection.
-    elif isinstance(other, Spline):
+    elif isinstance(other, bspy.Spline):
         # Construct a new spline that represents the intersection.
         spline = self.subtract(other.spline)
 
@@ -911,13 +911,13 @@ def intersect(self, other):
                 contours = spline.contours()
                 for contour in contours:
                     # Swap left and right, compared to not swapped.
-                    left = Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[nDep:], contour.metadata)
-                    right = Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[:nDep], contour.metadata)
+                    left = bspy.Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[nDep:], contour.metadata)
+                    right = bspy.Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[:nDep], contour.metadata)
                     intersections.append(Manifold.Crossing(left, right))
             else:
                 for contour in contours:
-                    left = Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[:nDep], contour.metadata)
-                    right = Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[nDep:], contour.metadata)
+                    left = bspy.Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[:nDep], contour.metadata)
+                    right = bspy.Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[nDep:], contour.metadata)
                     intersections.append(Manifold.Crossing(left, right))
         else:
             return NotImplemented

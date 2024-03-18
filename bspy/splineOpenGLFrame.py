@@ -1,6 +1,8 @@
+from collections import namedtuple
 import numpy as np
-import tkinter as tk
 from OpenGL.GL import *
+from OpenGL.GLU import *
+from bspy.manifold import Manifold
 import OpenGL.GL.shaders as shaders
 try:
     from pyopengltk import OpenGLFrame
@@ -958,6 +960,48 @@ class SplineOpenGLFrame(OpenGLFrame):
                 discard;
         }
     """
+
+    trimmedSurfaceFragmentShaderCode = """
+        #version 410 core
+     
+        flat in SplineInfo
+        {
+            int uOrder, vOrder;
+            int uN, vN;
+            int uKnot, vKnot;
+            float uFirst, vFirst;
+            float uSpan, vSpan;
+            float u, v;
+            float uInterval, vInterval;
+        } inData;
+        in vec3 worldPosition;
+        in vec3 splineColor;
+        in vec3 normal;
+        in vec2 parameters;
+        in vec2 pixelPer;
+
+        uniform vec4 uFillColor;
+        uniform vec4 uLineColor;
+        uniform vec3 uLightDirection;
+        uniform int uOptions;
+        uniform sampler2D uTrimTextureMap;
+
+        out vec4 color;
+     
+        void main()
+        {
+        	vec2 tex = vec2((parameters.x - inData.uFirst) / inData.uSpan, (parameters.y - inData.vFirst) / inData.vSpan);
+            float specular = pow(abs(dot(normal, normalize(uLightDirection + worldPosition / length(worldPosition)))), 25.0);
+            bool line = (uOptions & (1 << 2)) > 0 && (pixelPer.x * (parameters.x - inData.uFirst) < 1.5 || pixelPer.x * (inData.uFirst + inData.uSpan - parameters.x) < 1.5);
+            line = line || ((uOptions & (1 << 2)) > 0 && (pixelPer.y * (parameters.y - inData.vFirst) < 1.5 || pixelPer.y * (inData.vFirst + inData.vSpan - parameters.y) < 1.5));
+            line = line || ((uOptions & (1 << 3)) > 0 && pixelPer.x * (parameters.x - inData.u) < 1.5);
+            line = line || ((uOptions & (1 << 3)) > 0 && pixelPer.y * (parameters.y - inData.v) < 1.5);
+            color = line ? uLineColor : ((uOptions & (1 << 1)) > 0 ? vec4(splineColor, uFillColor.a) : vec4(0.0, 0.0, 0.0, 0.0));
+            color.rgb = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * color.rgb;
+            if (color.a * texture(uTrimTextureMap, tex).r == 0.0)
+                discard;
+        }
+    """
  
     def __init__(self, *args, eye=(0.0, 0.0, 3.0), center=(0.0, 0.0, 0.0), up=(0.0, 1.0, 0.0), draw_func=None, **kw):
         OpenGLFrame.__init__(self, *args, **kw)
@@ -1114,6 +1158,31 @@ class SplineOpenGLFrame(OpenGLFrame):
         #print("GL_SHADING_LANGUAGE_VERSION: ", glGetString(GL_SHADING_LANGUAGE_VERSION))
         #print("GL_MAX_TESS_GEN_LEVEL: ", glGetIntegerv(GL_MAX_TESS_GEN_LEVEL))
 
+        # Set up frameBuffer into which we draw surface trims.    
+        self.frameBuffer = glGenFramebuffers(1)
+        glBindFramebuffer(GL_FRAMEBUFFER, self.frameBuffer)
+
+        # Create the texture buffer for surface trims.
+        self.trimTextureBuffer = glGenTextures(1)
+        glActiveTexture(GL_TEXTURE1)
+        glBindTexture(GL_TEXTURE_2D, self.trimTextureBuffer)
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 512, 512, 0, GL_RED, GL_UNSIGNED_BYTE, None)
+        glActiveTexture(GL_TEXTURE0)
+
+        # Attach trim texture buffer to framebuffer and validate framebuffer.
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, self.trimTextureBuffer, 0)
+        glDrawBuffers(1, (GL_COLOR_ATTACHMENT0,))
+        if glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE:
+            raise ValueError("Framebuffer incomplete")
+        
+        # Set framebuffer back to default.
+        glBindFramebuffer(GL_FRAMEBUFFER, 0)
+
         # Set up GL texture buffer for spline data
         self.splineDataBuffer = glGenBuffers(1)
         self.splineTextureBuffer = glGenTextures(1)
@@ -1137,8 +1206,9 @@ class SplineOpenGLFrame(OpenGLFrame):
         try:
             # Must create CurveProgram first, because it checks and potentially resets tessellationEnabled flag.
             self.curveProgram = CurveProgram(self)
-            self.surface3Program = SurfaceProgram(self, 3, "", "", "", "splineColor = uFillColor.rgb;")
-            self.surface4Program = SurfaceProgram(self, 4,
+            self.surface3Program = SurfaceProgram(self, False, 3, "", "", "", "splineColor = uFillColor.rgb;")
+            self.trimmedSurface3Program = SurfaceProgram(self, True, 3, "", "", "", "splineColor = uFillColor.rgb;")
+            self.surface4Program = SurfaceProgram(self, False, 4,
                 """
                     vec4 kVec = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
                     vec3 pVec;
@@ -1152,7 +1222,27 @@ class SplineOpenGLFrame(OpenGLFrame):
                     pVec = abs(fract(uFillColor.xxx + kVec.xyz) * 6.0 - kVec.www);
                     splineColor = uFillColor.z * mix(kVec.xxx, clamp(pVec - kVec.xxx, 0.0, 1.0), splineColor.r);
                 """)
-            self.surface6Program = SurfaceProgram(self, 6, "", "splineColor = vec3(0.0, 0.0, 0.0);",
+            self.trimmedSurface4Program = SurfaceProgram(self, True, 4,
+                """
+                    vec4 kVec = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+                    vec3 pVec;
+                """, "splineColor = vec3(0.0, 0.0, 0.0);",
+                """
+                    splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;
+                """,
+                # Taken from http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
+                # uFillColor is passed in as HSV
+                """
+                    pVec = abs(fract(uFillColor.xxx + kVec.xyz) * 6.0 - kVec.www);
+                    splineColor = uFillColor.z * mix(kVec.xxx, clamp(pVec - kVec.xxx, 0.0, 1.0), splineColor.r);
+                """)
+            self.surface6Program = SurfaceProgram(self, False, 6, "", "splineColor = vec3(0.0, 0.0, 0.0);",
+                """
+                    splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;
+                    splineColor.g += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+4).x;
+                    splineColor.b += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+5).x;
+                """, "")
+            self.trimmedSurface6Program = SurfaceProgram(self, True, 6, "", "splineColor = vec3(0.0, 0.0, 0.0);",
                 """
                     splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+3).x;
                     splineColor.g += uBSpline[uB] * vBSpline[vB] * texelFetch(uSplineData, i+4).x;
@@ -1168,6 +1258,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             print(badLine)
             quit()
 
+        # Set default draw parameters.
         glUseProgram(0)
         glEnable( GL_DEPTH_TEST )
         glClearColor(self.backgroundColor[0], self.backgroundColor[1], self.backgroundColor[2], self.backgroundColor[3])
@@ -1196,8 +1287,11 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         self.curveProgram.ResetBounds(self)
         self.surface3Program.ResetBounds(self)
+        self.trimmedSurface3Program.ResetBounds(self)
         self.surface4Program.ResetBounds(self)
+        self.trimmedSurface4Program.ResetBounds(self)
         self.surface6Program.ResetBounds(self)
+        self.trimmedSurface6Program.ResetBounds(self)
 
         glUseProgram(0)
         glMatrixMode(GL_MODELVIEW)
@@ -1448,6 +1542,122 @@ class SplineOpenGLFrame(OpenGLFrame):
             spline.metadata["options"] = SplineOpenGLFrame.SHADED | SplineOpenGLFrame.BOUNDARY
         if not "animate" in spline.metadata:
             spline.metadata["animate"] = None
+
+    @staticmethod
+    def tessellate2DSolid(solid):
+        """
+        Returns an array of triangles that tessellate the given 2D solid
+        """
+        assert solid.dimension == 2
+        assert solid.containsInfinity == False
+
+        # First, collect all manifold contour endpoints, accounting for slight numerical error.
+        class Endpoint:
+            def __init__(self, curve, t, clockwise, isStart, otherEnd=None):
+                self.curve = curve
+                self.t = t
+                self.xy = curve.manifold.evaluate((t,))
+                self.clockwise = clockwise
+                self.isStart = isStart
+                self.otherEnd = otherEnd
+                self.connection = None
+        endpoints = []
+        for curve in solid.boundaries:
+            curve.domain.boundaries.sort(key=lambda boundary: (boundary.manifold.evaluate(0.0), -boundary.manifold.normal(0.0)))
+            leftB = 0
+            rightB = 0
+            boundaryCount = len(curve.domain.boundaries)
+            while leftB < boundaryCount:
+                if curve.domain.boundaries[leftB].manifold.normal(0.0) < 0.0:
+                    leftPoint = curve.domain.boundaries[leftB].manifold.evaluate(0.0)[0]
+                    while rightB < boundaryCount:
+                        rightPoint = curve.domain.boundaries[rightB].manifold.evaluate(0.0)[0]
+                        if leftPoint - Manifold.minSeparation < rightPoint and curve.domain.boundaries[rightB].manifold.normal(0.0) > 0.0:
+                            t = curve.manifold.tangent_space(leftPoint)[:,0]
+                            n = curve.manifold.normal(leftPoint)
+                            clockwise = t[0] * n[1] - t[1] * n[0] > 0.0
+                            ep1 = Endpoint(curve, leftPoint, clockwise, rightPoint >= leftPoint)
+                            ep2 = Endpoint(curve, rightPoint, clockwise, rightPoint < leftPoint, ep1)
+                            ep1.otherEnd = ep2
+                            endpoints.append(ep1)
+                            endpoints.append(ep2)
+                            leftB = rightB
+                            rightB += 1
+                            break
+                        rightB += 1
+                leftB += 1
+
+        # Second, collect all valid pairings of endpoints (normal not flipped between segments).
+        Connection = namedtuple('Connection', ('distance', 'ep1', 'ep2'))
+        connections = []
+        for i, ep1 in enumerate(endpoints[:-1]):
+            for ep2 in endpoints[i+1:]:
+                if (ep1.clockwise == ep2.clockwise and ep1.isStart != ep2.isStart) or \
+                    (ep1.clockwise != ep2.clockwise and ep1.isStart == ep2.isStart):
+                    connections.append(Connection(np.linalg.norm(ep1.xy - ep2.xy), ep1, ep2))
+
+        # Third, only keep closest pairings (prune the rest).
+        connections.sort(key=lambda connection: -connection.distance)
+        while connections:
+            connection = connections.pop()
+            connection.ep1.connection = connection.ep2
+            connection.ep2.connection = connection.ep1
+            connections = [c for c in connections if c.ep1 is not connection.ep1 and c.ep1 is not connection.ep2 and \
+                    c.ep2 is not connection.ep1 and c.ep2 is not connection.ep2]
+            
+        # Fourth, set up GLUT to tesselate the solid.
+        tess = gluNewTess()
+        gluTessProperty(tess, GLU_TESS_WINDING_RULE, GLU_TESS_WINDING_ODD)
+        vertices = []
+        def beginCallback(type=None):
+            vertices = []
+        def edgeFlagDataCallback(flag, polygonData):
+            pass # Forces triangulation of polygons rather than triangle fans or strips
+        def vertexCallback(vertex, otherData=None):
+            vertices.append(vertex[:2])
+        def combineCallback(vertex, neighbors, neighborWeights, outData=None):
+            outData = vertex
+            return outData
+        def endCallback():
+            pass
+        gluTessCallback(tess, GLU_TESS_BEGIN, beginCallback)
+        gluTessCallback(tess, GLU_TESS_EDGE_FLAG_DATA, edgeFlagDataCallback)
+        gluTessCallback(tess, GLU_TESS_VERTEX, vertexCallback)
+        gluTessCallback(tess, GLU_TESS_COMBINE, combineCallback)
+        gluTessCallback(tess, GLU_TESS_END, endCallback)
+
+        # Fifth, trace the contours from pairing to pairing, using GLUT to tesselate the interior.
+        gluTessBeginPolygon(tess, 0)
+        while endpoints:
+            start = endpoints[0]
+            if not start.isStart:
+                start = start.otherEnd
+            # Run backwards until you hit start again or hit an end.
+            if start.connection is not None:
+                originalStart = start
+                next = start.connection
+                start = None
+                while next is not None and start is not originalStart:
+                    start = next.otherEnd
+                    next = start.connection
+            # Run forwards submitting vertices for the contour.
+            next = start
+            gluTessBeginContour(tess)
+            while next is not None:
+                endpoints.remove(next)
+                endpoints.remove(next.otherEnd)
+                subdivisions = max(int(abs(next.otherEnd.t - next.t) / 0.1), 20) if isinstance(next.curve.manifold, Spline) else 2
+                for t in np.linspace(next.t, next.otherEnd.t, subdivisions):
+                    xy = next.curve.manifold.evaluate((t,))
+                    vertex = (*xy, 0.0)
+                    gluTessVertex(tess, vertex, vertex)
+                next = next.otherEnd.connection
+                if next is start:
+                    break
+            gluTessEndContour(tess)
+        gluTessEndPolygon(tess)
+        gluDeleteTess(tess)
+        return np.array(vertices, np.float32)
 
     def _DrawPoints(self, spline, drawCoefficients):
         """
@@ -1754,8 +1964,12 @@ class CurveProgram:
 
 class SurfaceProgram:
     """ Compile surface program """
-    def __init__(self, frame, nDep, splineColorDeclarations, initializeSplineColor, computeSplineColor, postProcessSplineColor):
+    def __init__(self, frame, trimmed, nDep, splineColorDeclarations, initializeSplineColor, computeSplineColor, postProcessSplineColor):
         if frame.tessellationEnabled:
+            if trimmed:
+                compiledFragmentShader = shaders.compileShader(frame.trimmedSurfaceFragmentShaderCode, GL_FRAGMENT_SHADER)
+            else:
+                compiledFragmentShader = shaders.compileShader(frame.surfaceFragmentShaderCode, GL_FRAGMENT_SHADER)
             self.surfaceProgram = shaders.compileProgram(
                 shaders.compileShader(frame.surfaceVertexShaderCode, GL_VERTEX_SHADER), 
                 shaders.compileShader(frame.surfaceTCShaderCode.format(
@@ -1770,7 +1984,7 @@ class SurfaceProgram:
                     computeSplineColor=computeSplineColor,
                     postProcessSplineColor=postProcessSplineColor,
                     maxOrder=frame.maxOrder), GL_TESS_EVALUATION_SHADER), 
-                shaders.compileShader(frame.surfaceFragmentShaderCode, GL_FRAGMENT_SHADER),
+                compiledFragmentShader,
                 validate = False)
         else:
             self.surfaceProgram = shaders.compileProgram(
@@ -1787,6 +2001,7 @@ class SurfaceProgram:
                     maxOrder=frame.maxOrder), GL_GEOMETRY_SHADER), 
                 shaders.compileShader(frame.surfaceSimpleFragmentShaderCode, GL_FRAGMENT_SHADER))
 
+        # Initialize program parameters.
         glUseProgram(self.surfaceProgram)
         self.aSurfaceParameters = glGetAttribLocation(self.surfaceProgram, "aParameters")
         glBindBuffer(GL_ARRAY_BUFFER, frame.parameterBuffer)
@@ -1800,7 +2015,10 @@ class SurfaceProgram:
         self.uSurfaceOptions = glGetUniformLocation(self.surfaceProgram, 'uOptions')
         self.uSurfaceSplineData = glGetUniformLocation(self.surfaceProgram, 'uSplineData')
         glUniform1i(self.uSurfaceSplineData, 0) # GL_TEXTURE0 is the spline buffer texture
-    
+        if trimmed and frame.tessellationEnabled:
+            self.uTrimTextureMap = glGetUniformLocation(self.surfaceProgram, 'uTrimTextureMap')
+            glUniform1i(self.uTrimTextureMap, 1) # GL_TEXTURE1 is the trim texture map
+
     def ResetBounds(self, frame):
         """Reset bounds and other frame configuration for surface program"""
         glUseProgram(self.surfaceProgram)
