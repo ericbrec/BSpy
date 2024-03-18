@@ -1740,14 +1740,15 @@ class SplineOpenGLFrame(OpenGLFrame):
         fillColor = spline.metadata["fillColor"]
         if spline.nDep <= 3:
             nDep = 3
-            program = self.surface3Program
+            program = self.trimmedSurface3Program if "trim" in spline.metadata else self.surface3Program
         elif spline.nDep == 4:
             nDep = 4
+            program = self.trimmedSurface4Program if "trim" in spline.metadata else self.surface4Program
             program = self.surface4Program
             fillColor = self.ConvertRGBToHSV(fillColor[0], fillColor[1], fillColor[2], fillColor[3])
         elif spline.nDep <= 6:
             nDep = 6
-            program = self.surface6Program
+            program = self.trimmedSurface6Program if "trim" in spline.metadata else self.surface6Program
         else:
             raise ValueError("Can't draw surface.")
         
@@ -1805,14 +1806,15 @@ class SplineOpenGLFrame(OpenGLFrame):
         lineColor = spline.metadata["lineColor"].copy()
         if spline.nDep <= 3:
             nDep = 3
-            program = self.surface3Program
+            program = self.trimmedSurface3Program if "trim" in spline.metadata else self.surface3Program
         elif spline.nDep == 4:
             nDep = 4
+            program = self.trimmedSurface4Program if "trim" in spline.metadata else self.surface4Program
             program = self.surface4Program
             fillColor = self.ConvertRGBToHSV(fillColor[0], fillColor[1], fillColor[2], fillColor[3])
         elif spline.nDep <= 6:
             nDep = 6
-            program = self.surface6Program
+            program = self.trimmedSurface6Program if "trim" in spline.metadata else self.surface6Program
         else:
             raise ValueError("Can't draw surface.")
         fillColor[3] *= 0.5
@@ -1879,6 +1881,33 @@ class SplineOpenGLFrame(OpenGLFrame):
         """
         Draw a spline within a `SplineOpenGLFrame`.
         """
+        # Fill trim stencil.
+        if "trim" in spline.metadata:
+            # Draw trim tessellation into trim texture framebuffer.
+            glBindFramebuffer(GL_FRAMEBUFFER, self.frameBuffer)
+            glDisable(GL_DEPTH_TEST)
+            glViewport(0,0,512,512)
+            glClearColor(0.0, 0.0, 0.0, 1.0)
+            glClear(GL_COLOR_BUFFER_BIT)
+            glMatrixMode(GL_PROJECTION)
+            glLoadIdentity()
+            bounds = spline.domain()
+            glOrtho(bounds[0, 0], bounds[0, 1], bounds[1, 0], bounds[1, 1], -1.0, 1.0)
+            glColor3f(1.0, 0.0, 0.0)
+            glBegin(GL_TRIANGLES)
+            for vertex in spline.metadata["trim"]:
+                glVertex2fv(vertex)
+            glEnd()
+            glFlush()
+            # Reset view for main framebuffer.
+            glBindFramebuffer(GL_FRAMEBUFFER, 0)
+            glEnable(GL_DEPTH_TEST)
+            glViewport(0, 0, self.width, self.height)
+            glClearColor(self.backgroundColor[0], self.backgroundColor[1], self.backgroundColor[2], self.backgroundColor[3])
+            glMatrixMode(GL_PROJECTION)
+            glLoadMatrixf(self.projection)
+            glMatrixMode(GL_MODELVIEW)
+
         # Retrieve transposed float32 coefficients.
         coefs = spline.cache["coefs32"]
 
