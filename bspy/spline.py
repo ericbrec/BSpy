@@ -2009,7 +2009,7 @@ class Spline(Manifold):
         """
         return bspy._spline_fitting.torus(innerRadius, outerRadius, tolerance)
     
-    def transform(self, matrix):
+    def transform(self, matrix, matrixInverseTranspose = None):
         """
         Transform a spline by the given matrix.
 
@@ -2017,6 +2017,9 @@ class Spline(Manifold):
         ----------
         matrix : array-like
             An array of size `newNDep`x`nDep` that specifies the transform matrix.
+
+        matrixInverseTranspose : `numpy.array`, optional
+            The inverse transpose of matrix (not used for splines).
 
         Returns
         -------
