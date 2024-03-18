@@ -781,7 +781,6 @@ def contours(self):
     return splineContours
 
 def intersect(self, other):
-    assert self.range_dimension() == other.range_dimension()
     intersections = []
     nDep = self.nInd # The dimension of the intersection's range
 
@@ -800,7 +799,7 @@ def intersect(self, other):
             for zero in zeros:
                 if isinstance(zero, tuple):
                     # Intersection is an interval, so create a Manifold.Coincidence.
-                    planeBounds = (projection @ (self.spline((zero[0],)) - other._point), projection @ (self.spline((zero[1],)) - other._point))
+                    planeBounds = (projection @ (self((zero[0],)) - other._point), projection @ (self((zero[1],)) - other._point))
 
                     # First, check for crossings at the boundaries of the coincidence, since splines can have discontinuous tangents.
                     # We do this first because later we may change the order of the plane bounds.
@@ -827,7 +826,7 @@ def intersect(self, other):
                     intersections.append(Manifold.Coincidence(left, right, alignment, np.atleast_2d(transform), np.atleast_2d(1.0 / transform), np.atleast_1d(translation)))
                 else:
                     # Intersection is a point, so create a Manifold.Crossing.
-                    intersections.append(Manifold.Crossing(Hyperplane(1.0, zero, 0.0), Hyperplane(1.0, projection @ (self.spline((zero,)) - other._point), 0.0)))
+                    intersections.append(Manifold.Crossing(Hyperplane(1.0, zero, 0.0), Hyperplane(1.0, projection @ (self((zero,)) - other._point), 0.0)))
 
         # Surface-Plane intersection.
         elif nDep == 2:
@@ -842,7 +841,7 @@ def intersect(self, other):
                 points = []
                 for t in tValues:
                     zero = contour((t,))
-                    points.append(projection @ (self.spline(zero) - other._point))
+                    points.append(projection @ (self(zero) - other._point))
                 right = bspy.Spline.least_squares(tValues, np.array(points).T, contour.order, contour.knots)
                 intersections.append(Manifold.Crossing(left, right))
         else:
@@ -851,7 +850,7 @@ def intersect(self, other):
     # Spline-Spline intersection.
     elif isinstance(other, bspy.Spline):
         # Construct a new spline that represents the intersection.
-        spline = self.subtract(other.spline)
+        spline = self.subtract(other)
 
         # Curve-Curve intersection.
         if nDep == 1:
@@ -906,7 +905,7 @@ def intersect(self, other):
 
             # Convert each contour into a Manifold.Crossing.
             if swap:
-                spline = other.subtract(self.spline)
+                spline = other.subtract(self)
                 logging.info(f"intersect({other.metadata['Name']}, {self.metadata['Name']})")
                 contours = spline.contours()
                 for contour in contours:
@@ -995,8 +994,8 @@ def complete_slice(self, slice, solid):
         if slice.dimension == 2:
             logging.info(f"check containment: {self.metadata['Name']}")
         domain = self.domain().T
-        if solid.contains_point(self.spline(0.5 * (domain[0] + domain[1]))):
-            self.establish_domain_bounds(slice, bounds)
+        if solid.contains_point(self(0.5 * (domain[0] + domain[1]))):
+            establish_domain_bounds(slice, bounds)
         return
 
     # For curves, add domain bounds as needed.
@@ -1012,7 +1011,7 @@ def complete_slice(self, slice, solid):
     # For surfaces, add bounding box for domain and intersect it with existing slice boundaries.
     if slice.dimension == 2:
         boundaryCount = len(slice.boundaries) # Keep track of existing slice boundaries
-        self.establish_domain_bounds(slice, bounds) # Add bounding box boundaries to slice boundaries
+        establish_domain_bounds(slice, bounds) # Add bounding box boundaries to slice boundaries
         for boundary in slice.boundaries[boundaryCount:]: # Mark bounding box boundaries as untouched
             boundary.touched = False
 

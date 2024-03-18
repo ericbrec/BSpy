@@ -1195,7 +1195,7 @@ class Spline(Manifold):
         -----
         Uses `zeros` to find all intersection points and `contours` to find all the intersection curves.
         """
-        if not(self.nDep == other.nDep): raise ValueError("The number of dependent variables for both splines much match.")
+        if not(self.range_dimension() == other.range_dimension()): raise ValueError("The number of dependent variables for both splines much match.")
         return bspy._spline_intersection.intersect(self, other)
 
     def jacobian(self, uvw):
