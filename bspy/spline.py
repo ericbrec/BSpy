@@ -989,6 +989,21 @@ class Spline(Manifold):
         """
         return bspy._spline_fitting.four_sided_patch(bottom, right, top, left, surfParam)
 
+    def full_domain(self):
+        """
+        Return a solid that represents the full domain of the spline.
+
+        Returns
+        -------
+        domain : `Solid`
+            The full (untrimmed) domain of the spline.
+
+        See Also
+        --------
+        `Boundary` : A portion of the boundary of a solid.
+        """
+        return bspy._spline_intersection.full_domain(self)
+    
     def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-6):
         """
         Determine a geodesic between two points on a surface

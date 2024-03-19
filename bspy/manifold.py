@@ -311,3 +311,18 @@ class Manifold:
         """
         assert self.domain_dimension() == slice.dimension
         assert self.range_dimension() == solid.dimension
+
+    def full_domain(self):
+        """
+        Return a solid that represents the full domain of the manifold.
+
+        Returns
+        -------
+        domain : `Solid`
+            The full (untrimmed) domain of the manifold.
+
+        See Also
+        --------
+        `Boundary` : A portion of the boundary of a solid.
+        """
+        return None
