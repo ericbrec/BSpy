@@ -79,7 +79,7 @@ class Viewer(tk.Tk):
         self.treeview = Treeview(controls, show='tree')
         self.treeview.pack(side=tk.LEFT, fill=tk.Y)
         self.treeview.bind('<<TreeviewSelect>>', self._ListSelectionChanged)
-
+        self.bind('<Control-a>', lambda *args: self.treeview.selection_add(self.treeview.get_children()))
         verticalScroll = tk.Scrollbar(controls, orient=tk.VERTICAL)
         verticalScroll.pack(side=tk.LEFT, fill=tk.Y)
 
