@@ -192,7 +192,7 @@ class Viewer(tk.Tk):
     def list_solid(self, solid, name="Solid", fillColor=None, lineColor=None, options=None, inherit=True, draw=False):
         solid.isDrawn = draw
         solid.isSelected = draw
-        iid = self.treeview.insert('', 'end', text=name)
+        iid = self.treeview.insert('', 'end', text=name, open=True)
         self.splineList[iid] = solid
         self.solidList.append(solid)
         if draw:
