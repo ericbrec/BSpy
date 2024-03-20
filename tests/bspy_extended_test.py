@@ -607,9 +607,8 @@ def test_intersect():
             dataPoints[2, i, j] = 0.0
     plane = bspy.Spline.least_squares(uValues, dataPoints, (order, order), (knots, knots))
 
-    contours = spline.intersect(plane)
-    for contour in contours:
+    intersections = spline.intersect(plane)
+    for intersection in intersections:
         for t in np.linspace(0.0, 1.0, 11):
-            uvst = contour((t,))
-            maxError = max(maxError, np.linalg.norm(spline(uvst[:2]) - plane(uvst[2:])))
+            maxError = max(maxError, np.linalg.norm(spline(intersection.left(t)) - plane(intersection.right(t))))
     assert maxError <= np.finfo(float).eps ** 0.2

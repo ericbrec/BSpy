@@ -50,7 +50,7 @@ class FunOpenGLFrame(SplineOpenGLFrame):
         img = Image.open(path.expanduser("~/OneDrive/Pictures/Backgrounds/Tom Sailing.jpg"))
         img_data = np.array((img.getdata())).astype(np.int8)
         self.textureBuffer = glGenTextures(1)
-        glActiveTexture(GL_TEXTURE1)
+        glActiveTexture(GL_TEXTURE2)
         glBindTexture(GL_TEXTURE_2D, self.textureBuffer)
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER)
@@ -64,7 +64,7 @@ class FunOpenGLFrame(SplineOpenGLFrame):
 
         glUseProgram(self.surface3Program.surfaceProgram)
         self.uSurfaceTextureMap = glGetUniformLocation(self.surface3Program.surfaceProgram, 'uTextureMap')
-        glUniform1i(self.uSurfaceTextureMap, 1) # GL_TEXTURE1 is the texture map
+        glUniform1i(self.uSurfaceTextureMap, 2) # GL_TEXTURE2 is the texture map
         self.surface3Program.surfaceProgram.check_validate() # Now that textures are assigned, we can validate the program
         glUseProgram(0)
 
