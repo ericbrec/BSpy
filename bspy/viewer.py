@@ -1,11 +1,10 @@
 import numpy as np
 import tkinter as tk
+from tkinter.ttk import Treeview
 from tkinter.colorchooser import askcolor
 from tkinter import filedialog
 import queue, threading
-from bspy import SplineOpenGLFrame
-from bspy import Hyperplane
-from bspy import Spline
+from bspy import SplineOpenGLFrame, Solid, Hyperplane, Spline
 
 class _BitCheckbutton(tk.Checkbutton):
     """A tkinter `CheckButton` that gets/sets its variable based on a given `bitmask`."""
@@ -38,7 +37,7 @@ class _BitCheckbutton(tk.Checkbutton):
 
 class Viewer(tk.Tk):
     """
-    A tkinter viewer (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a listbox full of 
+    A tkinter viewer (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a treeview full of 
     splines, and a set of controls to adjust and view the selected splines.
 
     See Also
@@ -77,17 +76,17 @@ class Viewer(tk.Tk):
         horizontalScroll = tk.Scrollbar(controls, orient=tk.HORIZONTAL)
         horizontalScroll.pack(side=tk.BOTTOM, fill=tk.X)
 
-        self.listBox = tk.Listbox(controls, selectmode=tk.EXTENDED)
-        self.listBox.pack(side=tk.LEFT, fill=tk.Y)
-        self.listBox.bind('<<ListboxSelect>>', self._ListSelectionChanged)
-
+        self.treeview = Treeview(controls, show='tree')
+        self.treeview.pack(side=tk.LEFT, fill=tk.Y)
+        self.treeview.bind('<<TreeviewSelect>>', self._ListSelectionChanged)
+        self.bind('<Control-a>', lambda *args: self.treeview.selection_add(self.treeview.get_children()))
         verticalScroll = tk.Scrollbar(controls, orient=tk.VERTICAL)
         verticalScroll.pack(side=tk.LEFT, fill=tk.Y)
 
-        horizontalScroll.config(command=self.listBox.xview)
-        self.listBox.configure(xscrollcommand=horizontalScroll.set)
-        verticalScroll.config(command=self.listBox.yview)
-        self.listBox.configure(yscrollcommand=verticalScroll.set)
+        horizontalScroll.config(command=self.treeview.xview)
+        self.treeview.configure(xscrollcommand=horizontalScroll.set)
+        verticalScroll.config(command=self.treeview.yview)
+        self.treeview.configure(yscrollcommand=verticalScroll.set)
 
         # Controls on the right
         controls = tk.Frame(self)
@@ -108,7 +107,8 @@ class Viewer(tk.Tk):
         self.scale.pack(side=tk.LEFT)
         self.scale.set(0.5)
 
-        self.splineList = []
+        self.splineList = {}
+        self.solidList = []
         self.splineDrawList = []
         self.splineRadius = 0.0
         self.adjust = None
@@ -136,29 +136,29 @@ class Viewer(tk.Tk):
                     self.work[work[0]](*work[1])
         self.after(200, self._check_for_work)
 
-    def list(self, spline, name = None):
-        """List a `Spline` in the listbox. Can be called before viewer is running."""
+    def list(self, spline, name = None, draw=False, parentIID = ''):
+        """List a `Spline` in the treeview. Can be called before viewer is running."""
         self.frame.make_drawable(spline)
         if name is not None:
             spline.metadata["Name"] = name
-        self.splineList.append(spline)
-        self.listBox.insert(tk.END, spline.metadata.get("Name", f"Spline({spline.nInd}, {spline.nDep})"))
+        iid = self.treeview.insert(parentIID, 'end', text=spline.metadata.get("Name", f"Spline({spline.nInd}, {spline.nDep})"))
+        self.splineList[iid] = spline
+        if draw:
+            self.treeview.selection_add(iid)
 
     def show(self, spline, name = None):
-        """Show a `Spline` in the listbox (calls the list method, kept for compatibility). Can be called before viewer is running."""
+        """Show a `Spline` in the treeview (calls the list method, kept for compatibility). Can be called before viewer is running."""
         self.list(spline, name)
         
     def draw(self, spline, name = None):
-        """Add a `Spline` to the listbox and draw it. Can be called before the viewer is running."""
-        self.list(spline, name)
-        self.listBox.selection_set(self.listBox.size() - 1)
-        self.update()
+        """Add a `Spline` to the treeview and draw it. Can be called before the viewer is running."""
+        self.list(spline, name, True)
     
     list_spline = list
     draw_spline = draw
     show_spline = show
 
-    def list_boundary(self, boundary, name="Boundary", fillColor=None, lineColor=None, options=None, inherit=True, draw=False):
+    def list_boundary(self, boundary, name="Boundary", fillColor=None, lineColor=None, options=None, inherit=True, draw=False, parentIID=''):
         if boundary.manifold.range_dimension() != 3:
             return
         vertices = self.frame.tessellate2DSolid(boundary.domain)
@@ -184,17 +184,21 @@ class Viewer(tk.Tk):
             spline.metadata["options"] = options
         spline.metadata["trim"] = vertices
         self.frame.make_drawable(spline)
-        if draw:
-            self.draw(spline)
-        else:
-            self.list(spline)
+        self.list(spline, spline.metadata["Name"], draw, parentIID)
 
     def draw_boundary(self, boundary, name="Boundary", fillColor=None, lineColor=None, options=None, inherit=True):
         self.list_boundary(boundary, name, fillColor, lineColor, options, inherit, draw=True)
 
     def list_solid(self, solid, name="Solid", fillColor=None, lineColor=None, options=None, inherit=True, draw=False):
+        solid.isDrawn = draw
+        solid.isSelected = draw
+        iid = self.treeview.insert('', 'end', text=name, open=True)
+        self.splineList[iid] = solid
+        self.solidList.append(solid)
+        if draw:
+            self.treeview.selection_add(iid)
         for i, surface in enumerate(solid.boundaries):
-            self.list_boundary(surface, f"{name} boundary {i+1}", fillColor, lineColor, options, inherit, draw)
+            self.list_boundary(surface, f"{name} boundary {i+1}", fillColor, lineColor, options, inherit, draw, iid)
 
     def draw_solid(self, solid, name="Solid", fillColor=None, lineColor=None, options=None, inherit=True):
         self.list_solid(solid, name, fillColor, lineColor, options, inherit, draw=True)
@@ -216,26 +220,24 @@ class Viewer(tk.Tk):
                 self.list(spline)
     
     def erase_all(self):
-        """Stop drawing all splines. Splines remain in the listbox."""
-        self.listBox.selection_clear(0, self.listBox.size() - 1)
+        """Stop drawing all splines. Splines remain in the treeview."""
+        self.treeview.selection_set()
         self.splineRadius = 0.0
         self.frame.ResetView()
         self.update()
 
     def remove(self):
-        """Remove splines from the listbox."""
-        while self.listBox.curselection():
-            item = self.listBox.curselection()[0]
-            spline = self.splineList[item]
-            del self.splineList[item]
+        """Remove splines from the treeview."""
+        for item in self.treeview.selection():
+            spline = self.splineList.pop(item)
             self.splineDrawList.remove(spline)
-            self.listBox.delete(item, item)
+        self.treeview.delete(*self.treeview.selection())
         self.update()
 
     def empty(self):
-        """Stop drawing all splines and remove them from the listbox."""
-        self.splineList = []
-        self.listBox.delete(0, self.listBox.size() - 1)
+        """Stop drawing all splines and remove them from the treeview."""
+        self.splineList = {}
+        self.treeview.delete(self.treeview.get_children())
         self.splineRadius = 0.0
         self.frame.ResetView()
         self.update()
@@ -264,19 +266,32 @@ class Viewer(tk.Tk):
     def update(self):
         """Update the spline draw list, set the default view, reset the bounds, and refresh the frame."""
         self.splineDrawList = []
+        for solid in self.solidList:
+            solid.isSelected = False
+
         gotOne = False
-        for item in self.listBox.curselection():
+        for item in self.treeview.selection():
             spline = self.splineList[item]
-            coefs = spline.cache["coefs32"].T[:3]
-            coefsAxis = tuple(range(1, spline.nInd + 1))
-            if gotOne:
-                splineMin = np.minimum(splineMin, coefs.min(axis=coefsAxis))
-                splineMax = np.maximum(splineMax, coefs.max(axis=coefsAxis))
-            else:
-                splineMin = coefs.min(axis=coefsAxis)
-                splineMax = coefs.max(axis=coefsAxis)
-                gotOne = True
-            self.splineDrawList.append(spline)
+            if isinstance(spline, Spline):
+                coefs = spline.cache["coefs32"].T[:3]
+                coefsAxis = tuple(range(1, spline.nInd + 1))
+                if gotOne:
+                    splineMin = np.minimum(splineMin, coefs.min(axis=coefsAxis))
+                    splineMax = np.maximum(splineMax, coefs.max(axis=coefsAxis))
+                else:
+                    splineMin = coefs.min(axis=coefsAxis)
+                    splineMax = coefs.max(axis=coefsAxis)
+                    gotOne = True
+                self.splineDrawList.append(spline)
+            elif isinstance(spline, Solid):
+                spline.isSelected = True
+                if not spline.isDrawn:
+                    spline.isDrawn = True
+                    self.treeview.selection_add(self.treeview.get_children(item))
+
+        for solid in self.solidList:
+            if not solid.isSelected:
+                solid.isDrawn = False
 
         if gotOne:
             newRadius = 0.5 * np.max(splineMax - splineMin)
@@ -284,8 +299,8 @@ class Viewer(tk.Tk):
             atDefaultEye = np.allclose(self.frame.eye, self.frame.defaultEye)
             center = 0.5 * (splineMax + splineMin)
             self.frame.SetDefaultView(center + (0.0, 0.0, 3.0 * newRadius), center, (0.0, 1.0, 0.0))
-            self.frame.ResetBounds()
             if atDefaultEye:
+                self.frame.ResetBounds()
                 self.frame.ResetView()
         else:
             self.splineRadius = 0.0
@@ -309,7 +324,7 @@ class Viewer(tk.Tk):
             frame.DrawSpline(spline, transform)
 
     def _ListSelectionChanged(self, event):
-        """Handle when the listbox selection has changed."""
+        """Handle when the treeview selection has changed."""
         self.update()
     
     def _ChangeFrameMode(self):
@@ -565,7 +580,7 @@ class Graphics:
 
     See Also
     --------
-    `Viewer` : A tkinter app (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a listbox full of 
+    `Viewer` : A tkinter app (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a treeview full of 
         splines, and a set of controls to adjust and view the selected splines.
 
     Examples
@@ -588,7 +603,7 @@ class Graphics:
         viewer.mainloop()        
 
     def list(self, spline, name = None):
-        """List a `Spline` in the listbox."""
+        """List a `Spline` in the treeview."""
         if name is not None:
             spline.metadata["Name"] = name
         elif "Name" not in spline.metadata:
@@ -599,11 +614,11 @@ class Graphics:
         self.workQueue.put(("show", (spline,)))
 
     def show(self, spline, name = None):
-        """Show a `Spline` in the listbox (calls list method, kept for compatibility)."""
+        """Show a `Spline` in the treeview (calls list method, kept for compatibility)."""
         self.list(spline, name)
 
     def draw(self, spline, name = None):
-        """Add a `Spline` to the listbox and draw it."""
+        """Add a `Spline` to the treeview and draw it."""
         if name is not None:
             spline.metadata["Name"] = name
         elif "Name" not in spline.metadata:
@@ -614,11 +629,11 @@ class Graphics:
         self.workQueue.put(("draw", (spline,)))
 
     def erase_all(self):
-        """Stop drawing all splines. Splines remain in the listbox."""
+        """Stop drawing all splines. Splines remain in the treeview."""
         self.workQueue.put(("erase_all", ()))
 
     def empty(self):
-        """Stop drawing all splines and remove them from the listbox."""
+        """Stop drawing all splines and remove them from the treeview."""
         self.workQueue.put(("empty", ()))
 
     def set_background_color(self, r, g=None, b=None, a=None):

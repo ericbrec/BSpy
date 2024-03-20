@@ -461,3 +461,18 @@ class Hyperplane(Manifold):
             solid.boundaries.append(Boundary(hyperplane, domain2))
 
         return solid
+
+    def full_domain(self):
+        """
+        Return a solid that represents the full domain of the hyperplane.
+
+        Returns
+        -------
+        domain : `Solid`
+            The full (untrimmed) domain of the hyperplane.
+
+        See Also
+        --------
+        `Boundary` : A portion of the boundary of a solid.
+        """
+        return Solid(self.domain_dimension(), True)

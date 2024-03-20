@@ -11,18 +11,18 @@ class Boundary:
     manifold : `Manifold`
         The differentiable function whose range is one dimension higher than its domain that defines the range of the boundary.
     
-    domain : `Solid`
-        The region of the domain of the manifold that's within the boundary.
+    domain : `Solid`, optional
+        The region of the domain of the manifold that's within the boundary. The default is the full domain of the manifold.
     
     See also
     --------
     `Solid` : A region that separates space into an inside and outside, defined by a collection of boundaries.
+    `Manifold.full_domain` : Return a solid that represents the full domain of the manifold.
     """
-    def __init__(self, manifold, domain):
-        assert manifold.domain_dimension() == domain.dimension
-
+    def __init__(self, manifold, domain = None):
         self.manifold = manifold
-        self.domain = domain
+        self.domain = manifold.full_domain() if domain is None else domain 
+        assert self.manifold.domain_dimension() == self.domain.dimension
 
     def __repr__(self):
         return "Boundary({0}, {1})".format(self.manifold.__repr__(), self.domain.__repr__())

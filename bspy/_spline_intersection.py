@@ -988,7 +988,7 @@ def complete_slice(self, slice, solid):
     if not slice.boundaries:
         if slice.dimension == 2:
             logging.info(f"check containment: {self.metadata['Name']}")
-        domain = self.domain().T
+        domain = bounds.T
         if solid.contains_point(self(0.5 * (domain[0] + domain[1]))):
             establish_domain_bounds(slice, bounds)
         return
@@ -1076,3 +1076,8 @@ def complete_slice(self, slice, solid):
             # No slice boundaries touched the bounding box, so remove bounding box if it's not contained in the solid.
             if not solid.contains_point(self.evaluate(bounds[:,0])):
                 slice.boundaries = slice.boundaries[:boundaryCount]
+
+def full_domain(self):
+    domain = Solid(self.domain_dimension(), False)
+    establish_domain_bounds(domain, self.domain())
+    return domain

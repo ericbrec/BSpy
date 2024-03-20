@@ -364,11 +364,9 @@ if __name__ == "__main__":
                 coefficients[1,i,j] = teapotVertices[vertex][2]
                 coefficients[2,i,j] = teapotVertices[vertex][1]
         teapot1.boundaries.append(Boundary(
-            Spline(2, 3, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=f"1: {patch[0]}")),
-            Hyperplane.create_hypercube([1.0, 1.0], [0.0, 0.0])))
+            Spline(2, 3, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=f"1: {patch[0]}"))))
         teapot2.boundaries.append(Boundary(
-            Spline(2, 3, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=f"2: {patch[0]}")),
-            Hyperplane.create_hypercube([1.0, 1.0], [0.0, 0.0])))
+            Spline(2, 3, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=f"2: {patch[0]}"))))
 
     viewer.list_solid(teapot1, fillColor=np.array((1, 1, 0, 1),np.float32))
 
