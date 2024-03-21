@@ -23,7 +23,7 @@ class Boundary:
         self.domain = manifold.full_domain() if domain is None else domain 
         if manifold.domain_dimension() != self.domain.dimension: raise ValueError("Domain dimensions don't match")
         if manifold.domain_dimension() + 1 != manifold.range_dimension(): raise ValueError("Manifold range is not one dimension higher than domain")
-        self.manifold, self.rangeBounds = manifold.trimmed_range_bounds(domain.bounds)
+        self.manifold, self.rangeBounds = manifold.trimmed_range_bounds(self.domain.bounds)
 
     def __repr__(self):
         return "Boundary({0}, {1})".format(self.manifold.__repr__(), self.domain.__repr__())
@@ -128,6 +128,8 @@ class Solid:
         self.boundaries.append(boundary)
         if self.bounds is None:
             self.bounds = boundary.rangeBounds
+        elif boundary.rangeBounds is None:
+            raise ValueError("Mix of infinite and bounded boundaries")
         else:
             self.bounds[:, 0] = np.minimum(self.bounds[:, 0], boundary.rangeBounds[:, 0])
             self.bounds[:, 1] = np.maximum(self.bounds[:, 1], boundary.rangeBounds[:, 1])

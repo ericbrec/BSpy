@@ -483,20 +483,28 @@ class Hyperplane(Manifold):
 
         Parameters
         ----------
-        domainBounds : array-like
-            An array with shape (domain_dimension, 2) of lower and upper and lower bounds on each hyperplane parameter.
+        domainBounds : array-like or `None`
+            An array with shape (domain_dimension, 2) of lower and upper and lower bounds on each hyperplane parameter. 
+            If domainBounds is `None` then the hyperplane is unbounded.
 
         Returns
         -------
-        trimmedManifold, rangeBounds : `Hyperplane`, `np.array`
+        trimmedManifold, rangeBounds : `Hyperplane`, `np.array` (or None)
             A manifold trimmed to the given domain bounds, and the range of the trimmed hyperplane given as 
-            lower and upper bounds on each dependent variable.
+            lower and upper bounds on each dependent variable. If the domain bounds are `None` (meaning unbounded) 
+            then rangeBounds is `None`.  
 
         Notes
         -----
         The returned trimmed manifold is the original hyperplane (no changes).
         """
-        domainBounds = np.atleast_1d(domainBounds)
-        rangeBounds = [[value.min(), value.max()] for value in 
-            self._tangentSpace @ domainBounds + self._point.reshape(self._point.shape[0], 1)]
-        return self, np.array(rangeBounds)
+        if domainBounds is None:
+            if self.domain_dimension() == 0:
+                return self, np.array(((self._point[0], self._point[0]),))
+            else:
+                return self, None
+        else:
+            domainBounds = np.atleast_1d(domainBounds)
+            rangeBounds = [[value.min(), value.max()] for value in 
+                self._tangentSpace @ domainBounds + self._point.reshape(self._point.shape[0], 1)]
+            return self, np.array(rangeBounds)
