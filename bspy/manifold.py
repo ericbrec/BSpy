@@ -326,3 +326,24 @@ class Manifold:
         `Boundary` : A portion of the boundary of a solid.
         """
         return None
+
+    def trimmed_range_bounds(domainBounds):
+        """
+        Return the trimmed range bounds for the manifold.
+
+        Parameters
+        ----------
+        domainBounds : array-like
+            An array with shape (domain_dimension, 2) of lower and upper and lower bounds on each manifold parameter.
+
+        Returns
+        -------
+        trimmedManifold, rangeBounds : `Manifold`, `np.array`
+            A manifold trimmed to the given domain bounds, and the range of the trimmed manifold given as 
+            lower and upper bounds on each dependent variable.
+
+        Notes
+        -----
+        The returned trimmed manifold may be the original manifold, depending on the subclass of manifold.
+        """
+        return None, None

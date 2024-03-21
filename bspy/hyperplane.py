@@ -476,3 +476,26 @@ class Hyperplane(Manifold):
         `Boundary` : A portion of the boundary of a solid.
         """
         return Solid(self.domain_dimension(), True)
+
+    def trimmed_range_bounds(self, domainBounds):
+        """
+        Return the trimmed range bounds for the hyperplane.
+
+        Parameters
+        ----------
+        domainBounds : array-like
+            An array with shape (domain_dimension, 2) of lower and upper and lower bounds on each hyperplane parameter.
+
+        Returns
+        -------
+        trimmedManifold, rangeBounds : `Hyperplane`, `np.array`
+            A manifold trimmed to the given domain bounds, and the range of the trimmed hyperplane given as 
+            lower and upper bounds on each dependent variable.
+
+        Notes
+        -----
+        The returned trimmed manifold is the original hyperplane (no changes).
+        """
+        rangeBounds = [[value.min(), value.max()] for value in 
+            self._tangentSpace @ domainBounds + self._point.reshape(self._point.shape[0], 1)]
+        return self, rangeBounds

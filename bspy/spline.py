@@ -717,7 +717,7 @@ class Spline(Manifold):
         Returns
         -------
         bounds : `numpy.array`
-            nInd x 2 array of the upper and lower bounds on each of the independent variables.
+            nInd x 2 array of the lower and upper bounds on each of the independent variables.
 
         See Also
         --------
@@ -874,7 +874,7 @@ class Spline(Manifold):
         Parameters
         ----------
         newDomain : array-like
-            nInd x 2 array of the new upper and lower bounds on each of the independent variables (same form as 
+            nInd x 2 array of the new lower and upper bounds on each of the independent variables (same form as 
             returned from `domain`). If a bound is None or nan then the original bound (and knots) are left unchanged.
 
         continuityOrder : `int`
@@ -1555,7 +1555,7 @@ class Spline(Manifold):
     def range_bounds(self):
         """
         Return the range of a spline as lower and upper bounds on each of the
-        dependent variables
+        dependent variables.
         """
         return bspy._spline_evaluation.range_bounds(self)
 
@@ -1652,7 +1652,7 @@ class Spline(Manifold):
         Parameters
         ----------
         newDomain : array-like
-            nInd x 2 array of the new upper and lower bounds on each of the independent variables (same form as 
+            nInd x 2 array of the new lower and upper bounds on each of the independent variables (same form as 
             returned from `domain`). If a bound pair is `None` then the original bound (and knots) are left unchanged. 
             For example, `[[0.0, 1.0], None]` will reparametrize the first independent variable and leave the second unchanged)
 
@@ -2110,7 +2110,7 @@ class Spline(Manifold):
         Parameters
         ----------
         newDomain : array-like
-            nInd x 2 array of the new upper and lower bounds on each of the independent variables (same form as 
+            nInd x 2 array of the new lower and upper bounds on each of the independent variables (same form as 
             returned from `domain`). If a bound is None or nan then the original bound (and knots) are left unchanged.
 
         Returns
@@ -2124,6 +2124,30 @@ class Spline(Manifold):
         `extrapolate` : Extrapolate a spline out to an extended domain maintaining a given order of continuity.
         """
         return bspy._spline_domain.trim(self, newDomain)
+
+    def trimmed_range_bounds(self, domainBounds):
+        """
+        Return the trimmed range bounds for the spline.
+
+        Parameters
+        ----------
+        domainBounds : array-like
+            An array with shape (nInd, 2) of lower and upper and lower bounds on each independent variable.
+
+        Returns
+        -------
+        trimmedSpline, rangeBounds : `Spline`, `np.array`
+            A spline trimmed to the given domain bounds, and the range of the trimmed spline given as 
+            lower and upper bounds on each dependent variable.
+
+        See Also
+        --------
+        `trim` : Trim the domain of a spline.
+        `range_bounds` : Return the range of a spline as lower and upper bounds on each of the
+            dependent variables.
+        """
+        trimmedSpline = self.trim(domainBounds)
+        return trimmedSpline, trimmedSpline.range_bounds()
 
     def unfold(self, foldedInd, coefficientlessSpline):
         """
