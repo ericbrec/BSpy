@@ -456,9 +456,9 @@ class Hyperplane(Manifold):
                 domain1 = Solid(0, True)
                 domain2 = Solid(0, True)
             hyperplane = Hyperplane.create_axis_aligned(dimension, i, -origin[i], True)
-            solid.boundaries.append(Boundary(hyperplane, domain1))
+            solid.add_boundary(Boundary(hyperplane, domain1))
             hyperplane = Hyperplane.create_axis_aligned(dimension, i, size[i] + origin[i], False)
-            solid.boundaries.append(Boundary(hyperplane, domain2))
+            solid.add_boundary(Boundary(hyperplane, domain2))
 
         return solid
 
@@ -496,6 +496,7 @@ class Hyperplane(Manifold):
         -----
         The returned trimmed manifold is the original hyperplane (no changes).
         """
+        domainBounds = np.atleast_1d(domainBounds)
         rangeBounds = [[value.min(), value.max()] for value in 
             self._tangentSpace @ domainBounds + self._point.reshape(self._point.shape[0], 1)]
-        return self, rangeBounds
+        return self, np.array(rangeBounds)

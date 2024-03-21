@@ -20,9 +20,10 @@ class Boundary:
     `Manifold.full_domain` : Return a solid that represents the full domain of the manifold.
     """
     def __init__(self, manifold, domain = None):
-        self.manifold = manifold
         self.domain = manifold.full_domain() if domain is None else domain 
-        assert self.manifold.domain_dimension() == self.domain.dimension
+        if manifold.domain_dimension() != self.domain.dimension: raise ValueError("Domain dimensions don't match")
+        if manifold.domain_dimension() + 1 != manifold.range_dimension(): raise ValueError("Manifold range is not one dimension higher than domain")
+        self.manifold, self.rangeBounds = manifold.trimmed_range_bounds(domain.bounds)
 
     def __repr__(self):
         return "Boundary({0}, {1})".format(self.manifold.__repr__(), self.domain.__repr__())
@@ -45,6 +46,18 @@ class Boundary:
         The point is computed by evaluating the boundary manifold by an arbitrary point in the domain of the boundary.
         """
         return self.manifold.evaluate(self.domain.any_point())
+
+    def overlap(self, other):
+        """
+        Returns whether or not the range bounds of self and other overlap.
+
+        Returns
+        -------
+        overlapping : `bool`
+            Value is true if the range bounds of self and other overlap.
+        """
+        return np.min(np.diff(self.rangeBounds).reshape(-1) + np.diff(other.rangeBounds).reshape(-1) -
+            np.abs(np.sum(self.rangeBounds, axis=1) - np.sum(other.rangeBounds, axis=1))) > 0.0
 
 class Solid:
     """
@@ -73,6 +86,7 @@ class Solid:
         self.dimension = dimension
         self.containsInfinity = containsInfinity
         self.boundaries = []
+        self.bounds = None
 
     def __repr__(self):
         return "Solid({0}, {1})".format(self.dimension, self.containsInfinity)
@@ -94,6 +108,29 @@ class Solid:
         Casting the solid to `bool` returns not `is_empty`.
         """
         return not self
+    
+    def add_boundary(self, boundary):
+        """
+        Adds a boundary to a solid, recomputing the solid's bounds.
+
+        Parameters
+        ----------
+        boundary : `Boundary`
+            A boundary to add to the solid.
+
+        Notes
+        -----
+        While you could just append the boundary to the solid's collection of boundaries, 
+        this method also recomputes the solid's bounds for faster intersection and containment operations. 
+        Adding the boundary directly to the solid's boundaries collection may result in faulty operations.
+        """
+        if boundary.manifold.range_dimension() != self.dimension: raise ValueError("Dimensions don't match")
+        self.boundaries.append(boundary)
+        if self.bounds is None:
+            self.bounds = boundary.rangeBounds
+        else:
+            self.bounds[:, 0] = np.minimum(self.bounds[:, 0], boundary.rangeBounds[:, 0])
+            self.bounds[:, 1] = np.maximum(self.bounds[:, 1], boundary.rangeBounds[:, 1])
 
     def complement(self):
         """
@@ -112,7 +149,7 @@ class Solid:
         """
         solid = Solid(self.dimension, not self.containsInfinity)
         for boundary in self.boundaries:
-            solid.boundaries.append(Boundary(boundary.manifold.flip_normal(), boundary.domain))
+            solid.add_boundary(Boundary(boundary.manifold.flip_normal(), boundary.domain))
         return solid
 
     def __neg__(self):
@@ -142,7 +179,7 @@ class Solid:
 
         solid = Solid(self.dimension, self.containsInfinity)
         for boundary in self.boundaries:
-            solid.boundaries.append(Boundary(boundary.manifold.transform(matrix, matrixInverseTranspose), boundary.domain))
+            solid.add_boundary(Boundary(boundary.manifold.transform(matrix, matrixInverseTranspose), boundary.domain))
         return solid
 
     def translate(self, delta):
@@ -163,7 +200,7 @@ class Solid:
 
         solid = Solid(self.dimension, self.containsInfinity)
         for boundary in self.boundaries:
-            solid.boundaries.append(Boundary(boundary.manifold.translate(delta), boundary.domain))
+            solid.add_boundary(Boundary(boundary.manifold.translate(delta), boundary.domain))
         return solid
 
     def any_point(self):
@@ -511,7 +548,7 @@ class Solid:
                 if isinstance(intersection, Manifold.Crossing):
                     domainSlice = boundary.domain.slice(left, cache)
                     if domainSlice:
-                        slice.boundaries.append(Boundary(right, domainSlice))
+                        slice.add_boundary(Boundary(right, domainSlice))
 
                 elif isinstance(intersection, Manifold.Coincidence):
                     # First, intersect domain coincidence with the domain boundary.
@@ -601,7 +638,7 @@ class Solid:
             newDomain = boundary.domain.intersection(slice, cache)
             if newDomain:
                 # Self boundary intersects other, so create a new boundary with the intersected domain.
-                combinedSolid.boundaries.append(Boundary(boundary.manifold, newDomain))
+                combinedSolid.add_boundary(Boundary(boundary.manifold, newDomain))
 
         for boundary in other.boundaries:
             # Slice other boundary manifold by self.
@@ -610,7 +647,7 @@ class Solid:
             newDomain = boundary.domain.intersection(slice, cache)
             if newDomain:
                 # Other boundary intersects self, so create a new boundary with the intersected domain.
-                combinedSolid.boundaries.append(Boundary(boundary.manifold, newDomain))
+                combinedSolid.add_boundary(Boundary(boundary.manifold, newDomain))
 
         return combinedSolid
 

@@ -812,13 +812,13 @@ def intersect(self, other):
 
                     # Now, create the coincidence.
                     left = Solid(nDep, False)
-                    left.boundaries.append(Boundary(Hyperplane(-1.0, zero[0], 0.0), Solid(0, True)))
-                    left.boundaries.append(Boundary(Hyperplane(1.0, zero[1], 0.0), Solid(0, True)))
+                    left.add_boundary(Boundary(Hyperplane(-1.0, zero[0], 0.0), Solid(0, True)))
+                    left.add_boundary(Boundary(Hyperplane(1.0, zero[1], 0.0), Solid(0, True)))
                     right = Solid(nDep, False)
                     if planeBounds[0] > planeBounds[1]:
                         planeBounds = (planeBounds[1], planeBounds[0])
-                    right.boundaries.append(Boundary(Hyperplane(-1.0, planeBounds[0], 0.0), Solid(0, True)))
-                    right.boundaries.append(Boundary(Hyperplane(1.0, planeBounds[1], 0.0), Solid(0, True)))
+                    right.add_boundary(Boundary(Hyperplane(-1.0, planeBounds[0], 0.0), Solid(0, True)))
+                    right.add_boundary(Boundary(Hyperplane(1.0, planeBounds[1], 0.0), Solid(0, True)))
                     alignment = np.dot(self.normal((zero[0],)), other._normal) # Use the first zero, since B-splines are closed on the left
                     width = zero[1] - zero[0]
                     transform = (planeBounds[1] - planeBounds[0]) / width
@@ -877,11 +877,11 @@ def intersect(self, other):
 
                     # Now, create the coincidence.
                     left = Solid(nDep, False)
-                    left.boundaries.append(Boundary(Hyperplane(-1.0, zero[0][0], 0.0), Solid(0, True)))
-                    left.boundaries.append(Boundary(Hyperplane(1.0, zero[1][0], 0.0), Solid(0, True)))
+                    left.add_boundary(Boundary(Hyperplane(-1.0, zero[0][0], 0.0), Solid(0, True)))
+                    left.add_boundary(Boundary(Hyperplane(1.0, zero[1][0], 0.0), Solid(0, True)))
                     right = Solid(nDep, False)
-                    right.boundaries.append(Boundary(Hyperplane(-1.0, zero[0][1], 0.0), Solid(0, True)))
-                    right.boundaries.append(Boundary(Hyperplane(1.0, zero[1][1], 0.0), Solid(0, True)))
+                    right.add_boundary(Boundary(Hyperplane(-1.0, zero[0][1], 0.0), Solid(0, True)))
+                    right.add_boundary(Boundary(Hyperplane(1.0, zero[1][1], 0.0), Solid(0, True)))
                     alignment = np.dot(self.normal(zero[0][0]), other.normal(zero[0][1])) # Use the first zeros, since B-splines are closed on the left
                     width = zero[1][0] - zero[0][0]
                     transform = (zero[1][1] - zero[0][1]) / width
@@ -975,9 +975,9 @@ def establish_domain_bounds(domain, bounds):
         else:
             tangentSpace = np.array([0.0])
         hyperplane = Hyperplane(-unitVector, bounds[i][0] * unitVector, tangentSpace)
-        domain.boundaries.append(Boundary(hyperplane, domainDomain1))
+        domain.add_boundary(Boundary(hyperplane, domainDomain1))
         hyperplane = Hyperplane(unitVector, bounds[i][1] * unitVector, tangentSpace)
-        domain.boundaries.append(Boundary(hyperplane, domainDomain2))
+        domain.add_boundary(Boundary(hyperplane, domainDomain2))
 
 def complete_slice(self, slice, solid):
     # Spline manifold domains have finite bounds.
@@ -1001,7 +1001,7 @@ def complete_slice(self, slice, solid):
             slice.boundaries.insert(0, Boundary(Hyperplane(-slice.boundaries[0].manifold._normal, bounds[0][0], 0.0), Solid(0, True)))
         if abs(slice.boundaries[-1].manifold._point - bounds[0][1]) >= Manifold.minSeparation and \
             slice.boundaries[-1].manifold._normal < 0.0:
-            slice.boundaries.append(Boundary(Hyperplane(-slice.boundaries[-1].manifold._normal, bounds[0][1], 0.0), Solid(0, True)))
+            slice.add_boundary(Boundary(Hyperplane(-slice.boundaries[-1].manifold._normal, bounds[0][1], 0.0), Solid(0, True)))
 
     # For surfaces, add bounding box for domain and intersect it with existing slice boundaries.
     if slice.dimension == 2:
@@ -1019,7 +1019,7 @@ def complete_slice(self, slice, solid):
                 if abs(np.dot(newBoundary.manifold._normal, vector)) < Manifold.minSeparation:
                     # Add the point onto the new boundary.
                     normal = np.sign(newBoundary.manifold._tangentSpace.T @ boundary.manifold.normal(domainPoint))
-                    newBoundary.domain.boundaries.append(Boundary(Hyperplane(normal, newBoundary.manifold._tangentSpace.T @ vector, 0.0), Solid(0, True)))
+                    newBoundary.domain.add_boundary(Boundary(Hyperplane(normal, newBoundary.manifold._tangentSpace.T @ vector, 0.0), Solid(0, True)))
                     newBoundary.touched = True
                     break
 

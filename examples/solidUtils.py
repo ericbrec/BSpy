@@ -109,12 +109,12 @@ def create_faceted_solid_from_points(dimension, points, containsInfinity = False
         previousPointDomain = hyperplane_domain_from_point(hyperplane, previousPoint)
         pointDomain = hyperplane_domain_from_point(hyperplane, point)
         if previousPointDomain < pointDomain:
-            domain.boundaries.append(Boundary(hyperplane_1D(-1.0, -previousPointDomain), Solid(dimension-2, True)))
-            domain.boundaries.append(Boundary(hyperplane_1D(1.0, pointDomain), Solid(dimension-2, True)))
+            domain.add_boundary(Boundary(hyperplane_1D(-1.0, -previousPointDomain), Solid(dimension-2, True)))
+            domain.add_boundary(Boundary(hyperplane_1D(1.0, pointDomain), Solid(dimension-2, True)))
         else:
-            domain.boundaries.append(Boundary(hyperplane_1D(-1.0, -pointDomain), Solid(dimension-2, True)))
-            domain.boundaries.append(Boundary(hyperplane_1D(1.0, previousPointDomain), Solid(dimension-2, True)))
-        solid.boundaries.append(Boundary(hyperplane, domain))
+            domain.add_boundary(Boundary(hyperplane_1D(-1.0, -pointDomain), Solid(dimension-2, True)))
+            domain.add_boundary(Boundary(hyperplane_1D(1.0, previousPointDomain), Solid(dimension-2, True)))
+        solid.add_boundary(Boundary(hyperplane, domain))
         previousPoint = point
 
     return solid
@@ -141,9 +141,9 @@ def create_smooth_solid_from_points(dimension, points, containsInfinity = False)
 
     spline = Spline.least_squares(uValues, dataPoints.T, (4,) * (dimension - 1), tolerance = 0.1)
     domain = Solid(dimension-1, False)
-    domain.boundaries.append(Boundary(hyperplane_1D(-1.0, 0.0), Solid(dimension-2, True)))
-    domain.boundaries.append(Boundary(hyperplane_1D(1.0, t), Solid(dimension-2, True)))
-    solid.boundaries.append(Boundary(spline, domain))
+    domain.add_boundary(Boundary(hyperplane_1D(-1.0, 0.0), Solid(dimension-2, True)))
+    domain.add_boundary(Boundary(hyperplane_1D(1.0, t), Solid(dimension-2, True)))
+    solid.add_boundary(Boundary(spline, domain))
 
     return solid
 
@@ -169,8 +169,8 @@ def create_star(radius, center, angle, smooth = False):
         for boundary in star.boundaries:
             u0 = boundary.domain.boundaries[0].manifold._point[0]
             u1 = boundary.domain.boundaries[1].manifold._point[0]
-            boundary.domain.boundaries.append(Boundary(hyperplane_1D(1.0, u0 + (1.0 - u)*(u1 - u0)), Solid(0, True)))
-            boundary.domain.boundaries.append(Boundary(hyperplane_1D(-1.0, -(u0 + u*(u1 - u0))), Solid(0, True)))
+            boundary.domain.add_boundary(Boundary(hyperplane_1D(1.0, u0 + (1.0 - u)*(u1 - u0)), Solid(0, True)))
+            boundary.domain.add_boundary(Boundary(hyperplane_1D(-1.0, -(u0 + u*(u1 - u0))), Solid(0, True)))
 
     return star
 
@@ -219,10 +219,10 @@ def extrude_solid(solid, path):
                 extrudedDomain = extrude_solid(boundary.domain, domainPath)
             else:
                 extrudedDomain = Solid(solid.dimension, False)
-                extrudedDomain.boundaries.append(Boundary(hyperplane_1D(-1.0, 0.0), Solid(0, True)))
-                extrudedDomain.boundaries.append(Boundary(hyperplane_1D(1.0, extent), Solid(0, True)))
+                extrudedDomain.add_boundary(Boundary(hyperplane_1D(-1.0, 0.0), Solid(0, True)))
+                extrudedDomain.add_boundary(Boundary(hyperplane_1D(1.0, extent), Solid(0, True)))
             # Add extruded boundary
-            extrusion.boundaries.append(Boundary(extrudedHyperplane, extrudedDomain))
+            extrusion.add_boundary(Boundary(extrudedHyperplane, extrudedDomain))
         
         # Move onto the next point
         point = nextPoint
@@ -230,10 +230,10 @@ def extrude_solid(solid, path):
     # Add end cap boundaries
     extrudedHyperplane = Hyperplane.create_axis_aligned(extrusion.dimension, solid.dimension, 0.0, True)
     extrudedHyperplane = extrudedHyperplane.translate(path[0])
-    extrusion.boundaries.append(Boundary(extrudedHyperplane, solid))
+    extrusion.add_boundary(Boundary(extrudedHyperplane, solid))
     extrudedHyperplane = Hyperplane.create_axis_aligned(extrusion.dimension, solid.dimension, 0.0, False)
     extrudedHyperplane = extrudedHyperplane.translate(path[-1])
-    extrusion.boundaries.append(Boundary(extrudedHyperplane, solid))
+    extrusion.add_boundary(Boundary(extrudedHyperplane, solid))
 
     return extrusion
 
