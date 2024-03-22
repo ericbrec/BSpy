@@ -127,25 +127,50 @@ class Solid:
         """
         Returns whether or not bounds1 and bounds2 overlap.
 
+        Parameters
+        ----------
+        bounds1 : array-like or `None`
+            An array with shape (dimension, 2) of lower and upper and lower bounds on each dimension. 
+            If bounds1 is `None` then then there are no bounds.
+
+        bounds2 : array-like or `None`
+            An array with shape (dimension, 2) of lower and upper and lower bounds on each dimension. 
+            If bounds2 is `None` then then there are no bounds.
+
         Returns
         -------
         overlapping : `bool`
-            Value is true if the bounds overlap.
+            Value is true if the bounds overlap. Value is false if either bounds is `None`.
         """
-        return np.min(np.diff(bounds1).reshape(-1) + np.diff(bounds2).reshape(-1) -
-            np.abs(np.sum(bounds1, axis=1) - np.sum(bounds2, axis=1))) > 0.0
+        if bounds1 is None or bounds2 is None:
+            return False
+        else:
+            return np.min(np.diff(bounds1).reshape(-1) + np.diff(bounds2).reshape(-1) -
+                np.abs(np.sum(bounds1, axis=1) - np.sum(bounds2, axis=1))) > 0.0
 
     @staticmethod
-    def point_in_bounds(point, bounds):
+    def point_within_bounds(point, bounds):
         """
         Returns whether or not point is within bounds.
+
+        Parameters
+        ----------
+        point : array-like
+            A point whose dimension matches the bounds.
+
+        bounds : array-like or `None`
+            An array with shape (dimension, 2) of lower and upper and lower bounds on each dimension. 
+            If bounds is `None` then then there are no bounds.
 
         Returns
         -------
         within : `bool`
-            Value is true if the point is within bounds.
+            Value is true if the point is within bounds. Value is false if bounds is `None`.
         """
-        return np.min(np.diff(bounds).reshape(-1) - np.abs(np.sum(bounds, axis=1) + -2.0 * point)) > 0.0
+        if bounds is None:
+            return False
+        else:
+            return np.min(np.diff(bounds).reshape(-1) - np.abs(np.sum(bounds, axis=1) + -2.0 * point)) > 0.0
 
     def complement(self):
         """
@@ -490,12 +515,15 @@ class Solid:
         -----
         A point is considered contained if it's on the boundary of the solid or it's winding number is greater than 0.5.
         """
-        windingNumber, onBoundaryNormal = self.winding_number(point)
-        # The default is to include points on the boundary (onBoundaryNormal is not None).
-        containment = True
-        if onBoundaryNormal is None:
-            # windingNumber > 0.5 returns a np.bool_, not a bool, so we need to cast it.
-            containment = bool(windingNumber > 0.5)
+        if Solid.point_within_bounds(point, self.bounds):
+            windingNumber, onBoundaryNormal = self.winding_number(point)
+            # The default is to include points on the boundary (onBoundaryNormal is not None).
+            containment = True
+            if onBoundaryNormal is None:
+                # windingNumber > 0.5 returns a np.bool_, not a bool, so we need to cast it.
+                containment = bool(windingNumber > 0.5)
+        else:
+            containment = self.containsInfinity
         return containment
 
     def slice(self, manifold, cache = None, trimTwin = False):
