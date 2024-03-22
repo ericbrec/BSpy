@@ -477,6 +477,18 @@ class Hyperplane(Manifold):
         """
         return Solid(self.domain_dimension(), True)
 
+    def range_bounds(self):
+        """
+        Return the range bounds for the hyperplane.
+
+        Returns
+        -------
+        rangeBounds : `np.array` or `None`
+            The range of the hyperplane given as lower and upper bounds on each dependent variable. 
+            If the hyperplane has an unbounded range (domain dimension > 0), `None` is returned.
+        """
+        return None if self.domain_dimension() > 0 else np.array(((self._point[0], self._point[0]),))
+
     def trimmed_range_bounds(self, domainBounds):
         """
         Return the trimmed range bounds for the hyperplane.
@@ -499,10 +511,7 @@ class Hyperplane(Manifold):
         The returned trimmed manifold is the original hyperplane (no changes).
         """
         if domainBounds is None:
-            if self.domain_dimension() == 0:
-                return self, np.array(((self._point[0], self._point[0]),))
-            else:
-                return self, None
+            return self, self.range_bounds()
         else:
             domainBounds = np.atleast_1d(domainBounds)
             rangeBounds = [[value.min(), value.max()] for value in 

@@ -327,7 +327,19 @@ class Manifold:
         """
         return None
 
-    def trimmed_range_bounds(domainBounds):
+    def range_bounds(self):
+        """
+        Return the range bounds for the manifold.
+
+        Returns
+        -------
+        rangeBounds : `np.array` or `None`
+            The range of the manifold given as lower and upper bounds on each dependent variable. 
+            If the manifold has an unbounded range, `None` is returned.
+        """
+        return None
+
+    def trimmed_range_bounds(self, domainBounds):
         """
         Return the trimmed range bounds for the manifold.
 
