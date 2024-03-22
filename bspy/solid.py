@@ -47,18 +47,6 @@ class Boundary:
         """
         return self.manifold.evaluate(self.domain.any_point())
 
-    def overlapping_bounds(self, other):
-        """
-        Returns whether or not the range bounds of self and other overlap.
-
-        Returns
-        -------
-        overlapping : `bool`
-            Value is true if the range bounds of self and other overlap.
-        """
-        return np.min(np.diff(self.rangeBounds).reshape(-1) + np.diff(other.rangeBounds).reshape(-1) -
-            np.abs(np.sum(self.rangeBounds, axis=1) - np.sum(other.rangeBounds, axis=1))) > 0.0
-
 class Solid:
     """
     A region that separates space into an inside and outside, defined by a collection of boundaries.
@@ -134,17 +122,30 @@ class Solid:
             self.bounds[:, 0] = np.minimum(self.bounds[:, 0], boundary.rangeBounds[:, 0])
             self.bounds[:, 1] = np.maximum(self.bounds[:, 1], boundary.rangeBounds[:, 1])
 
-    def overlapping_bounds(self, other):
+    @staticmethod
+    def overlapping_bounds(bounds1, bounds2):
         """
-        Returns whether or not the bounds of self and other overlap.
+        Returns whether or not bounds1 and bounds2 overlap.
 
         Returns
         -------
         overlapping : `bool`
-            Value is true if the range bounds of self and other overlap.
+            Value is true if the bounds overlap.
         """
-        return np.min(np.diff(self.bounds).reshape(-1) + np.diff(other.bounds).reshape(-1) -
-            np.abs(np.sum(self.bounds, axis=1) - np.sum(other.bounds, axis=1))) > 0.0
+        return np.min(np.diff(bounds1).reshape(-1) + np.diff(bounds2).reshape(-1) -
+            np.abs(np.sum(bounds1, axis=1) - np.sum(bounds2, axis=1))) > 0.0
+
+    @staticmethod
+    def point_in_bounds(point, bounds):
+        """
+        Returns whether or not point is within bounds.
+
+        Returns
+        -------
+        within : `bool`
+            Value is true if the point is within bounds.
+        """
+        return np.min(np.diff(bounds).reshape(-1) - np.abs(np.sum(bounds, axis=1) + -2.0 * point)) > 0.0
 
     def complement(self):
         """
