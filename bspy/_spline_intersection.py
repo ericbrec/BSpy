@@ -996,12 +996,14 @@ def complete_slice(self, slice, solid):
     # For curves, add domain bounds as needed.
     if slice.dimension == 1:
         slice.boundaries.sort(key=lambda b: (b.manifold.evaluate(0.0), b.manifold.normal(0.0)))
-        if abs(slice.boundaries[0].manifold._point - bounds[0][0]) >= Manifold.minSeparation and \
-            slice.boundaries[0].manifold._normal > 0.0:
-            slice.boundaries.insert(0, Boundary(Hyperplane(-slice.boundaries[0].manifold._normal, bounds[0][0], 0.0), Solid(0, True)))
+        # First, check right end since we add new boundary to the end.
         if abs(slice.boundaries[-1].manifold._point - bounds[0][1]) >= Manifold.minSeparation and \
             slice.boundaries[-1].manifold._normal < 0.0:
             slice.add_boundary(Boundary(Hyperplane(-slice.boundaries[-1].manifold._normal, bounds[0][1], 0.0), Solid(0, True)))
+        # Next, check left end since it's still untouched.
+        if abs(slice.boundaries[0].manifold._point - bounds[0][0]) >= Manifold.minSeparation and \
+            slice.boundaries[0].manifold._normal > 0.0:
+            slice.add_boundary(Boundary(Hyperplane(-slice.boundaries[0].manifold._normal, bounds[0][0], 0.0), Solid(0, True)))
 
     # For surfaces, add bounding box for domain and intersect it with existing slice boundaries.
     if slice.dimension == 2:

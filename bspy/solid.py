@@ -47,7 +47,7 @@ class Boundary:
         """
         return self.manifold.evaluate(self.domain.any_point())
 
-    def overlap(self, other):
+    def overlapping_bounds(self, other):
         """
         Returns whether or not the range bounds of self and other overlap.
 
@@ -133,6 +133,18 @@ class Solid:
         else:
             self.bounds[:, 0] = np.minimum(self.bounds[:, 0], boundary.rangeBounds[:, 0])
             self.bounds[:, 1] = np.maximum(self.bounds[:, 1], boundary.rangeBounds[:, 1])
+
+    def overlapping_bounds(self, other):
+        """
+        Returns whether or not the bounds of self and other overlap.
+
+        Returns
+        -------
+        overlapping : `bool`
+            Value is true if the range bounds of self and other overlap.
+        """
+        return np.min(np.diff(self.bounds).reshape(-1) + np.diff(other.bounds).reshape(-1) -
+            np.abs(np.sum(self.bounds, axis=1) - np.sum(other.bounds, axis=1))) > 0.0
 
     def complement(self):
         """

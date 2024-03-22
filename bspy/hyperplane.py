@@ -507,4 +507,4 @@ class Hyperplane(Manifold):
             domainBounds = np.atleast_1d(domainBounds)
             rangeBounds = [[value.min(), value.max()] for value in 
                 self._tangentSpace @ domainBounds + self._point.reshape(self._point.shape[0], 1)]
-            return self, np.array(rangeBounds)
+            return self, np.array(rangeBounds, self._normal.dtype)
