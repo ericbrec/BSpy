@@ -23,7 +23,7 @@ class Boundary:
         self.domain = manifold.full_domain() if domain is None else domain 
         if manifold.domain_dimension() != self.domain.dimension: raise ValueError("Domain dimensions don't match")
         if manifold.domain_dimension() + 1 != manifold.range_dimension(): raise ValueError("Manifold range is not one dimension higher than domain")
-        self.manifold, self.rangeBounds = manifold.trimmed_range_bounds(self.domain.bounds)
+        self.manifold, self.bounds = manifold.trimmed_range_bounds(self.domain.bounds)
 
     def __repr__(self):
         return "Boundary({0}, {1})".format(self.manifold.__repr__(), self.domain.__repr__())
@@ -115,17 +115,17 @@ class Solid:
         if boundary.manifold.range_dimension() != self.dimension: raise ValueError("Dimensions don't match")
         self.boundaries.append(boundary)
         if self.bounds is None:
-            self.bounds = boundary.rangeBounds
-        elif boundary.rangeBounds is None:
+            self.bounds = boundary.bounds
+        elif boundary.bounds is None:
             raise ValueError("Mix of infinite and bounded boundaries")
         else:
-            self.bounds[:, 0] = np.minimum(self.bounds[:, 0], boundary.rangeBounds[:, 0])
-            self.bounds[:, 1] = np.maximum(self.bounds[:, 1], boundary.rangeBounds[:, 1])
+            self.bounds[:, 0] = np.minimum(self.bounds[:, 0], boundary.bounds[:, 0])
+            self.bounds[:, 1] = np.maximum(self.bounds[:, 1], boundary.bounds[:, 1])
 
     @staticmethod
-    def overlapping_bounds(bounds1, bounds2):
+    def disjoint_bounds(bounds1, bounds2):
         """
-        Returns whether or not bounds1 and bounds2 overlap.
+        Returns whether or not bounds1 and bounds2 are disjoint.
 
         Parameters
         ----------
@@ -139,14 +139,14 @@ class Solid:
 
         Returns
         -------
-        overlapping : `bool`
-            Value is true if the bounds overlap. Value is false if either bounds is `None`.
+        disjoint : `bool`
+            Value is true if the bounds are disjoint. Value is false if either bounds is `None`.
         """
         if bounds1 is None or bounds2 is None:
             return False
         else:
             return np.min(np.diff(bounds1).reshape(-1) + np.diff(bounds2).reshape(-1) -
-                np.abs(np.sum(bounds1, axis=1) - np.sum(bounds2, axis=1))) > 0.0
+                np.abs(np.sum(bounds1, axis=1) - np.sum(bounds2, axis=1))) < -Manifold.minSeparation
 
     @staticmethod
     def point_within_bounds(point, bounds):
@@ -170,7 +170,7 @@ class Solid:
         if bounds is None:
             return False
         else:
-            return np.min(np.diff(bounds).reshape(-1) - np.abs(np.sum(bounds, axis=1) + -2.0 * point)) > 0.0
+            return np.min(np.diff(bounds).reshape(-1) - np.abs(np.sum(bounds, axis=1) + -2.0 * point)) > Manifold.minSeparation
 
     def complement(self):
         """
@@ -575,10 +575,17 @@ class Solid:
 
         # Start with an empty slice and no domain coincidences.
         slice = Solid(self.dimension-1, self.containsInfinity)
+        bounds = manifold.range_bounds()
+        if Solid.disjoint_bounds(bounds, self.bounds):
+            manifold.complete_slice(slice, self)
+            return slice
         coincidences = []
 
         # Intersect each of this solid's boundaries with the manifold.
         for boundary in self.boundaries:
+            if Solid.disjoint_bounds(boundary.bounds, bounds):
+                continue
+
             # Intersect manifolds, checking if the intersection is already in the cache.
             intersections, isTwin = boundary.manifold.cached_intersect(manifold, cache)
             if intersections is NotImplemented:
@@ -673,6 +680,8 @@ class Solid:
 
         # Start with a solid without boundaries.
         combinedSolid = Solid(self.dimension, self.containsInfinity and other.containsInfinity)
+        if Solid.disjoint_bounds(self.bounds, other.bounds):
+            return combinedSolid
 
         for boundary in self.boundaries:
             # Slice self boundary manifold by other.
