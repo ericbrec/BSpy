@@ -24,6 +24,7 @@ class Boundary:
         if manifold.domain_dimension() != self.domain.dimension: raise ValueError("Domain dimensions don't match")
         if manifold.domain_dimension() + 1 != manifold.range_dimension(): raise ValueError("Manifold range is not one dimension higher than domain")
         self.manifold, self.bounds = manifold.trimmed_range_bounds(self.domain.bounds)
+        self.manifold = manifold
 
     def __repr__(self):
         return "Boundary({0}, {1})".format(self.manifold.__repr__(), self.domain.__repr__())
