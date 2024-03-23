@@ -815,6 +815,23 @@ def test_four_sided_patch():
         assert (np.linalg.norm(truthPt - coonsPt)) < 1.0e-15
 
 def test_geodesic():
+    section1 = bspy.Spline.section([[0.0, 0.0, 75.0, -50.0], [1.0, 0.0, -85.0, -30.0]])
+    section2 = bspy.Spline.section([[1.0, 0.0, 75.0, -0.1], [1.5, 0.0, -85.0, -0.1]])
+    section1_3D = [[1.0, 0.0], [0.0, 0.0], [0.0, 1.0]] @ section1
+    section2_3D = [[1.0, 0.0], [0.0, 0.0], [0.0, 1.0]] @ section2 + [0.0, 1.0, 0.0]
+    section1_tan = section1_3D.differentiate()
+    section2_tan = section2_3D.differentiate()
+    s1xs2 = section1_tan.multiply(section2_tan, productType = 'C')
+    s1ms2 = section1_3D.subtract(section2_3D)
+    determinant = s1xs2 @ s1ms2
+#    [u1u2] = determinant.contours()
+#    tValues = np.linspace(0.0, 1.0, 51)
+#    u1Fit, u2Fit = u1u2(tValues)
+#    rulings = [bspy.Spline.line(section1_3D(u1), section2_3D(u2)) for u1, u2 in zip(u1Fit, u2Fit)]
+#    developable = bspy.Spline.least_squares(tValues, rulings, tolerance = 1.0e-4).transpose()
+#    This doesn't converge
+#    geodesic = developable.geodesic([0.0, 0.5], [1.0, 0.5])
+
     surface = bspy.Spline(2, 3, [4, 4], [4, 4], 2 * [[0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0]],
                       [[0.0, 0.0, 0.0, 0.0, 0.3, 0.3, 0.3, 0.3, 0.7, 0.7, 0.7, 0.7, 1.0, 1.0, 1.0, 1.0],
                        [0.0, 0.3, 0.7, 1.0, 0.0, 0.3, 0.7, 1.0, 0.0, 0.3, 0.7, 1.0, 0.0, 0.3, 0.7, 1.0],
@@ -1063,6 +1080,16 @@ def test_multiply():
             maxError = max(maxError, (xTest - x) ** 2)
     assert maxError <= np.finfo(float).eps
 
+    # Should work for 2D tensor product cross product
+    blob = bspy.Spline.section([[1.0, 0.0, 90.0, 0.2], [0.0, 1.0, 180.0, 0.2], [-0.5, 0.5, 320.0, 0.0],
+                            [-0.5, -0.5, 220.0, 0.0], [0.0, -1.0, 0.0, 5.0], [1.0, 0.0, 90.0, 0.2]])
+    trajectory = bspy.Spline(1, 2, [4], [4], [[0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0]],
+                         [[0.0, 0.0], [0.0, 1.5], [2.0, 1.0], [2.0, 2.0]])
+    blob_u = blob.differentiate()
+    blob_t = trajectory.differentiate()
+    blob_tangents = blob_u.multiply(blob_t, productType = 'C')
+    assert blob_tangents.nDep == 1
+
 def test_normal():
     spline = bspy.Spline(2, 3, [3, 4], [4, 5], [[0,0,0,.5,1,1,1], [0,0,0,0,.5,1,1,1,1]],
                         [[0, 0, 0, 0, 0, .3, .3, .3, .3, .3, .7, .7, .7, .7, .7, 1, 1, 1, 1, 1],
@@ -1204,6 +1231,11 @@ def test_section():
         rate = [0]
         for i in range(3):
             rate.append(math.log2(maxErrors[i] / maxErrors[i + 1]))
+    
+    # Make sure it can handle zero curvature
+
+    blob = bspy.Spline.section([[-0.5, 0.5, 320.0, 0.0], [-0.5, -0.5, 220.0, 0.0]])
+    assert abs(blob(0.5)[1]) < np.finfo(float).eps
 
 def test_solve_ode():
     # Test u' = u, u(0) = 1

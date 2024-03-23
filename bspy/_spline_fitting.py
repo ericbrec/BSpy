@@ -23,7 +23,7 @@ def cone(radius1, radius2, height, tolerance = None):
     return bspy.Spline.ruled_surface(bottom, top)
 
 # Courtesy of Michael Epton - Translated from his F77 code lgnzro
-def _legendre_polynomial_zeros(degree):
+def _legendre_polynomial_zeros(degree, mapToZeroOne = True):
     def legendre(degree, x):
         p = [1.0, x]
         pd = [0.0, 1.0]
@@ -35,6 +35,7 @@ def _legendre_polynomial_zeros(degree):
         return p, pd
     zval = 1.0
     z = []
+    zNegative = []
     for iRoot in range(degree // 2):
         done = False
         while True:
@@ -49,21 +50,28 @@ def _legendre_polynomial_zeros(degree):
             if dz < 1.0e-10:
                 done = True
         z.append(zval)
+        zNegative.append(-zval)
         zval -= 0.001
     if degree % 2 == 1:
-        z.append(0.0)
+        zNegative.append(0.0)
     z.reverse()
+    z = np.array(zNegative + z)
     w = []
     for zval in z:
         p, pd = legendre(degree, zval)
         w.append(2.0 / ((1.0 - zval ** 2) * pd[-1] ** 2))
+    w = np.array(w)
+    if mapToZeroOne:
+        z = 0.5 * (1.0 + z)
+        w = 0.5 * w
     return z, w
 
 def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     # Set up parameters for initial guess of x(t) and validate arguments.
     order = 4
     degree = order - 1
-    rhos, gaussWeights = _legendre_polynomial_zeros(degree - 1)
+    gaussNodes, gaussWeights = _legendre_polynomial_zeros(degree - 1)
+
     if not(len(knownXValues) >= 2): raise ValueError("There must be at least 2 known x values.")
     m = len(knownXValues) - 1
     nCoef = m * (degree - 1) + 2
@@ -120,13 +128,9 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     for point in knownXValues[1:]:
         dt = np.linalg.norm(point - previousPoint)
         if not(dt > epsilon): raise ValueError("Points must be separated by at least epsilon.")
-        for rho in reversed(rhos):
-            tValues[i] = t + 0.5 * dt * (1.0 - rho)
-            GSamples[i] = 0.5 * (previousPoint + point - rho * (point - previousPoint))
-            i += 1
-        for rho in rhos[0 if degree % 2 == 1 else 1:]:
-            tValues[i] = t + 0.5 * dt * (1.0 + rho)
-            GSamples[i] = 0.5 * (previousPoint + point + rho * (point - previousPoint))
+        for gaussNode in gaussNodes:
+            tValues[i] = t + gaussNode * dt
+            GSamples[i] = (1.0 - gaussNode) * previousPoint + gaussNode * point
             i += 1
         t += dt
         knots += [t] * (order - 2)
@@ -253,26 +257,14 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             newKnot = 0.5 * (previousKnot + knot)
 
             # Place tValues at Gauss points for the intervals [previousKnot, newKnot] and [newKnot, knot].
-            for rho in reversed(rhos):
-                tValues[i] = t = 0.5 * (previousKnot + newKnot - rho * (newKnot - previousKnot))
-                GSamples[i] = x = compactCoefs.T @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
-                FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
-                i += 1
-            for rho in rhos[0 if degree % 2 == 1 else 1:]:
-                tValues[i] = t = 0.5 * (previousKnot + newKnot + rho * (newKnot - previousKnot))
-                GSamples[i] = x = compactCoefs.T @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
-                FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
-                i += 1
-            for rho in reversed(rhos):
-                tValues[i] = t = 0.5 * (newKnot + knot - rho * (knot - newKnot))
-                GSamples[i] = x = compactCoefs.T @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
-                FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
-                i += 1
-            for rho in rhos[0 if degree % 2 == 1 else 1:]:
-                tValues[i] = t = 0.5 * (newKnot + knot + rho * (knot - newKnot))
-                GSamples[i] = x = compactCoefs.T @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
-                FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
-                i += 1
+            for knotInterval in [[previousKnot, newKnot], [newKnot, knot]]:
+                for gaussNode in gaussNodes:
+                    tValues[i] = t = (1.0 - gaussNode) * knotInterval[0] + gaussNode * knotInterval[1]
+                    x = compactCoefs.T @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
+                    x = np.array([max(0.0, min(1.0, xi)) for xi in x])
+                    GSamples[i] = x
+                    FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
+                    i += 1
             
             newKnots += [newKnot] * (order - 2) # C1 continuity
             newKnots += [knot] * (order - 2) # C1 continuity
@@ -707,7 +699,10 @@ def section(xytk):
         onePlusCosTheta = 1.0 + math.cos(theta)
         r0 = 4.0 * startKappa * tangentDistances[0] ** 2 / (3.0 * tangentDistances[1] * crossTangents)
         r1 = 4.0 * endKappa * tangentDistances[1] ** 2 / (3.0 * tangentDistances[0] * crossTangents)
-        rhoCrit = (math.sqrt(1.0 + 4.0 * (r0 + r1)) - 1.0) / (2.0 * (r0 + r1))
+        if r0 != 0.0 or r1 != 0.0:
+            rhoCrit = (math.sqrt(1.0 + 4.0 * (r0 + r1)) - 1.0) / (2.0 * (r0 + r1))
+        else:
+            rhoCrit = 1.0
         rhoCritOfTheta = 3.0 * (math.sqrt(1.0 + 32.0 / (3.0 * onePlusCosTheta)) - 1.0) * onePlusCosTheta / 16.0
 
         # Determine quadratic polynomial
@@ -797,11 +792,7 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
         for knot0, knot1 in zip(currentGuess.knots[0][:-1], currentGuess.knots[0][1:]):
             if knot0 < knot1:
                 for gaussNode in gaussNodes:
-                    alpha = 0.5 * (1.0 - gaussNode)
-                    collocationPoints.append((1.0 - alpha) * knot0 + alpha * knot1)
-                    if abs(gaussNode) > 1.0e-5:
-                        collocationPoints.append(alpha * knot0 + (1.0 - alpha) * knot1)
-        collocationPoints = np.sort(collocationPoints)
+                    collocationPoints.append((1.0 - gaussNode) * knot0 + gaussNode * knot1)
         n = nDep * currentGuess.nCoef[0]
         bestGuess = np.reshape(currentGuess.coefs.T, (n,))
 

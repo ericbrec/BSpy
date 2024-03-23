@@ -308,6 +308,8 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
     # Construct new spline parameters.
     nInd = self.nInd + other.nInd
     nDep = other.nDep
+    if productType == 'C' and nDep == 2:
+        nDep = 1
     order = [*self.order, *other.order]
     nCoef = [*self.nCoef, *other.nCoef]
     knots = [*self.knots, *other.knots]
@@ -692,7 +694,12 @@ def normal_spline(self, indices=None):
         # using that calculation to span uvw from the starting knot to the end for each variable.
         nCoef = len(newKnots[-1]) - newOrder[-1]
         totalCoefs.append(totalCoefs[-1] * nCoef)
-        uvwValues.append(bspy.Spline(1, 0, [newOrd], [nCoef], [newKnots[-1]], []).greville())
+        knotAverages = bspy.Spline(1, 0, [newOrd], [nCoef], [newKnots[-1]], []).greville()
+        for iKnot in range(1, len(knotAverages) - 1):
+            if knotAverages[iKnot] == knotAverages[iKnot + 1]:
+                knotAverages[iKnot] = 0.5 * (knotAverages[iKnot - 1] + knotAverages[iKnot])
+                knotAverages[iKnot + 1] = 0.5 * (knotAverages[iKnot + 1] + knotAverages[iKnot + 2])
+        uvwValues.append(knotAverages)
         nCoefs.append(nCoef)
     points = []
     ijk = [0 for order in self.order]
@@ -710,7 +717,6 @@ def normal_spline(self, indices=None):
     points = np.reshape(points, [nDep] + nCoefs)
     points = np.transpose(points, [0] + list(range(self.nInd, 0, -1)))
     return bspy.Spline.least_squares(uvwValues, points, order = newOrder, knots = newKnots, metadata = self.metadata)
-#    return bspy.Spline.least_squares(self.nInd, nDep, newOrder, points, newKnots, 0, self.metadata)
 
 def rotate(self, vector, angle):
     vector = np.atleast_1d(vector)

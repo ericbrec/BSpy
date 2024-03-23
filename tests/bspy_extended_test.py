@@ -556,6 +556,32 @@ truthSurface = \
  [1.000000000000000000e+00, 1.000000000000000000e+00, 0.000000000000000000e+00]]
 
 def test_contours():
+
+    # Make sure contours builds the correct topology for this case
+    blob = bspy.Spline.section([[1.0, 0.0, 90.0, 0.2], [0.0, 1.0, 180.0, 0.2], [-0.5, 0.5, 320.0, 0.0],
+                            [-0.5, -0.5, 220.0, 0.0], [0.0, -1.0, 0.0, 5.0], [1.0, 0.0, 90.0, 0.2]])
+    trajectory = bspy.Spline(1, 2, [4], [4], [[0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0]],
+                         [[0.0, 0.0], [0.0, 1.5], [2.0, 1.0], [2.0, 2.0]])
+    blob_u = blob.differentiate()
+    blob_t = trajectory.differentiate()
+    blob_tangents = blob_u.multiply(blob_t, productType = 'C')
+# This currently has a topology resolution failure
+#    curves = blob_tangents.contours()
+#    assert len(curves) == 4
+
+    section1 = bspy.Spline.section([[0.0, 0.0, 75.0, -50.0], [1.0, 0.0, -85.0, -30.0]])
+    section2 = bspy.Spline.section([[1.0, 0.0, 75.0, -0.1], [1.5, 0.0, -85.0, -0.1]])
+    section1_3D = [[1.0, 0.0], [0.0, 0.0], [0.0, 1.0]] @ section1
+    section2_3D = [[1.0, 0.0], [0.0, 0.0], [0.0, 1.0]] @ section2 + [0.0, 1.0, 0.0]
+    section1_tan = section1_3D.differentiate()
+    section2_tan = section2_3D.differentiate()
+    s1xs2 = section1_tan.multiply(section2_tan, productType = 'C')
+    s1ms2 = section1_3D.subtract(section2_3D)
+    determinant = s1xs2 @ s1ms2
+# This test currently causes a spline evaluation outside the domain
+#    [u1u2] = determinant.contours()
+#    assert u1u2.nDep == 2
+
     maxError = 0.0
     F = lambda u , v : (u ** 2 + (v - 3/4) ** 2 - 1/25) * \
         ((u - 2/5) ** 2 + (v - 3/5) ** 2 - 1/25) * \
@@ -578,6 +604,18 @@ def test_contours():
     assert maxError <= 0.05
 
 def test_intersect():
+#  This test brings BSpy to its knees
+#
+#    def myFunction(t):
+#        return 1.0 + 0.25 * np.cos(6.0 * np.pi * t)
+#    tValues = np.linspace(0.0, 1.0, 51)
+#    xValues = [[myFunction(t) for t in tValues]]
+#    mySpline = bspy.Spline.least_squares(tValues, xValues, tolerance = 0.001)
+#    myCurve = mySpline * bspy.Spline.circular_arc(1.0, 90.0)
+#    flower = myCurve.revolve(360.0)
+#    myCone = bspy.Spline.cone(0.25, 0.1, 2.0).rotate([0.0, 1.0, 0.0], -20.0)
+#    stuff = flower.intersect(myCone)
+
     maxError = 0.0
     F = lambda u , v : (u ** 2 + (v - 3/4) ** 2 - 1/25) * \
         ((u - 2/5) ** 2 + (v - 3/5) ** 2 - 1/25) * \
