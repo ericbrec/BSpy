@@ -2146,8 +2146,7 @@ class Spline(Manifold):
         `range_bounds` : Return the range of a spline as lower and upper bounds on each of the
             dependent variables.
         """
-        trimmedSpline = self.trim(domainBounds)
-        return trimmedSpline, trimmedSpline.range_bounds()
+        return bspy._spline_domain.trimmed_range_bounds(self, domainBounds)
 
     def unfold(self, foldedInd, coefficientlessSpline):
         """
