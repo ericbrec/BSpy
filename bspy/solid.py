@@ -149,9 +149,9 @@ class Solid:
                 np.abs(np.sum(bounds1, axis=1) - np.sum(bounds2, axis=1))) < -Manifold.minSeparation
 
     @staticmethod
-    def point_within_bounds(point, bounds):
+    def point_outside_bounds(point, bounds):
         """
-        Returns whether or not point is within bounds.
+        Returns whether or not point is outside bounds.
 
         Parameters
         ----------
@@ -165,12 +165,12 @@ class Solid:
         Returns
         -------
         within : `bool`
-            Value is true if the point is within bounds. Value is false if bounds is `None`.
+            Value is true if the point is outside bounds or bounds is `None`.
         """
         if bounds is None:
-            return False
+            return True
         else:
-            return np.min(np.diff(bounds).reshape(-1) - np.abs(np.sum(bounds, axis=1) + -2.0 * point)) > Manifold.minSeparation
+            return np.min(np.diff(bounds).reshape(-1) - np.abs(np.sum(bounds, axis=1) + -2.0 * point)) < -Manifold.minSeparation
 
     def complement(self):
         """
@@ -453,11 +453,15 @@ class Solid:
         * A simple fast implementation if the solid is a number line (dimension <= 1). This is the default for dimension <= 1.
         * A surface integral with integrand: `(x - point) / norm(x - point)**dimension`.
         """
+        point = np.atleast_1d(point)
         windingNumber = 0.0
         onBoundaryNormal = None
         if self.containsInfinity:
             # If the solid contains infinity, then the winding number starts as 1 to account for the boundary at infinity.
             windingNumber = 1.0
+
+        if Solid.point_outside_bounds(point, self.bounds):
+            return windingNumber, onBoundaryNormal
 
         if self.dimension <= 1:
             # Fast winding number calculation for a number line specialized to catch boundary edges.
@@ -515,15 +519,12 @@ class Solid:
         -----
         A point is considered contained if it's on the boundary of the solid or it's winding number is greater than 0.5.
         """
-        if Solid.point_within_bounds(point, self.bounds):
-            windingNumber, onBoundaryNormal = self.winding_number(point)
-            # The default is to include points on the boundary (onBoundaryNormal is not None).
-            containment = True
-            if onBoundaryNormal is None:
-                # windingNumber > 0.5 returns a np.bool_, not a bool, so we need to cast it.
-                containment = bool(windingNumber > 0.5)
-        else:
-            containment = self.containsInfinity
+        windingNumber, onBoundaryNormal = self.winding_number(point)
+        # The default is to include points on the boundary (onBoundaryNormal is not None).
+        containment = True
+        if onBoundaryNormal is None:
+            # windingNumber > 0.5 returns a np.bool_, not a bool, so we need to cast it.
+            containment = bool(windingNumber > 0.5)
         return containment
 
     def slice(self, manifold, cache = None, trimTwin = False):
