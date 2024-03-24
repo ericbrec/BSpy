@@ -681,7 +681,15 @@ class Solid:
 
         # Start with a solid without boundaries.
         combinedSolid = Solid(self.dimension, self.containsInfinity and other.containsInfinity)
+
+        # If the solids are disjoint, add the boundaries contained by infinity and return.
         if Solid.disjoint_bounds(self.bounds, other.bounds):
+            if other.containsInfinity:
+                for boundary in self.boundaries:
+                    combinedSolid.add_boundary(boundary)
+            if self.containsInfinity:
+                for boundary in other.boundaries:
+                    combinedSolid.add_boundary(boundary)
             return combinedSolid
 
         for boundary in self.boundaries:
