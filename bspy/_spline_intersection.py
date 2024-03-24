@@ -990,7 +990,8 @@ def complete_slice(self, slice, solid):
             logging.info(f"check containment: {self.metadata['Name']}")
         domain = bounds.T
         if solid.contains_point(self(0.5 * (domain[0] + domain[1]))):
-            establish_domain_bounds(slice, bounds)
+            for boundary in Hyperplane.create_hypercube(bounds).boundaries:
+                slice.add_boundary(boundary)
         return
 
     # For curves, add domain bounds as needed.
@@ -1080,6 +1081,4 @@ def complete_slice(self, slice, solid):
                 slice.boundaries = slice.boundaries[:boundaryCount]
 
 def full_domain(self):
-    domain = Solid(self.domain_dimension(), False)
-    establish_domain_bounds(domain, self.domain())
-    return domain
+    return Hyperplane.create_hypercube(self.domain())
