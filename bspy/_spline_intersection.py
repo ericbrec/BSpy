@@ -938,47 +938,6 @@ def intersect(self, other):
 
     return intersections
 
-def establish_domain_bounds(domain, bounds):
-    """
-    Establish the outer bounds of a spline's domain (creates a hypercube based on the spline's bounds).
-
-    Parameters
-    ----------
-    domain : `solid.Solid`
-        The domain of the spline into which boundaries should be added based on the spline's bounds.
-
-    bounds : array-like
-        nInd x 2 array of the lower and upper bounds on each of the independent variables.
-
-    See Also
-    --------
-    `solid.Solid.slice` : slice the solid by a manifold.
-    `complete_slice` : Add any missing inherent (implicit) boundaries of this manifold's domain to the given slice.
-    """
-    dimension = len(bounds)
-    assert len(bounds[0]) == 2
-    assert domain.dimension == dimension
-    domain.containsInfinity = False
-    for i in range(dimension):
-        if dimension > 1:
-            domainDomain1 = Solid(dimension - 1, False)
-            establish_domain_bounds(domainDomain1, np.delete(bounds, i, axis=0))
-            domainDomain2 = Solid(dimension - 1, False)
-            establish_domain_bounds(domainDomain2, np.delete(bounds, i, axis=0))
-        else:
-            domainDomain1 = Solid(0, True)
-            domainDomain2 = Solid(0, True)
-        diagonal = np.identity(dimension)
-        unitVector = diagonal[i]
-        if dimension > 1:
-            tangentSpace = np.delete(diagonal, i, axis=1)
-        else:
-            tangentSpace = np.array([0.0])
-        hyperplane = Hyperplane(-unitVector, bounds[i][0] * unitVector, tangentSpace)
-        domain.add_boundary(Boundary(hyperplane, domainDomain1))
-        hyperplane = Hyperplane(unitVector, bounds[i][1] * unitVector, tangentSpace)
-        domain.add_boundary(Boundary(hyperplane, domainDomain2))
-
 def complete_slice(self, slice, solid):
     # Spline manifold domains have finite bounds.
     slice.containsInfinity = False
@@ -1012,10 +971,10 @@ def complete_slice(self, slice, solid):
         for newBoundary in fullDomain.boundaries: # Mark full domain boundaries as untouched
             newBoundary.touched = False
 
-        # Define function for adding slice points to new bounding box boundaries.
+        # Define function for adding slice points to full domain boundaries.
         def process_domain_point(boundary, domainPoint):
             point = boundary.manifold.evaluate(domainPoint)
-            # See if and where point touches bounding box of slice.
+            # See if and where point touches full domain.
             for newBoundary in fullDomain.boundaries:
                 vector = point - newBoundary.manifold._point
                 if abs(np.dot(newBoundary.manifold._normal, vector)) < Manifold.minSeparation:
@@ -1052,7 +1011,7 @@ def complete_slice(self, slice, solid):
         
         if boundaryWasTouched:
             # Touch untouched boundaries that are connected to touched boundary endpoints and add them to slice.
-            boundaryMap = ((2, 3, 0), (2, 3, -1), (0, 1, 0), (0, 1, -1)) # Map of which bounding box boundaries touch each other
+            boundaryMap = ((2, 3, 0), (2, 3, -1), (0, 1, 0), (0, 1, -1)) # Map of which full domain boundaries touch each other
             while True:
                 noTouches = True
                 for map, newBoundary, bound in zip(boundaryMap, fullDomain.boundaries, bounds.flatten()):
