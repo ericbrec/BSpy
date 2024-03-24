@@ -104,6 +104,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                     wrt[i] = 1
                     return F.derivative(wrt, x)
                 dF.append(splineDerivative)
+            FDomain = F.domain().T
         else:
             for i in range(nDep):
                 def fDerivative(x, i=i):
@@ -115,6 +116,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                     xShift[i] += h2
                     return (np.array(F(xShift)) - fLeft) / h2
                 dF.append(fDerivative)
+            FDomain = np.array(nDep * [[-np.inf, np.inf]]).T
     else:
         if not(len(dF) == nDep): raise ValueError(f"Must provide {nDep} first derivatives.")
 
@@ -188,6 +190,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
 
                 # Do the same for F(x(t)).
                 x = coefsMin + (compactCoefs.T @ bValues) * coefsMaxMinusMin
+                x = np.maximum(FDomain[0], np.minimum(FDomain[1], x))
                 FValues = F(x)
                 FSamplesNorm = max(FSamplesNorm, np.linalg.norm(FValues, np.inf))
                 if previousFSamplesNorm > 0.0 and FSamplesNorm > previousFSamplesNorm * (1.0 - evaluationEpsilon):

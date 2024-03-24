@@ -824,7 +824,7 @@ def test_geodesic():
     s1xs2 = section1_tan.multiply(section2_tan, productType = 'C')
     s1ms2 = section1_3D.subtract(section2_3D)
     determinant = s1xs2 @ s1ms2
-#    [u1u2] = determinant.contours()
+    [u1u2] = determinant.contours()
 #    tValues = np.linspace(0.0, 1.0, 51)
 #    u1Fit, u2Fit = u1u2(tValues)
 #    rulings = [bspy.Spline.line(section1_3D(u1), section2_3D(u2)) for u1, u2 in zip(u1Fit, u2Fit)]
