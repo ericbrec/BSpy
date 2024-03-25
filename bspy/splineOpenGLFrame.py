@@ -1016,6 +1016,9 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.origin = None
         self.button = None
         self.mode = self.ROTATE
+        
+        self.computeBSplineCode = self.computeBSplineCode.format(maxOrder=self.maxOrder)
+        self.computeSurfaceSamplesCode = self.computeSurfaceSamplesCode.format(maxOrder=self.maxOrder)
 
         self.SetBackgroundColor(0.0, 0.2, 0.2)
 
@@ -1201,8 +1204,6 @@ class SplineOpenGLFrame(OpenGLFrame):
         glBufferData(GL_ARRAY_BUFFER, 4 * 4, np.array([0,0,0,0], np.float32), GL_STATIC_DRAW)
 
         # Compile shaders and link programs
-        self.computeBSplineCode = self.computeBSplineCode.format(maxOrder=self.maxOrder)
-        self.computeSurfaceSamplesCode = self.computeSurfaceSamplesCode.format(maxOrder=self.maxOrder)
         try:
             # Must create CurveProgram first, because it checks and potentially resets tessellationEnabled flag.
             self.curveProgram = CurveProgram(self)
