@@ -418,47 +418,33 @@ class Hyperplane(Manifold):
         return Hyperplane(normal, point, tangentSpace)
 
     @staticmethod
-    def create_hypercube(size, origin = None):
+    def create_hypercube(bounds):
         """
         Create a solid hypercube.
 
         Parameters
         ----------
-        size : array-like
-            The widths of the sides of the hypercube. 
-            The length of size determines the dimension of the hypercube. 
-            The hypercube will span from origin to origin + size.
-
-        origin : array-like
-            The origin of the hypercube. Default is the zero vector.
+        bounds : array-like
+            An array with shape (dimension, 2) of lower and upper and lower bounds for the hypercube. 
 
         Returns
         -------
         hypercube : `Solid`
             The hypercube.
         """
-        dimension = len(size)
+        bounds = np.array(bounds)
+        if len(bounds.shape) != 2 or bounds.shape[1] != 2: raise ValueError("bounds must have shape (dimension, 2)")
+        dimension = bounds.shape[0]
         solid = Solid(dimension, False)
-        if origin is None:
-            origin = [0.0]*dimension
-        else:
-            assert len(origin) == dimension
-
         for i in range(dimension):
             if dimension > 1:
-                domainSize = size.copy()
-                del domainSize[i]
-                domainOrigin = origin.copy()
-                del domainOrigin[i]
-                domain1 = Hyperplane.create_hypercube(domainSize, domainOrigin)
-                domain2 = Hyperplane.create_hypercube(domainSize, domainOrigin)
+                domain = Hyperplane.create_hypercube(np.delete(bounds, i, axis=0))
             else:
-                domain1 = Solid(0, True)
-                domain2 = Solid(0, True)
-            hyperplane = Hyperplane.create_axis_aligned(dimension, i, -origin[i], True)
-            solid.boundaries.append(Boundary(hyperplane, domain1))
-            hyperplane = Hyperplane.create_axis_aligned(dimension, i, size[i] + origin[i], False)
-            solid.boundaries.append(Boundary(hyperplane, domain2))
+                domain = Solid(0, True)
+            hyperplane = Hyperplane.create_axis_aligned(dimension, i, -bounds[i][0], True)
+            solid.add_boundary(Boundary(hyperplane, domain))
+            hyperplane = Hyperplane.create_axis_aligned(dimension, i, bounds[i][1], False)
+            solid.add_boundary(Boundary(hyperplane, domain))
 
         return solid
 
@@ -476,3 +462,44 @@ class Hyperplane(Manifold):
         `Boundary` : A portion of the boundary of a solid.
         """
         return Solid(self.domain_dimension(), True)
+
+    def range_bounds(self):
+        """
+        Return the range bounds for the hyperplane.
+
+        Returns
+        -------
+        rangeBounds : `np.array` or `None`
+            The range of the hyperplane given as lower and upper bounds on each dependent variable. 
+            If the hyperplane has an unbounded range (domain dimension > 0), `None` is returned.
+        """
+        return None if self.domain_dimension() > 0 else np.array(((self._point[0], self._point[0]),))
+
+    def trimmed_range_bounds(self, domainBounds):
+        """
+        Return the trimmed range bounds for the hyperplane.
+
+        Parameters
+        ----------
+        domainBounds : array-like or `None`
+            An array with shape (domain_dimension, 2) of lower and upper and lower bounds on each hyperplane parameter. 
+            If domainBounds is `None` then the hyperplane is unbounded.
+
+        Returns
+        -------
+        trimmedManifold, rangeBounds : `Hyperplane`, `np.array` (or None)
+            A manifold trimmed to the given domain bounds, and the range of the trimmed hyperplane given as 
+            lower and upper bounds on each dependent variable. If the domain bounds are `None` (meaning unbounded) 
+            then rangeBounds is `None`.  
+
+        Notes
+        -----
+        The returned trimmed manifold is the original hyperplane (no changes).
+        """
+        if domainBounds is None:
+            return self, self.range_bounds()
+        else:
+            domainBounds = np.atleast_1d(domainBounds)
+            rangeBounds = [[value.min(), value.max()] for value in 
+                self._tangentSpace @ domainBounds + self._point.reshape(self._point.shape[0], 1)]
+            return self, np.array(rangeBounds, self._normal.dtype)

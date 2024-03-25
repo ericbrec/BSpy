@@ -363,20 +363,30 @@ if __name__ == "__main__":
                 coefficients[0,i,j] = teapotVertices[vertex][0]
                 coefficients[1,i,j] = teapotVertices[vertex][2]
                 coefficients[2,i,j] = teapotVertices[vertex][1]
-        teapot1.boundaries.append(Boundary(
+        teapot1.add_boundary(Boundary(
             Spline(2, 3, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=f"1: {patch[0]}"))))
-        teapot2.boundaries.append(Boundary(
+        teapot2.add_boundary(Boundary(
             Spline(2, 3, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=f"2: {patch[0]}"))))
 
     viewer.list_solid(teapot1, fillColor=np.array((1, 1, 0, 1),np.float32))
 
-    #theta = 180.0 * np.pi / 180 # Touching spouts
-    theta = 120.0 * np.pi / 180 # Wide intersection
-    teapot2 = teapot2.transform(np.array(((np.cos(theta), 0.0, np.sin(theta)),
-		(0.0, 1.0, 0.0), (-np.sin(theta), 0.0, np.cos(theta)))))
-    #teapot2 = teapot2.translate((5.25, 0.0, 0.15)) # Touching spouts
-    teapot2 = teapot2.translate((0.6, -2.0, 2.0)) # Wide intersection
-    viewer.list_solid(teapot2, fillColor=np.array((0, 1, 0, 1),np.float32))
+    if False: # Touching spouts
+        theta = 180.0 * np.pi / 180
+        teapot2 = teapot2.transform(np.array(((np.cos(theta), 0.0, np.sin(theta)),
+            (0.0, 1.0, 0.0), (-np.sin(theta), 0.0, np.cos(theta)))))
+        teapot2 = teapot2.translate((5.25, 0.0, 0.15)) # Touching spouts
+        viewer.list_solid(teapot2, fillColor=np.array((0, 1, 0, 1),np.float32))
+        teapot3 = teapot1 - teapot2
+        viewer.draw_solid(teapot3)
+
+    if True: # Wide intersection
+        theta = 120.0 * np.pi / 180
+        teapot2 = teapot2.transform(np.array(((np.cos(theta), 0.0, np.sin(theta)),
+            (0.0, 1.0, 0.0), (-np.sin(theta), 0.0, np.cos(theta)))))
+        teapot2 = teapot2.translate((0.6, -2.0, 2.0))
+        viewer.list_solid(teapot2, fillColor=np.array((0, 1, 0, 1),np.float32))
+        teapot3 = teapot1 * teapot2
+        viewer.draw_solid(teapot3)
 
     if False:
         name1 = "1: Bottom 1"
@@ -407,9 +417,5 @@ if __name__ == "__main__":
         trimmedSlice = boundary2.domain.intersection(slice)
         trimmedSlicedBoundary = Boundary(manifold.copy(), trimmedSlice)
         viewer.draw_boundary(trimmedSlicedBoundary, f"Trimmed sliced {name2}")
-
-    if True:
-        teapot3 = teapot1 * teapot2
-        viewer.draw_solid(teapot3)
         
     viewer.mainloop()
