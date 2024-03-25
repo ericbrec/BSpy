@@ -2,10 +2,12 @@ import numpy as np
 
 def bspline_values(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs = False):
     basis = np.zeros(splineOrder, knots.dtype)
-    basis[-1] = 1.0
     if knot is None:
         knot = np.searchsorted(knots, u, side = 'right')
         knot = min(knot, len(knots) - splineOrder)
+    if derivativeOrder >= splineOrder:
+        return knot, basis
+    basis[-1] = 1.0
     for degree in range(1, splineOrder - derivativeOrder):
         b = splineOrder - degree
         for i in range(knot - degree, knot):

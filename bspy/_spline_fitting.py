@@ -403,68 +403,47 @@ def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-6):
     # Define the callback function for the ODE solver
     def geodesicCallback(t, u, surface, uvDomain):
         # Evaluate the surface information needed for the Christoffel symbols
-        u[0, 0] = max(uvDomain[0, 0], min(uvDomain[0, 1], u[0, 0]))
-        u[1, 0] = max(uvDomain[1, 0], min(uvDomain[1, 1], u[1, 0]))
+        u[:, 0] = np.maximum(uvDomain[:, 0], np.minimum(uvDomain[:, 1], u[:, 0]))
         su = surface.derivative([1, 0], u[:, 0])
         sv = surface.derivative([0, 1], u[:, 0])
         suu = surface.derivative([2, 0], u[:, 0])
         suv = surface.derivative([1, 1], u[:, 0])
         svv = surface.derivative([0, 2], u[:, 0])
-
-        # Calculate the first fundamental form
-        E = su @ su
-        F = su @ sv
-        G = sv @ sv
-        A = np.array([[E, F], [F, G]])
-
-        # Compute right hand side entries
-        R_uuu = suu @ su
-        R_uuv = suu @ sv
-        R_uvu = suv @ su
-        R_uvv = suv @ sv
-        R_vvu = svv @ su
-        R_vvv = svv @ sv
-        R = np.array([[R_uuu, R_uvu, R_vvu], [R_uuv, R_uvv, R_vvv]])
-
-        # Solve for the Christoffel symbols
-        luAndPivot = sp.linalg.lu_factor(A)
-        Gamma = sp.linalg.lu_solve(luAndPivot, R)
-
-        # Compute the right hand side for the ODE
-        rhs = -np.array([Gamma[0, 0] * u[0, 1] ** 2 + 2.0 * Gamma[0, 1] * u[0, 1] * u[1, 1] + Gamma[0, 2] * u[1, 1] ** 2,
-                         Gamma[1, 0] * u[0, 1] ** 2 + 2.0 * Gamma[1, 1] * u[0, 1] * u[1, 1] + Gamma[1, 2] * u[1, 1] ** 2])
-        
-        # Now we need the derivatives of the Christoffel symbols with respect to u
         suuu = surface.derivative([3, 0], u[:, 0])
         suuv = surface.derivative([2, 1], u[:, 0])
         suvv = surface.derivative([1, 2], u[:, 0])
         svvv = surface.derivative([0, 3], u[:, 0])
-        E_u = 2.0 * R_uuu
-        F_u = R_uuv + R_uvu
-        G_u = 2.0 * R_uvv
-        A_u = np.array([[E_u, F_u], [F_u, G_u]])
-        R_uuu_u = suuu @ su + suu @ suu
-        R_uuv_u = suuu @ sv + suu @ suv
-        R_uvu_u = suuv @ su + suv @ suu
-        R_uvv_u = suuv @ sv + suv @ suv
-        R_vvu_u = suvv @ su + svv @ suu
-        R_vvv_u = suvv @ sv + svv @ suv
-        R_u = np.array([[R_uuu_u, R_uvu_u, R_vvu_u], [R_uuv_u, R_uvv_u, R_vvv_u]])
-        Gamma_u = sp.linalg.lu_solve(luAndPivot, R_u - A_u @ Gamma)
 
-        # . . . And the derivatives of the Christoffel symbols with respect to v
-        E_v = 2.0 * R_uvu
-        F_v = R_uvv + R_vvu
-        G_v = 2.0 * R_vvv
+        # Calculate the first fundamental form and derivatives
+        E = su @ su
+        E_u = 2.0 * suu @ su
+        E_v = 2.0 * suv @ su
+        F = su @ sv
+        F_u = suu @ sv + suv @ su
+        F_v = suv @ sv + svv @ su
+        G = sv @ sv
+        G_u = 2.0 * suv @ sv
+        G_v = 2.0 * svv @ sv
+        A = np.array([[E, F], [F, G]])
+        A_u = np.array([[E_u, F_u], [F_u, G_u]])
         A_v = np.array([[E_v, F_v], [F_v, G_v]])
-        R_uuu_v = suuv @ su + suu @ suv
-        R_uuv_v = suuv @ sv + suu @ svv
-        R_uvu_v = suvv @ su + suv @ suv
-        R_uvv_v = suvv @ sv + suv @ svv
-        R_vvu_v = svvv @ su + svv @ suv
-        R_vvv_v = svvv @ sv + svv @ svv
-        R_v = np.array([[R_uuu_v, R_uvu_v, R_vvu_v], [R_uuv_v, R_uvv_v, R_vvv_v]])
+
+        # Compute right hand side entries
+        R = np.array([[suu @ su, suv @ su, svv @ su], [suu @ sv, suv @ sv, svv @ sv]])
+        R_u = np.array([[suuu @ su + suu @ suu, suuv @ su + suv @ suu, suvv @ su + svv @ suu],
+                        [suuu @ sv + suu @ suv, suuv @ sv + suv @ suv, suvv @ sv + svv @ suv]])
+        R_v = np.array([[suuv @ su + suu @ suv, suvv @ su + suv @ suv, suvv @ su + svv @ suv],
+                        [suuv @ sv + suu @ svv, suvv @ sv + suv @ svv, svvv @ sv + svv @ svv]])
+
+        # Solve for the Christoffel symbols
+        luAndPivot = sp.linalg.lu_factor(A)
+        Gamma = sp.linalg.lu_solve(luAndPivot, R)
+        Gamma_u = sp.linalg.lu_solve(luAndPivot, R_u - A_u @ Gamma)
         Gamma_v = sp.linalg.lu_solve(luAndPivot, R_v - A_v @ Gamma)
+
+        # Compute the right hand side for the ODE
+        rhs = -np.array([Gamma[0, 0] * u[0, 1] ** 2 + 2.0 * Gamma[0, 1] * u[0, 1] * u[1, 1] + Gamma[0, 2] * u[1, 1] ** 2,
+                         Gamma[1, 0] * u[0, 1] ** 2 + 2.0 * Gamma[1, 1] * u[0, 1] * u[1, 1] + Gamma[1, 2] * u[1, 1] ** 2])
 
         # Compute the Jacobian matrix of the right hand side of the ODE
         jacobian = -np.array([[[Gamma_u[0, 0] * u[0, 1] ** 2 + 2.0 * Gamma_u[0, 1] * u[0, 1] * u[1, 1] + Gamma_u[0, 2] * u[1, 1] ** 2,
@@ -820,7 +799,7 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
             done = linear
             continuation = 1.0
             bestContinuation = 0.0
-            continuationBest = bestGuess
+            inCaseOfEmergency = bestGuess.copy()
             previous = 0.5 * np.finfo(bestGuess[0]).max
             iteration = 0
     
@@ -863,9 +842,10 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
                 update = sp.linalg.solve_banded((bandWidth, bandWidth), collocationMatrix, residuals)
                 bestGuess[nDep * (iFirstPoint + nLeft) : nDep * (iNextPoint + nLeft)] += update[nDep * nLeft : nDep * (iNextPoint - iFirstPoint + nLeft)]
                 updateSize = np.linalg.norm(update)
-                if updateSize > 1.25 * previous and iteration >= 4:
+                if updateSize > 1.25 * previous and iteration >= 4 or \
+                   updateSize > 0.01 and iteration > 50:
                     continuation = 0.5 * (continuation + bestContinuation)
-                    bestGuess = continuationBest
+                    bestGuess = inCaseOfEmergency.copy()
                     if continuation - bestContinuation < 0.01:
                         break
                     previous = 0.5 * np.finfo(bestGuess[0]).max
@@ -880,7 +860,7 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
                 if updateSize < math.sqrt(n) * scale * math.sqrt(np.finfo(update.dtype).eps):
                     if continuation < 1.0:
                         bestContinuation = continuation
-                        continuationBest = bestGuess
+                        inCaseOfEmergency = bestGuess.copy()
                         continuation = min(1.0, 1.2 * continuation)
                         previous = 0.5 * np.finfo(bestGuess[0]).max
                         iteration = 0
