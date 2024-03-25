@@ -893,7 +893,8 @@ def intersect(self, other):
         
         # Surface-Surface intersection.
         elif nDep == 2:
-            logging.info(f"intersect({self.metadata['Name']}, {other.metadata['Name']})")
+            if "Name" in self.metadata and "Name" in other.metadata:
+                logging.info(f"intersect({self.metadata['Name']}, {other.metadata['Name']})")
             # Find the intersection contours, which are returned as splines.
             swap = False
             try:
@@ -906,7 +907,8 @@ def intersect(self, other):
             # Convert each contour into a Manifold.Crossing.
             if swap:
                 spline = other.subtract(self)
-                logging.info(f"intersect({other.metadata['Name']}, {self.metadata['Name']})")
+                if "Name" in self.metadata and "Name" in other.metadata:
+                    logging.info(f"intersect({other.metadata['Name']}, {self.metadata['Name']})")
                 contours = spline.contours()
                 for contour in contours:
                     # Swap left and right, compared to not swapped.
@@ -946,7 +948,8 @@ def complete_slice(self, slice, solid):
     # If manifold (self) has no intersections with solid, just check containment.
     if not slice.boundaries:
         if slice.dimension == 2:
-            logging.info(f"check containment: {self.metadata['Name']}")
+            if "Name" in self.metadata:
+                logging.info(f"check containment: {self.metadata['Name']}")
         domain = bounds.T
         if solid.contains_point(self(0.5 * (domain[0] + domain[1]))):
             for boundary in Hyperplane.create_hypercube(bounds).boundaries:
