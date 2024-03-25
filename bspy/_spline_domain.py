@@ -1,4 +1,5 @@
 import numpy as np
+from bspy.manifold import Manifold
 
 def clamp(self, left, right):
     bounds = [[None, None] for i in range(self.nInd)]
@@ -581,6 +582,14 @@ def trim(self, newDomain):
     coefs = spline.coefs[tuple(coefIndex)]
 
     return type(spline)(spline.nInd, spline.nDep, spline.order, coefs.shape[1:], knotsList, coefs, spline.metadata)
+
+def trimmed_range_bounds(self, domainBounds):
+    domainBounds = np.array(domainBounds, copy=True)
+    for original, trim in zip(self.domain(), domainBounds):
+        trim[0] = max(original[0], trim[0] - Manifold.minSeparation)
+        trim[1] = min(original[1], trim[1] + Manifold.minSeparation)
+    trimmedSpline = self.trim(domainBounds)
+    return trimmedSpline, trimmedSpline.range_bounds()
 
 def unfold(self, foldedInd, coefficientlessSpline):
     if not(len(foldedInd) == coefficientlessSpline.nInd): raise ValueError("Invalid coefficientlessSpline")

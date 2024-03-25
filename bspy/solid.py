@@ -20,9 +20,10 @@ class Boundary:
     `Manifold.full_domain` : Return a solid that represents the full domain of the manifold.
     """
     def __init__(self, manifold, domain = None):
-        self.manifold = manifold
         self.domain = manifold.full_domain() if domain is None else domain 
-        assert self.manifold.domain_dimension() == self.domain.dimension
+        if manifold.domain_dimension() != self.domain.dimension: raise ValueError("Domain dimensions don't match")
+        if manifold.domain_dimension() + 1 != manifold.range_dimension(): raise ValueError("Manifold range is not one dimension higher than domain")
+        self.manifold, self.bounds = manifold.trimmed_range_bounds(self.domain.bounds)
 
     def __repr__(self):
         return "Boundary({0}, {1})".format(self.manifold.__repr__(), self.domain.__repr__())
@@ -73,6 +74,7 @@ class Solid:
         self.dimension = dimension
         self.containsInfinity = containsInfinity
         self.boundaries = []
+        self.bounds = None
 
     def __repr__(self):
         return "Solid({0}, {1})".format(self.dimension, self.containsInfinity)
@@ -94,6 +96,81 @@ class Solid:
         Casting the solid to `bool` returns not `is_empty`.
         """
         return not self
+    
+    def add_boundary(self, boundary):
+        """
+        Adds a boundary to a solid, recomputing the solid's bounds.
+
+        Parameters
+        ----------
+        boundary : `Boundary`
+            A boundary to add to the solid.
+
+        Notes
+        -----
+        While you could just append the boundary to the solid's collection of boundaries, 
+        this method also recomputes the solid's bounds for faster intersection and containment operations. 
+        Adding the boundary directly to the solid's boundaries collection may result in faulty operations.
+        """
+        if boundary.manifold.range_dimension() != self.dimension: raise ValueError("Dimensions don't match")
+        self.boundaries.append(boundary)
+        if self.bounds is None:
+            self.bounds = boundary.bounds
+        elif boundary.bounds is None:
+            raise ValueError("Mix of infinite and bounded boundaries")
+        else:
+            self.bounds[:, 0] = np.minimum(self.bounds[:, 0], boundary.bounds[:, 0])
+            self.bounds[:, 1] = np.maximum(self.bounds[:, 1], boundary.bounds[:, 1])
+
+    @staticmethod
+    def disjoint_bounds(bounds1, bounds2):
+        """
+        Returns whether or not bounds1 and bounds2 are disjoint.
+
+        Parameters
+        ----------
+        bounds1 : array-like or `None`
+            An array with shape (dimension, 2) of lower and upper and lower bounds on each dimension. 
+            If bounds1 is `None` then then there are no bounds.
+
+        bounds2 : array-like or `None`
+            An array with shape (dimension, 2) of lower and upper and lower bounds on each dimension. 
+            If bounds2 is `None` then then there are no bounds.
+
+        Returns
+        -------
+        disjoint : `bool`
+            Value is true if the bounds are disjoint. Value is false if either bounds is `None`.
+        """
+        if bounds1 is None or bounds2 is None:
+            return False
+        else:
+            return np.min(np.diff(bounds1).reshape(-1) + np.diff(bounds2).reshape(-1) -
+                np.abs(np.sum(bounds1, axis=1) - np.sum(bounds2, axis=1))) < -Manifold.minSeparation
+
+    @staticmethod
+    def point_outside_bounds(point, bounds):
+        """
+        Returns whether or not point is outside bounds.
+
+        Parameters
+        ----------
+        point : array-like
+            A point whose dimension matches the bounds.
+
+        bounds : array-like or `None`
+            An array with shape (dimension, 2) of lower and upper and lower bounds on each dimension. 
+            If bounds is `None` then then there are no bounds.
+
+        Returns
+        -------
+        within : `bool`
+            Value is true if the point is outside bounds or bounds is `None`.
+        """
+        if bounds is None:
+            return True
+        else:
+            return np.min(np.diff(bounds).reshape(-1) - np.abs(np.sum(bounds, axis=1) + -2.0 * point)) < -Manifold.minSeparation
 
     def complement(self):
         """
@@ -112,7 +189,7 @@ class Solid:
         """
         solid = Solid(self.dimension, not self.containsInfinity)
         for boundary in self.boundaries:
-            solid.boundaries.append(Boundary(boundary.manifold.flip_normal(), boundary.domain))
+            solid.add_boundary(Boundary(boundary.manifold.flip_normal(), boundary.domain))
         return solid
 
     def __neg__(self):
@@ -142,7 +219,7 @@ class Solid:
 
         solid = Solid(self.dimension, self.containsInfinity)
         for boundary in self.boundaries:
-            solid.boundaries.append(Boundary(boundary.manifold.transform(matrix, matrixInverseTranspose), boundary.domain))
+            solid.add_boundary(Boundary(boundary.manifold.transform(matrix, matrixInverseTranspose), boundary.domain))
         return solid
 
     def translate(self, delta):
@@ -163,7 +240,7 @@ class Solid:
 
         solid = Solid(self.dimension, self.containsInfinity)
         for boundary in self.boundaries:
-            solid.boundaries.append(Boundary(boundary.manifold.translate(delta), boundary.domain))
+            solid.add_boundary(Boundary(boundary.manifold.translate(delta), boundary.domain))
         return solid
 
     def any_point(self):
@@ -376,11 +453,15 @@ class Solid:
         * A simple fast implementation if the solid is a number line (dimension <= 1). This is the default for dimension <= 1.
         * A surface integral with integrand: `(x - point) / norm(x - point)**dimension`.
         """
+        point = np.atleast_1d(point)
         windingNumber = 0.0
         onBoundaryNormal = None
         if self.containsInfinity:
             # If the solid contains infinity, then the winding number starts as 1 to account for the boundary at infinity.
             windingNumber = 1.0
+
+        if Solid.point_outside_bounds(point, self.bounds):
+            return windingNumber, onBoundaryNormal
 
         if self.dimension <= 1:
             # Fast winding number calculation for a number line specialized to catch boundary edges.
@@ -495,10 +576,17 @@ class Solid:
 
         # Start with an empty slice and no domain coincidences.
         slice = Solid(self.dimension-1, self.containsInfinity)
+        bounds = manifold.range_bounds()
+        if Solid.disjoint_bounds(bounds, self.bounds):
+            manifold.complete_slice(slice, self)
+            return slice
         coincidences = []
 
         # Intersect each of this solid's boundaries with the manifold.
         for boundary in self.boundaries:
+            if Solid.disjoint_bounds(boundary.bounds, bounds):
+                continue
+
             # Intersect manifolds, checking if the intersection is already in the cache.
             intersections, isTwin = boundary.manifold.cached_intersect(manifold, cache)
             if intersections is NotImplemented:
@@ -511,7 +599,7 @@ class Solid:
                 if isinstance(intersection, Manifold.Crossing):
                     domainSlice = boundary.domain.slice(left, cache)
                     if domainSlice:
-                        slice.boundaries.append(Boundary(right, domainSlice))
+                        slice.add_boundary(Boundary(right, domainSlice))
 
                 elif isinstance(intersection, Manifold.Coincidence):
                     # First, intersect domain coincidence with the domain boundary.
@@ -594,6 +682,16 @@ class Solid:
         # Start with a solid without boundaries.
         combinedSolid = Solid(self.dimension, self.containsInfinity and other.containsInfinity)
 
+        # If the solids are disjoint, add the boundaries contained by infinity and return.
+        if Solid.disjoint_bounds(self.bounds, other.bounds):
+            if other.containsInfinity:
+                for boundary in self.boundaries:
+                    combinedSolid.add_boundary(boundary)
+            if self.containsInfinity:
+                for boundary in other.boundaries:
+                    combinedSolid.add_boundary(boundary)
+            return combinedSolid
+
         for boundary in self.boundaries:
             # Slice self boundary manifold by other.
             slice = other.slice(boundary.manifold, cache, True)
@@ -601,7 +699,7 @@ class Solid:
             newDomain = boundary.domain.intersection(slice, cache)
             if newDomain:
                 # Self boundary intersects other, so create a new boundary with the intersected domain.
-                combinedSolid.boundaries.append(Boundary(boundary.manifold, newDomain))
+                combinedSolid.add_boundary(Boundary(boundary.manifold, newDomain))
 
         for boundary in other.boundaries:
             # Slice other boundary manifold by self.
@@ -610,7 +708,7 @@ class Solid:
             newDomain = boundary.domain.intersection(slice, cache)
             if newDomain:
                 # Other boundary intersects self, so create a new boundary with the intersected domain.
-                combinedSolid.boundaries.append(Boundary(boundary.manifold, newDomain))
+                combinedSolid.add_boundary(Boundary(boundary.manifold, newDomain))
 
         return combinedSolid
 
