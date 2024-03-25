@@ -732,6 +732,10 @@ def test_evaluate():
             i += 1
     assert maxError <= 2.5 * np.finfo(float).eps
 
+    line = bspy.Spline.line([0.0, 0.0, 0.0], [1.0, 2.0, 3.0])
+    zeroValue = line.derivative([2], [0.5])
+    assert np.linalg.norm(zeroValue) == 0.0
+
 def test_extrapolate():
     maxError = 0.0
     spline = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0.2, 0.3, 0.4, 0.5, 0.5, 1, 1], float)], 
@@ -1063,6 +1067,16 @@ def test_multiply():
             maxError = max(maxError, (xTest - x) ** 2)
     assert maxError <= np.finfo(float).eps
 
+    # Should work for 2D tensor product cross product
+    blob = bspy.Spline.section([[1.0, 0.0, 90.0, 0.2], [0.0, 1.0, 180.0, 0.2], [-0.5, 0.5, 320.0, 0.0],
+                            [-0.5, -0.5, 220.0, 0.0], [0.0, -1.0, 0.0, 5.0], [1.0, 0.0, 90.0, 0.2]])
+    trajectory = bspy.Spline(1, 2, [4], [4], [[0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0]],
+                         [[0.0, 0.0], [0.0, 1.5], [2.0, 1.0], [2.0, 2.0]])
+    blob_u = blob.differentiate()
+    blob_t = trajectory.differentiate()
+    blob_tangents = blob_u.multiply(blob_t, productType = 'C')
+    assert blob_tangents.nDep == 1
+
 def test_normal():
     spline = bspy.Spline(2, 3, [3, 4], [4, 5], [[0,0,0,.5,1,1,1], [0,0,0,0,.5,1,1,1,1]],
                         [[0, 0, 0, 0, 0, .3, .3, .3, .3, .3, .7, .7, .7, .7, .7, 1, 1, 1, 1, 1],
@@ -1204,6 +1218,11 @@ def test_section():
         rate = [0]
         for i in range(3):
             rate.append(math.log2(maxErrors[i] / maxErrors[i + 1]))
+    
+    # Make sure it can handle zero curvature
+
+    blob = bspy.Spline.section([[-0.5, 0.5, 320.0, 0.0], [-0.5, -0.5, 220.0, 0.0]])
+    assert abs(blob(0.5)[1]) < np.finfo(float).eps
 
 def test_solve_ode():
     # Test u' = u, u(0) = 1

@@ -577,6 +577,7 @@ def contours(self):
     # Extra step not in paper.
     # Run a checksum on the points, ensuring starting and ending points balance.
     # Start by flipping endpoints as needed, since we can miss turning points near endpoints.
+
     if points[0].det < 0.0:
         point = points[0]
         points[0] = Point(point.d, -point.det, point.onUVBoundary, point.turningPoint, point.uvw)

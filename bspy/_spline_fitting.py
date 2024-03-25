@@ -23,7 +23,7 @@ def cone(radius1, radius2, height, tolerance = None):
     return bspy.Spline.ruled_surface(bottom, top)
 
 # Courtesy of Michael Epton - Translated from his F77 code lgnzro
-def _legendre_polynomial_zeros(degree):
+def _legendre_polynomial_zeros(degree, mapToZeroOne = True):
     def legendre(degree, x):
         p = [1.0, x]
         pd = [0.0, 1.0]
@@ -35,6 +35,7 @@ def _legendre_polynomial_zeros(degree):
         return p, pd
     zval = 1.0
     z = []
+    zNegative = []
     for iRoot in range(degree // 2):
         done = False
         while True:
@@ -49,21 +50,28 @@ def _legendre_polynomial_zeros(degree):
             if dz < 1.0e-10:
                 done = True
         z.append(zval)
+        zNegative.append(-zval)
         zval -= 0.001
     if degree % 2 == 1:
-        z.append(0.0)
+        zNegative.append(0.0)
     z.reverse()
+    z = np.array(zNegative + z)
     w = []
     for zval in z:
         p, pd = legendre(degree, zval)
         w.append(2.0 / ((1.0 - zval ** 2) * pd[-1] ** 2))
+    w = np.array(w)
+    if mapToZeroOne:
+        z = 0.5 * (1.0 + z)
+        w = 0.5 * w
     return z, w
 
 def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     # Set up parameters for initial guess of x(t) and validate arguments.
     order = 4
     degree = order - 1
-    rhos, gaussWeights = _legendre_polynomial_zeros(degree - 1)
+    gaussNodes, gaussWeights = _legendre_polynomial_zeros(degree - 1)
+
     if not(len(knownXValues) >= 2): raise ValueError("There must be at least 2 known x values.")
     m = len(knownXValues) - 1
     nCoef = m * (degree - 1) + 2
@@ -96,6 +104,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                     wrt[i] = 1
                     return F.derivative(wrt, x)
                 dF.append(splineDerivative)
+            FDomain = F.domain().T
         else:
             for i in range(nDep):
                 def fDerivative(x, i=i):
@@ -107,6 +116,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                     xShift[i] += h2
                     return (np.array(F(xShift)) - fLeft) / h2
                 dF.append(fDerivative)
+            FDomain = np.array(nDep * [[-np.inf, np.inf]]).T
     else:
         if not(len(dF) == nDep): raise ValueError(f"Must provide {nDep} first derivatives.")
 
@@ -120,13 +130,9 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     for point in knownXValues[1:]:
         dt = np.linalg.norm(point - previousPoint)
         if not(dt > epsilon): raise ValueError("Points must be separated by at least epsilon.")
-        for rho in reversed(rhos):
-            tValues[i] = t + 0.5 * dt * (1.0 - rho)
-            GSamples[i] = 0.5 * (previousPoint + point - rho * (point - previousPoint))
-            i += 1
-        for rho in rhos[0 if degree % 2 == 1 else 1:]:
-            tValues[i] = t + 0.5 * dt * (1.0 + rho)
-            GSamples[i] = 0.5 * (previousPoint + point + rho * (point - previousPoint))
+        for gaussNode in gaussNodes:
+            tValues[i] = t + gaussNode * dt
+            GSamples[i] = (1.0 - gaussNode) * previousPoint + gaussNode * point
             i += 1
         t += dt
         knots += [t] * (order - 2)
@@ -184,6 +190,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
 
                 # Do the same for F(x(t)).
                 x = coefsMin + (compactCoefs.T @ bValues) * coefsMaxMinusMin
+                x = np.maximum(FDomain[0], np.minimum(FDomain[1], x))
                 FValues = F(x)
                 FSamplesNorm = max(FSamplesNorm, np.linalg.norm(FValues, np.inf))
                 if previousFSamplesNorm > 0.0 and FSamplesNorm > previousFSamplesNorm * (1.0 - evaluationEpsilon):
@@ -253,26 +260,14 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             newKnot = 0.5 * (previousKnot + knot)
 
             # Place tValues at Gauss points for the intervals [previousKnot, newKnot] and [newKnot, knot].
-            for rho in reversed(rhos):
-                tValues[i] = t = 0.5 * (previousKnot + newKnot - rho * (newKnot - previousKnot))
-                GSamples[i] = x = compactCoefs.T @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
-                FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
-                i += 1
-            for rho in rhos[0 if degree % 2 == 1 else 1:]:
-                tValues[i] = t = 0.5 * (previousKnot + newKnot + rho * (newKnot - previousKnot))
-                GSamples[i] = x = compactCoefs.T @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
-                FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
-                i += 1
-            for rho in reversed(rhos):
-                tValues[i] = t = 0.5 * (newKnot + knot - rho * (knot - newKnot))
-                GSamples[i] = x = compactCoefs.T @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
-                FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
-                i += 1
-            for rho in rhos[0 if degree % 2 == 1 else 1:]:
-                tValues[i] = t = 0.5 * (newKnot + knot + rho * (knot - newKnot))
-                GSamples[i] = x = compactCoefs.T @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
-                FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
-                i += 1
+            for knotInterval in [[previousKnot, newKnot], [newKnot, knot]]:
+                for gaussNode in gaussNodes:
+                    tValues[i] = t = (1.0 - gaussNode) * knotInterval[0] + gaussNode * knotInterval[1]
+                    x = compactCoefs.T @ bspy.Spline.bspline_values(ix, knots, order, t)[1]
+                    x = np.array([max(0.0, min(1.0, xi)) for xi in x])
+                    GSamples[i] = x
+                    FSamplesNorm = max(FSamplesNorm, np.linalg.norm(F(coefsMin + x * coefsMaxMinusMin), np.inf))
+                    i += 1
             
             newKnots += [newKnot] * (order - 2) # C1 continuity
             newKnots += [knot] * (order - 2) # C1 continuity
@@ -408,68 +403,47 @@ def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-6):
     # Define the callback function for the ODE solver
     def geodesicCallback(t, u, surface, uvDomain):
         # Evaluate the surface information needed for the Christoffel symbols
-        u[0, 0] = max(uvDomain[0, 0], min(uvDomain[0, 1], u[0, 0]))
-        u[1, 0] = max(uvDomain[1, 0], min(uvDomain[1, 1], u[1, 0]))
+        u[:, 0] = np.maximum(uvDomain[:, 0], np.minimum(uvDomain[:, 1], u[:, 0]))
         su = surface.derivative([1, 0], u[:, 0])
         sv = surface.derivative([0, 1], u[:, 0])
         suu = surface.derivative([2, 0], u[:, 0])
         suv = surface.derivative([1, 1], u[:, 0])
         svv = surface.derivative([0, 2], u[:, 0])
-
-        # Calculate the first fundamental form
-        E = su @ su
-        F = su @ sv
-        G = sv @ sv
-        A = np.array([[E, F], [F, G]])
-
-        # Compute right hand side entries
-        R_uuu = suu @ su
-        R_uuv = suu @ sv
-        R_uvu = suv @ su
-        R_uvv = suv @ sv
-        R_vvu = svv @ su
-        R_vvv = svv @ sv
-        R = np.array([[R_uuu, R_uvu, R_vvu], [R_uuv, R_uvv, R_vvv]])
-
-        # Solve for the Christoffel symbols
-        luAndPivot = sp.linalg.lu_factor(A)
-        Gamma = sp.linalg.lu_solve(luAndPivot, R)
-
-        # Compute the right hand side for the ODE
-        rhs = -np.array([Gamma[0, 0] * u[0, 1] ** 2 + 2.0 * Gamma[0, 1] * u[0, 1] * u[1, 1] + Gamma[0, 2] * u[1, 1] ** 2,
-                         Gamma[1, 0] * u[0, 1] ** 2 + 2.0 * Gamma[1, 1] * u[0, 1] * u[1, 1] + Gamma[1, 2] * u[1, 1] ** 2])
-        
-        # Now we need the derivatives of the Christoffel symbols with respect to u
         suuu = surface.derivative([3, 0], u[:, 0])
         suuv = surface.derivative([2, 1], u[:, 0])
         suvv = surface.derivative([1, 2], u[:, 0])
         svvv = surface.derivative([0, 3], u[:, 0])
-        E_u = 2.0 * R_uuu
-        F_u = R_uuv + R_uvu
-        G_u = 2.0 * R_uvv
-        A_u = np.array([[E_u, F_u], [F_u, G_u]])
-        R_uuu_u = suuu @ su + suu @ suu
-        R_uuv_u = suuu @ sv + suu @ suv
-        R_uvu_u = suuv @ su + suv @ suu
-        R_uvv_u = suuv @ sv + suv @ suv
-        R_vvu_u = suvv @ su + svv @ suu
-        R_vvv_u = suvv @ sv + svv @ suv
-        R_u = np.array([[R_uuu_u, R_uvu_u, R_vvu_u], [R_uuv_u, R_uvv_u, R_vvv_u]])
-        Gamma_u = sp.linalg.lu_solve(luAndPivot, R_u - A_u @ Gamma)
 
-        # . . . And the derivatives of the Christoffel symbols with respect to v
-        E_v = 2.0 * R_uvu
-        F_v = R_uvv + R_vvu
-        G_v = 2.0 * R_vvv
+        # Calculate the first fundamental form and derivatives
+        E = su @ su
+        E_u = 2.0 * suu @ su
+        E_v = 2.0 * suv @ su
+        F = su @ sv
+        F_u = suu @ sv + suv @ su
+        F_v = suv @ sv + svv @ su
+        G = sv @ sv
+        G_u = 2.0 * suv @ sv
+        G_v = 2.0 * svv @ sv
+        A = np.array([[E, F], [F, G]])
+        A_u = np.array([[E_u, F_u], [F_u, G_u]])
         A_v = np.array([[E_v, F_v], [F_v, G_v]])
-        R_uuu_v = suuv @ su + suu @ suv
-        R_uuv_v = suuv @ sv + suu @ svv
-        R_uvu_v = suvv @ su + suv @ suv
-        R_uvv_v = suvv @ sv + suv @ svv
-        R_vvu_v = svvv @ su + svv @ suv
-        R_vvv_v = svvv @ sv + svv @ svv
-        R_v = np.array([[R_uuu_v, R_uvu_v, R_vvu_v], [R_uuv_v, R_uvv_v, R_vvv_v]])
+
+        # Compute right hand side entries
+        R = np.array([[suu @ su, suv @ su, svv @ su], [suu @ sv, suv @ sv, svv @ sv]])
+        R_u = np.array([[suuu @ su + suu @ suu, suuv @ su + suv @ suu, suvv @ su + svv @ suu],
+                        [suuu @ sv + suu @ suv, suuv @ sv + suv @ suv, suvv @ sv + svv @ suv]])
+        R_v = np.array([[suuv @ su + suu @ suv, suvv @ su + suv @ suv, suvv @ su + svv @ suv],
+                        [suuv @ sv + suu @ svv, suvv @ sv + suv @ svv, svvv @ sv + svv @ svv]])
+
+        # Solve for the Christoffel symbols
+        luAndPivot = sp.linalg.lu_factor(A)
+        Gamma = sp.linalg.lu_solve(luAndPivot, R)
+        Gamma_u = sp.linalg.lu_solve(luAndPivot, R_u - A_u @ Gamma)
         Gamma_v = sp.linalg.lu_solve(luAndPivot, R_v - A_v @ Gamma)
+
+        # Compute the right hand side for the ODE
+        rhs = -np.array([Gamma[0, 0] * u[0, 1] ** 2 + 2.0 * Gamma[0, 1] * u[0, 1] * u[1, 1] + Gamma[0, 2] * u[1, 1] ** 2,
+                         Gamma[1, 0] * u[0, 1] ** 2 + 2.0 * Gamma[1, 1] * u[0, 1] * u[1, 1] + Gamma[1, 2] * u[1, 1] ** 2])
 
         # Compute the Jacobian matrix of the right hand side of the ODE
         jacobian = -np.array([[[Gamma_u[0, 0] * u[0, 1] ** 2 + 2.0 * Gamma_u[0, 1] * u[0, 1] * u[1, 1] + Gamma_u[0, 2] * u[1, 1] ** 2,
@@ -707,7 +681,10 @@ def section(xytk):
         onePlusCosTheta = 1.0 + math.cos(theta)
         r0 = 4.0 * startKappa * tangentDistances[0] ** 2 / (3.0 * tangentDistances[1] * crossTangents)
         r1 = 4.0 * endKappa * tangentDistances[1] ** 2 / (3.0 * tangentDistances[0] * crossTangents)
-        rhoCrit = (math.sqrt(1.0 + 4.0 * (r0 + r1)) - 1.0) / (2.0 * (r0 + r1))
+        if r0 != 0.0 or r1 != 0.0:
+            rhoCrit = (math.sqrt(1.0 + 4.0 * (r0 + r1)) - 1.0) / (2.0 * (r0 + r1))
+        else:
+            rhoCrit = 1.0
         rhoCritOfTheta = 3.0 * (math.sqrt(1.0 + 32.0 / (3.0 * onePlusCosTheta)) - 1.0) * onePlusCosTheta / 16.0
 
         # Determine quadratic polynomial
@@ -797,11 +774,7 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
         for knot0, knot1 in zip(currentGuess.knots[0][:-1], currentGuess.knots[0][1:]):
             if knot0 < knot1:
                 for gaussNode in gaussNodes:
-                    alpha = 0.5 * (1.0 - gaussNode)
-                    collocationPoints.append((1.0 - alpha) * knot0 + alpha * knot1)
-                    if abs(gaussNode) > 1.0e-5:
-                        collocationPoints.append(alpha * knot0 + (1.0 - alpha) * knot1)
-        collocationPoints = np.sort(collocationPoints)
+                    collocationPoints.append((1.0 - gaussNode) * knot0 + gaussNode * knot1)
         n = nDep * currentGuess.nCoef[0]
         bestGuess = np.reshape(currentGuess.coefs.T, (n,))
 
@@ -826,7 +799,7 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
             done = linear
             continuation = 1.0
             bestContinuation = 0.0
-            continuationBest = bestGuess
+            inCaseOfEmergency = bestGuess.copy()
             previous = 0.5 * np.finfo(bestGuess[0]).max
             iteration = 0
     
@@ -869,9 +842,10 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
                 update = sp.linalg.solve_banded((bandWidth, bandWidth), collocationMatrix, residuals)
                 bestGuess[nDep * (iFirstPoint + nLeft) : nDep * (iNextPoint + nLeft)] += update[nDep * nLeft : nDep * (iNextPoint - iFirstPoint + nLeft)]
                 updateSize = np.linalg.norm(update)
-                if updateSize > 1.25 * previous and iteration >= 4:
+                if updateSize > 1.25 * previous and iteration >= 4 or \
+                   updateSize > 0.01 and iteration > 50:
                     continuation = 0.5 * (continuation + bestContinuation)
-                    bestGuess = continuationBest
+                    bestGuess = inCaseOfEmergency.copy()
                     if continuation - bestContinuation < 0.01:
                         break
                     previous = 0.5 * np.finfo(bestGuess[0]).max
@@ -886,7 +860,7 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
                 if updateSize < math.sqrt(n) * scale * math.sqrt(np.finfo(update.dtype).eps):
                     if continuation < 1.0:
                         bestContinuation = continuation
-                        continuationBest = bestGuess
+                        inCaseOfEmergency = bestGuess.copy()
                         continuation = min(1.0, 1.2 * continuation)
                         previous = 0.5 * np.finfo(bestGuess[0]).max
                         iteration = 0

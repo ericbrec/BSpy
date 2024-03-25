@@ -1689,7 +1689,7 @@ class Spline(Manifold):
 
     def revolve(self, angle):
         """
-        Rotate the spline to create a surface of revolution (nDep must equal 2, 
+        Revolve the spline to create a surface of revolution (nDep must equal 2, 
         first dimension provides the radius for x and y, second dimension provides the z).
 
         Parameters
