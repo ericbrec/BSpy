@@ -1029,7 +1029,7 @@ def complete_slice(self, slice, solid):
                 if noTouches:
                     break
         else:
-            # No slice boundaries touched the full domain (a hole), so only add full domain if spline is contained in the solid.
+            # No slice boundaries touched the full domain (a hole), so only add full domain if it is contained in the solid.
             if solid.contains_point(self.evaluate(bounds[:,0])):
                 for newBoundary in fullDomain.boundaries:
                     slice.add_boundary(newBoundary)
