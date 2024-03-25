@@ -46,11 +46,11 @@ class Viewer(tk.Tk):
 
     Examples
     --------
-    Creates a Viewer, show some splines, and launches the viewer (blocks on the main loop).
+    Creates a Viewer, lists three splines, drawing (selecting) the third, and launches the viewer (blocks on the main loop).
     >>> viewer = Viewer()
-    >>> viewer.show(spline1)
-    >>> viewer.show(spline2)
-    >>> viewer.show(spline3)
+    >>> viewer.list(spline1)
+    >>> viewer.list(spline2)
+    >>> viewer.draw(spline3)
     >>> viewer.mainloop()
     """
 
@@ -76,7 +76,10 @@ class Viewer(tk.Tk):
         horizontalScroll = tk.Scrollbar(controls, orient=tk.HORIZONTAL)
         horizontalScroll.pack(side=tk.BOTTOM, fill=tk.X)
 
-        self.treeview = Treeview(controls, show='tree')
+        treeFrame = tk.Frame(controls, width=120)
+        treeFrame.pack(side=tk.LEFT, fill=tk.Y)
+        treeFrame.pack_propagate(0)
+        self.treeview = Treeview(treeFrame, show='tree')
         self.treeview.pack(side=tk.LEFT, fill=tk.Y)
         self.treeview.bind('<<TreeviewSelect>>', self._ListSelectionChanged)
         self.bind('<Control-a>', lambda *args: self.treeview.selection_add(self.treeview.get_children()))
