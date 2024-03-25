@@ -732,6 +732,10 @@ def test_evaluate():
             i += 1
     assert maxError <= 2.5 * np.finfo(float).eps
 
+    line = bspy.Spline.line([0.0, 0.0, 0.0], [1.0, 2.0, 3.0])
+    zeroValue = line.derivative([2], [0.5])
+    assert np.linalg.norm(zeroValue) == 0.0
+
 def test_extrapolate():
     maxError = 0.0
     spline = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0.2, 0.3, 0.4, 0.5, 0.5, 1, 1], float)], 
