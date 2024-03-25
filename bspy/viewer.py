@@ -46,11 +46,11 @@ class Viewer(tk.Tk):
 
     Examples
     --------
-    Creates a Viewer, show some splines, and launches the viewer (blocks on the main loop).
+    Creates a Viewer, lists three splines, drawing (selecting) the third, and launches the viewer (blocks on the main loop).
     >>> viewer = Viewer()
-    >>> viewer.show(spline1)
-    >>> viewer.show(spline2)
-    >>> viewer.show(spline3)
+    >>> viewer.list(spline1)
+    >>> viewer.list(spline2)
+    >>> viewer.draw(spline3)
     >>> viewer.mainloop()
     """
 
@@ -76,7 +76,10 @@ class Viewer(tk.Tk):
         horizontalScroll = tk.Scrollbar(controls, orient=tk.HORIZONTAL)
         horizontalScroll.pack(side=tk.BOTTOM, fill=tk.X)
 
-        self.treeview = Treeview(controls, show='tree')
+        treeFrame = tk.Frame(controls, width=120)
+        treeFrame.pack(side=tk.LEFT, fill=tk.Y)
+        treeFrame.pack_propagate(0)
+        self.treeview = Treeview(treeFrame, show='tree')
         self.treeview.pack(side=tk.LEFT, fill=tk.Y)
         self.treeview.bind('<<TreeviewSelect>>', self._ListSelectionChanged)
         self.bind('<Control-a>', lambda *args: self.treeview.selection_add(self.treeview.get_children()))
@@ -192,13 +195,13 @@ class Viewer(tk.Tk):
     def list_solid(self, solid, name="Solid", fillColor=None, lineColor=None, options=None, inherit=True, draw=False):
         solid.isDrawn = draw
         solid.isSelected = draw
-        iid = self.treeview.insert('', 'end', text=name, open=True)
+        iid = self.treeview.insert('', 'end', text=name, open=False)
         self.splineList[iid] = solid
         self.solidList.append(solid)
         if draw:
             self.treeview.selection_add(iid)
         for i, surface in enumerate(solid.boundaries):
-            self.list_boundary(surface, f"{name} boundary {i+1}", fillColor, lineColor, options, inherit, draw, iid)
+            self.list_boundary(surface, f"{name} boundary {i+1}", fillColor, lineColor, options, inherit, False, iid)
 
     def draw_solid(self, solid, name="Solid", fillColor=None, lineColor=None, options=None, inherit=True):
         self.list_solid(solid, name, fillColor, lineColor, options, inherit, draw=True)
@@ -266,9 +269,6 @@ class Viewer(tk.Tk):
     def update(self):
         """Update the spline draw list, set the default view, reset the bounds, and refresh the frame."""
         self.splineDrawList = []
-        for solid in self.solidList:
-            solid.isSelected = False
-
         gotOne = False
         for item in self.treeview.selection():
             spline = self.splineList[item]
@@ -284,14 +284,18 @@ class Viewer(tk.Tk):
                     gotOne = True
                 self.splineDrawList.append(spline)
             elif isinstance(spline, Solid):
-                spline.isSelected = True
-                if not spline.isDrawn:
-                    spline.isDrawn = True
-                    self.treeview.selection_add(self.treeview.get_children(item))
-
-        for solid in self.solidList:
-            if not solid.isSelected:
-                solid.isDrawn = False
+                for subitem in self.treeview.get_children(item):
+                    spline = self.splineList[subitem]
+                    coefs = spline.cache["coefs32"].T[:3]
+                    coefsAxis = tuple(range(1, spline.nInd + 1))
+                    if gotOne:
+                        splineMin = np.minimum(splineMin, coefs.min(axis=coefsAxis))
+                        splineMax = np.maximum(splineMax, coefs.max(axis=coefsAxis))
+                    else:
+                        splineMin = coefs.min(axis=coefsAxis)
+                        splineMax = coefs.max(axis=coefsAxis)
+                        gotOne = True
+                    self.splineDrawList.append(spline)
 
         if gotOne:
             newRadius = 0.5 * np.max(splineMax - splineMin)
