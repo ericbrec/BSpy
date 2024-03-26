@@ -414,26 +414,51 @@ def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-6):
         suvv = surface.derivative([1, 2], u[:, 0])
         svvv = surface.derivative([0, 3], u[:, 0])
 
+        # Calculate inner products
+        su_su = su @ su
+        su_sv = su @ sv
+        sv_sv = sv @ sv
+        suu_su = suu @ su
+        suv_su = suv @ su
+        svv_su = svv @ su
+        suu_sv = suu @ sv
+        suv_sv = suv @ sv
+        svv_sv = svv @ sv
+        suu_suu = suu @ suu
+        suv_suu = suv @ suu
+        svv_suu = svv @ suu
+        suv_suv = suv @ suv
+        svv_suv = svv @ suv
+        svv_svv = svv @ svv
+        suuu_su = suuu @ su
+        suuu_sv = suuu @ sv
+        suuv_su = suuv @ su
+        suuv_sv = suuv @ sv
+        suvv_su = suvv @ su
+        suvv_sv = suvv @ sv
+        svvv_su = svvv @ su
+        svvv_sv = svvv @ sv
+
         # Calculate the first fundamental form and derivatives
-        E = su @ su
-        E_u = 2.0 * suu @ su
-        E_v = 2.0 * suv @ su
-        F = su @ sv
-        F_u = suu @ sv + suv @ su
-        F_v = suv @ sv + svv @ su
-        G = sv @ sv
-        G_u = 2.0 * suv @ sv
-        G_v = 2.0 * svv @ sv
+        E = su_su
+        E_u = 2.0 * suu_su
+        E_v = 2.0 * suv_su
+        F = su_sv
+        F_u = suu_sv + suv_su
+        F_v = suv_sv + svv_su
+        G = sv_sv
+        G_u = 2.0 * suv_sv
+        G_v = 2.0 * svv_sv
         A = np.array([[E, F], [F, G]])
         A_u = np.array([[E_u, F_u], [F_u, G_u]])
         A_v = np.array([[E_v, F_v], [F_v, G_v]])
 
         # Compute right hand side entries
-        R = np.array([[suu @ su, suv @ su, svv @ su], [suu @ sv, suv @ sv, svv @ sv]])
-        R_u = np.array([[suuu @ su + suu @ suu, suuv @ su + suv @ suu, suvv @ su + svv @ suu],
-                        [suuu @ sv + suu @ suv, suuv @ sv + suv @ suv, suvv @ sv + svv @ suv]])
-        R_v = np.array([[suuv @ su + suu @ suv, suvv @ su + suv @ suv, suvv @ su + svv @ suv],
-                        [suuv @ sv + suu @ svv, suvv @ sv + suv @ svv, svvv @ sv + svv @ svv]])
+        R = np.array([[suu_su, suv_su, svv_su], [suu_sv, suv_sv, svv_sv]])
+        R_u = np.array([[suuu_su + suu_suu, suuv_su + suv_suu, suvv_su + svv_suu],
+                        [suuu_sv + suv_suu, suuv_sv + suv_suv, suvv_sv + svv_suv]])
+        R_v = np.array([[suuv_su + suv_suu, suvv_su + suv_suv, svvv_su + svv_suv],
+                        [suuv_sv + svv_suu, suvv_sv + svv_suv, svvv_sv + svv_svv]])
 
         # Solve for the Christoffel symbols
         luAndPivot = sp.linalg.lu_factor(A)
