@@ -989,6 +989,27 @@ class Spline(Manifold):
         """
         return bspy._spline_fitting.four_sided_patch(bottom, right, top, left, surfParam)
 
+    @staticmethod
+    def from_dict(dictionary):
+        """
+        Create a `Spline` from a data in a `dict`.
+
+        Parameters
+        ----------
+        dictionary : `dict`
+            The `dict` containing `Spline` data.
+
+        Returns
+        -------
+        spline : `Spline`
+
+        See Also
+        --------
+        `to_dict` : Return a `dict` with `Spline` data.
+        """
+        return Spline(dictionary["nInd"], dictionary["nDep"], dictionary["order"], dictionary["nCoef"],
+                [np.array(knots) for knots in dictionary["knots"]], np.array(dictionary["coefs"]), dictionary["metadata"])
+
     def full_domain(self):
         """
         Return a solid that represents the full domain of the spline.
@@ -1411,8 +1432,7 @@ class Spline(Manifold):
         if isinstance(splineData, dict):
             splineData = [splineData]
         for splineDict in splineData:
-            splines.append(Spline(splineDict["nInd"], splineDict["nDep"], splineDict["order"], splineDict["nCoef"],
-                [np.array(knots) for knots in splineDict["knots"]], np.array(splineDict["coefs"]), splineDict["metadata"]))
+            splines.append(Spline.from_dict(splineDict))
         return splines        
 
     def multiply(self, other, indMap = None, productType = 'S'):
@@ -1777,15 +1797,7 @@ class Spline(Manifold):
                 if isinstance(obj, np.ndarray):
                     return obj.tolist()
                 if isinstance(obj, Spline):
-                    return {
-                        "nInd" : obj.nInd,
-                        "nDep" : obj.nDep,
-                        "order" : obj.order,
-                        "nCoef" : obj.nCoef,
-                        "knots" : obj.knots,
-                        "coefs" : obj.coefs,
-                        "metadata" : obj.metadata
-                    }
+                    return obj.to_dict()
                 return super().default(obj)
 
         with open(fileName, 'w', encoding='utf-8') as file:
@@ -1985,6 +1997,21 @@ class Spline(Manifold):
             The nDep x nInd matrix of tangent vectors (tangents are the columns).
         """
         return bspy._spline_evaluation.tangent_space(self, uvw)
+
+    def to_dict(self):
+        """
+        Return a `dict` with `Spline` data.
+
+        Returns
+        -------
+        dictionary : `dict`
+
+        See Also
+        --------
+        `from_dict` : Create a `Spline` from a data in a `dict`.
+        """
+        return {"nInd" : self.nInd, "nDep" : self.nDep, "order" : self.order, "nCoef" : self.nCoef,
+            "knots" : self.knots, "coefs" : self.coefs, "metadata" : self.metadata}
 
     @staticmethod
     def torus(innerRadius, outerRadius, tolerance = None):
