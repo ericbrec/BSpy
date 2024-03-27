@@ -166,8 +166,8 @@ class Viewer(tk.Tk):
             return
         vertices = self.frame.tessellate2DSolid(boundary.domain)
         if isinstance(boundary.manifold, Hyperplane):
-            uvMin = vertices.min(axis=0)
-            uvMax = vertices.max(axis=0)
+            uvMin = boundary.domain.bounds[:,0]
+            uvMax = boundary.domain.bounds[:,1]
             xyzMinMin = boundary.manifold.evaluate(uvMin)
             xyzMinMax = boundary.manifold.evaluate((uvMin[0], uvMax[1]))
             xyzMaxMin = boundary.manifold.evaluate((uvMax[0], uvMin[1]))
