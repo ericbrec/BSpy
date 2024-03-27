@@ -36,6 +36,40 @@ class Hyperplane(Manifold):
     def __repr__(self):
         return "Hyperplane({0}, {1}, {2})".format(self._normal, self._point, self._tangentSpace)
 
+    def complete_slice(self, slice, solid):
+        """
+        Add any missing inherent (implicit) boundaries of this manifold's domain to the given slice of the 
+        given solid that are needed to make the slice valid and complete.
+
+        Parameters
+        ----------
+        slice : `Solid`
+            The slice of the given solid formed by the manifold. The slice may be incomplete, missing some of the 
+            manifold's inherent domain boundaries. Its dimension must match `self.domain_dimension()`.
+
+        solid : `Solid`
+            The solid being sliced by the manifold. Its dimension must match `self.range_dimension()`.
+
+        Parameters
+        ----------
+        domain : `Solid`
+            A domain for this manifold that may be incomplete, missing some of the manifold's inherent domain boundaries. 
+            Its dimension must match `self.domain_dimension()`.
+
+        See Also
+        --------
+        `Solid.slice` : Slice the solid by a manifold.
+
+        Notes
+        -----
+        Since hyperplanes have no inherent domain boundaries, this operation only tests for 
+        point containment for zero-dimension hyperplanes (points).
+        """
+        assert self.domain_dimension() == slice.dimension
+        assert self.range_dimension() == solid.dimension
+        if slice.dimension == 0:
+            slice.containsInfinity = solid.contains_point(self._point)
+
     def copy(self):
         """
         Copy the hyperplane.
@@ -46,6 +80,74 @@ class Hyperplane(Manifold):
         """
         return Hyperplane(self._normal, self._point, self._tangentSpace)
 
+    @staticmethod
+    def create_axis_aligned(dimension, axis, offset, flipNormal=False):
+        """
+        Create an axis-aligned hyperplane.
+
+        Parameters
+        ----------
+        dimension : `int`
+            The dimension of the hyperplane.
+
+        axis : `int`
+            The number of the axis (0 for x, 1 for y, ...).
+        
+        offset : `float`
+            The offset from zero along the axis of a point on the hyperplane. 
+        
+        flipNormal : `bool`, optional
+            A Boolean indicating that the normal should point toward in the negative direction along the axis. 
+            Default is False, meaning the normal points in the positive direction along the axis.
+
+        Returns
+        -------
+        hyperplane : `Hyperplane`
+            The axis-aligned hyperplane.
+        """
+        assert dimension > 0
+        diagonal = np.identity(dimension)
+        sign = -1.0 if flipNormal else 1.0
+        normal = sign * diagonal[:,axis]
+        point = offset * normal
+        if dimension > 1:
+            tangentSpace = np.delete(diagonal, axis, axis=1)
+        else:
+            tangentSpace = np.array([0.0])
+        
+        return Hyperplane(normal, point, tangentSpace)
+
+    @staticmethod
+    def create_hypercube(bounds):
+        """
+        Create a solid hypercube.
+
+        Parameters
+        ----------
+        bounds : array-like
+            An array with shape (dimension, 2) of lower and upper and lower bounds for the hypercube. 
+
+        Returns
+        -------
+        hypercube : `Solid`
+            The hypercube.
+        """
+        bounds = np.array(bounds)
+        if len(bounds.shape) != 2 or bounds.shape[1] != 2: raise ValueError("bounds must have shape (dimension, 2)")
+        dimension = bounds.shape[0]
+        solid = Solid(dimension, False)
+        for i in range(dimension):
+            if dimension > 1:
+                domain = Hyperplane.create_hypercube(np.delete(bounds, i, axis=0))
+            else:
+                domain = Solid(0, True)
+            hyperplane = Hyperplane.create_axis_aligned(dimension, i, -bounds[i][0], True)
+            solid.add_boundary(Boundary(hyperplane, domain))
+            hyperplane = Hyperplane.create_axis_aligned(dimension, i, bounds[i][1], False)
+            solid.add_boundary(Boundary(hyperplane, domain))
+
+        return solid
+
     def domain_dimension(self):
         """
         Return the domain dimension.
@@ -55,65 +157,6 @@ class Hyperplane(Manifold):
         dimension : `int`
         """
         return len(self._normal) - 1
-
-    def range_dimension(self):
-        """
-        Return the range dimension.
-
-        Returns
-        -------
-        dimension : `int`
-        """
-        return len(self._normal)
-
-    def normal(self, domainPoint, normalize=True, indices=None):
-        """
-        Return the normal.
-
-        Parameters
-        ----------
-        domainPoint : `numpy.array`
-            The 1D array at which to evaluate the normal.
-        
-        normalize : `boolean`, optional
-            If True the returned normal will have unit length (the default). Otherwise, the normal's length will
-            be the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).
-        
-        indices : `iterable`, optional
-            An iterable of normal indices to calculate. For example, `indices=(0, 3)` will return a vector of length 2
-            with the first and fourth values of the normal. If `None`, all normal values are returned (the default).
-
-        Returns
-        -------
-        normal : `numpy.array`
-        """
-        if normalize:
-            normal = self._normal
-        else:
-            # Compute and cache cofactor normal on demand.
-            if not hasattr(self, '_cofactorNormal'):
-                dimension = self.range_dimension()
-                if dimension > 1:
-                    minor = np.zeros((dimension-1, dimension-1))
-                    self._cofactorNormal = np.array(self._normal) # We change it, so make a copy.
-                    sign = 1.0
-                    for i in range(dimension):
-                        if i > 0:
-                            minor[0:i, :] = self._tangentSpace[0:i, :]
-                        if i < dimension - 1:
-                            minor[i:, :] = self._tangentSpace[i+1:, :]
-                        self._cofactorNormal[i] = sign * np.linalg.det(minor)
-                        sign *= -1.0
-            
-                    # Ensure cofactorNormal points in the same direction as normal.
-                    if np.dot(self._cofactorNormal, self._normal) < 0.0:
-                        self._cofactorNormal = -self._cofactorNormal
-                else:
-                    self._cofactorNormal = self._normal
-            
-            normal = self._cofactorNormal
-        
-        return normal if indices is None else normal[(indices,)]
 
     def evaluate(self, domainPoint):
         """
@@ -130,74 +173,6 @@ class Hyperplane(Manifold):
         """
         return np.dot(self._tangentSpace, domainPoint) + self._point
 
-    def tangent_space(self, domainPoint):
-        """
-        Return the tangent space.
-
-        Parameters
-        ----------
-        domainPoint : `numpy.array`
-            The 1D array at which to evaluate the tangent space.
-
-        Returns
-        -------
-        tangentSpace : `numpy.array`
-        """
-        return self._tangentSpace
-
-    def transform(self, matrix, matrixInverseTranspose = None):
-        """
-        Transform the range of the hyperplane.
-
-        Parameters
-        ----------
-        matrix : `numpy.array`
-            A square matrix transformation.
-
-        matrixInverseTranspose : `numpy.array`, optional
-            The inverse transpose of matrix (computed if not provided).
-
-        Returns
-        -------
-        hyperplane : `Hyperplane`
-            The transformed hyperplane.
-
-        See Also
-        --------
-        `Solid.transform` : Transform the range of the solid.
-        """
-        if self.range_dimension() > 1:
-            if matrixInverseTranspose is None:
-                matrixInverseTranspose = np.transpose(np.linalg.inv(matrix))
-
-            normal = matrixInverseTranspose @ self._normal
-            normal = normal / np.linalg.norm(normal)
-            hyperplane = Hyperplane(normal, matrix @ self._point, matrix @ self._tangentSpace)
-        else:
-            hyperplane = Hyperplane(self._normal, matrix @ self._point, self._tangentSpace)
-    
-        return hyperplane
-    
-    def translate(self, delta):
-        """
-        translate the range of the hyperplane.
-
-        Parameters
-        ----------
-        delta : `numpy.array`
-            A 1D array translation.
-
-        Returns
-        -------
-        hyperplane : `Hyperplane`
-            The translated hyperplane.
-
-        See Also
-        --------
-        `Solid.translate` : translate the range of the solid.
-        """
-        return Hyperplane(self._normal, self._point + delta, self._tangentSpace)
-
     def flip_normal(self):
         """
         Flip the direction of the normal.
@@ -212,6 +187,41 @@ class Hyperplane(Manifold):
         `Solid.complement` : Return the complement of the solid: whatever was inside is outside and vice-versa.
         """
         return Hyperplane(-self._normal, self._point, self._tangentSpace)
+
+    @staticmethod
+    def from_dict(dictionary):
+        """
+        Create a `Hyperplane` from a data in a `dict`.
+
+        Parameters
+        ----------
+        dictionary : `dict`
+            The `dict` containing `Hyperplane` data.
+
+        Returns
+        -------
+        hyperplane : `hyperplane`
+
+        See Also
+        --------
+        `to_dict` : Return a `dict` with `Hyperplane` data.
+        """
+        return Hyperplane(dictionary["normal"], dictionary["point"], dictionary["tangentSpace"])
+
+    def full_domain(self):
+        """
+        Return a solid that represents the full domain of the hyperplane.
+
+        Returns
+        -------
+        domain : `Solid`
+            The full (untrimmed) domain of the hyperplane.
+
+        See Also
+        --------
+        `Boundary` : A portion of the boundary of a solid.
+        """
+        return Solid(self.domain_dimension(), True)
 
     def intersect(self, other):
         """
@@ -346,122 +356,54 @@ class Hyperplane(Manifold):
 
         return intersections
 
-    def complete_slice(self, slice, solid):
+    def normal(self, domainPoint, normalize=True, indices=None):
         """
-        Add any missing inherent (implicit) boundaries of this manifold's domain to the given slice of the 
-        given solid that are needed to make the slice valid and complete.
+        Return the normal.
 
         Parameters
         ----------
-        slice : `Solid`
-            The slice of the given solid formed by the manifold. The slice may be incomplete, missing some of the 
-            manifold's inherent domain boundaries. Its dimension must match `self.domain_dimension()`.
-
-        solid : `Solid`
-            The solid being sliced by the manifold. Its dimension must match `self.range_dimension()`.
-
-        Parameters
-        ----------
-        domain : `Solid`
-            A domain for this manifold that may be incomplete, missing some of the manifold's inherent domain boundaries. 
-            Its dimension must match `self.domain_dimension()`.
-
-        See Also
-        --------
-        `Solid.slice` : Slice the solid by a manifold.
-
-        Notes
-        -----
-        Since hyperplanes have no inherent domain boundaries, this operation only tests for 
-        point containment for zero-dimension hyperplanes (points).
-        """
-        assert self.domain_dimension() == slice.dimension
-        assert self.range_dimension() == solid.dimension
-        if slice.dimension == 0:
-            slice.containsInfinity = solid.contains_point(self._point)
-
-    @staticmethod
-    def create_axis_aligned(dimension, axis, offset, flipNormal=False):
-        """
-        Create an axis-aligned hyperplane.
-
-        Parameters
-        ----------
-        dimension : `int`
-            The dimension of the hyperplane.
-
-        axis : `int`
-            The number of the axis (0 for x, 1 for y, ...).
+        domainPoint : `numpy.array`
+            The 1D array at which to evaluate the normal.
         
-        offset : `float`
-            The offset from zero along the axis of a point on the hyperplane. 
+        normalize : `boolean`, optional
+            If True the returned normal will have unit length (the default). Otherwise, the normal's length will
+            be the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).
         
-        flipNormal : `bool`, optional
-            A Boolean indicating that the normal should point toward in the negative direction along the axis. 
-            Default is False, meaning the normal points in the positive direction along the axis.
+        indices : `iterable`, optional
+            An iterable of normal indices to calculate. For example, `indices=(0, 3)` will return a vector of length 2
+            with the first and fourth values of the normal. If `None`, all normal values are returned (the default).
 
         Returns
         -------
-        hyperplane : `Hyperplane`
-            The axis-aligned hyperplane.
+        normal : `numpy.array`
         """
-        assert dimension > 0
-        diagonal = np.identity(dimension)
-        sign = -1.0 if flipNormal else 1.0
-        normal = sign * diagonal[:,axis]
-        point = offset * normal
-        if dimension > 1:
-            tangentSpace = np.delete(diagonal, axis, axis=1)
+        if normalize:
+            normal = self._normal
         else:
-            tangentSpace = np.array([0.0])
+            # Compute and cache cofactor normal on demand.
+            if not hasattr(self, '_cofactorNormal'):
+                dimension = self.range_dimension()
+                if dimension > 1:
+                    minor = np.zeros((dimension-1, dimension-1))
+                    self._cofactorNormal = np.array(self._normal) # We change it, so make a copy.
+                    sign = 1.0
+                    for i in range(dimension):
+                        if i > 0:
+                            minor[0:i, :] = self._tangentSpace[0:i, :]
+                        if i < dimension - 1:
+                            minor[i:, :] = self._tangentSpace[i+1:, :]
+                        self._cofactorNormal[i] = sign * np.linalg.det(minor)
+                        sign *= -1.0
+            
+                    # Ensure cofactorNormal points in the same direction as normal.
+                    if np.dot(self._cofactorNormal, self._normal) < 0.0:
+                        self._cofactorNormal = -self._cofactorNormal
+                else:
+                    self._cofactorNormal = self._normal
+            
+            normal = self._cofactorNormal
         
-        return Hyperplane(normal, point, tangentSpace)
-
-    @staticmethod
-    def create_hypercube(bounds):
-        """
-        Create a solid hypercube.
-
-        Parameters
-        ----------
-        bounds : array-like
-            An array with shape (dimension, 2) of lower and upper and lower bounds for the hypercube. 
-
-        Returns
-        -------
-        hypercube : `Solid`
-            The hypercube.
-        """
-        bounds = np.array(bounds)
-        if len(bounds.shape) != 2 or bounds.shape[1] != 2: raise ValueError("bounds must have shape (dimension, 2)")
-        dimension = bounds.shape[0]
-        solid = Solid(dimension, False)
-        for i in range(dimension):
-            if dimension > 1:
-                domain = Hyperplane.create_hypercube(np.delete(bounds, i, axis=0))
-            else:
-                domain = Solid(0, True)
-            hyperplane = Hyperplane.create_axis_aligned(dimension, i, -bounds[i][0], True)
-            solid.add_boundary(Boundary(hyperplane, domain))
-            hyperplane = Hyperplane.create_axis_aligned(dimension, i, bounds[i][1], False)
-            solid.add_boundary(Boundary(hyperplane, domain))
-
-        return solid
-
-    def full_domain(self):
-        """
-        Return a solid that represents the full domain of the hyperplane.
-
-        Returns
-        -------
-        domain : `Solid`
-            The full (untrimmed) domain of the hyperplane.
-
-        See Also
-        --------
-        `Boundary` : A portion of the boundary of a solid.
-        """
-        return Solid(self.domain_dimension(), True)
+        return normal if indices is None else normal[(indices,)]
 
     def range_bounds(self):
         """
@@ -474,6 +416,98 @@ class Hyperplane(Manifold):
             If the hyperplane has an unbounded range (domain dimension > 0), `None` is returned.
         """
         return None if self.domain_dimension() > 0 else np.array(((self._point[0], self._point[0]),))
+
+    def range_dimension(self):
+        """
+        Return the range dimension.
+
+        Returns
+        -------
+        dimension : `int`
+        """
+        return len(self._normal)
+
+    def tangent_space(self, domainPoint):
+        """
+        Return the tangent space.
+
+        Parameters
+        ----------
+        domainPoint : `numpy.array`
+            The 1D array at which to evaluate the tangent space.
+
+        Returns
+        -------
+        tangentSpace : `numpy.array`
+        """
+        return self._tangentSpace
+
+    def to_dict(self):
+        """
+        Return a `dict` with `Hyperplane` data.
+
+        Returns
+        -------
+        dictionary : `dict`
+
+        See Also
+        --------
+        `from_dict` : Create a `Hyperplane` from a data in a `dict`.
+        """
+        return {"normal" : self._normal, "point" : self._point, "tangentSpace" : self._tangentSpace}
+
+    def transform(self, matrix, matrixInverseTranspose = None):
+        """
+        Transform the range of the hyperplane.
+
+        Parameters
+        ----------
+        matrix : `numpy.array`
+            A square matrix transformation.
+
+        matrixInverseTranspose : `numpy.array`, optional
+            The inverse transpose of matrix (computed if not provided).
+
+        Returns
+        -------
+        hyperplane : `Hyperplane`
+            The transformed hyperplane.
+
+        See Also
+        --------
+        `Solid.transform` : Transform the range of the solid.
+        """
+        if self.range_dimension() > 1:
+            if matrixInverseTranspose is None:
+                matrixInverseTranspose = np.transpose(np.linalg.inv(matrix))
+
+            normal = matrixInverseTranspose @ self._normal
+            normal = normal / np.linalg.norm(normal)
+            hyperplane = Hyperplane(normal, matrix @ self._point, matrix @ self._tangentSpace)
+        else:
+            hyperplane = Hyperplane(self._normal, matrix @ self._point, self._tangentSpace)
+    
+        return hyperplane
+    
+    def translate(self, delta):
+        """
+        translate the range of the hyperplane.
+
+        Parameters
+        ----------
+        delta : `numpy.array`
+            A 1D array translation.
+
+        Returns
+        -------
+        hyperplane : `Hyperplane`
+            The translated hyperplane.
+
+        See Also
+        --------
+        `Solid.translate` : translate the range of the solid.
+        """
+        return Hyperplane(self._normal, self._point + delta, self._tangentSpace)
 
     def trimmed_range_bounds(self, domainBounds):
         """
