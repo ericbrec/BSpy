@@ -307,8 +307,8 @@ class Viewer(tk.Tk):
             atDefaultEye = np.allclose(self.frame.eye, self.frame.defaultEye)
             center = 0.5 * (splineMax + splineMin)
             self.frame.SetDefaultView(center + (0.0, 0.0, 3.0 * newRadius), center, (0.0, 1.0, 0.0))
+            self.frame.ResetBounds()
             if atDefaultEye:
-                self.frame.ResetBounds()
                 self.frame.ResetView()
         else:
             self.splineRadius = 0.0
