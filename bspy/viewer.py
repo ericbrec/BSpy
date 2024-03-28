@@ -185,8 +185,8 @@ class Viewer(tk.Tk):
             spline.metadata["lineColor"] = lineColor
         if options is not None:
             spline.metadata["options"] = options
-        spline.metadata["trim"] = vertices
         self.frame.make_drawable(spline)
+        spline.cache["trim"] = vertices
         self.list(spline, spline.metadata["Name"], draw, parentIID)
 
     def draw_boundary(self, boundary, name="Boundary", fillColor=None, lineColor=None, options=None, inherit=True):
