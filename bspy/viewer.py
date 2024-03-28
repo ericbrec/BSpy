@@ -166,8 +166,8 @@ class Viewer(tk.Tk):
             return
         vertices = self.frame.tessellate2DSolid(boundary.domain)
         if isinstance(boundary.manifold, Hyperplane):
-            uvMin = vertices.min(axis=0)
-            uvMax = vertices.max(axis=0)
+            uvMin = boundary.domain.bounds[:,0]
+            uvMax = boundary.domain.bounds[:,1]
             xyzMinMin = boundary.manifold.evaluate(uvMin)
             xyzMinMax = boundary.manifold.evaluate((uvMin[0], uvMax[1]))
             xyzMaxMin = boundary.manifold.evaluate((uvMax[0], uvMin[1]))
@@ -185,8 +185,8 @@ class Viewer(tk.Tk):
             spline.metadata["lineColor"] = lineColor
         if options is not None:
             spline.metadata["options"] = options
-        spline.metadata["trim"] = vertices
         self.frame.make_drawable(spline)
+        spline.cache["trim"] = vertices
         self.list(spline, spline.metadata["Name"], draw, parentIID)
 
     def draw_boundary(self, boundary, name="Boundary", fillColor=None, lineColor=None, options=None, inherit=True):
@@ -207,20 +207,24 @@ class Viewer(tk.Tk):
         self.list_solid(solid, name, fillColor, lineColor, options, inherit, draw=True)
 
     def save_splines(self):
-        if self.splineDrawList:
-            initialName = self.splineDrawList[0].metadata.get("Name", "spline") + ".json"
+        splines = [self.splineList[item] for item in self.treeview.selection()]
+        if splines:
+            initialName = self.treeview.item(self.treeview.selection()[0])["text"] + ".json"
             fileName = filedialog.asksaveasfilename(title="Save splines", initialfile=initialName,
                 defaultextension=".json", filetypes=(('Json files', '*.json'),('All files', '*.*')))
             if fileName:
-                self.splineDrawList[0].save(fileName, *self.splineDrawList[1:])
+                Solid.save(fileName, *splines)
 
     def load_splines(self):
         fileName = filedialog.askopenfilename(title="Load splines", 
             defaultextension=".json", filetypes=(('Json files', '*.json'),('All files', '*.*')))
         if fileName:
-            splines = Spline.load(fileName)
+            splines = Solid.load(fileName)
             for spline in splines:
-                self.list(spline)
+                if isinstance(spline, Spline):
+                    self.list(spline)
+                else:
+                    self.list_solid(spline)
     
     def erase_all(self):
         """Stop drawing all splines. Splines remain in the treeview."""
@@ -303,8 +307,8 @@ class Viewer(tk.Tk):
             atDefaultEye = np.allclose(self.frame.eye, self.frame.defaultEye)
             center = 0.5 * (splineMax + splineMin)
             self.frame.SetDefaultView(center + (0.0, 0.0, 3.0 * newRadius), center, (0.0, 1.0, 0.0))
+            self.frame.ResetBounds()
             if atDefaultEye:
-                self.frame.ResetBounds()
                 self.frame.ResetView()
         else:
             self.splineRadius = 0.0

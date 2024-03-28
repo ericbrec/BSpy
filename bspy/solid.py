@@ -1,4 +1,5 @@
 import numpy as np
+import json
 import scipy.integrate as integrate
 from bspy.manifold import Manifold
 
@@ -76,26 +77,23 @@ class Solid:
         self.boundaries = []
         self.bounds = None
 
-    def __repr__(self):
-        return "Solid({0}, {1})".format(self.dimension, self.containsInfinity)
+    def __add__(self, other):
+        return self.union(other)
 
     def __bool__(self):
         return self.containsInfinity or len(self.boundaries) > 0
 
-    def is_empty(self):
-        """
-        Test if the solid is empty.
+    def __mul__(self, other):
+        return self.intersection(other)
 
-        Returns
-        -------
-        isEmpty : `bool`
-            `True` if the solid is empty, `False` otherwise.
+    def __neg__(self):
+        return self.complement()
 
-        Notes
-        -----
-        Casting the solid to `bool` returns not `is_empty`.
-        """
-        return not self
+    def __repr__(self):
+        return "Solid({0}, {1})".format(self.dimension, self.containsInfinity)
+
+    def __sub__(self, other):
+        return self.difference(other)
     
     def add_boundary(self, boundary):
         """
@@ -121,127 +119,6 @@ class Solid:
         else:
             self.bounds[:, 0] = np.minimum(self.bounds[:, 0], boundary.bounds[:, 0])
             self.bounds[:, 1] = np.maximum(self.bounds[:, 1], boundary.bounds[:, 1])
-
-    @staticmethod
-    def disjoint_bounds(bounds1, bounds2):
-        """
-        Returns whether or not bounds1 and bounds2 are disjoint.
-
-        Parameters
-        ----------
-        bounds1 : array-like or `None`
-            An array with shape (dimension, 2) of lower and upper and lower bounds on each dimension. 
-            If bounds1 is `None` then then there are no bounds.
-
-        bounds2 : array-like or `None`
-            An array with shape (dimension, 2) of lower and upper and lower bounds on each dimension. 
-            If bounds2 is `None` then then there are no bounds.
-
-        Returns
-        -------
-        disjoint : `bool`
-            Value is true if the bounds are disjoint. Value is false if either bounds is `None`.
-        """
-        if bounds1 is None or bounds2 is None:
-            return False
-        else:
-            return np.min(np.diff(bounds1).reshape(-1) + np.diff(bounds2).reshape(-1) -
-                np.abs(np.sum(bounds1, axis=1) - np.sum(bounds2, axis=1))) < -Manifold.minSeparation
-
-    @staticmethod
-    def point_outside_bounds(point, bounds):
-        """
-        Returns whether or not point is outside bounds.
-
-        Parameters
-        ----------
-        point : array-like
-            A point whose dimension matches the bounds.
-
-        bounds : array-like or `None`
-            An array with shape (dimension, 2) of lower and upper and lower bounds on each dimension. 
-            If bounds is `None` then then there are no bounds.
-
-        Returns
-        -------
-        within : `bool`
-            Value is true if the point is outside bounds or bounds is `None`.
-        """
-        if bounds is None:
-            return True
-        else:
-            return np.min(np.diff(bounds).reshape(-1) - np.abs(np.sum(bounds, axis=1) + -2.0 * point)) < -Manifold.minSeparation
-
-    def complement(self):
-        """
-        Return the complement of the solid: whatever was inside is outside and vice-versa.
-
-        Returns
-        -------
-        solid : `Solid`
-            The complement of the solid.
-
-        See Also
-        --------
-        `intersection` : Intersect two solids.
-        `union` : Union two solids.
-        `difference` : Subtract one solid from another. 
-        """
-        solid = Solid(self.dimension, not self.containsInfinity)
-        for boundary in self.boundaries:
-            solid.add_boundary(Boundary(boundary.manifold.flip_normal(), boundary.domain))
-        return solid
-
-    def __neg__(self):
-        return self.complement()
-
-    def transform(self, matrix, matrixInverseTranspose = None):
-        """
-        Transform the range of the solid.
-
-        Parameters
-        ----------
-        matrix : `numpy.array`
-            A square matrix transformation.
-
-        matrixInverseTranspose : `numpy.array`, optional
-            The inverse transpose of matrix (computed if not provided).
-
-        Returns
-        -------
-        solid : `Solid`
-            The transformed solid.
-        """
-        assert np.shape(matrix) == (self.dimension, self.dimension)
-
-        if matrixInverseTranspose is None:
-            matrixInverseTranspose = np.transpose(np.linalg.inv(matrix))
-
-        solid = Solid(self.dimension, self.containsInfinity)
-        for boundary in self.boundaries:
-            solid.add_boundary(Boundary(boundary.manifold.transform(matrix, matrixInverseTranspose), boundary.domain))
-        return solid
-
-    def translate(self, delta):
-        """
-        Translate the range of the solid.
-
-        Parameters
-        ----------
-        delta : `numpy.array`
-            A 1D array translation.
-
-        Returns
-        -------
-        solid : `Solid`
-            The translated solid.
-        """
-        assert len(delta) == self.dimension
-
-        solid = Solid(self.dimension, self.containsInfinity)
-        for boundary in self.boundaries:
-            solid.add_boundary(Boundary(boundary.manifold.translate(delta), boundary.domain))
-        return solid
 
     def any_point(self):
         """
@@ -273,229 +150,25 @@ class Solid:
 
         return point
 
-    def volume_integral(self, f, args=(), epsabs=None, epsrel=None, *quadArgs):
+    def complement(self):
         """
-        Compute the volume integral of a function within the solid.
-
-        Parameters
-        ----------
-        f : python function `f(point: numpy.array, args : user-defined) -> scalar value`
-            The function to be integrated within the solid.
-            It's passed a point within the solid, as well as any optional user-defined arguments.
-        
-        args : tuple, optional
-            Extra arguments to pass to `f`.
-        
-        *quadArgs : Quadrature arguments passed to `scipy.integrate.quad`.
+        Return the complement of the solid: whatever was inside is outside and vice-versa.
 
         Returns
         -------
-        sum : scalar value
-            The value of the volume integral.
+        solid : `Solid`
+            The complement of the solid.
 
         See Also
         --------
-        `surface_integral` : Compute the surface integral of a vector field on the boundary of the solid.
-        `scipy.integrate.quad` : Integrate func from a to b (possibly infinite interval) using a technique from the Fortran library QUADPACK.
-
-        Notes
-        -----
-        The volume integral is computed by recursive application of the divergence theorem: `volume_integral(divergence(F)) = surface_integral(dot(F, n))`, 
-        where `F` is a vector field and `n` is the outward boundary unit normal.
-        
-        Let `F = [Integral(f) from x0 to x holding other coordinates fixed, 0..0]`. `divergence(F) = f` by construction, and `dot(F, n) = Integral(f) * n[0]`.
-        Note that the choice of `x0` is arbitrary as long as it's in the domain of f and doesn't change across all surface integral boundaries.
-
-        Thus, we have `volume_integral(f) = surface_integral(Integral(f) * n[0])`.
-        The outward boundary unit normal, `n`, is the cross product of the boundary manifold's tangent space divided by its length.
-        The surface differential, `dS`, is the length of cross product of the boundary manifold's tangent space times the differentials of the manifold's domain variables.
-        The length of the cross product appears in the numerator and denominator of the surface integral and cancels.
-        What's left multiplying `Integral(f)` is the first coordinate of the cross product plus the domain differentials (volume integral).
-        The first coordinate of the cross product of the boundary manifold's tangent space is the first cofactor of the tangent space.
-        And so, `surface_integral(Integral(f) * n[0]) = volume_integral(Integral(f) * first cofactor)` over each boundary manifold's domain.
-
-        So, we have `volume_integral(f) = volume_integral(Integral(f) * first cofactor)` over each boundary manifold's domain.
-        To compute the volume integral we sum `volume_integral` over the domain of the solid's boundaries, using the integrand:
-        `scipy.integrate.quad(f, x0, x [other coordinates fixed]) * first cofactor`.
-        This recursion continues until the boundaries are only points, where we can just sum the integrand.
+        `intersection` : Intersect two solids.
+        `union` : Union two solids.
+        `difference` : Subtract one solid from another. 
         """
-        if not isinstance(args, tuple):
-            args = (args,)
-        if epsabs is None:
-            epsabs = Manifold.minSeparation
-        if epsrel is None:
-            epsrel = Manifold.minSeparation
-
-        # Initialize the return value for the integral
-        sum = 0.0
-
-        # Select the first coordinate of an arbitrary point within the volume boundary (the domain of f)
-        x0 = self.any_point()[0]
-
+        solid = Solid(self.dimension, not self.containsInfinity)
         for boundary in self.boundaries:
-            def domainF(domainPoint):
-                evalPoint = np.atleast_1d(domainPoint)
-                point = boundary.manifold.evaluate(evalPoint)
-
-                # fHat passes the scalar given by integrate.quad into the first coordinate of the vector for f.
-                def fHat(x):
-                    evalPoint = np.array(point)
-                    evalPoint[0] = x
-                    return f(evalPoint, *args)
-
-                # Calculate Integral(f) * first cofactor. Note that quad returns a tuple: (integral, error bound).
-                returnValue = 0.0
-                firstCofactor = boundary.manifold.normal(evalPoint, False, (0,))
-                if abs(x0 - point[0]) > epsabs and abs(firstCofactor) > epsabs:
-                    returnValue = integrate.quad(fHat, x0, point[0], epsabs=epsabs, epsrel=epsrel, *quadArgs)[0] * firstCofactor
-                return returnValue
-
-            if boundary.domain.dimension > 0:
-                # Add the contribution to the Volume integral from this boundary.
-                sum += boundary.domain.volume_integral(domainF)
-            else:
-                # This is a 1-D boundary (line interval, no domain), so just add the integrand.
-                sum += domainF(0.0)
-
-        return sum
-
-    def surface_integral(self, f, args=(), epsabs=None, epsrel=None, *quadArgs):
-        """
-        Compute the surface integral of a vector field on the boundary of the solid.
-
-        Parameters
-        ----------
-        f : python function `f(point: numpy.array, normal: numpy.array, args : user-defined) -> numpy.array`
-            The vector field to be integrated on the boundary of the solid.
-            It's passed a point on the boundary and its corresponding outward-pointing unit normal, as well as any optional user-defined arguments.
-        
-        args : tuple, optional
-            Extra arguments to pass to `f`.
-        
-        *quadArgs : Quadrature arguments passed to `scipy.integrate.quad`.
-
-        Returns
-        -------
-        sum : scalar value
-            The value of the surface integral.
-
-        See Also
-        --------
-        `volume_integral` : Compute the volume integral of a function within the solid.
-        `scipy.integrate.quad` : Integrate func from a to b (possibly infinite interval) using a technique from the Fortran library QUADPACK.
-
-        Notes
-        -----
-        To compute the surface integral of a scalar function on the boundary, have `f` return the product of the `normal` times the scalar function for the `point`.
-
-        `surface_integral` sums the `volume_integral` over the domain of the solid's boundaries, using the integrand: `numpy.dot(f(point, normal), normal)`, 
-        where `normal` is the cross-product of the boundary tangents (the normal before normalization).
-        """
-        if not isinstance(args, tuple):
-            args = (args,)
-        if epsabs is None:
-            epsabs = Manifold.minSeparation
-        if epsrel is None:
-            epsrel = Manifold.minSeparation
-
-        # Initialize the return value for the integral
-        sum = 0.0
-
-        for boundary in self.boundaries:
-            def integrand(domainPoint):
-                evalPoint = np.atleast_1d(domainPoint)
-                point = boundary.manifold.evaluate(evalPoint)
-                cofactorNormal = boundary.manifold.normal(evalPoint, False)
-                normal = cofactorNormal / np.linalg.norm(cofactorNormal)
-                fValue = f(point, normal, *args)
-                return np.dot(fValue, cofactorNormal)
-
-            if boundary.domain.dimension > 0:
-                # Add the contribution to the Volume integral from this boundary.
-                sum += boundary.domain.volume_integral(integrand)
-            else:
-                # This is a 1-D boundary (line interval, no domain), so just add the integrand.
-                sum += integrand(0.0)
-
-        return sum
-
-    def winding_number(self, point):
-        """
-        Compute the winding number for a point relative to the solid.
-
-        Parameters
-        ----------
-        point : array-like
-            A point that may lie within the solid.
-
-        Returns
-        -------
-        windingNumber : scalar value
-            The `windingNumber` is 0 if the point is outside the solid, 1 if it's inside.
-            Other values indicate issues:
-            * A point on the boundary leads to an undefined (random) winding number;
-            * Boundaries with gaps or overlaps lead to fractional winding numbers;
-            * Interior-pointing normals lead to negative winding numbers;
-            * Nested shells lead to winding numbers with absolute value 2 or greater.
-        
-        onBoundaryNormal : `numpy.array`
-            The boundary normal if the point lies on a boundary, `None` otherwise.
-
-        See Also
-        --------
-        `contains_point` : Test if a point lies within the solid.
-
-        Notes
-        -----
-        If `onBoundaryNormal` is not `None`, `windingNumber` is undefined and should be ignored.
-
-        `winding_number` uses two different implementations:
-        * A simple fast implementation if the solid is a number line (dimension <= 1). This is the default for dimension <= 1.
-        * A surface integral with integrand: `(x - point) / norm(x - point)**dimension`.
-        """
-        point = np.atleast_1d(point)
-        windingNumber = 0.0
-        onBoundaryNormal = None
-        if self.containsInfinity:
-            # If the solid contains infinity, then the winding number starts as 1 to account for the boundary at infinity.
-            windingNumber = 1.0
-
-        if Solid.point_outside_bounds(point, self.bounds):
-            return windingNumber, onBoundaryNormal
-
-        if self.dimension <= 1:
-            # Fast winding number calculation for a number line specialized to catch boundary edges.
-            for boundary in self.boundaries:
-                normal = boundary.manifold.normal(0.0)
-                separation = np.dot(normal, boundary.manifold.evaluate(0.0) - point)
-                if -2.0 * Manifold.minSeparation < separation < Manifold.minSeparation:
-                    onBoundaryNormal = normal
-                    break
-                else:
-                    windingNumber += np.sign(separation) / 2.0
-        else:
-            # Compute the winding number via a surface integral, normalizing by the hypersphere surface area. 
-            nSphereArea = 2.0
-            if self.dimension % 2 == 0:
-                nSphereArea *= np.pi
-            dimension = self.dimension
-            while dimension > 2:
-                nSphereArea *= 2.0 * np.pi / (dimension - 2.0)
-                dimension -= 2
-
-            def windingIntegrand(boundaryPoint, boundaryNormal, onBoundaryNormalList):
-                vector = boundaryPoint - point
-                vectorLength = np.linalg.norm(vector)
-                if vectorLength < Manifold.minSeparation:
-                    onBoundaryNormalList[0] = boundaryNormal
-                    vectorLength = 1.0
-                return vector / (vectorLength**self.dimension)
-
-            onBoundaryNormalList = [onBoundaryNormal]
-            windingNumber += self.surface_integral(windingIntegrand, onBoundaryNormalList) / nSphereArea
-            onBoundaryNormal = onBoundaryNormalList[0]
-
-        return windingNumber, onBoundaryNormal
+            solid.add_boundary(Boundary(boundary.manifold.flip_normal(), boundary.domain))
+        return solid
 
     def contains_point(self, point):
         """
@@ -526,6 +199,240 @@ class Solid:
             # windingNumber > 0.5 returns a np.bool_, not a bool, so we need to cast it.
             containment = bool(windingNumber > 0.5)
         return containment
+
+    def difference(self, other):
+        """
+        Subtract one solid from another.
+
+        Parameters
+        ----------
+        other : `Solid`
+            The `Solid` subtracted from self.
+
+        Returns
+        -------
+        combinedSolid : `Solid`
+            A `Solid` that represents the subtraction of other from self.
+
+        See Also
+        --------
+        `intersection` : Intersect two solids.
+        `union` : Union two solids.
+        """
+        return self.intersection(other.complement())
+
+    @staticmethod
+    def disjoint_bounds(bounds1, bounds2):
+        """
+        Returns whether or not bounds1 and bounds2 are disjoint.
+
+        Parameters
+        ----------
+        bounds1 : array-like or `None`
+            An array with shape (dimension, 2) of lower and upper and lower bounds on each dimension. 
+            If bounds1 is `None` then then there are no bounds.
+
+        bounds2 : array-like or `None`
+            An array with shape (dimension, 2) of lower and upper and lower bounds on each dimension. 
+            If bounds2 is `None` then then there are no bounds.
+
+        Returns
+        -------
+        disjoint : `bool`
+            Value is true if the bounds are disjoint. Value is false if either bounds is `None`.
+        """
+        if bounds1 is None or bounds2 is None:
+            return False
+        else:
+            return np.min(np.diff(bounds1).reshape(-1) + np.diff(bounds2).reshape(-1) -
+                np.abs(np.sum(bounds1, axis=1) - np.sum(bounds2, axis=1))) < -Manifold.minSeparation
+
+    def intersection(self, other, cache = None):
+        """
+        Intersect two solids.
+
+        Parameters
+        ----------
+        other : `Solid`
+            The `Solid` intersecting self.
+        
+        cache : `dict`, optional
+            A dictionary to cache `Manifold` intersections, speeding computation. If no dictionary is passed, one is created.
+
+        Returns
+        -------
+        combinedSolid : `Solid`
+            A `Solid` that represents the intersection between self and other.
+
+        See Also
+        --------
+        `slice` : Slice a solid by a manifold.
+        `union` : Union two solids.
+        `difference` : Subtract one solid from another.
+
+        Notes
+        -----
+        To intersect two solids, we slice each solid with the boundaries of the other solid. The slices are the region
+        of the domain that intersect the solid. We then intersect the domain of each boundary with its slice of the other solid. Thus,
+        the intersection of two solids becomes a set of intersections within the domains of their boundaries. This recursion continues
+        until we are intersecting points whose domains have no boundaries.
+
+        The only subtlety is when two boundaries are coincident. To avoid overlapping the coincident region, we keep that region
+        for one slice and trim it away for the other. We use a manifold intersection cache to keep track of these pairs, as well as to reduce computation. 
+        """
+        assert self.dimension == other.dimension
+
+        # Manifold intersections are expensive and come in symmetric pairs (m1 intersect m2, m2 intersect m1).
+        # So, we create a manifold intersections cache (dictionary) to store and reuse intersection pairs.
+        # The cache is also used to avoid overlapping coincident regions by identifying twins that could be trimmed.
+        if cache is None:
+            cache = {}
+
+        # Start with a solid without boundaries.
+        combinedSolid = Solid(self.dimension, self.containsInfinity and other.containsInfinity)
+
+        # If the solids are disjoint, add the boundaries contained by infinity and return.
+        if Solid.disjoint_bounds(self.bounds, other.bounds):
+            if other.containsInfinity:
+                for boundary in self.boundaries:
+                    combinedSolid.add_boundary(boundary)
+            if self.containsInfinity:
+                for boundary in other.boundaries:
+                    combinedSolid.add_boundary(boundary)
+            return combinedSolid
+
+        for boundary in self.boundaries:
+            # Slice self boundary manifold by other.
+            slice = other.slice(boundary.manifold, cache, True)
+            # Intersect slice with the boundary's domain.
+            newDomain = boundary.domain.intersection(slice, cache)
+            if newDomain:
+                # Self boundary intersects other, so create a new boundary with the intersected domain.
+                combinedSolid.add_boundary(Boundary(boundary.manifold, newDomain))
+
+        for boundary in other.boundaries:
+            # Slice other boundary manifold by self.
+            slice = self.slice(boundary.manifold, cache, True)
+            # Intersect slice with the boundary's domain.
+            newDomain = boundary.domain.intersection(slice, cache)
+            if newDomain:
+                # Other boundary intersects self, so create a new boundary with the intersected domain.
+                combinedSolid.add_boundary(Boundary(boundary.manifold, newDomain))
+
+        return combinedSolid
+
+    def is_empty(self):
+        """
+        Test if the solid is empty.
+
+        Returns
+        -------
+        isEmpty : `bool`
+            `True` if the solid is empty, `False` otherwise.
+
+        Notes
+        -----
+        Casting the solid to `bool` returns not `is_empty`.
+        """
+        return not self
+    
+    @staticmethod
+    def load(fileName):
+        """
+        Load solids and/or manifolds in json format from the specified filename (full path).
+
+        Parameters
+        ----------
+        fileName : `string`
+            The full path to the file containing the solids and/or manifolds. Can be a relative path.
+        
+        Returns
+        -------
+        solidsAndManifolds : list of `Solid` and/or `Manifold`
+            The loaded solids and/or manifolds.
+
+        See Also
+        --------
+        `save` : Save a solids and/or manifolds in json format to the specified filename (full path).
+        """
+        def from_dict(dictionary):
+            solid = Solid(dictionary["dimension"], dictionary["containsInfinity"])
+            for boundary in dictionary["boundaries"]:
+                manifold = boundary["manifold"]
+                solid.add_boundary(Boundary(Manifold.factory[manifold.get("type", "Spline")].from_dict(manifold), from_dict(boundary["domain"])))
+            return solid
+
+        # Load json file.
+        with open(fileName, 'r', encoding='utf-8') as file:
+            data = json.load(file)
+
+        # Convert json data to solids and manifolds.
+        solidsAndManifolds = []
+        if isinstance(data, dict):
+            data = [data]
+        for dictionary in data:
+            className = dictionary.get("type", "Spline")
+            if className == "Solid":
+                solidsAndManifolds.append(from_dict(dictionary))
+            else:
+                solidsAndManifolds.append(Manifold.factory[className].from_dict(dictionary))
+        return solidsAndManifolds
+
+    @staticmethod
+    def point_outside_bounds(point, bounds):
+        """
+        Returns whether or not point is outside bounds.
+
+        Parameters
+        ----------
+        point : array-like
+            A point whose dimension matches the bounds.
+
+        bounds : array-like or `None`
+            An array with shape (dimension, 2) of lower and upper and lower bounds on each dimension. 
+            If bounds is `None` then then there are no bounds.
+
+        Returns
+        -------
+        within : `bool`
+            Value is true if the point is outside bounds or bounds is `None`.
+        """
+        if bounds is None:
+            return True
+        else:
+            return np.min(np.diff(bounds).reshape(-1) - np.abs(np.sum(bounds, axis=1) + -2.0 * point)) < -Manifold.minSeparation
+    
+    @staticmethod
+    def save(fileName, *solids_or_manifolds):
+        """
+        Save a solids and/or manifolds in json format to the specified filename (full path).
+
+        Parameters
+        ----------
+        fileName : `string`
+            The full path to the file containing the solids and/or manifolds. Can be a relative path.
+        
+        *solids_or_manifolds : `Solid` or `Manifold`
+            Solids and/or manifolds to save in the same file.
+        
+        See Also
+        --------
+        `load` : Load solids and/or manifolds in json format from the specified filename (full path).
+        """
+        class Encoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, np.ndarray):
+                    return obj.tolist()
+                if isinstance(obj, Manifold):
+                    return obj.to_dict()
+                if isinstance(obj, Boundary):
+                    return {"type" : "Boundary", "manifold" : obj.manifold, "domain" : obj.domain}
+                if isinstance(obj, Solid):
+                    return {"type" : "Solid", "dimension" : obj.dimension, "containsInfinity" : obj.containsInfinity, "boundaries" : obj.boundaries}
+                return super().default(obj)
+
+        with open(fileName, 'w', encoding='utf-8') as file:
+            json.dump(solids_or_manifolds, file, indent=4, cls=Encoder)
 
     def slice(self, manifold, cache = None, trimTwin = False):
         """
@@ -638,82 +545,113 @@ class Solid:
 
         return slice
 
-    def intersection(self, other, cache = None):
+    def surface_integral(self, f, args=(), epsabs=None, epsrel=None, *quadArgs):
         """
-        Intersect two solids.
+        Compute the surface integral of a vector field on the boundary of the solid.
 
         Parameters
         ----------
-        other : `Solid`
-            The `Solid` intersecting self.
+        f : python function `f(point: numpy.array, normal: numpy.array, args : user-defined) -> numpy.array`
+            The vector field to be integrated on the boundary of the solid.
+            It's passed a point on the boundary and its corresponding outward-pointing unit normal, as well as any optional user-defined arguments.
         
-        cache : `dict`, optional
-            A dictionary to cache `Manifold` intersections, speeding computation. If no dictionary is passed, one is created.
+        args : tuple, optional
+            Extra arguments to pass to `f`.
+        
+        *quadArgs : Quadrature arguments passed to `scipy.integrate.quad`.
 
         Returns
         -------
-        combinedSolid : `Solid`
-            A `Solid` that represents the intersection between self and other.
+        sum : scalar value
+            The value of the surface integral.
 
         See Also
         --------
-        `slice` : Slice a solid by a manifold.
-        `union` : Union two solids.
-        `difference` : Subtract one solid from another.
+        `volume_integral` : Compute the volume integral of a function within the solid.
+        `scipy.integrate.quad` : Integrate func from a to b (possibly infinite interval) using a technique from the Fortran library QUADPACK.
 
         Notes
         -----
-        To intersect two solids, we slice each solid with the boundaries of the other solid. The slices are the region
-        of the domain that intersect the solid. We then intersect the domain of each boundary with its slice of the other solid. Thus,
-        the intersection of two solids becomes a set of intersections within the domains of their boundaries. This recursion continues
-        until we are intersecting points whose domains have no boundaries.
+        To compute the surface integral of a scalar function on the boundary, have `f` return the product of the `normal` times the scalar function for the `point`.
 
-        The only subtlety is when two boundaries are coincident. To avoid overlapping the coincident region, we keep that region
-        for one slice and trim it away for the other. We use a manifold intersection cache to keep track of these pairs, as well as to reduce computation. 
+        `surface_integral` sums the `volume_integral` over the domain of the solid's boundaries, using the integrand: `numpy.dot(f(point, normal), normal)`, 
+        where `normal` is the cross-product of the boundary tangents (the normal before normalization).
         """
-        assert self.dimension == other.dimension
+        if not isinstance(args, tuple):
+            args = (args,)
+        if epsabs is None:
+            epsabs = Manifold.minSeparation
+        if epsrel is None:
+            epsrel = Manifold.minSeparation
 
-        # Manifold intersections are expensive and come in symmetric pairs (m1 intersect m2, m2 intersect m1).
-        # So, we create a manifold intersections cache (dictionary) to store and reuse intersection pairs.
-        # The cache is also used to avoid overlapping coincident regions by identifying twins that could be trimmed.
-        if cache is None:
-            cache = {}
-
-        # Start with a solid without boundaries.
-        combinedSolid = Solid(self.dimension, self.containsInfinity and other.containsInfinity)
-
-        # If the solids are disjoint, add the boundaries contained by infinity and return.
-        if Solid.disjoint_bounds(self.bounds, other.bounds):
-            if other.containsInfinity:
-                for boundary in self.boundaries:
-                    combinedSolid.add_boundary(boundary)
-            if self.containsInfinity:
-                for boundary in other.boundaries:
-                    combinedSolid.add_boundary(boundary)
-            return combinedSolid
+        # Initialize the return value for the integral
+        sum = 0.0
 
         for boundary in self.boundaries:
-            # Slice self boundary manifold by other.
-            slice = other.slice(boundary.manifold, cache, True)
-            # Intersect slice with the boundary's domain.
-            newDomain = boundary.domain.intersection(slice, cache)
-            if newDomain:
-                # Self boundary intersects other, so create a new boundary with the intersected domain.
-                combinedSolid.add_boundary(Boundary(boundary.manifold, newDomain))
+            def integrand(domainPoint):
+                evalPoint = np.atleast_1d(domainPoint)
+                point = boundary.manifold.evaluate(evalPoint)
+                cofactorNormal = boundary.manifold.normal(evalPoint, False)
+                normal = cofactorNormal / np.linalg.norm(cofactorNormal)
+                fValue = f(point, normal, *args)
+                return np.dot(fValue, cofactorNormal)
 
-        for boundary in other.boundaries:
-            # Slice other boundary manifold by self.
-            slice = self.slice(boundary.manifold, cache, True)
-            # Intersect slice with the boundary's domain.
-            newDomain = boundary.domain.intersection(slice, cache)
-            if newDomain:
-                # Other boundary intersects self, so create a new boundary with the intersected domain.
-                combinedSolid.add_boundary(Boundary(boundary.manifold, newDomain))
+            if boundary.domain.dimension > 0:
+                # Add the contribution to the Volume integral from this boundary.
+                sum += boundary.domain.volume_integral(integrand)
+            else:
+                # This is a 1-D boundary (line interval, no domain), so just add the integrand.
+                sum += integrand(0.0)
 
-        return combinedSolid
+        return sum
 
-    def __mul__(self, other):
-        return self.intersection(other)
+    def transform(self, matrix, matrixInverseTranspose = None):
+        """
+        Transform the range of the solid.
+
+        Parameters
+        ----------
+        matrix : `numpy.array`
+            A square matrix transformation.
+
+        matrixInverseTranspose : `numpy.array`, optional
+            The inverse transpose of matrix (computed if not provided).
+
+        Returns
+        -------
+        solid : `Solid`
+            The transformed solid.
+        """
+        assert np.shape(matrix) == (self.dimension, self.dimension)
+
+        if matrixInverseTranspose is None:
+            matrixInverseTranspose = np.transpose(np.linalg.inv(matrix))
+
+        solid = Solid(self.dimension, self.containsInfinity)
+        for boundary in self.boundaries:
+            solid.add_boundary(Boundary(boundary.manifold.transform(matrix, matrixInverseTranspose), boundary.domain))
+        return solid
+
+    def translate(self, delta):
+        """
+        Translate the range of the solid.
+
+        Parameters
+        ----------
+        delta : `numpy.array`
+            A 1D array translation.
+
+        Returns
+        -------
+        solid : `Solid`
+            The translated solid.
+        """
+        assert len(delta) == self.dimension
+
+        solid = Solid(self.dimension, self.containsInfinity)
+        for boundary in self.boundaries:
+            solid.add_boundary(Boundary(boundary.manifold.translate(delta), boundary.domain))
+        return solid
 
     def union(self, other):
         """
@@ -736,29 +674,166 @@ class Solid:
         """
         return self.complement().intersection(other.complement()).complement()
 
-    def __add__(self, other):
-        return self.union(other)
-
-    def difference(self, other):
+    def volume_integral(self, f, args=(), epsabs=None, epsrel=None, *quadArgs):
         """
-        Subtract one solid from another.
+        Compute the volume integral of a function within the solid.
 
         Parameters
         ----------
-        other : `Solid`
-            The `Solid` subtracted from self.
+        f : python function `f(point: numpy.array, args : user-defined) -> scalar value`
+            The function to be integrated within the solid.
+            It's passed a point within the solid, as well as any optional user-defined arguments.
+        
+        args : tuple, optional
+            Extra arguments to pass to `f`.
+        
+        *quadArgs : Quadrature arguments passed to `scipy.integrate.quad`.
 
         Returns
         -------
-        combinedSolid : `Solid`
-            A `Solid` that represents the subtraction of other from self.
+        sum : scalar value
+            The value of the volume integral.
 
         See Also
         --------
-        `intersection` : Intersect two solids.
-        `union` : Union two solids.
-        """
-        return self.intersection(other.complement())
+        `surface_integral` : Compute the surface integral of a vector field on the boundary of the solid.
+        `scipy.integrate.quad` : Integrate func from a to b (possibly infinite interval) using a technique from the Fortran library QUADPACK.
 
-    def __sub__(self, other):
-        return self.difference(other)
+        Notes
+        -----
+        The volume integral is computed by recursive application of the divergence theorem: `volume_integral(divergence(F)) = surface_integral(dot(F, n))`, 
+        where `F` is a vector field and `n` is the outward boundary unit normal.
+        
+        Let `F = [Integral(f) from x0 to x holding other coordinates fixed, 0..0]`. `divergence(F) = f` by construction, and `dot(F, n) = Integral(f) * n[0]`.
+        Note that the choice of `x0` is arbitrary as long as it's in the domain of f and doesn't change across all surface integral boundaries.
+
+        Thus, we have `volume_integral(f) = surface_integral(Integral(f) * n[0])`.
+        The outward boundary unit normal, `n`, is the cross product of the boundary manifold's tangent space divided by its length.
+        The surface differential, `dS`, is the length of cross product of the boundary manifold's tangent space times the differentials of the manifold's domain variables.
+        The length of the cross product appears in the numerator and denominator of the surface integral and cancels.
+        What's left multiplying `Integral(f)` is the first coordinate of the cross product plus the domain differentials (volume integral).
+        The first coordinate of the cross product of the boundary manifold's tangent space is the first cofactor of the tangent space.
+        And so, `surface_integral(Integral(f) * n[0]) = volume_integral(Integral(f) * first cofactor)` over each boundary manifold's domain.
+
+        So, we have `volume_integral(f) = volume_integral(Integral(f) * first cofactor)` over each boundary manifold's domain.
+        To compute the volume integral we sum `volume_integral` over the domain of the solid's boundaries, using the integrand:
+        `scipy.integrate.quad(f, x0, x [other coordinates fixed]) * first cofactor`.
+        This recursion continues until the boundaries are only points, where we can just sum the integrand.
+        """
+        if not isinstance(args, tuple):
+            args = (args,)
+        if epsabs is None:
+            epsabs = Manifold.minSeparation
+        if epsrel is None:
+            epsrel = Manifold.minSeparation
+
+        # Initialize the return value for the integral
+        sum = 0.0
+
+        # Select the first coordinate of an arbitrary point within the volume boundary (the domain of f)
+        x0 = self.any_point()[0]
+
+        for boundary in self.boundaries:
+            def domainF(domainPoint):
+                evalPoint = np.atleast_1d(domainPoint)
+                point = boundary.manifold.evaluate(evalPoint)
+
+                # fHat passes the scalar given by integrate.quad into the first coordinate of the vector for f.
+                def fHat(x):
+                    evalPoint = np.array(point)
+                    evalPoint[0] = x
+                    return f(evalPoint, *args)
+
+                # Calculate Integral(f) * first cofactor. Note that quad returns a tuple: (integral, error bound).
+                returnValue = 0.0
+                firstCofactor = boundary.manifold.normal(evalPoint, False, (0,))
+                if abs(x0 - point[0]) > epsabs and abs(firstCofactor) > epsabs:
+                    returnValue = integrate.quad(fHat, x0, point[0], epsabs=epsabs, epsrel=epsrel, *quadArgs)[0] * firstCofactor
+                return returnValue
+
+            if boundary.domain.dimension > 0:
+                # Add the contribution to the Volume integral from this boundary.
+                sum += boundary.domain.volume_integral(domainF)
+            else:
+                # This is a 1-D boundary (line interval, no domain), so just add the integrand.
+                sum += domainF(0.0)
+
+        return sum
+
+    def winding_number(self, point):
+        """
+        Compute the winding number for a point relative to the solid.
+
+        Parameters
+        ----------
+        point : array-like
+            A point that may lie within the solid.
+
+        Returns
+        -------
+        windingNumber : scalar value
+            The `windingNumber` is 0 if the point is outside the solid, 1 if it's inside.
+            Other values indicate issues:
+            * A point on the boundary leads to an undefined (random) winding number;
+            * Boundaries with gaps or overlaps lead to fractional winding numbers;
+            * Interior-pointing normals lead to negative winding numbers;
+            * Nested shells lead to winding numbers with absolute value 2 or greater.
+        
+        onBoundaryNormal : `numpy.array`
+            The boundary normal if the point lies on a boundary, `None` otherwise.
+
+        See Also
+        --------
+        `contains_point` : Test if a point lies within the solid.
+
+        Notes
+        -----
+        If `onBoundaryNormal` is not `None`, `windingNumber` is undefined and should be ignored.
+
+        `winding_number` uses two different implementations:
+        * A simple fast implementation if the solid is a number line (dimension <= 1). This is the default for dimension <= 1.
+        * A surface integral with integrand: `(x - point) / norm(x - point)**dimension`.
+        """
+        point = np.atleast_1d(point)
+        windingNumber = 0.0
+        onBoundaryNormal = None
+        if self.containsInfinity:
+            # If the solid contains infinity, then the winding number starts as 1 to account for the boundary at infinity.
+            windingNumber = 1.0
+
+        if Solid.point_outside_bounds(point, self.bounds):
+            return windingNumber, onBoundaryNormal
+
+        if self.dimension <= 1:
+            # Fast winding number calculation for a number line specialized to catch boundary edges.
+            for boundary in self.boundaries:
+                normal = boundary.manifold.normal(0.0)
+                separation = np.dot(normal, boundary.manifold.evaluate(0.0) - point)
+                if -2.0 * Manifold.minSeparation < separation < Manifold.minSeparation:
+                    onBoundaryNormal = normal
+                    break
+                else:
+                    windingNumber += np.sign(separation) / 2.0
+        else:
+            # Compute the winding number via a surface integral, normalizing by the hypersphere surface area. 
+            nSphereArea = 2.0
+            if self.dimension % 2 == 0:
+                nSphereArea *= np.pi
+            dimension = self.dimension
+            while dimension > 2:
+                nSphereArea *= 2.0 * np.pi / (dimension - 2.0)
+                dimension -= 2
+
+            def windingIntegrand(boundaryPoint, boundaryNormal, onBoundaryNormalList):
+                vector = boundaryPoint - point
+                vectorLength = np.linalg.norm(vector)
+                if vectorLength < Manifold.minSeparation:
+                    onBoundaryNormalList[0] = boundaryNormal
+                    vectorLength = 1.0
+                return vector / (vectorLength**self.dimension)
+
+            onBoundaryNormalList = [onBoundaryNormal]
+            windingNumber += self.surface_integral(windingIntegrand, onBoundaryNormalList) / nSphereArea
+            onBoundaryNormal = onBoundaryNormalList[0]
+
+        return windingNumber, onBoundaryNormal
