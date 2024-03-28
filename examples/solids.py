@@ -20,21 +20,21 @@ if __name__ == "__main__":
         extrudedSquare = utils.extrude_solid(square,[[-2,2,-4],[2,-2,4]])
         extrudedStar = utils.extrude_solid(star,[[-2,-2,-4],[2,2,4]])
         combined = extrudedStar.union(extrudedSquare)
-        viewer.draw_solid(combined)
+        viewer.draw(combined)
     if False:
         viewer.frame.SetBackgroundColor(1.0, 1.0, 1.0)
         sphere = Hyperplane.create_hypercube([[-1, 1]] * 3)
         #sphere = Solid(3, False)
         #sphere.add_boundary(Boundary(BSpline(Spline.sphere(1.0, 0.001))))
         #sphere.add_boundary(Boundary(BSpline(Spline.cone(2.0, 0.01, 3.0, 0.001) + (0.0, 0.0, -1.5)))
-        viewer.draw_solid(sphere, "cube", np.array((.4, .6, 1, 1),np.float32))
+        viewer.draw(sphere, "cube", np.array((.4, .6, 1, 1),np.float32))
         endCurve = [[1, 0], [0, 0], [0, 1]] @ Spline(1, 1, (3,), (5,), (np.array((-3.0, -3.0, -3.0, -0.6, 0.6, 3.0, 3.0, 3.0)),), np.array((0, 3.0/8.0, 0, -4.0/8.0, 0))).graph()
         spline = Spline.ruled_surface(endCurve + (0.0, -2.0, 0.0), endCurve + (0.0, 2.0, 0.0))
         halfSpace = Solid(3, False)
         halfSpace.add_boundary(Boundary(spline, Hyperplane.create_hypercube([[-3.0, 3.0], [0.0, 1.0]])))
-        viewer.draw_solid(halfSpace, "halfSpace", np.array((0, 1, 0, 1),np.float32))
+        viewer.draw(halfSpace, "halfSpace", np.array((0, 1, 0, 1),np.float32))
         difference = sphere - halfSpace
-        viewer.draw_solid(difference, "difference")
+        viewer.draw(difference, "difference")
         viewer.mainloop()
     if False:
         order = 3
@@ -48,7 +48,7 @@ if __name__ == "__main__":
         paraboloid = Solid(3, False)
         paraboloid.add_boundary(Boundary(spline))
         paraboloid.add_boundary(Boundary(cap, Hyperplane.create_hypercube([[-1.0, 1.0]] * 2)))
-        viewer.list_solid(paraboloid, "paraboloid", np.array((.4, .6, 1, 1),np.float32))
+        viewer.list(paraboloid, "paraboloid", np.array((.4, .6, 1, 1),np.float32))
 
         spline = spline.copy()
         cap = Hyperplane.create_axis_aligned(3, 1, 0.7, False)
@@ -56,9 +56,9 @@ if __name__ == "__main__":
         paraboloid2.add_boundary(Boundary(spline))
         paraboloid2.add_boundary(Boundary(cap, Hyperplane.create_hypercube([[-1.0, 1.0]] * 2)))
         paraboloid2 = paraboloid2.translate(np.array((0.0, 0.5, 0.55)))
-        viewer.list_solid(paraboloid2, "paraboloid2", np.array((0, 1, 0, 1),np.float32))
+        viewer.list(paraboloid2, "paraboloid2", np.array((0, 1, 0, 1),np.float32))
 
         paraboloid3 = paraboloid + paraboloid2
-        viewer.draw_solid(paraboloid3, "p + p2")
+        viewer.draw(paraboloid3, "p + p2")
     
     viewer.mainloop()

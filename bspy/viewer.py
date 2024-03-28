@@ -4,7 +4,7 @@ from tkinter.ttk import Treeview
 from tkinter.colorchooser import askcolor
 from tkinter import filedialog
 import queue, threading
-from bspy import SplineOpenGLFrame, Solid, Hyperplane, Spline
+from bspy import SplineOpenGLFrame, Solid, Boundary, Hyperplane, Spline
 
 class _BitCheckbutton(tk.Checkbutton):
     """A tkinter `CheckButton` that gets/sets its variable based on a given `bitmask`."""
@@ -118,8 +118,7 @@ class Viewer(tk.Tk):
         self.workQueue = workQueue
         if self.workQueue is not None:
             self.work = {
-                "show" : self.show,
-                "draw" : self.draw,
+                "list" : self.list,
                 "erase_all" : self.erase_all,
                 "empty" : self.empty,
                 "set_background_color" : self.set_background_color,
@@ -139,72 +138,59 @@ class Viewer(tk.Tk):
                     self.work[work[0]](*work[1])
         self.after(200, self._check_for_work)
 
-    def list(self, spline, name = None, draw=False, parentIID = ''):
-        """List a `Spline` in the treeview. Can be called before viewer is running."""
-        self.frame.make_drawable(spline)
-        if name is not None:
-            spline.metadata["Name"] = name
-        iid = self.treeview.insert(parentIID, 'end', text=spline.metadata.get("Name", f"Spline({spline.nInd}, {spline.nDep})"))
-        self.splineList[iid] = spline
-        if draw:
-            self.treeview.selection_add(iid)
+    def list(self, spline, name = None, fillColor=None, lineColor=None, options=None, draw=False, parentIID = ''):
+        """List a `Spline`, `Boundary`, or `Solid` in the treeview. Can be called before viewer is running."""
+        if isinstance(spline, Solid):
+            solid = spline
+            if solid.dimension != 3:
+                return
+            if name is None:
+                name = "Solid"
+            iid = self.treeview.insert('', 'end', text=name, open=False)
+            self.splineList[iid] = solid
+            self.solidList.append(solid)
+            if draw:
+                self.treeview.selection_add(iid)
+            for i, boundary in enumerate(solid.boundaries):
+                self.list(boundary, f"{name} boundary {i+1}", fillColor, lineColor, options, False, iid)
+        elif isinstance(spline, Boundary):
+            boundary = spline
+            if isinstance(boundary.manifold, Hyperplane):
+                uvMin = boundary.domain.bounds[:,0]
+                uvMax = boundary.domain.bounds[:,1]
+                xyzMinMin = boundary.manifold.evaluate(uvMin)
+                xyzMinMax = boundary.manifold.evaluate((uvMin[0], uvMax[1]))
+                xyzMaxMin = boundary.manifold.evaluate((uvMax[0], uvMin[1]))
+                xyzMaxMax = boundary.manifold.evaluate(uvMax)
+                spline = Spline(2, 3, (2, 2), (2, 2), 
+                    np.array((uvMin, uvMin, uvMax, uvMax), np.float32).T,
+                    np.array(((xyzMinMin, xyzMaxMin), (xyzMinMax, xyzMaxMax)), np.float32).T)
+            elif isinstance(boundary.manifold, Spline):
+                spline = boundary.manifold
+            if not hasattr(spline, "cache"):
+                spline.cache = {}
+            spline.cache["trim"] = self.frame.tessellate2DSolid(boundary.domain)
+            self.list(spline, name, fillColor, lineColor, options, draw, parentIID)
+        else:
+            if "Name" not in spline.metadata:
+                spline.metadata["Name"] = f"Spline({spline.nInd}, {spline.nDep})" if name is None else name
+            if fillColor is not None:
+                spline.metadata["fillColor"] = fillColor
+            if lineColor is not None:
+                spline.metadata["lineColor"] = lineColor
+            if options is not None:
+                spline.metadata["options"] = options
+            self.frame.make_drawable(spline)
+            iid = self.treeview.insert(parentIID, 'end', text=spline.metadata["Name"])
+            self.splineList[iid] = spline
+            if draw:
+                self.treeview.selection_add(iid)
 
-    def show(self, spline, name = None):
-        """Show a `Spline` in the treeview (calls the list method, kept for compatibility). Can be called before viewer is running."""
-        self.list(spline, name)
-        
-    def draw(self, spline, name = None):
-        """Add a `Spline` to the treeview and draw it. Can be called before the viewer is running."""
-        self.list(spline, name, True)
-    
-    list_spline = list
-    draw_spline = draw
-    show_spline = show
+    show = list
 
-    def list_boundary(self, boundary, name="Boundary", fillColor=None, lineColor=None, options=None, inherit=True, draw=False, parentIID=''):
-        if boundary.manifold.range_dimension() != 3:
-            return
-        vertices = self.frame.tessellate2DSolid(boundary.domain)
-        if isinstance(boundary.manifold, Hyperplane):
-            uvMin = boundary.domain.bounds[:,0]
-            uvMax = boundary.domain.bounds[:,1]
-            xyzMinMin = boundary.manifold.evaluate(uvMin)
-            xyzMinMax = boundary.manifold.evaluate((uvMin[0], uvMax[1]))
-            xyzMaxMin = boundary.manifold.evaluate((uvMax[0], uvMin[1]))
-            xyzMaxMax = boundary.manifold.evaluate(uvMax)
-            spline = Spline(2, 3, (2, 2), (2, 2), 
-                np.array((uvMin, uvMin, uvMax, uvMax), np.float32).T,
-                np.array(((xyzMinMin, xyzMaxMin), (xyzMinMax, xyzMaxMax)), np.float32).T)
-        elif isinstance(boundary.manifold, Spline):
-            spline = boundary.manifold
-        if "Name" not in spline.metadata:
-            spline.metadata["Name"] = name
-        if fillColor is not None:
-            spline.metadata["fillColor"] = fillColor
-        if lineColor is not None:
-            spline.metadata["lineColor"] = lineColor
-        if options is not None:
-            spline.metadata["options"] = options
-        self.frame.make_drawable(spline)
-        spline.cache["trim"] = vertices
-        self.list(spline, spline.metadata["Name"], draw, parentIID)
-
-    def draw_boundary(self, boundary, name="Boundary", fillColor=None, lineColor=None, options=None, inherit=True):
-        self.list_boundary(boundary, name, fillColor, lineColor, options, inherit, draw=True)
-
-    def list_solid(self, solid, name="Solid", fillColor=None, lineColor=None, options=None, inherit=True, draw=False):
-        solid.isDrawn = draw
-        solid.isSelected = draw
-        iid = self.treeview.insert('', 'end', text=name, open=False)
-        self.splineList[iid] = solid
-        self.solidList.append(solid)
-        if draw:
-            self.treeview.selection_add(iid)
-        for i, surface in enumerate(solid.boundaries):
-            self.list_boundary(surface, f"{name} boundary {i+1}", fillColor, lineColor, options, inherit, False, iid)
-
-    def draw_solid(self, solid, name="Solid", fillColor=None, lineColor=None, options=None, inherit=True):
-        self.list_solid(solid, name, fillColor, lineColor, options, inherit, draw=True)
+    def draw(self, spline, name = None, fillColor=None, lineColor=None, options=None):
+        """List a `Spline`, `Boundary`, or `Solid` in the treeview and draw it in the viewer. Can be called before viewer is running."""
+        self.list(spline, name, fillColor, lineColor, options, True)
 
     def save_splines(self):
         splines = [self.splineList[item] for item in self.treeview.selection()]
@@ -244,7 +230,7 @@ class Viewer(tk.Tk):
     def empty(self):
         """Stop drawing all splines and remove them from the treeview."""
         self.splineList = {}
-        self.treeview.delete(self.treeview.get_children())
+        self.treeview.delete(*self.treeview.get_children())
         self.splineRadius = 0.0
         self.frame.ResetView()
         self.update()
@@ -610,31 +596,19 @@ class Graphics:
         viewer = Viewer(workQueue=self.workQueue)
         viewer.mainloop()        
 
-    def list(self, spline, name = None):
-        """List a `Spline` in the treeview."""
-        if name is not None:
-            spline.metadata["Name"] = name
-        elif "Name" not in spline.metadata:
+    def list(self, spline, name = None, fillColor=None, lineColor=None, options=None, draw=False):
+        """List a `Spline`, `Boundary`, or `Solid` in the treeview. Can be called before viewer is running."""
+        if name is None:
             for name, value in self.variableDictionary.items():
                 if value is spline:
-                    spline.metadata["Name"] = name
                     break
-        self.workQueue.put(("show", (spline,)))
+        self.workQueue.put(("list", (spline, name, fillColor, lineColor, options, draw)))
 
-    def show(self, spline, name = None):
-        """Show a `Spline` in the treeview (calls list method, kept for compatibility)."""
-        self.list(spline, name)
-
-    def draw(self, spline, name = None):
-        """Add a `Spline` to the treeview and draw it."""
-        if name is not None:
-            spline.metadata["Name"] = name
-        elif "Name" not in spline.metadata:
-            for name, value in self.variableDictionary.items():
-                if value is spline:
-                    spline.metadata["Name"] = name
-                    break
-        self.workQueue.put(("draw", (spline,)))
+    show = list
+    
+    def draw(self, spline, name = None, fillColor=None, lineColor=None, options=None):
+        """List a `Spline`, `Boundary`, or `Solid` in the treeview and draw it in the viewer. Can be called before viewer is running."""
+        self.list(spline, name, fillColor, lineColor, options, True)
 
     def erase_all(self):
         """Stop drawing all splines. Splines remain in the treeview."""
