@@ -3,6 +3,7 @@ from collections import namedtuple
 from bspy.manifold import Manifold
 from bspy.solid import Solid, Boundary
 
+@Manifold.register
 class Hyperplane(Manifold):
     """
     A hyperplane is a `Manifold` defined by a unit normal, a point on the hyperplane, and a tangent space orthogonal to the normal.
@@ -454,7 +455,7 @@ class Hyperplane(Manifold):
         --------
         `from_dict` : Create a `Hyperplane` from a data in a `dict`.
         """
-        return {"normal" : self._normal, "point" : self._point, "tangentSpace" : self._tangentSpace}
+        return {"type" : "Hyperplane", "normal" : self._normal, "point" : self._point, "tangentSpace" : self._tangentSpace}
 
     def transform(self, matrix, matrixInverseTranspose = None):
         """

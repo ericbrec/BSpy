@@ -8,6 +8,7 @@ import bspy._spline_intersection
 import bspy._spline_fitting
 import bspy._spline_operations
 
+@Manifold.register
 class Spline(Manifold):
     """
     A class to model, represent, and process piecewise polynomial tensor product
@@ -1433,7 +1434,7 @@ class Spline(Manifold):
             splineData = [splineData]
         for splineDict in splineData:
             splines.append(Spline.from_dict(splineDict))
-        return splines        
+        return splines
 
     def multiply(self, other, indMap = None, productType = 'S'):
         """
@@ -2010,7 +2011,7 @@ class Spline(Manifold):
         --------
         `from_dict` : Create a `Spline` from a data in a `dict`.
         """
-        return {"nInd" : self.nInd, "nDep" : self.nDep, "order" : self.order, "nCoef" : self.nCoef,
+        return {"type" : "Spline", "nInd" : self.nInd, "nDep" : self.nDep, "order" : self.order, "nCoef" : self.nCoef,
             "knots" : self.knots, "coefs" : self.coefs, "metadata" : self.metadata}
 
     @staticmethod

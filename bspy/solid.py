@@ -1,4 +1,5 @@
 import numpy as np
+import json
 import scipy.integrate as integrate
 from bspy.manifold import Manifold
 
@@ -334,6 +335,48 @@ class Solid:
         Casting the solid to `bool` returns not `is_empty`.
         """
         return not self
+    
+    @staticmethod
+    def load(fileName):
+        """
+        Load solids and/or manifolds in json format from the specified filename (full path).
+
+        Parameters
+        ----------
+        fileName : `string`
+            The full path to the file containing the solids and/or manifolds. Can be a relative path.
+        
+        Returns
+        -------
+        solidsAndManifolds : list of `Solid` and/or `Manifold`
+            The loaded solids and/or manifolds.
+
+        See Also
+        --------
+        `save` : Save a solids and/or manifolds in json format to the specified filename (full path).
+        """
+        def from_dict(dictionary):
+            solid = Solid(dictionary["dimension"], dictionary["containsInfinity"])
+            for boundary in dictionary["boundaries"]:
+                manifold = boundary["manifold"]
+                solid.add_boundary(Boundary(Manifold.factory[manifold.get("type", "Spline")].from_dict(manifold), from_dict(boundary["domain"])))
+            return solid
+
+        # Load json file.
+        with open(fileName, 'r', encoding='utf-8') as file:
+            data = json.load(file)
+
+        # Convert json data to solids and manifolds.
+        solidsAndManifolds = []
+        if isinstance(data, dict):
+            data = [data]
+        for dictionary in data:
+            className = dictionary.get("type", "Spline")
+            if className == "Solid":
+                solidsAndManifolds.append(from_dict(dictionary))
+            else:
+                solidsAndManifolds.append(Manifold.factory[className].from_dict(dictionary))
+        return solidsAndManifolds
 
     @staticmethod
     def point_outside_bounds(point, bounds):
@@ -358,6 +401,38 @@ class Solid:
             return True
         else:
             return np.min(np.diff(bounds).reshape(-1) - np.abs(np.sum(bounds, axis=1) + -2.0 * point)) < -Manifold.minSeparation
+    
+    @staticmethod
+    def save(fileName, *solids_or_manifolds):
+        """
+        Save a solids and/or manifolds in json format to the specified filename (full path).
+
+        Parameters
+        ----------
+        fileName : `string`
+            The full path to the file containing the solids and/or manifolds. Can be a relative path.
+        
+        *solids_or_manifolds : `Solid` or `Manifold`
+            Solids and/or manifolds to save in the same file.
+        
+        See Also
+        --------
+        `load` : Load solids and/or manifolds in json format from the specified filename (full path).
+        """
+        class Encoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, np.ndarray):
+                    return obj.tolist()
+                if isinstance(obj, Manifold):
+                    return obj.to_dict()
+                if isinstance(obj, Boundary):
+                    return {"type" : "Boundary", "manifold" : obj.manifold, "domain" : obj.domain}
+                if isinstance(obj, Solid):
+                    return {"type" : "Solid", "dimension" : obj.dimension, "containsInfinity" : obj.containsInfinity, "boundaries" : obj.boundaries}
+                return super().default(obj)
+
+        with open(fileName, 'w', encoding='utf-8') as file:
+            json.dump(solids_or_manifolds, file, indent=4, cls=Encoder)
 
     def slice(self, manifold, cache = None, trimTwin = False):
         """

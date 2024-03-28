@@ -207,20 +207,24 @@ class Viewer(tk.Tk):
         self.list_solid(solid, name, fillColor, lineColor, options, inherit, draw=True)
 
     def save_splines(self):
-        if self.splineDrawList:
-            initialName = self.splineDrawList[0].metadata.get("Name", "spline") + ".json"
+        splines = [self.splineList[item] for item in self.treeview.selection()]
+        if splines:
+            initialName = self.treeview.item(self.treeview.selection()[0])["text"] + ".json"
             fileName = filedialog.asksaveasfilename(title="Save splines", initialfile=initialName,
                 defaultextension=".json", filetypes=(('Json files', '*.json'),('All files', '*.*')))
             if fileName:
-                self.splineDrawList[0].save(fileName, *self.splineDrawList[1:])
+                Solid.save(fileName, *splines)
 
     def load_splines(self):
         fileName = filedialog.askopenfilename(title="Load splines", 
             defaultextension=".json", filetypes=(('Json files', '*.json'),('All files', '*.*')))
         if fileName:
-            splines = Spline.load(fileName)
+            splines = Solid.load(fileName)
             for spline in splines:
-                self.list(spline)
+                if isinstance(spline, Spline):
+                    self.list(spline)
+                else:
+                    self.list_solid(spline)
     
     def erase_all(self):
         """Stop drawing all splines. Splines remain in the treeview."""

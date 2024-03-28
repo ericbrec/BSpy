@@ -14,6 +14,9 @@ class Manifold:
     Coincidence = namedtuple('Coincidence', ('left', 'right', 'alignment', 'transform', 'inverse', 'translation'))
     """Return type for intersect."""
 
+    factory = {}
+    """Factory dictionary for creating manifolds."""
+
     def __init__(self):
         pass
 
@@ -283,6 +286,14 @@ class Manifold:
         dimension : `int`
         """
         return 0
+
+    @staticmethod
+    def register(manifold):
+        """
+        Class decorator for subclasses of `Manifold` that registers the subclass with the `Manifold` factory.
+        """
+        Manifold.factory[manifold.__name__] = manifold
+        return manifold
 
     def tangent_space(self, domainPoint):
         """
