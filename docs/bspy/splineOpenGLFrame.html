@@ -115,6 +115,9 @@
                                 <a class="variable" href="#SplineOpenGLFrame.surfaceFragmentShaderCode">surfaceFragmentShaderCode</a>
                         </li>
                         <li>
+                                <a class="variable" href="#SplineOpenGLFrame.trimmedSurfaceFragmentShaderCode">trimmedSurfaceFragmentShaderCode</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#SplineOpenGLFrame.draw_func">draw_func</a>
                         </li>
                         <li>
@@ -197,6 +200,9 @@
                         </li>
                         <li>
                                 <a class="function" href="#SplineOpenGLFrame.make_drawable">make_drawable</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SplineOpenGLFrame.tessellate2DSolid">tessellate2DSolid</a>
                         </li>
                         <li>
                                 <a class="function" href="#SplineOpenGLFrame.ConvertRGBToHSV">ConvertRGBToHSV</a>
@@ -675,6 +681,19 @@ highlightcolor, highlightthickness, relief, takefocus, visual, width.</p>
     
 
                             </div>
+                            <div id="SplineOpenGLFrame.trimmedSurfaceFragmentShaderCode" class="classattr">
+                                <div class="attr variable">
+            <span class="name">trimmedSurfaceFragmentShaderCode</span>        =
+<input id="SplineOpenGLFrame.trimmedSurfaceFragmentShaderCode-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+            <label class="view-value-button pdoc-button" for="SplineOpenGLFrame.trimmedSurfaceFragmentShaderCode-view-value"></label><span class="default_value">&#39;\n        #version 410 core\n     \n        flat in SplineInfo\n        {\n            int uOrder, vOrder;\n            int uN, vN;\n            int uKnot, vKnot;\n            float uFirst, vFirst;\n            float uSpan, vSpan;\n            float u, v;\n            float uInterval, vInterval;\n        } inData;\n        in vec3 worldPosition;\n        in vec3 splineColor;\n        in vec3 normal;\n        in vec2 parameters;\n        in vec2 pixelPer;\n\n        uniform vec4 uFillColor;\n        uniform vec4 uLineColor;\n        uniform vec3 uLightDirection;\n        uniform int uOptions;\n        uniform sampler2D uTrimTextureMap;\n\n        out vec4 color;\n     \n        void main()\n        {\n        \tvec2 tex = vec2((parameters.x - inData.uFirst) / inData.uSpan, (parameters.y - inData.vFirst) / inData.vSpan);\n            float specular = pow(abs(dot(normal, normalize(uLightDirection + worldPosition / length(worldPosition)))), 25.0);\n            bool line = (uOptions &amp; (1 &lt;&lt; 2)) &gt; 0 &amp;&amp; (pixelPer.x * (parameters.x - inData.uFirst) &lt; 1.5 || pixelPer.x * (inData.uFirst + inData.uSpan - parameters.x) &lt; 1.5);\n            line = line || ((uOptions &amp; (1 &lt;&lt; 2)) &gt; 0 &amp;&amp; (pixelPer.y * (parameters.y - inData.vFirst) &lt; 1.5 || pixelPer.y * (inData.vFirst + inData.vSpan - parameters.y) &lt; 1.5));\n            line = line || ((uOptions &amp; (1 &lt;&lt; 3)) &gt; 0 &amp;&amp; pixelPer.x * (parameters.x - inData.u) &lt; 1.5);\n            line = line || ((uOptions &amp; (1 &lt;&lt; 3)) &gt; 0 &amp;&amp; pixelPer.y * (parameters.y - inData.v) &lt; 1.5);\n            color = line ? uLineColor : ((uOptions &amp; (1 &lt;&lt; 1)) &gt; 0 ? vec4(splineColor, uFillColor.a) : vec4(0.0, 0.0, 0.0, 0.0));\n            color.rgb = (0.3 + 0.5 * abs(dot(normal, uLightDirection)) + 0.2 * specular) * color.rgb;\n            if (color.a * texture(uTrimTextureMap, tex).r == 0.0)\n                discard;\n        }\n    &#39;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SplineOpenGLFrame.trimmedSurfaceFragmentShaderCode"></a>
+    
+    
+
+                            </div>
                             <div id="SplineOpenGLFrame.draw_func" class="classattr">
                                 <div class="attr variable">
             <span class="name">draw_func</span>
@@ -1114,6 +1133,22 @@ as colors (up to 6 dependent variables are supported).</p>
 
 
                             </div>
+                            <div id="SplineOpenGLFrame.tessellate2DSolid" class="classattr">
+                                <div class="attr function">
+                    <div class="decorator">@staticmethod</div>
+
+        <span class="def">def</span>
+        <span class="name">tessellate2DSolid</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">solid</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SplineOpenGLFrame.tessellate2DSolid"></a>
+    
+            <div class="docstring"><p>Returns an array of triangles that tessellate the given 2D solid</p>
+</div>
+
+
+                            </div>
                             <div id="SplineOpenGLFrame.ConvertRGBToHSV" class="classattr">
                                 <div class="attr function">
                     <div class="decorator">@staticmethod</div>
@@ -1459,7 +1494,7 @@ as colors (up to 6 dependent variables are supported).</p>
                             <div id="SurfaceProgram.__init__" class="classattr">
                                 <div class="attr function">
             
-        <span class="name">SurfaceProgram</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">frame</span>,</span><span class="param">	<span class="n">nDep</span>,</span><span class="param">	<span class="n">splineColorDeclarations</span>,</span><span class="param">	<span class="n">initializeSplineColor</span>,</span><span class="param">	<span class="n">computeSplineColor</span>,</span><span class="param">	<span class="n">postProcessSplineColor</span></span>)</span>
+        <span class="name">SurfaceProgram</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">frame</span>,</span><span class="param">	<span class="n">trimmed</span>,</span><span class="param">	<span class="n">nDep</span>,</span><span class="param">	<span class="n">splineColorDeclarations</span>,</span><span class="param">	<span class="n">initializeSplineColor</span>,</span><span class="param">	<span class="n">computeSplineColor</span>,</span><span class="param">	<span class="n">postProcessSplineColor</span></span>)</span>
 
         
     </div>
