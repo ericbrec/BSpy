@@ -565,9 +565,8 @@ def test_contours():
     blob_u = blob.differentiate()
     blob_t = trajectory.differentiate()
     blob_tangents = blob_u.multiply(blob_t, productType = 'C')
-# This currently has a topology resolution failure
-#    curves = blob_tangents.contours()
-#    assert len(curves) == 4
+    curves = blob_tangents.contours()
+    assert len(curves) == 4
 
     section1 = bspy.Spline.section([[0.0, 0.0, 75.0, -50.0], [1.0, 0.0, -85.0, -30.0]])
     section2 = bspy.Spline.section([[1.0, 0.0, 75.0, -0.1], [1.5, 0.0, -85.0, -0.1]])
