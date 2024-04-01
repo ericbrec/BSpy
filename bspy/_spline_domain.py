@@ -518,6 +518,62 @@ def reverse(self, variable = 0):
     newFolded = type(self)(folded.nInd, folded.nDep, folded.order, folded.nCoef, (newKnots,), newCoefs, folded.metadata)
     return newFolded.unfold(myIndices, basisInfo)
 
+def split(self, breaks = None, minContinuity = 0):
+    if breaks is not None and len(breaks) != self.nInd: raise ValueError("Invalid breaks")
+    if minContinuity < 0: raise ValueError("minContinuity must be >= 0")
+    if self.nInd < 1: return self
+
+    # Step 1: Determine the knots to insert.
+    newKnotsList = []
+    for i, order, knots in zip(range(self.nInd), self.order, self.knots):
+        unique, counts = np.unique(knots, return_counts=True)
+        newKnots = []
+        splits = []
+        for knot, count in zip(unique, counts):
+            assert count <= order
+            if count > order - 1 - minContinuity:
+                newKnots += [knot] * (order - count)
+        if breaks is not None:
+            for knot in breaks[i]:
+                if knot not in unique:
+                    newKnots += [knot] * order
+        newKnotsList.append(newKnots)    
+    
+    # Step 2: Insert the knots.
+    spline = self.insert_knots(newKnotsList)
+    if spline is self:
+        return spline
+
+    # Step 3: Store the indices of the full order knots.
+    indexList = []
+    for order, knots in zip(self.order, self.knots):
+        unique, counts = np.unique(knots, return_counts=True)
+        indices = np.searchsorted(knots, unique)
+        fullOrder = []
+        for ix, count in zip(indices, counts):
+            if count == order:
+                fullOrder.append(ix)
+        indexList.append(fullOrder)
+
+
+    # Step 4: Slice up the spline.
+    splineArray = []
+    for indices in indexList:
+        splines = []
+        for i in range(len(indices) - 1):
+            knotsList = []
+            coefIndex = [slice(None)] # First index is for nDep
+            for (order, knots) in zip(spline.order, spline.knots):
+                leftIndex = indices[i]
+                rightIndex = indices[i + 1]
+                knotsList.append(knots[leftIndex:rightIndex + order])
+                coefIndex.append(slice(leftIndex, rightIndex))
+            coefs = spline.coefs[tuple(coefIndex)]
+            splines.append(type(spline)(spline.nInd, spline.nDep, spline.order, coefs.shape[1:], knotsList, coefs, spline.metadata))
+        splineArray.append(splines)
+
+    return splineArray
+
 def transpose(self, axes=None):
     if axes is None:
         axes = range(self.nInd)[::-1]
