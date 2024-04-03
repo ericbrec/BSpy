@@ -1050,6 +1050,8 @@ def test_moment():
     yMoment = arc.moment([0, 1])
     assert abs(yMoment - 1.0)
 
+    outer
+
 def test_multiply():
     maxError = 0.0
     spline1 = bspy.Spline(1, 2, (5,), (5,), [np.array([0, 0, 0, 0, 0.2, 0.5, 0.5, 1, 1, 1], float)], 

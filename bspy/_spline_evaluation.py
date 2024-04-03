@@ -171,18 +171,24 @@ def moment(self, exponent = None, domain = None):
         if len(exponent) != self.nDep:  raise ValueError("Incorrect number of exponents specified")
 
     # Establish the callback function
-    def momentIntegrand(u):
-        x = self(u)
-        measure = np.linalg.norm(self.normal(u, False))
-        for iDep in range(self.nDep):
-            measure *= x[iDep] ** exponent[iDep]
-        return measure
+    def momentIntegrand(u, nIndSoFar, uValues):
+        uValues[nIndSoFar] = u
+        nIndSoFar += 1
+        if self.nInd == nIndSoFar:
+            x = self(uValues)
+            total = np.linalg.norm(self.normal(uValues, False))
+            for iDep in range(self.nDep):
+                total *= x[iDep] ** exponent[iDep]
+        else:
+            total = 0.0
+            for ix in range(len(uniqueKnots[nIndSoFar]) - 1):
+                value = sp.integrate.quad(momentIntegrand, uniqueKnots[nIndSoFar][ix],
+                                          uniqueKnots[nIndSoFar][ix + 1], (nIndSoFar, uValues))
+                total += value[0]
+        return total    
     
-    # Call the quadrature routine
-    total = 0.0
-    for ix in range(len(uniqueKnots[0]) - 1):
-        value = sp.integrate.quad(momentIntegrand, uniqueKnots[0][ix], uniqueKnots[0][ix + 1])
-        total += value[0]
+    # Compute the value by calling the callback routine
+    total = momentIntegrand(0.0, -1, self.nInd * [0.0])
     return total
 
 def normal(self, uvw, normalize=True, indices=None):
