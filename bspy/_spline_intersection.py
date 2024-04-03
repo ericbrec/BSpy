@@ -75,14 +75,22 @@ def zeros_using_interval_newton(self):
         if derivativeBounds[0] * derivativeBounds[1] >= 0.0:    # Refine interval
             projectedLeftStep = max(0.0, adjustedLeftStep)
             projectedRightStep = min(1.0, adjustedRightStep)
+            provisionalZero = [0.5 * (projectedLeftStep + projectedRightStep)]
             if projectedLeftStep <= projectedRightStep:
                 if projectedRightStep - projectedLeftStep <= epsilon:
-                    myZeros = [0.5 * (projectedLeftStep + projectedRightStep)]
+                    myZeros = provisionalZero
                 else:
                     trimmedSpline = mySpline.trim(((projectedLeftStep, projectedRightStep),))
                     myZeros = refine(trimmedSpline, intervalSize, functionMax)
+                    if len(myZeros) == 0 and mySpline.order[0] == mySpline.nCoef[0] and \
+                       mySpline.coefs[0][0] * mySpline.coefs[0][-1] < 0.0:
+                        return provisionalZero
             else:
-               return []
+               if mySpline.order[0] == mySpline.nCoef[0] and \
+                  mySpline.coefs[0][0] * mySpline.coefs[0][-1] < 0.0:
+                   return provisionalZero
+               else:
+                   return []
         else:                           # . . . or split as needed
             myZeros = []
             if adjustedLeftStep > 0.0:
