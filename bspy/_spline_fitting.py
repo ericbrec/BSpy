@@ -419,16 +419,16 @@ def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-6):
         su_sv = su @ sv
         sv_sv = sv @ sv
         suu_su = suu @ su
-        suv_su = suv @ su
-        svv_su = svv @ su
         suu_sv = suu @ sv
+        suv_su = suv @ su
         suv_sv = suv @ sv
+        svv_su = svv @ su
         svv_sv = svv @ sv
         suu_suu = suu @ suu
-        suv_suu = suv @ suu
-        svv_suu = svv @ suu
+        suu_suv = suu @ suv
+        suu_svv = suu @ svv
         suv_suv = suv @ suv
-        svv_suv = svv @ suv
+        suv_svv = suv @ svv
         svv_svv = svv @ svv
         suuu_su = suuu @ su
         suuu_sv = suuu @ sv
@@ -455,10 +455,10 @@ def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-6):
 
         # Compute right hand side entries
         R = np.array([[suu_su, suv_su, svv_su], [suu_sv, suv_sv, svv_sv]])
-        R_u = np.array([[suuu_su + suu_suu, suuv_su + suv_suu, suvv_su + svv_suu],
-                        [suuu_sv + suv_suu, suuv_sv + suv_suv, suvv_sv + svv_suv]])
-        R_v = np.array([[suuv_su + suv_suu, suvv_su + suv_suv, svvv_su + svv_suv],
-                        [suuv_sv + svv_suu, suvv_sv + svv_suv, svvv_sv + svv_svv]])
+        R_u = np.array([[suuu_su + suu_suu, suuv_su + suu_suv, suvv_su + suu_svv],
+                        [suuu_sv + suu_suv, suuv_sv + suv_suv, suvv_sv + suv_svv]])
+        R_v = np.array([[suuv_su + suu_suv, suvv_su + suv_suv, svvv_su + suv_svv],
+                        [suuv_sv + suu_svv, suvv_sv + suv_svv, svvv_sv + svv_svv]])
 
         # Solve for the Christoffel symbols
         luAndPivot = sp.linalg.lu_factor(A)

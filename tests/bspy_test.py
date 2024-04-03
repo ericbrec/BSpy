@@ -1041,6 +1041,15 @@ def test_matmul():
     except:
         return NotImplementedError
 
+def test_moment():
+    arc = bspy.Spline.circular_arc(1.0, 90.0)
+    arcLength = arc.moment()
+    assert abs(arcLength - np.pi / 2.0) < 1.0e-12
+    xMoment = arc.moment([1, 0])
+    assert abs(xMoment - 1.0) < 1.0e-12
+    yMoment = arc.moment([0, 1])
+    assert abs(yMoment - 1.0)
+
 def test_multiply():
     maxError = 0.0
     spline1 = bspy.Spline(1, 2, (5,), (5,), [np.array([0, 0, 0, 0, 0.2, 0.5, 0.5, 1, 1, 1], float)], 

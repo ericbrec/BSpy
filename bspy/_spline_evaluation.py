@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 
 def bspline_values(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs = False):
     basis = np.zeros(splineOrder, knots.dtype)
@@ -143,6 +144,46 @@ def jacobian(self, uvw):
         wrt[i] = 0
     
     return value
+
+def moment(self, exponent = None, domain = None):
+    # Determine domain and check its validity
+    actualDomain = self.domain()
+    if domain is None:
+        domain = actualDomain
+    else:
+        for iInd in range(self.nInd):
+            if domain[iInd, 0] < actualDomain[iInd, 0] or \
+               domain[iInd, 1] > actualDomain[iInd, 1]:
+                raise ValueError("Can't integrate beyond the domain of the spline")
+
+    # Determine breakpoints for quadrature intervals; require functions to be analytic
+
+    uniqueKnots = []
+    for iInd in range(self.nInd):
+        iStart = np.searchsorted(self.knots[iInd], domain[iInd, 0], side = 'right')
+        iEnd = np.searchsorted(self.knots[iInd], domain[iInd, 1], side = 'right')
+        uniqueKnots.append(np.unique(np.insert(self.knots[iInd], [iStart, iEnd], domain[iInd])[iStart : iEnd + 2]))
+
+    # Determine exponents and check validity
+    if exponent is None:
+        exponent = self.nDep * [0]
+    else:
+        if len(exponent) != self.nDep:  raise ValueError("Incorrect number of exponents specified")
+
+    # Establish the callback function
+    def momentIntegrand(u):
+        x = self(u)
+        measure = np.linalg.norm(self.normal(u, False))
+        for iDep in range(self.nDep):
+            measure *= x[iDep] ** exponent[iDep]
+        return measure
+    
+    # Call the quadrature routine
+    total = 0.0
+    for ix in range(len(uniqueKnots[0]) - 1):
+        value = sp.integrate.quad(momentIntegrand, uniqueKnots[0][ix], uniqueKnots[0][ix + 1])
+        total += value[0]
+    return total
 
 def normal(self, uvw, normalize=True, indices=None):
     # Make work for scalar valued functions

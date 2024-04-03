@@ -1108,7 +1108,7 @@ class Spline(Manifold):
 
     def integral(self, with_respect_to, uvw1, uvw2, returnSpline = False):
         """
-        Compute the derivative of the spline at given parameter values.
+        Compute the integral of the spline at given parameter values.
 
         Parameters
         ----------
@@ -1414,6 +1414,40 @@ class Spline(Manifold):
             splines.append(Spline(splineDict["nInd"], splineDict["nDep"], splineDict["order"], splineDict["nCoef"],
                 [np.array(knots) for knots in splineDict["knots"]], np.array(splineDict["coefs"]), splineDict["metadata"]))
         return splines        
+
+    def moment(self, exponent = None, domain = None):
+        """
+        Compute any moment of a spline.  In particular, compute the nInd-dimensional integral over the
+        specified domain of the quantity x_0^(j_0)x_1^(j_1)...x_{nDep-1}^(j_{nDep-1})dA, where the x_1 is
+        the i-th dependent variable, j_i is the i-th exponent as passed in the exponent array, and dA is
+        the multivariate measure of the spline mapping.
+
+        Parameters
+        ----------
+        exponent : `iterable` or `None`, optional
+            An iterable of length nDep which expresses the exponents of the dependent variables of the
+            spline.  If exponent is None, then zero exponents are assumed.
+    
+        domain : array-like
+            nInd x 2 array of the lower and upper limits of integration for the spline on each of the
+            independent variables.  If domain is None, then the actual domain of the spline is used.
+        
+        Returns
+        -------
+        moment : `float`
+            The computed value of the specified integral
+        
+        See Also
+        --------
+        `integral` : Compute the integral of the spline at given parameter values.
+        `integrate` : Integrate a spline with respect to one of its independent variables, returning
+                      the resulting spline.
+
+        Notes
+        -----
+        Attempts to compute the integral to two digits less than machine precision.
+        """
+        return bspy._spline_evaluation.moment(self, exponent, domain)
 
     def multiply(self, other, indMap = None, productType = 'S'):
         """
