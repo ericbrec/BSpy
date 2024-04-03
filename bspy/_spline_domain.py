@@ -518,9 +518,9 @@ def reverse(self, variable = 0):
     newFolded = type(self)(folded.nInd, folded.nDep, folded.order, folded.nCoef, (newKnots,), newCoefs, folded.metadata)
     return newFolded.unfold(myIndices, basisInfo)
 
-def split(self, breaks = None, minContinuity = 0):
-    if breaks is not None and len(breaks) != self.nInd: raise ValueError("Invalid breaks")
+def split(self, minContinuity = 0, breaks = None):
     if minContinuity < 0: raise ValueError("minContinuity must be >= 0")
+    if breaks is not None and len(breaks) != self.nInd: raise ValueError("Invalid breaks")
     if self.nInd < 1: return self
 
     # Step 1: Determine the knots to insert.
@@ -541,7 +541,7 @@ def split(self, breaks = None, minContinuity = 0):
     # Step 2: Insert the knots.
     spline = self.insert_knots(newKnotsList)
     if spline is self:
-        return spline
+        return np.full((1,) * spline.nInd, spline)
 
     # Step 3: Store the indices of the full order knots.
     indexList = []

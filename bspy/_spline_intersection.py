@@ -418,9 +418,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
 
     return roots
 
-def contours(self):
-    if self.nInd - self.nDep != 1: raise ValueError("The number of free variables (self.nInd - self.nDep) must be one.")
-
+def _contours_of_C1_spline(self):
     Point = namedtuple('Point', ('d', 'det', 'onUVBoundary', 'turningPoint', 'uvw'))
     epsilon = np.sqrt(np.finfo(self.coefs.dtype).eps)
     evaluationEpsilon = np.sqrt(epsilon)
@@ -780,6 +778,10 @@ def contours(self):
         splineContours.append(contour)
     
     return splineContours
+
+def contours(self):
+    if self.nInd - self.nDep != 1: raise ValueError("The number of free variables (self.nInd - self.nDep) must be one.")
+    return _contours_of_C1_spline(self)
 
 def intersect(self, other):
     intersections = []

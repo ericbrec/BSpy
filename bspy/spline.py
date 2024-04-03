@@ -1944,31 +1944,30 @@ class Spline(Manifold):
         """
         return bspy._spline_fitting.sphere(radius, tolerance)
 
-    def split(self, breaks = None, minContinuity = 0):
+    def split(self, minContinuity = 0, breaks = None):
         """
         Split a spline into separate spline pieces.
 
         Parameters
         ----------
-        breaks : `iterable` of length `nInd` or `None`, optional
-            An iterable that specifies the breaks at which to separate the spline. 
-            len(newKnots[ind]) == 0 if there the spline isn't separated for the `ind` independent variable. 
-            If newKnots is `None` (the default), the spline will only be separated at discontinuities.
-
         minContinuity : `int`, optional
             The minimum expected continuity of each spline piece. The default is zero, for C0 continuity.
 
+        breaks : `iterable` of length `nInd` or `None`, optional
+            An iterable that specifies the breaks at which to separate the spline. 
+            len(breaks[ind]) == 0 if there the spline isn't separated for the `ind` independent variable. 
+            If breaks is `None` (the default), the spline will only be separated at discontinuities.
+
         Returns
         -------
-        splineArray : array-like collection of `Spline`
-            A array of splines with nInd dimensions containing the spline pieces separated for each independent variable. 
-            If the spline isn't split at all, the original spline is returned.
+        splineArray : array of `Spline`
+            A array of splines with nInd dimensions containing the spline pieces. 
 
         See Also
         --------
         `join` : Join a list of splines together into a single spline.
         """
-        return bspy._spline_domain.split(self, breaks, minContinuity)
+        return bspy._spline_domain.split(self, minContinuity, breaks)
     
     def subtract(self, other, indMap = None):
         """
