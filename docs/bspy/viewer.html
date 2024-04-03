@@ -37,7 +37,7 @@
                                 <a class="function" href="#Viewer.__init__">Viewer</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Viewer.listBox">listBox</a>
+                                <a class="variable" href="#Viewer.treeview">treeview</a>
                         </li>
                         <li>
                                 <a class="function" href="#Viewer.frame">frame</a>
@@ -50,6 +50,9 @@
                         </li>
                         <li>
                                 <a class="variable" href="#Viewer.splineList">splineList</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Viewer.solidList">solidList</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Viewer.splineDrawList">splineDrawList</a>
@@ -214,7 +217,7 @@
     </div>
     <a class="headerlink" href="#Viewer"></a>
     
-            <div class="docstring"><p>A tkinter viewer (<code>tkinter.Tk</code>) that hosts a <code>SplineOpenGLFrame</code>, a listbox full of 
+            <div class="docstring"><p>A tkinter viewer (<code>tkinter.Tk</code>) that hosts a <code>SplineOpenGLFrame</code>, a treeview full of 
 splines, and a set of controls to adjust and view the selected splines.</p>
 
 <h6 id="see-also">See Also</h6>
@@ -223,13 +226,13 @@ splines, and a set of controls to adjust and view the selected splines.</p>
 
 <h6 id="examples">Examples</h6>
 
-<p>Creates a Viewer, show some splines, and launches the viewer (blocks on the main loop).</p>
+<p>Creates a Viewer, lists three splines, drawing (selecting) the third, and launches the viewer (blocks on the main loop).</p>
 
 <div class="pdoc-code codehilite">
 <pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">viewer</span> <span class="o">=</span> <span class="n">Viewer</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">viewer</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">spline1</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">viewer</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">spline2</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">viewer</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">spline3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">viewer</span><span class="o">.</span><span class="n">list</span><span class="p">(</span><span class="n">spline1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">viewer</span><span class="o">.</span><span class="n">list</span><span class="p">(</span><span class="n">spline2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">viewer</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">spline3</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">viewer</span><span class="o">.</span><span class="n">mainloop</span><span class="p">()</span>
 </code></pre>
 </div>
@@ -254,13 +257,13 @@ is the name of the widget class.</p>
 
 
                             </div>
-                            <div id="Viewer.listBox" class="classattr">
+                            <div id="Viewer.treeview" class="classattr">
                                 <div class="attr variable">
-            <span class="name">listBox</span>
+            <span class="name">treeview</span>
 
         
     </div>
-    <a class="headerlink" href="#Viewer.listBox"></a>
+    <a class="headerlink" href="#Viewer.treeview"></a>
     
     
 
@@ -313,6 +316,17 @@ is the name of the widget class.</p>
     
 
                             </div>
+                            <div id="Viewer.solidList" class="classattr">
+                                <div class="attr variable">
+            <span class="name">solidList</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Viewer.solidList"></a>
+    
+    
+
+                            </div>
                             <div id="Viewer.splineDrawList" class="classattr">
                                 <div class="attr variable">
             <span class="name">splineDrawList</span>
@@ -361,13 +375,13 @@ is the name of the widget class.</p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">list</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">spline</span>, </span><span class="param"><span class="n">name</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+        <span class="name">list</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">spline</span>,</span><span class="param">	<span class="n">name</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">fillColor</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">lineColor</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">options</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">draw</span><span class="o">=</span><span class="kc">False</span>,</span><span class="param">	<span class="n">parentIID</span><span class="o">=</span><span class="s1">&#39;&#39;</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
     <a class="headerlink" href="#Viewer.list"></a>
     
-            <div class="docstring"><p>List a <code>Spline</code> in the listbox. Can be called before viewer is running.</p>
+            <div class="docstring"><p>List a <code>Spline</code>, <code>Boundary</code>, or <code>Solid</code> in the treeview. Can be called before viewer is running.</p>
 </div>
 
 
@@ -376,13 +390,13 @@ is the name of the widget class.</p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">show</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">spline</span>, </span><span class="param"><span class="n">name</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+        <span class="name">show</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">spline</span>,</span><span class="param">	<span class="n">name</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">fillColor</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">lineColor</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">options</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">draw</span><span class="o">=</span><span class="kc">False</span>,</span><span class="param">	<span class="n">parentIID</span><span class="o">=</span><span class="s1">&#39;&#39;</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
     <a class="headerlink" href="#Viewer.show"></a>
     
-            <div class="docstring"><p>Show a <code>Spline</code> in the listbox (calls the list method, kept for compatibility). Can be called before viewer is running.</p>
+            <div class="docstring"><p>List a <code>Spline</code>, <code>Boundary</code>, or <code>Solid</code> in the treeview. Can be called before viewer is running.</p>
 </div>
 
 
@@ -391,13 +405,13 @@ is the name of the widget class.</p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">draw</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">spline</span>, </span><span class="param"><span class="n">name</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+        <span class="name">draw</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">spline</span>,</span><span class="param">	<span class="n">name</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">fillColor</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">lineColor</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">options</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
     <a class="headerlink" href="#Viewer.draw"></a>
     
-            <div class="docstring"><p>Add a <code>Spline</code> to the listbox and draw it. Can be called before the viewer is running.</p>
+            <div class="docstring"><p>List a <code>Spline</code>, <code>Boundary</code>, or <code>Solid</code> in the treeview and draw it in the viewer. Can be called before viewer is running.</p>
 </div>
 
 
@@ -438,7 +452,7 @@ is the name of the widget class.</p>
     </div>
     <a class="headerlink" href="#Viewer.erase_all"></a>
     
-            <div class="docstring"><p>Stop drawing all splines. Splines remain in the listbox.</p>
+            <div class="docstring"><p>Stop drawing all splines. Splines remain in the treeview.</p>
 </div>
 
 
@@ -453,7 +467,7 @@ is the name of the widget class.</p>
     </div>
     <a class="headerlink" href="#Viewer.remove"></a>
     
-            <div class="docstring"><p>Remove splines from the listbox.</p>
+            <div class="docstring"><p>Remove splines from the treeview.</p>
 </div>
 
 
@@ -468,7 +482,7 @@ is the name of the widget class.</p>
     </div>
     <a class="headerlink" href="#Viewer.empty"></a>
     
-            <div class="docstring"><p>Stop drawing all splines and remove them from the listbox.</p>
+            <div class="docstring"><p>Stop drawing all splines and remove them from the treeview.</p>
 </div>
 
 
@@ -998,7 +1012,7 @@ A dictionary of variable names, typically <code>locals()</code>, used to assign 
 
 <h6 id="see-also">See Also</h6>
 
-<p><code><a href="#Viewer">Viewer</a></code>:  A tkinter app (<code>tkinter.Tk</code>) that hosts a <code>SplineOpenGLFrame</code>, a listbox full of 
+<p><code><a href="#Viewer">Viewer</a></code>:  A tkinter app (<code>tkinter.Tk</code>) that hosts a <code>SplineOpenGLFrame</code>, a treeview full of 
 splines, and a set of controls to adjust and view the selected splines.  </p>
 
 <h6 id="examples">Examples</h6>
@@ -1064,13 +1078,13 @@ splines, and a set of controls to adjust and view the selected splines.  </p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">list</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">spline</span>, </span><span class="param"><span class="n">name</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+        <span class="name">list</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">spline</span>,</span><span class="param">	<span class="n">name</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">fillColor</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">lineColor</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">options</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">draw</span><span class="o">=</span><span class="kc">False</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
     <a class="headerlink" href="#Graphics.list"></a>
     
-            <div class="docstring"><p>List a <code>Spline</code> in the listbox.</p>
+            <div class="docstring"><p>List a <code>Spline</code>, <code>Boundary</code>, or <code>Solid</code> in the treeview. Can be called before viewer is running.</p>
 </div>
 
 
@@ -1079,13 +1093,13 @@ splines, and a set of controls to adjust and view the selected splines.  </p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">show</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">spline</span>, </span><span class="param"><span class="n">name</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+        <span class="name">show</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">spline</span>,</span><span class="param">	<span class="n">name</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">fillColor</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">lineColor</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">options</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">draw</span><span class="o">=</span><span class="kc">False</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
     <a class="headerlink" href="#Graphics.show"></a>
     
-            <div class="docstring"><p>Show a <code>Spline</code> in the listbox (calls list method, kept for compatibility).</p>
+            <div class="docstring"><p>List a <code>Spline</code>, <code>Boundary</code>, or <code>Solid</code> in the treeview. Can be called before viewer is running.</p>
 </div>
 
 
@@ -1094,13 +1108,13 @@ splines, and a set of controls to adjust and view the selected splines.  </p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">draw</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">spline</span>, </span><span class="param"><span class="n">name</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+        <span class="name">draw</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">spline</span>,</span><span class="param">	<span class="n">name</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">fillColor</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">lineColor</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">options</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
     <a class="headerlink" href="#Graphics.draw"></a>
     
-            <div class="docstring"><p>Add a <code>Spline</code> to the listbox and draw it.</p>
+            <div class="docstring"><p>List a <code>Spline</code>, <code>Boundary</code>, or <code>Solid</code> in the treeview and draw it in the viewer. Can be called before viewer is running.</p>
 </div>
 
 
@@ -1115,7 +1129,7 @@ splines, and a set of controls to adjust and view the selected splines.  </p>
     </div>
     <a class="headerlink" href="#Graphics.erase_all"></a>
     
-            <div class="docstring"><p>Stop drawing all splines. Splines remain in the listbox.</p>
+            <div class="docstring"><p>Stop drawing all splines. Splines remain in the treeview.</p>
 </div>
 
 
@@ -1130,7 +1144,7 @@ splines, and a set of controls to adjust and view the selected splines.  </p>
     </div>
     <a class="headerlink" href="#Graphics.empty"></a>
     
-            <div class="docstring"><p>Stop drawing all splines and remove them from the listbox.</p>
+            <div class="docstring"><p>Stop drawing all splines and remove them from the treeview.</p>
 </div>
 
 

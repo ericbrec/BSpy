@@ -73,6 +73,9 @@
                                 <a class="function" href="#Spline.common_basis">common_basis</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.complete_slice">complete_slice</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.cone">cone</a>
                         </li>
                         <li>
@@ -112,6 +115,9 @@
                                 <a class="function" href="#Spline.domain">domain</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.domain_dimension">domain_dimension</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.dot">dot</a>
                         </li>
                         <li>
@@ -127,10 +133,19 @@
                                 <a class="function" href="#Spline.extrapolate">extrapolate</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.flip_normal">flip_normal</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.fold">fold</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.four_sided_patch">four_sided_patch</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.from_dict">from_dict</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.full_domain">full_domain</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.geodesic">geodesic</a>
@@ -184,6 +199,9 @@
                                 <a class="function" href="#Spline.range_bounds">range_bounds</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.range_dimension">range_dimension</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.remove_knot">remove_knot</a>
                         </li>
                         <li>
@@ -223,6 +241,12 @@
                                 <a class="function" href="#Spline.subtract">subtract</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.tangent_space">tangent_space</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.to_dict">to_dict</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.torus">torus</a>
                         </li>
                         <li>
@@ -236,6 +260,9 @@
                         </li>
                         <li>
                                 <a class="function" href="#Spline.trim">trim</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.trimmed_range_bounds">trimmed_range_bounds</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.unfold">unfold</a>
@@ -269,7 +296,8 @@
             </section>
                 <section id="Spline">
                     <div class="attr class">
-            
+                    <div class="decorator">@Manifold.register</div>
+
     <span class="def">class</span>
     <span class="name">Spline</span><wbr>(<span class="base"><a href="manifold.html#Manifold">bspy.manifold.Manifold</a></span>):
 
@@ -618,6 +646,42 @@ The aligned collection of N splines.</li>
 
 
                             </div>
+                            <div id="Spline.complete_slice" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">complete_slice</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="nb">slice</span>, </span><span class="param"><span class="n">solid</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.complete_slice"></a>
+    
+            <div class="docstring"><p>Add any missing inherent (implicit) boundaries of this spline's domain to the given slice of the 
+given solid that are needed to make the slice valid and complete.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>slice</strong> (<code>solid.Solid</code>):
+The slice of the given solid formed by the spline. The slice may be incomplete, missing some of the 
+spline's inherent domain boundaries. Its dimension must match <code>self.domain_dimension()</code>.</li>
+<li><strong>solid</strong> (<code>solid.Solid</code>):
+The solid being sliced by the manifold. Its dimension must match <code>self.range_dimension()</code>.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code>solid.Solid.slice</code>:  slice the solid by a manifold. <br />
+<code><a href="#Spline.domain">domain</a></code>:  Return the domain of a spline.  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>A spline's inherent domain is determined by its knot array for each dimension. This method only works for 
+nInd of 1 or 2.</p>
+</div>
+
+
+                            </div>
                             <div id="Spline.cone" class="classattr">
                                 <div class="attr function">
                     <div class="decorator">@staticmethod</div>
@@ -892,20 +956,13 @@ Computer Aided Geometric Design 11, no. 6 (1994): 597-620.</p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">copy</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">metadata</span><span class="o">=</span><span class="p">{}</span></span><span class="return-annotation">):</span></span>
+        <span class="name">copy</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
     <a class="headerlink" href="#Spline.copy"></a>
     
             <div class="docstring"><p>Create a copy of a spline.</p>
-
-<h6 id="parameters">Parameters</h6>
-
-<ul>
-<li><strong>metadata</strong> (<code>dict</code>, optional):
-A dictionary of ancillary data to store with the spline. Default is {}.</li>
-</ul>
 
 <h6 id="returns">Returns</h6>
 
@@ -1132,13 +1189,35 @@ The spline that results from differentiating the original spline with respect to
 
 <ul>
 <li><strong>bounds</strong> (<code>numpy.array</code>):
-nInd x 2 array of the upper and lower bounds on each of the independent variables.</li>
+nInd x 2 array of the lower and upper bounds on each of the independent variables.</li>
 </ul>
 
 <h6 id="see-also">See Also</h6>
 
 <p><code><a href="#Spline.reparametrize">reparametrize</a></code>:  Reparametrize a spline to match new domain bounds <br />
 <code><a href="#Spline.trim">trim</a></code>:  Trim the domain of a spline.  </p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.domain_dimension" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">domain_dimension</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.domain_dimension"></a>
+    
+            <div class="docstring"><p>Return the domain dimension of a spline (nInd).</p>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>dimension</strong> (<code>int</code>):
+The dimension of the spline's domain (nInd)</li>
+</ul>
 </div>
 
 
@@ -1325,7 +1404,7 @@ B-spline coefficients is computed.</p>
 
 <ul>
 <li><strong>newDomain</strong> (array-like):
-nInd x 2 array of the new upper and lower bounds on each of the independent variables (same form as 
+nInd x 2 array of the new lower and upper bounds on each of the independent variables (same form as 
 returned from <code><a href="#Spline.domain">domain</a></code>). If a bound is None or nan then the original bound (and knots) are left unchanged.</li>
 <li><strong>continuityOrder</strong> (<code>int</code>):
 The order of continuity of the extrapolation (the number of derivatives that match at the endpoints). 
@@ -1344,6 +1423,32 @@ Extrapolated spline. If all the knots are unchanged, the original spline is retu
 
 <p><code><a href="#Spline.domain">domain</a></code>:  Return the domain of a spline. <br />
 <code><a href="#Spline.trim">trim</a></code>:  Trim the domain of a spline.  </p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.flip_normal" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">flip_normal</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.flip_normal"></a>
+    
+            <div class="docstring"><p>Flip the direction of the normal.</p>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+The spline with flipped normal. The spline retains the same tangent space.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code>solid.Solid.complement</code>:  Return the complement of the solid: whatever was inside is outside and vice-versa.  </p>
 </div>
 
 
@@ -1444,6 +1549,65 @@ The spline surface requested by the input curves and surfParam.</li>
 be given in any order.  This method does the best possible job of matching endpoints, so
 the roles of "right," "top," and "left" may very well get reassigned.  Moreover, the
 parametrization of the curves may also get reversed in order to best match endpoints.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.from_dict" class="classattr">
+                                <div class="attr function">
+                    <div class="decorator">@staticmethod</div>
+
+        <span class="def">def</span>
+        <span class="name">from_dict</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">dictionary</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.from_dict"></a>
+    
+            <div class="docstring"><p>Create a <code><a href="#Spline">Spline</a></code> from a data in a <code>dict</code>.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>dictionary</strong> (<code>dict</code>):
+The <code>dict</code> containing <code><a href="#Spline">Spline</a></code> data.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.to_dict">to_dict</a></code>:  Return a <code>dict</code> with <code><a href="#Spline">Spline</a></code> data.  </p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.full_domain" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">full_domain</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.full_domain"></a>
+    
+            <div class="docstring"><p>Return a solid that represents the full domain of the spline.</p>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>domain</strong> (<code>Solid</code>):
+The full (untrimmed) domain of the spline.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code>Boundary</code>:  A portion of the boundary of a solid.  </p>
 </div>
 
 
@@ -1735,7 +1899,8 @@ Each intersection records either a crossing or a coincident region.</p>
 <h6 id="see-also">See Also</h6>
 
 <p><code><a href="#Spline.zeros">zeros</a></code>:  Find the roots of a spline (nInd must match nDep). <br />
-<code><a href="#Spline.contours">contours</a></code>:  Find all the contour curves of a spline.  </p>
+<code><a href="#Spline.contours">contours</a></code>:  Find all the contour curves of a spline. <br />
+<code>solid.Solid.slice</code>:  slice the solid by a manifold.  </p>
 
 <h6 id="notes">Notes</h6>
 
@@ -2172,7 +2337,29 @@ The spline that represents the input point.</li>
     <a class="headerlink" href="#Spline.range_bounds"></a>
     
             <div class="docstring"><p>Return the range of a spline as lower and upper bounds on each of the
-dependent variables</p>
+dependent variables.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.range_dimension" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">range_dimension</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.range_dimension"></a>
+    
+            <div class="docstring"><p>Return the range dimension of a spline (nDep).</p>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>dimension</strong> (<code>int</code>):
+The dimension of the spline's range (nDep)</li>
+</ul>
 </div>
 
 
@@ -2289,7 +2476,7 @@ A spline with the knots removed.</li>
 
 <ul>
 <li><strong>newDomain</strong> (array-like):
-nInd x 2 array of the new upper and lower bounds on each of the independent variables (same form as 
+nInd x 2 array of the new lower and upper bounds on each of the independent variables (same form as 
 returned from <code><a href="#Spline.domain">domain</a></code>). If a bound pair is <code>None</code> then the original bound (and knots) are left unchanged. 
 For example, <code>[[0.0, 1.0], None]</code> will reparametrize the first independent variable and leave the second unchanged)</li>
 </ul>
@@ -2351,7 +2538,7 @@ Reparametrized (i.e. reversed) spline.</li>
     </div>
     <a class="headerlink" href="#Spline.revolve"></a>
     
-            <div class="docstring"><p>Rotate the spline to create a surface of revolution (nDep must equal 2, 
+            <div class="docstring"><p>Revolve the spline to create a surface of revolution (nDep must equal 2, 
 first dimension provides the radius for x and y, second dimension provides the z).</p>
 
 <h6 id="parameters">Parameters</h6>
@@ -2708,6 +2895,60 @@ The result of subtracting other from self.</li>
 
 
                             </div>
+                            <div id="Spline.tangent_space" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">tangent_space</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">uvw</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.tangent_space"></a>
+    
+            <div class="docstring"><p>Return the tangent space of the spline.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>uvw</strong> (array-like):
+The value at which to evaluate the tangent space.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>tangentSpace</strong> (<code>numpy.array</code>):
+The nDep x nInd matrix of tangent vectors (tangents are the columns).</li>
+</ul>
+</div>
+
+
+                            </div>
+                            <div id="Spline.to_dict" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_dict</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.to_dict"></a>
+    
+            <div class="docstring"><p>Return a <code>dict</code> with <code><a href="#Spline">Spline</a></code> data.</p>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>dictionary</strong> (<code>dict</code>):</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.from_dict">from_dict</a></code>:  Create a <code><a href="#Spline">Spline</a></code> from a data in a <code>dict</code>.  </p>
+</div>
+
+
+                            </div>
                             <div id="Spline.torus" class="classattr">
                                 <div class="attr function">
                     <div class="decorator">@staticmethod</div>
@@ -2761,7 +3002,7 @@ a given tolerance. <br />
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">transform</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">matrix</span></span><span class="return-annotation">):</span></span>
+        <span class="name">transform</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">matrix</span>, </span><span class="param"><span class="n">matrixInverseTranspose</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -2774,6 +3015,8 @@ a given tolerance. <br />
 <ul>
 <li><strong>matrix</strong> (array-like):
 An array of size <code>newNDep</code>x<code><a href="#Spline.nDep">nDep</a></code> that specifies the transform matrix.</li>
+<li><strong>matrixInverseTranspose</strong> (<code>numpy.array</code>, optional):
+The inverse transpose of matrix (not used for splines).</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -2888,7 +3131,7 @@ Trimmed spline. If all the knots are unchanged, the original spline is returned.
 
 <ul>
 <li><strong>newDomain</strong> (array-like):
-nInd x 2 array of the new upper and lower bounds on each of the independent variables (same form as 
+nInd x 2 array of the new lower and upper bounds on each of the independent variables (same form as 
 returned from <code><a href="#Spline.domain">domain</a></code>). If a bound is None or nan then the original bound (and knots) are left unchanged.</li>
 </ul>
 
@@ -2903,6 +3146,42 @@ Trimmed spline. If all the knots are unchanged, the original spline is returned.
 
 <p><code><a href="#Spline.domain">domain</a></code>:  Return the domain of a spline. <br />
 <code><a href="#Spline.extrapolate">extrapolate</a></code>:  Extrapolate a spline out to an extended domain maintaining a given order of continuity.  </p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.trimmed_range_bounds" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">trimmed_range_bounds</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">domainBounds</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.trimmed_range_bounds"></a>
+    
+            <div class="docstring"><p>Return the trimmed range bounds for the spline.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>domainBounds</strong> (array-like):
+An array with shape (nInd, 2) of lower and upper and lower bounds on each independent variable.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>trimmedSpline, rangeBounds</strong> (<code><a href="#Spline">Spline</a></code>, <code>np.array</code>):
+A spline trimmed to the given domain bounds, and the range of the trimmed spline given as 
+lower and upper bounds on each dependent variable.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.trim">trim</a></code>:  Trim the domain of a spline. <br />
+<code><a href="#Spline.range_bounds">range_bounds</a></code>:  Return the range of a spline as lower and upper bounds on each of the
+dependent variables.  </p>
 </div>
 
 
@@ -3007,6 +3286,9 @@ For all higher dimensions, it implements the projected-polyhedron technique from
                                 <dd id="Spline.minSeparation" class="variable"><a href="manifold.html#Manifold.minSeparation">minSeparation</a></dd>
                 <dd id="Spline.Crossing" class="class"><a href="manifold.html#Manifold.Crossing">Crossing</a></dd>
                 <dd id="Spline.Coincidence" class="class"><a href="manifold.html#Manifold.Coincidence">Coincidence</a></dd>
+                <dd id="Spline.factory" class="variable"><a href="manifold.html#Manifold.factory">factory</a></dd>
+                <dd id="Spline.cached_intersect" class="function"><a href="manifold.html#Manifold.cached_intersect">cached_intersect</a></dd>
+                <dd id="Spline.register" class="function"><a href="manifold.html#Manifold.register">register</a></dd>
 
             </div>
                                 </dl>

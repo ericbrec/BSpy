@@ -3,12 +3,12 @@ Library for manipulating and rendering B-spline curves, surfaces, and multidimen
 
 The [Manifold](https://ericbrec.github.io/BSpy/bspy/manifold.html) abstract base class for [Hyperplane](https://ericbrec.github.io/BSpy/bspy/hyperplane.html) and [Spline](https://ericbrec.github.io/BSpy/bspy/spline.html).
 
-The [Hyperplane](https://ericbrec.github.io/BSpy/bspy/hyperplane.html) class has methods to create individual hyperplanes in any dimension, along with axis-aligned hyperplanes and hypercubes.
-
 The [Spline](https://ericbrec.github.io/BSpy/bspy/spline.html) class has a method to fit multidimensional data for 
 scalar and vector functions of single and multiple variables. It also has methods to create points, lines, circular arcs, spheres, cones, cylinders, tori, ruled surfaces, surfaces of revolution, and four-sided patches. 
 Other methods add, subtract, and multiply splines, as well as confine spline curves to a given range. 
 There are methods to evaluate spline values, derivatives, integrals, normals, curvature, and the Jacobian, as well as methods that return spline representations of derivatives, normals, integrals, graphs, and convolutions. In addition, there are methods to manipulate the domain of splines, including trim, join, reparametrize, transpose, reverse, add and remove knots, elevate and extrapolate, and fold and unfold. There are methods to manipulate the range of splines, including dot product, cross product, translate, rotate, scale, and transform. Finally, there are methods to compute the zeros and contours of a spline and to intersect two splines.
+
+The [Hyperplane](https://ericbrec.github.io/BSpy/bspy/hyperplane.html) class has methods to create individual hyperplanes in any dimension, along with axis-aligned hyperplanes and hypercubes.
 
 The [Solid](https://ericbrec.github.io/BSpy/bspy/solid.html) class has methods to construct n-dimensional solids from trimmed [Manifold](https://ericbrec.github.io/BSpy/bspy/manifold.html) boundaries. Each solid consists of a list of boundaries and a Boolean value that indicates if the solid contains infinity. Each [Boundary](https://ericbrec.github.io/BSpy/bspy/solid.html) consists of a manifold (currently a [Hyperplane](https://ericbrec.github.io/BSpy/bspy/hyperplane.html) or [Spline](https://ericbrec.github.io/BSpy/bspy/spline.html)) and a domain solid that trims the manifold. Solids have methods to form the intersection, union, difference, and complement of solids. There are methods to compute point containment, winding numbers, surface integrals, and volume integrals. There are also methods to translate, transform, and slice solids.
 
