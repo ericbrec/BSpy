@@ -801,19 +801,19 @@ def contours(self):
                 oldStart = oldContour(0.0)
                 oldFinish = oldContour(1.0)
                 if np.linalg.norm(newStart - oldFinish) < evaluationEpsilon:
-                    contours[i] = bspy.Spline.join(oldContour, newContour)
+                    contours[i] = bspy.Spline.join((oldContour, newContour))
                     joined = True
                     break
                 if np.linalg.norm(newStart - oldStart) < evaluationEpsilon:
-                    contours[i] = bspy.Spline.join(oldContour, newContour.reverse())
+                    contours[i] = bspy.Spline.join((oldContour, newContour.reverse()))
                     joined = True
                     break
                 if np.linalg.norm(newFinish - oldStart) < evaluationEpsilon:
-                    contours[i] = bspy.Spline.join(newContour, oldContour)
+                    contours[i] = bspy.Spline.join((newContour, oldContour))
                     joined = True
                     break
                 if np.linalg.norm(newFinish - oldFinish) < evaluationEpsilon:
-                    contours[i] = bspy.Spline.join(newContour, oldContour.reverse())
+                    contours[i] = bspy.Spline.join((newContour, oldContour.reverse()))
                     joined = True
                     break
             if not joined:

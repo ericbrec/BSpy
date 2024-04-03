@@ -567,6 +567,12 @@ def test_contours():
     blob_tangents = blob_u.multiply(blob_t, productType = 'C')
     curves = blob_tangents.contours()
     assert len(curves) == 4
+    maxError = 0.0
+    for contour in curves:
+        for t in np.linspace(0.0, 1.0, 5):
+            uvw = contour((t,))
+            maxError = max(maxError, np.linalg.norm(blob_tangents(uvw)))
+    assert maxError <= 0.05
 
     section1 = bspy.Spline.section([[0.0, 0.0, 75.0, -50.0], [1.0, 0.0, -85.0, -30.0]])
     section2 = bspy.Spline.section([[1.0, 0.0, 75.0, -0.1], [1.5, 0.0, -85.0, -0.1]])
@@ -577,9 +583,9 @@ def test_contours():
     s1xs2 = section1_tan.multiply(section2_tan, productType = 'C')
     s1ms2 = section1_3D.subtract(section2_3D)
     determinant = s1xs2 @ s1ms2
-# This test currently causes a spline evaluation outside the domain
-#    [u1u2] = determinant.contours()
-#    assert u1u2.nDep == 2
+    # This test currently causes a spline evaluation outside the domain
+    [u1u2] = determinant.contours()
+    assert u1u2.nDep == 2
 
     maxError = 0.0
     F = lambda u , v : (u ** 2 + (v - 3/4) ** 2 - 1/25) * \
