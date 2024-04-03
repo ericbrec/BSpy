@@ -1502,6 +1502,12 @@ def test_zeros():
     roots = spline.zeros()
     check_1D_roots(expectedRoots, roots, tolerance)
 
+    spline = bspy.Spline(1, 1, (4,), (4,), [[0., 0., 0., 0., 1., 1., 1., 1.]], [[-33.8991015203293529,
+                         -72.18590229675817227, 11.794124162484582286, 18.432444303536296815]])
+    expectedRoots = (0.7293143009710111,)
+    roots = spline.zeros(tolerance)
+    check_1D_roots(expectedRoots, roots, tolerance)
+
     uValues = [np.linspace(-2.0, 2.0, 3), np.linspace(-2.0, 2.0, 7)]
     data = np.array([[9 * u ** 2 + v ** 2 - 1.0, u - v] for u in uValues[0] for v in uValues[1]])
     data = np.swapaxes(data, 0, 1)
