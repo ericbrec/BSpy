@@ -518,6 +518,67 @@ def reverse(self, variable = 0):
     newFolded = type(self)(folded.nInd, folded.nDep, folded.order, folded.nCoef, (newKnots,), newCoefs, folded.metadata)
     return newFolded.unfold(myIndices, basisInfo)
 
+def split(self, minContinuity = 0, breaks = None):
+    if minContinuity < 0: raise ValueError("minContinuity must be >= 0")
+    if breaks is not None and len(breaks) != self.nInd: raise ValueError("Invalid breaks")
+    if self.nInd < 1: return self
+
+    # Step 1: Determine the knots to insert.
+    newKnotsList = []
+    for i, order, knots in zip(range(self.nInd), self.order, self.knots):
+        unique, counts = np.unique(knots, return_counts=True)
+        newKnots = []
+        for knot, count in zip(unique, counts):
+            assert count <= order
+            if count > order - 1 - minContinuity:
+                newKnots += [knot] * (order - count)
+        if breaks is not None:
+            for knot in breaks[i]:
+                if knot not in unique:
+                    newKnots += [knot] * order
+        newKnotsList.append(newKnots)    
+    
+    # Step 2: Insert the knots.
+    spline = self.insert_knots(newKnotsList)
+    if spline is self:
+        return np.full((1,) * spline.nInd, spline)
+
+    # Step 3: Store the indices of the full order knots.
+    indexList = []
+    splineCount = []
+    totalSplineCount = 1
+    for order, knots in zip(spline.order, spline.knots):
+        unique, counts = np.unique(knots, return_counts=True)
+        indices = np.searchsorted(knots, unique)
+        fullOrder = []
+        for ix, count in zip(indices, counts):
+            if count == order:
+                fullOrder.append(ix)
+        indexList.append(fullOrder)
+        splines = len(fullOrder) - 1
+        splineCount.append(splines)
+        totalSplineCount *= splines
+
+
+    # Step 4: Slice up the spline.
+    splineArray = np.empty(totalSplineCount, object)
+    for i in range(totalSplineCount):
+        knotsList = []
+        coefIndex = [slice(None)] # First index is for nDep
+        ix = i
+        for order, knots, splines, indices in zip(spline.order, spline.knots, splineCount, indexList):
+            j = ix % splines
+            ix = ix // splines
+            leftIndex = indices[j]
+            rightIndex = indices[j + 1]
+            knotsList.append(knots[leftIndex:rightIndex + order])
+            coefIndex.append(slice(leftIndex, rightIndex))
+        coefs = spline.coefs[tuple(coefIndex)]
+        splineArray[i] = type(spline)(spline.nInd, spline.nDep, spline.order, coefs.shape[1:], knotsList, coefs, spline.metadata)
+
+    # Return the transpose because we put the splines into splineArray dimensions in reverse order.
+    return splineArray.reshape(tuple(reversed(splineCount))).T
+
 def transpose(self, axes=None):
     if axes is None:
         axes = range(self.nInd)[::-1]

@@ -426,12 +426,8 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
 
     return roots
 
-def contours(self):
-    if self.nInd - self.nDep != 1: raise ValueError("The number of free variables (self.nInd - self.nDep) must be one.")
-
+def _contours_of_C1_spline(self, epsilon, evaluationEpsilon):
     Point = namedtuple('Point', ('d', 'det', 'onUVBoundary', 'turningPoint', 'uvw'))
-    epsilon = np.sqrt(np.finfo(self.coefs.dtype).eps)
-    evaluationEpsilon = np.sqrt(epsilon)
 
     # Go through each nDep of the spline, checking bounds.
     for coefs in self.coefs:
@@ -788,6 +784,41 @@ def contours(self):
         splineContours.append(contour)
     
     return splineContours
+
+def contours(self):
+    if self.nInd - self.nDep != 1: raise ValueError("The number of free variables (self.nInd - self.nDep) must be one.")
+    epsilon = np.sqrt(np.finfo(self.coefs.dtype).eps)
+    evaluationEpsilon = np.sqrt(epsilon)
+    splines = self.split(minContinuity = 1)
+    contours = []
+    for spline in splines.ravel():
+        splineContours = _contours_of_C1_spline(spline, epsilon, evaluationEpsilon)
+        for newContour in splineContours:
+            newStart = newContour(0.0)
+            newFinish = newContour(1.0)
+            joined = False
+            for i, oldContour in enumerate(contours):
+                oldStart = oldContour(0.0)
+                oldFinish = oldContour(1.0)
+                if np.linalg.norm(newStart - oldFinish) < evaluationEpsilon:
+                    contours[i] = bspy.Spline.join((oldContour, newContour))
+                    joined = True
+                    break
+                if np.linalg.norm(newStart - oldStart) < evaluationEpsilon:
+                    contours[i] = bspy.Spline.join((oldContour, newContour.reverse()))
+                    joined = True
+                    break
+                if np.linalg.norm(newFinish - oldStart) < evaluationEpsilon:
+                    contours[i] = bspy.Spline.join((newContour, oldContour))
+                    joined = True
+                    break
+                if np.linalg.norm(newFinish - oldFinish) < evaluationEpsilon:
+                    contours[i] = bspy.Spline.join((newContour, oldContour.reverse()))
+                    joined = True
+                    break
+            if not joined:
+                contours.append(newContour)
+    return contours
 
 def intersect(self, other):
     intersections = []
