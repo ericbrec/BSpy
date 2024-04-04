@@ -176,14 +176,15 @@ def moment(self, exponent = None, domain = None):
         nIndSoFar += 1
         if self.nInd == nIndSoFar:
             x = self(uValues)
-            total = np.linalg.norm(self.normal(uValues, False))
+            total = np.prod(np.linalg.svd(self.jacobian(uValues), compute_uv = False))
             for iDep in range(self.nDep):
                 total *= x[iDep] ** exponent[iDep]
         else:
             total = 0.0
             for ix in range(len(uniqueKnots[nIndSoFar]) - 1):
                 value = sp.integrate.quad(momentIntegrand, uniqueKnots[nIndSoFar][ix],
-                                          uniqueKnots[nIndSoFar][ix + 1], (nIndSoFar, uValues))
+                                          uniqueKnots[nIndSoFar][ix + 1], (nIndSoFar, uValues),
+                                          epsabs = 1.0e-13, epsrel = 1.0e-13)
                 total += value[0]
         return total    
     

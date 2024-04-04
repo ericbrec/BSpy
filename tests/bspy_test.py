@@ -1051,12 +1051,12 @@ def test_moment():
     assert abs(yMoment - 1.0) < 1.0e-12
 
     outer = bspy.Spline.circular_arc(2.0, 90.0)
-    annulus = [[1.0, 0.0], [0.0, 1.0], [0.0, 0.0]] @ bspy.Spline.ruled_surface(outer, arc)
+    annulus = bspy.Spline.ruled_surface(outer, arc)
     area = annulus.moment()
     assert abs(area - 0.75 * np.pi) < 1.0e-12
-    xMoment = annulus.moment([1, 0, 0])
+    xMoment = annulus.moment([1, 0])
     assert abs(xMoment - 7.0 / 3.0) < 1.0e-12
-    yMoment = annulus.moment([0, 1, 0])
+    yMoment = annulus.moment([0, 1])
     assert abs(yMoment - 7.0 / 3.0) < 1.0e-12
     xBar = xMoment / area
     yBar = yMoment / area  
