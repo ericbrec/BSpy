@@ -1314,6 +1314,21 @@ def test_sphere():
     for xValue, yValue, zValue in zip(xValues, yValues, zValues):
         assert abs(np.linalg.norm([xValue, yValue, zValue]) - 1.3) < 1.0e-12
     
+def test_split():
+    stepSurface = bspy.Spline(2, 3, (2,2), (3,4), ((0.0, 0.0, 0.3, 1.0, 1.0), (0.0, 0.0, 0.6, 0.6, 1.0, 1.0)),
+        (((-1.0, 0.0, 0.0, 1.0), (-1.0, 0.0, 0.0, 1.0), (-1.0, 0.0, 0.0, 1.0)),
+        ((-1.0, -1.0, 0.0, 0.0), (-1.0, -1.0, 0.0, 0.0), (0.0, 0.0, 1.0, 1.0)),
+        ((-1.0, -1.0, -1.0, -1.0), (0.0, 0.0, 0.0, 0.0), (1.0, 1.0, 1.0, 1.0))))
+    split = stepSurface.split(minContinuity=1)
+    assert split.shape == (2,2)
+    assert np.allclose(split[0, 0].domain(), ((0, 0.3), (0, 0.6)))
+    assert np.allclose(split[0, 1].domain(), ((0, 0.3), (0.6, 1)))
+    assert np.allclose(split[1, 0].domain(), ((0.3, 1), (0, 0.6)))
+    assert np.allclose(split[1, 1].domain(), ((0.3, 1), (0.6, 1)))
+    split = mySurface.split(minContinuity=1)
+    assert split.shape == (1,1)
+    assert split[0,0] is mySurface
+
 def test_subtract():
     maxError = 0.0
     spline1 = bspy.Spline(1, 2, (5,), (5,), [np.array([0, 0, 0, 0, 0.2, 0.5, 0.5, 1, 1, 1], float)], 
