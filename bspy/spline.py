@@ -498,7 +498,8 @@ class Spline(Manifold):
             Splines in the same row are treated as if they are added together. 
             Each row need not have the same number of splines, but all splines in a row must have the same 
             number of dependent variables (same nDep). The sum of nDep across all the rows must one less 
-            than the maximum sum of independent variables (sum of nInd) across the rows.
+            than the maximum sum of independent variables (sum of nInd) across the rows. 
+            Corresponding independent variables must have the same domain.
 
             For example, if F is a spline with nInd = 3 and nDep = 2, G is a spline with nInd = 1 and nDep = 2, 
             and h is a spline with nInd = 2 and nDep = 1, then [[F, G], [h]] is a valid splineMatrix (total nDep is 3 
@@ -2328,6 +2329,7 @@ class Spline(Manifold):
             Each row need not have the same number of splines, but all splines in a row must have the same 
             number of dependent variables (same nDep). The sum of nDep across all the rows must match the 
             maximum sum of independent variables (sum of nInd) across the rows.
+            Corresponding independent variables must have the same domain.
 
             For example, if F is a spline with nInd = 2 and nDep = 2, G is a spline with nInd = 1 and nDep = 2, 
             and h is a spline with nInd = 2 and nDep = 1, then [[F, G], [h]] is a valid splineMatrix (total nDep is 3 

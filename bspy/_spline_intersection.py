@@ -203,7 +203,7 @@ def _intersect_convex_hull_with_x_interval(hullPoints, epsilon, xInterval):
     else:
         return (min(max(xMin, xInterval[0]), xInterval[1]), max(min(xMax, xInterval[1]), xInterval[0]))
 
-Interval = namedtuple('Interval', ('spline', 'unknowns', 'scale', 'slope', 'intercept', 'epsilon', 'atMachineEpsilon'))
+Interval = namedtuple('Interval', ('splineMatrix', 'unknowns', 'scale', 'slope', 'intercept', 'epsilon', 'atMachineEpsilon'))
 
 # We use multiprocessing.Pool to call this function in parallel, so it cannot be nested and must take a single argument.
 def _refine_projected_polyhedron(interval):
@@ -348,9 +348,64 @@ class _Region:
         self.radius = radius
         self.count = count
 
-def zeros_using_projected_polyhedron(self, epsilon=None):
-    if not(self.nInd == self.nDep): raise ValueError("The number of independent variables (nInd) must match the number of dependent variables (nDep).")
-    machineEpsilon = np.finfo(self.knots[0].dtype).eps
+def evaluate_spline_matrix(splineMatrix, nInd, nDep, dtype, uwv):
+    value = np.zeros(nDep, dtype)
+    jacobian = np.zeros((nDep, nInd), dtype)
+    nDep = 0
+    for i, row in enumerate(splineMatrix):
+        nInd = 0
+        for spline in row:
+            value[nDep:nDep + spline.nDep] += spline(uwv[nInd:nInd + spline.nInd])
+            jacobian[nDep:nDep + spline.nDep, nInd:nInd + spline.nInd] += spline.jacobian(uwv[nInd:nInd + spline.nInd])
+            nInd += spline.nInd
+        nDep += spline.nDep
+    
+    return value, jacobian
+
+def zeros_using_projected_polyhedron(splineMatrix, epsilon=None):
+    # Compute nInd and nDep for splineMatrix. Also capture knots dtype.
+    nInd = 0
+    nDep = 0
+    dtype = None
+    for row in splineMatrix:
+        rowInd = 0
+        rowDep = 0
+        for spline in row:
+            rowInd += spline.nInd
+            if rowDep == 0:
+                rowDep = spline.nDep
+                if nInd == 0:
+                    dtype = spline.knots[0].dtype
+            elif rowDep != spline.nDep:
+                raise ValueError("All splines in the same row must have the same nDep")
+        nInd = max(nInd, rowInd)
+        nDep += rowDep
+    
+    # Check for proper splineMatrix, compute domain, and reparametrize splineMatrix.
+    if nInd != nDep: raise ValueError("The number of independent variables (nInd) must match the number of dependent variables (nDep).")
+    domain = np.empty((nInd, 2), dtype)
+    nInd = 0
+    newSplineMatrix = []
+    for row in splineMatrix:
+        rowInd = 0
+        newRow = []
+        for spline in row:
+            for i in range(rowInd, rowInd + spline.nInd):
+                ind = i - rowInd
+                d = spline.domain()
+                if i < nInd:
+                    if domain[i, 0] != d[ind, 0] or domain[i, 1] != d[ind, 1]:
+                        raise ValueError("Domains of independent variables must match")
+                else:
+                    domain[i, 0] = d[ind, 0]
+                    domain[i, 1] = d[ind, 1]
+            rowInd += spline.nInd
+            newRow.append(spline.reparametrize(((0.0, 1.0),) * spline.nInd))
+        nInd = max(nInd, rowInd)
+        newSplineMatrix.append(newRow)
+
+    # Determine epsilon and initialize roots.
+    machineEpsilon = np.finfo(dtype).eps
     if epsilon is None:
         epsilon = 0.0
     epsilon = max(epsilon, np.sqrt(machineEpsilon))
@@ -358,8 +413,8 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
     roots = []
 
     # Set initial spline, domain, and interval.
-    domain = self.domain().T
-    intervals = [Interval(self.trim(domain.T).reparametrize(((0.0, 1.0),) * self.nInd), [*range(self.nInd)], 1.0, domain[1] - domain[0], domain[0], epsilon, False)]
+    domain = domain.T
+    intervals = [Interval(newSplineMatrix, [*range(nInd)], 1.0, domain[1] - domain[0], domain[0], epsilon, False)]
     chunkSize = 8
     #pool = Pool() # Pool size matches CPU count
 
@@ -384,12 +439,12 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
         rootRadius = root[1]
 
         # Ensure we have a real root (not a boundary special case).
-        if np.linalg.norm(self(rootCenter)) >= evaluationEpsilon:
+        value, jacobian = evaluate_spline_matrix(splineMatrix, nInd, nDep, dtype, rootCenter)
+        if np.linalg.norm(value) >= evaluationEpsilon:
             continue
 
         # Expand the radius of the root based on the approximate distance from the center needed
         # to raise the value of the spline above evaluationEpsilon.
-        jacobian = self.jacobian(rootCenter)
         minEigenvalue = np.sqrt(np.linalg.eigvalsh(jacobian.T @ jacobian)[0])
         if minEigenvalue > epsilon:
             rootRadius = max(rootRadius, evaluationEpsilon / minEigenvalue)
@@ -421,7 +476,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
     roots = [region.center for region in regions if region.count > 0]
 
     # Sort roots if there's only one dimension.
-    if self.nInd == 1:
+    if nInd == 1:
         roots.sort()
 
     return roots
