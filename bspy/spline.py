@@ -448,6 +448,7 @@ class Spline(Manifold):
 
         See Also
         --------
+        `contour_extended` : Find all the contour curves of a matrix of splines whose `nInd` is one larger than its `nDep`.
         `least_squares` : Fit a spline to an array of data points using the method of least squares.
         `contours` : Find all the contour curves of a spline.
         `confine` : Confine the range of a curve to the given bounds.
@@ -473,7 +474,9 @@ class Spline(Manifold):
 
         See Also
         --------
+        `contours_extended` : Find all the contour curves of a matrix of splines whose `nInd` is one larger than its `nDep`.
         `zeros` : Find the roots of a spline (nInd must match nDep).
+        `zeros_extended` : Find the roots of a matrix of splines (nInd must match nDep).
         `contour` : Fit a spline to the contour defined by `F(x) = 0`.
         `intersect` : Intersect two splines.
 
@@ -483,7 +486,46 @@ class Spline(Manifold):
         The algorithm used to to find all intersection curves is from Grandine, Thomas A., and Frederick W. Klein IV. 
         "A new approach to the surface intersection problem." Computer Aided Geometric Design 14, no. 2 (1997): 111-134.
         """
-        return bspy._spline_intersection.contours(self)
+        return bspy._spline_intersection.contours([[self]])
+
+    def contours_extended(splineMatrix):
+        """
+        Find all the contour curves of a matrix of splines whose `nInd` is one larger than its `nDep`.
+
+        Parameters
+        ----------
+        splineMatrix : an array-like collection of splines (may be a list of lists)
+            Splines in the same row are treated as if they are added together. 
+            Each row need not have the same number of splines, but all splines in a row must have the same 
+            number of dependent variables (same nDep). The sum of nDep across all the rows must one less 
+            than the maximum sum of independent variables (sum of nInd) across the rows. 
+            Corresponding independent variables must have the same domain.
+
+            For example, if F is a spline with nInd = 3 and nDep = 2, G is a spline with nInd = 1 and nDep = 2, 
+            and h is a spline with nInd = 2 and nDep = 1, then [[F, G], [h]] is a valid splineMatrix (total nDep is 3 
+            and max nInd is 4). zero_extended([[F, G], [h]]) will return the contours of the system: F + G = 0, h = 0.
+
+        Returns
+        -------
+        curves : `iterable`
+            A collection of `Spline` curves, `u(t)`, each of whose domain is [0, 1], whose range is
+            in the parameter space of the given spline, and which satisfy `splineMatrix(u(t)) = 0`. 
+
+        See Also
+        --------
+        `contours` : Find all the contour curves of a spline whose `nInd` is one larger than its `nDep`.
+        `contour` : Fit a spline to the contour defined by `F(x) = 0`.
+        `zeros` : Find the roots of a spline (nInd must match nDep).
+        `zeros_extended` : Find the roots of a matrix of splines (nInd must match nDep).
+        `intersect` : Intersect two splines.
+
+        Notes
+        -----
+        Uses `zeros` to find all intersection points and `contour` to find individual intersection curves. 
+        The algorithm used to to find all intersection curves is from Grandine, Thomas A., and Frederick W. Klein IV. 
+        "A new approach to the surface intersection problem." Computer Aided Geometric Design 14, no. 2 (1997): 111-134.
+        """
+        return bspy._spline_intersection.contours(splineMatrix)
 
     def contract(self, uvw):
         """
@@ -2291,8 +2333,10 @@ class Spline(Manifold):
         
         See Also
         --------
+        `zeros_extended` : Find the roots of a matrix of splines.
         `intersect` : Intersect two splines.
-        `contour` : Fit a spline to the contour defined by `F(x) = 0`.
+        `contours` : Find all the contour curves of a spline whose `nInd` is one larger than its `nDep`.
+        `contours_extended` : Find all the contour curves of a matrix of splines whose `nInd` is one larger than its `nDep`.
 
         Notes
         -----
@@ -2305,4 +2349,48 @@ class Spline(Manifold):
         if self.nInd <= 1:
             return bspy._spline_intersection.zeros_using_interval_newton(self)
         else:
-            return bspy._spline_intersection.zeros_using_projected_polyhedron(self, epsilon)
+            return bspy._spline_intersection.zeros_using_projected_polyhedron([[self]], epsilon)
+    
+    @staticmethod
+    def zeros_extended(splineMatrix, epsilon=None):
+        """
+        Find the roots of a matrix of splines (nInd must match nDep).
+
+        Parameters
+        ----------
+        splineMatrix : an array-like collection of splines (may be a list of lists)
+            Splines in the same row are treated as if they are added together. 
+            Each row need not have the same number of splines, but all splines in a row must have the same 
+            number of dependent variables (same nDep). The sum of nDep across all the rows must match the 
+            maximum sum of independent variables (sum of nInd) across the rows.
+            Corresponding independent variables must have the same domain.
+
+            For example, if F is a spline with nInd = 2 and nDep = 2, G is a spline with nInd = 1 and nDep = 2, 
+            and h is a spline with nInd = 2 and nDep = 1, then [[F, G], [h]] is a valid splineMatrix (total nDep is 3 
+            and max nInd is 3). zero_extended([[F, G], [h]]) will return the zeros of the system: F + G = 0, h = 0.
+
+        epsilon : `float`, optional
+            Tolerance for root precision. The root will be within epsilon of the actual root. 
+            The default is the machine epsilon.
+
+        Returns
+        -------
+        roots : `iterable`
+            An iterable containing the roots of the matrix of splines. If the matrix is 
+            zero over an interval, that root will appear as a tuple of the interval. 
+            For curves (nInd == 1), the roots are ordered.
+        
+        See Also
+        --------
+        `zeros` : Find the roots of a spline.
+        `intersect` : Intersect two splines.
+        `contours` : Find all the contour curves of a spline whose `nInd` is one larger than its `nDep`.
+        `contour_extended` : Find all the contour curves of a matrix of splines whose `nInd` is one larger than its `nDep`.
+
+        Notes
+        -----
+        Implements a variation of the projected-polyhedron technique from Sherbrooke, Evan C., and Nicholas M. Patrikalakis. 
+        "Computation of the solutions of nonlinear polynomial systems." Computer Aided Geometric Design 10, no. 5 (1993): 379-405.
+        """
+        return bspy._spline_intersection.zeros_using_projected_polyhedron(splineMatrix, epsilon)
+ 
