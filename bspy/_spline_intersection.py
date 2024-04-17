@@ -206,52 +206,55 @@ def _intersect_convex_hull_with_x_interval(hullPoints, epsilon, xInterval):
     else:
         return (min(max(xMin, xInterval[0]), xInterval[1]), max(min(xMax, xInterval[1]), xInterval[0]))
 
-Interval = namedtuple('Interval', ('splineMatrix', 'unknowns', 'scale', 'slope', 'intercept', 'epsilon', 'atMachineEpsilon'))
+Interval = namedtuple('Interval', ('splineMatrix', 'unknowns', 'scale', 'bounds', 'slope', 'intercept', 'epsilon', 'atMachineEpsilon'))
 
 def create_interval(domain, splineMatrix, unknowns, scale, slope, intercept, epsilon):
-    newScale = 0.0
+    nDep = 0
+    bounds = np.zeros((len(scale), 2), scale.dtype)
+    newScale = np.empty_like(scale)
     newSplineMatrix = []
     for row in splineMatrix:
         newRow = []
         nInd = 0
+        rowDep = 0
+        keepDep = []
         # Trim and reparametrize splines, and sum bounds.
         for spline in row:
             spline = spline.trim(domain[nInd:nInd + spline.nInd]).reparametrize(((0.0, 1.0),) * spline.nInd)
-            if nInd == 0:
-                bounds = spline.range_bounds()
-            else:
-                bounds += spline.range_bounds()
+            rowDep = spline.nDep
+            bounds[nDep:nDep + rowDep] += spline.range_bounds()
             nInd += spline.nInd
             newRow.append(spline)
 
         # Check row bounds for potential roots.
-        keepDep = []
-        for nDep, (coefsMin, coefsMax) in enumerate(bounds * scale):
+        for dep in range(rowDep):
+            coefsMin = bounds[nDep, 0] * scale[nDep]
+            coefsMax = bounds[nDep, 1] * scale[nDep]
             if coefsMax < -epsilon or coefsMin > epsilon:
                 # No roots in this interval.
                 return None
             if coefsMin < -epsilon or coefsMax > epsilon:
                 # Dependent variable not near zero for entire interval.
-                keepDep.append(nDep)
+                keepDep.append(dep)
+                newScale[nDep] = max(-coefsMin, coefsMax)
+                for spline in newRow:
+                    # Rescale spline coefficients to max 1.0.
+                    spline.coefs[dep] *= 1.0 / max(-bounds[nDep, 0], bounds[nDep, 1])
+                nDep += 1
+            else:
+                # Dependent variable near zero for entire interval.
+                bounds = np.delete(bounds, nDep, 0)
+                scale = np.delete(scale, nDep, 0)
         
         if keepDep:
             # Remove dependent variables that are zero over the domain
-            bounds = bounds[keepDep]
             for spline in newRow:
                 spline.nDep = len(keepDep)
                 spline.coefs = spline.coefs[keepDep]
 
-            # Calculate the new scaling for the splines and build up the new spline matrix.
-            newScale = max(newScale, np.abs(bounds).max())
             newSplineMatrix.append(newRow)
 
-    # Rescale spline matrix
-    for row in newSplineMatrix:
-        for spline in row:
-            # Rescale remaining spline coefficients to max 1.0.
-            spline.coefs *= 1.0 / newScale
-
-    return Interval(splineMatrix, unknowns, newScale * scale, slope, intercept, epsilon, np.dot(slope, slope) < np.finfo(slope.dtype).eps)
+    return Interval(newSplineMatrix, unknowns, newScale[:nDep], bounds, slope, intercept, epsilon, np.dot(slope, slope) < np.finfo(slope.dtype).eps)
 
 # We use multiprocessing.Pool to call this function in parallel, so it cannot be nested and must take a single argument.
 def _refine_projected_polyhedron(interval):
@@ -413,58 +416,53 @@ def evaluate_spline_matrix(splineMatrix, nInd, nDep, dtype, uwv):
     return value, jacobian
 
 def zeros_using_projected_polyhedron(splineMatrix, epsilon=None):
-    # Compute nInd and nDep for splineMatrix. Also capture knots dtype.
+    # Compute and validate nInd, nDep, knots dtype, coefs dtype, and domain for splineMatrix.
     nInd = 0
     nDep = 0
     dtype = None
+    domain = []
     for row in splineMatrix:
         rowInd = 0
         rowDep = 0
         for spline in row:
-            rowInd += spline.nInd
             if rowDep == 0:
                 rowDep = spline.nDep
                 if nInd == 0:
-                    dtype = spline.knots[0].dtype
+                    knotsDtype = spline.knots[0].dtype
+                    coefsDtype = spline.coefs.dtype
             elif rowDep != spline.nDep:
                 raise ValueError("All splines in the same row must have the same nDep")
-        nInd = max(nInd, rowInd)
-        nDep += rowDep
-    
-    # Validate splineMatrix, compute domain, and reparametrize splineMatrix.
-    if nInd != nDep: raise ValueError("The number of independent variables (nInd) must match the number of dependent variables (nDep).")
-    domain = np.empty((nInd, 2), dtype)
-    nInd = 0
-    newSplineMatrix = []
-    for row in splineMatrix:
-        rowInd = 0
-        newRow = []
-        for spline in row:
+            d = spline.domain()
             for i in range(rowInd, rowInd + spline.nInd):
                 ind = i - rowInd
-                d = spline.domain()
                 if i < nInd:
-                    if domain[i, 0] != d[ind, 0] or domain[i, 1] != d[ind, 1]:
+                    if domain[i][0] != d[ind, 0] or domain[i][1] != d[ind, 1]:
                         raise ValueError("Domains of independent variables must match")
                 else:
-                    domain[i, 0] = d[ind, 0]
-                    domain[i, 1] = d[ind, 1]
+                    domain.append(d[ind])
             rowInd += spline.nInd
-            newRow.append(spline.reparametrize(((0.0, 1.0),) * spline.nInd))
         nInd = max(nInd, rowInd)
-        newSplineMatrix.append(newRow)
+        nDep += rowDep
+
+    if nInd != nDep: raise ValueError("The number of independent variables (nInd) must match the number of dependent variables (nDep).")
 
     # Determine epsilon and initialize roots.
-    machineEpsilon = np.finfo(dtype).eps
+    machineEpsilon = np.finfo(knotsDtype).eps
     if epsilon is None:
         epsilon = 0.0
     epsilon = max(epsilon, np.sqrt(machineEpsilon))
     evaluationEpsilon = np.sqrt(epsilon)
+    intervals = []
     roots = []
 
-    # Set initial spline, domain, and interval.
-    domain = domain.T
-    intervals = [Interval(newSplineMatrix, [*range(nInd)], 1.0, domain[1] - domain[0], domain[0], epsilon, False)]
+    # Set initial interval.
+    domain = np.array(domain, knotsDtype).T
+    newInterval = create_interval(domain.T, splineMatrix, [*range(nInd)], np.full(nDep, 1.0, coefsDtype), domain[1] - domain[0], domain[0], epsilon)
+    if newInterval:
+        if newInterval.splineMatrix:
+            intervals.append(newInterval)
+        else:
+            roots.append((newInterval.intercept + 0.5 * newInterval.slope, 0.5 * np.linalg.norm(newInterval.slope)))
     chunkSize = 8
     #pool = Pool() # Pool size matches CPU count
 
