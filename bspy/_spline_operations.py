@@ -630,31 +630,61 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
 
     return type(self)(nInd, nDep, order, nCoef, knots, coefs, self.metadata)
 
-# Return a matrix of booleans whose [i,j] value indicates if self's partial wrt variable i depends on variable j. 
-def _cross_correlation_matrix(self):
-    ccm = np.empty((self.nInd, self.nInd), bool)
-    for i in range(self.nInd - 1):
-        tangent = self.differentiate(i)
-        totalCoefs = tangent.coefs.size // tangent.nDep
-        ccm[i, i] = True
-        for j in range(i + 1, self.nInd):
-            coefs = np.moveaxis(tangent.coefs, (0, j + 1), (-1, -2))
-            coefs = coefs.reshape(totalCoefs // tangent.nCoef[j], tangent.nCoef[j], tangent.nDep)
-            match = True
-            for row in coefs:
-                first = row[0]
-                for point in row[1:]:
-                    match = np.allclose(point, first)
-                    if not match:
-                        break
-                if not match:
-                    break
-            ccm[i, j] = ccm[j, i] = not match
-    ccm[-1, -1] = True
-    return ccm
+def normal_spline(splineMatrix, indices=None):
+    # Compute and validate nInd, nDep, knots dtype, and coefs dtype for splineMatrix.
+    # Also, construct order, nCoef, knots, and sample values for generalized cross product of the tangent space.
+    nInd = 0
+    nDep = 0
+    knotsDtype = coefsDtype = None
+    newOrder = []
+    newKnots = []
+    uvwValues = []
+    nCoefs = []
+    totalCoefs = [1]
+    # Loop through each independent variable.
+    while True:
+        knots = None
+        counts = None
+        order = 0
+        for row in splineMatrix:
+            rowInd = 0
+            rowDep = 0
+            for spline in row:
+                if rowDep == 0:
+                    rowDep = spline.nDep
+                elif rowDep != spline.nDep:
+                    raise ValueError("All splines in the same row must have the same nDep")
+                if knotsDtype == None:
+                    knotsDtype = spline.knots[0].dtype
+                    coefsDtype = spline.coefs.dtype
+                if (rowInd <= nInd < rowInd + spline.nInd) and \
+                    (indices is None or nInd in indices):
+                    ind = nInd - rowInd
+                    ord = spline.order[ind]
+                    fullOrd = (ord - 1) * spline.nInd
+                    k, c = np.unique(spline.knots[ind][ord-1:spline.nCoef[ind]+1], return_counts=True)
+                    if knots:
+                        if knots[0] != k[0] or knots[-1] != k[-1]: raise ValueError("Domains of independent variables must match")
+                        if order < ord:
+                            counts += ord - order
+                            order = ord
+                        for knot, count in zip(k[1:-1], c[1:-1]):
+                            ix = np.searchsorted(knots, knot)
+                            if knots[ix] == knot:
+                                counts[ix] = max(counts[ix], count + order - ord)
+                            else:
+                                knots = np.insert(knots, ix, knot)
+                                counts = np.insert(counts, ix, count + order - ord)
+                    else:
+                        knots = k
+                        counts = c
+                        order = ord
 
-def normal_spline(self, indices=None):
-    if abs(self.nInd - self.nDep) != 1: raise ValueError("The number of independent variables must be one less than the number of dependent variables.")
+                rowInd += spline.nInd
+            nInd = max(nInd, rowInd)
+            nDep += rowDep
+
+    if abs(nInd - nDep) != 1: raise ValueError("The number of independent variables must be different than the number of dependent variables.")
 
     # Construct order and knots for generalized cross product of the tangent space.
     newOrder = []
@@ -662,7 +692,6 @@ def normal_spline(self, indices=None):
     uvwValues = []
     nCoefs = []
     totalCoefs = [1]
-    ccm = _cross_correlation_matrix(self)
     for i, (order, knots) in enumerate(zip(self.order, self.knots)):
         # First, calculate the order of the normal for this independent variable.
         # Note that the total order will be one less than usual, because one of 
