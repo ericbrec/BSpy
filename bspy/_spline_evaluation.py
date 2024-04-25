@@ -1,5 +1,60 @@
 import numpy as np
 
+def block_evaluate(self, uwv):
+    value = np.zeros(self.nDep, self.coefsDtype)
+    nDep = 0
+    for row in self.block:
+        nInd = 0
+        for spline in row:
+            value[nDep:nDep + spline.nDep] += spline(uwv[nInd:nInd + spline.nInd])
+            nInd += spline.nInd
+        nDep += spline.nDep
+    return value
+
+def block_jacobian(self, uwv):
+    jacobian = np.zeros((self.nDep, self.nInd), self.coefsDtype)
+    nDep = 0
+    for row in self.block:
+        nInd = 0
+        for spline in row:
+            jacobian[nDep:nDep + spline.nDep, nInd:nInd + spline.nInd] += spline.jacobian(uwv[nInd:nInd + spline.nInd])
+            nInd += spline.nInd
+        nDep += spline.nDep
+    return jacobian
+
+def block_normal(self, uvw, normalize=True, indices=None):
+    # Make work for scalar valued functions
+    uvw = np.atleast_1d(uvw)
+
+    if abs(self.nInd - self.nDep) != 1: raise ValueError("The number of independent variables must be one different than the number of dependent variables.")
+
+    # Evaluate the Jacobian at the point.
+    tangentSpace = self.jacobian(uvw)
+    
+    # Record the larger dimension and ensure it comes first.
+    if self.nInd > self.nDep:
+        nDep = self.nInd
+        tangentSpace = tangentSpace.T
+    else:
+        nDep = self.nDep
+    
+    # Compute the normal using cofactors (determinants of subsets of the tangent space).
+    sign = -1 if self.metadata.get("flipNormal", False) else 1
+    if indices is None:
+        indices = range(nDep)
+        normal = np.empty(nDep, self.coefs.dtype)
+    else:
+        normal = np.empty(len(indices), self.coefs.dtype)
+    for i in indices:
+        normal[i] = sign * np.linalg.det(tangentSpace[[j for j in range(nDep) if i != j]])
+        sign *= -1
+    
+    # Normalize the result as needed.
+    if normalize:
+        normal /= np.linalg.norm(normal)
+    
+    return normal
+
 def bspline_values(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs = False):
     basis = np.zeros(splineOrder, knots.dtype)
     if knot is None:
@@ -150,8 +205,8 @@ def normal(self, uvw, normalize=True, indices=None):
 
     if abs(self.nInd - self.nDep) != 1: raise ValueError("The number of independent variables must be one different than the number of dependent variables.")
 
-    # Evaluate the tangents at the point.
-    tangentSpace = self.tangent_space(uvw)
+    # Evaluate the Jacobian at the point.
+    tangentSpace = self.jacobian(uvw)
     
     # Record the larger dimension and ensure it comes first.
     if self.nInd > self.nDep:

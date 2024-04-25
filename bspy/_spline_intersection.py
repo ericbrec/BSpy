@@ -400,28 +400,6 @@ class _Region:
         self.radius = radius
         self.count = count
 
-def spline_matrix_evaluate(block, nInd, nDep, dtype, uwv):
-    value = np.zeros(nDep, dtype)
-    nDep = 0
-    for row in block:
-        nInd = 0
-        for spline in row:
-            value[nDep:nDep + spline.nDep] += spline(uwv[nInd:nInd + spline.nInd])
-            nInd += spline.nInd
-        nDep += spline.nDep
-    return value
-
-def spline_matrix_jacobian(block, nInd, nDep, dtype, uwv):
-    jacobian = np.zeros((nDep, nInd), dtype)
-    nDep = 0
-    for row in block:
-        nInd = 0
-        for spline in row:
-            jacobian[nDep:nDep + spline.nDep, nInd:nInd + spline.nInd] += spline.jacobian(uwv[nInd:nInd + spline.nInd])
-            nInd += spline.nInd
-        nDep += spline.nDep
-    return jacobian
-
 def zeros_using_projected_polyhedron(self, epsilon=None):
     # Determine epsilon and initialize roots.
     machineEpsilon = np.finfo(self.knotsDtype).eps
@@ -464,13 +442,13 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
         rootRadius = root[1]
 
         # Ensure we have a real root (not a boundary special case).
-        value = spline_matrix_evaluate(self.block, self.nInd, self.nDep, self.coefsDtype, rootCenter)
+        value = self.evaluate(rootCenter)
         if np.linalg.norm(value) >= evaluationEpsilon:
             continue
 
         # Expand the radius of the root based on the approximate distance from the center needed
         # to raise the value of the spline above evaluationEpsilon.
-        jacobian = spline_matrix_jacobian(self.block, self.nInd, self.nDep, self.coefsDtype, rootCenter)
+        jacobian = self.jacobian(rootCenter)
         minEigenvalue = np.sqrt(np.linalg.eigvalsh(jacobian.T @ jacobian)[0])
         if minEigenvalue > epsilon:
             rootRadius = max(rootRadius, evaluationEpsilon / minEigenvalue)

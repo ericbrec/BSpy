@@ -91,6 +91,69 @@ class SplineBlock:
         "A new approach to the surface intersection problem." Computer Aided Geometric Design 14, no. 2 (1997): 111-134.
         """
         return bspy._spline_intersection.contours(self)
+    
+    def evaluate(self, uvw):
+        """
+        Compute the value of the spline block at given parameter values.
+
+        Parameters
+        ----------
+        uvw : `iterable`
+            An iterable of length `nInd` that specifies the values of each independent variable (the parameter values).
+
+        Returns
+        -------
+        value : `numpy.array`
+            The value of the spline block at the given parameter values (array of size nDep).
+        """
+        return bspy._spline_evaluation.block_evaluate(self, uvw)
+    
+    def jacobian(self, uvw):
+        """
+        Compute the value of the spline block's Jacobian at given parameter values.
+
+        Parameters
+        ----------
+        uvw : `iterable`
+            An iterable of length `nInd` that specifies the values of each independent variable (the parameter values).
+
+        Returns
+        -------
+        value : `numpy.array`
+            The value of the spline block's Jacobian at the given parameter values. The shape of the return value is (nDep, nInd).
+        """
+        return bspy._spline_evaluation.block_jacobian(self, uvw)
+
+    def normal(self, uvw, normalize=True, indices=None):
+        """
+        Compute the normal of the spline block at given parameter values. The number of independent variables must be
+        one different than the number of dependent variables.
+
+        Parameters
+        ----------
+        uvw : `iterable`
+            An iterable of length `nInd` that specifies the values of each independent variable (the parameter values).
+        
+        normalize : `boolean`, optional
+            If True the returned normal will have unit length (the default). Otherwise, the normal's length will
+            be the area of the tangent space (for two independent variables, its the length of the cross product of tangent vectors).
+        
+        indices : `iterable`, optional
+            An iterable of normal indices to calculate. For example, `indices=(0, 3)` will return a vector of length 2
+            with the first and fourth values of the normal. If `None`, all normal values are returned (the default).
+
+        Returns
+        -------
+        normal : `numpy.array`
+            The normal vector of the spline block at the given parameter values.
+
+        Notes
+        -----
+        Attentive readers will notice that the number of independent variables could be one more than the number of 
+        dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of 
+        the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.
+        """
+        return bspy._spline_evaluation.block_normal(self, uvw, normalize, indices)
 
     def normal_spline(self, indices=None):
         """
