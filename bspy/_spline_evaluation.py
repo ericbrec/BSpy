@@ -39,15 +39,13 @@ def block_normal(self, uvw, normalize=True, indices=None):
         nDep = self.nDep
     
     # Compute the normal using cofactors (determinants of subsets of the tangent space).
-    sign = -1 if self.metadata.get("flipNormal", False) else 1
     if indices is None:
         indices = range(nDep)
-        normal = np.empty(nDep, self.coefs.dtype)
+        normal = np.empty(nDep, self.coefsDtype)
     else:
-        normal = np.empty(len(indices), self.coefs.dtype)
+        normal = np.empty(len(indices), self.coefsDtype)
     for i in indices:
-        normal[i] = sign * np.linalg.det(tangentSpace[[j for j in range(nDep) if i != j]])
-        sign *= -1
+        normal[i] = ((-1) ** i) * np.linalg.det(tangentSpace[[j for j in range(nDep) if i != j]])
     
     # Normalize the result as needed.
     if normalize:
@@ -223,8 +221,7 @@ def normal(self, uvw, normalize=True, indices=None):
     else:
         normal = np.empty(len(indices), self.coefs.dtype)
     for i in indices:
-        normal[i] = sign * np.linalg.det(tangentSpace[[j for j in range(nDep) if i != j]])
-        sign *= -1
+        normal[i] = sign * ((-1) ** i) * np.linalg.det(tangentSpace[[j for j in range(nDep) if i != j]])
     
     # Normalize the result as needed.
     if normalize:

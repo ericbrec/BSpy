@@ -401,6 +401,8 @@ class _Region:
         self.count = count
 
 def zeros_using_projected_polyhedron(self, epsilon=None):
+    if self.nInd != self.nDep: raise ValueError("The number of independent variables (nInd) must match the number of dependent variables (nDep).")
+
     # Determine epsilon and initialize roots.
     machineEpsilon = np.finfo(self.knotsDtype).eps
     if epsilon is None:

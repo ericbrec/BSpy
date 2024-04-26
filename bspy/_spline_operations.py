@@ -630,108 +630,94 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
 
     return type(self)(nInd, nDep, order, nCoef, knots, coefs, self.metadata)
 
-def normal_spline(splineMatrix, indices=None):
-    # Compute and validate nInd, nDep, knots dtype, and coefs dtype for splineMatrix.
-    # Also, construct order, nCoef, knots, and sample values for generalized cross product of the tangent space.
-    nInd = 0
-    nDep = 0
-    knotsDtype = coefsDtype = None
+def normal_spline(self, indices=None):
+    if abs(self.nInd - self.nDep) != 1: raise ValueError("The number of independent variables must be different than the number of dependent variables.")
+
+    # Construct order, nCoef, knots, and sample values for generalized cross product of the tangent space.
     newOrder = []
     newKnots = []
     uvwValues = []
     nCoefs = []
     totalCoefs = [1]
-    # Loop through each independent variable.
-    while True:
+    for nInd in range(self.nInd):
         knots = None
         counts = None
-        order = 0
-        for row in splineMatrix:
+        maxOrder = 0
+        startInd = 0
+        endInd = 0
+        # First, collect the order, knots, and number of relevant columns for this independent variable.
+        for row in self.block:
             rowInd = 0
-            rowDep = 0
             for spline in row:
-                if rowDep == 0:
-                    rowDep = spline.nDep
-                elif rowDep != spline.nDep:
-                    raise ValueError("All splines in the same row must have the same nDep")
-                if knotsDtype == None:
-                    knotsDtype = spline.knots[0].dtype
-                    coefsDtype = spline.coefs.dtype
-                if (rowInd <= nInd < rowInd + spline.nInd) and \
-                    (indices is None or nInd in indices):
+                if rowInd <= nInd < rowInd + spline.nInd:
                     ind = nInd - rowInd
-                    ord = spline.order[ind]
-                    fullOrd = (ord - 1) * spline.nInd
-                    k, c = np.unique(spline.knots[ind][ord-1:spline.nCoef[ind]+1], return_counts=True)
+                    order = spline.order[ind]
+                    k, c = np.unique(spline.knots[ind][order-1:spline.nCoef[ind]+1], return_counts=True)
                     if knots:
-                        if knots[0] != k[0] or knots[-1] != k[-1]: raise ValueError("Domains of independent variables must match")
-                        if order < ord:
-                            counts += ord - order
-                            order = ord
+                        if maxOrder < order:
+                            counts += order - maxOrder
+                            maxOrder = order
+                        endInd = max(endInd, rowInd + spline.nInd)
                         for knot, count in zip(k[1:-1], c[1:-1]):
                             ix = np.searchsorted(knots, knot)
                             if knots[ix] == knot:
-                                counts[ix] = max(counts[ix], count + order - ord)
+                                counts[ix] = max(counts[ix], count + maxOrder - order)
                             else:
                                 knots = np.insert(knots, ix, knot)
-                                counts = np.insert(counts, ix, count + order - ord)
+                                counts = np.insert(counts, ix, count + maxOrder - order)
                     else:
                         knots = k
                         counts = c
-                        order = ord
+                        maxOrder = order
+                        startInd = rowInd
+                        endInd = rowInd + spline.nInd
+                    
+                    break
 
                 rowInd += spline.nInd
-            nInd = max(nInd, rowInd)
-            nDep += rowDep
 
-    if abs(nInd - nDep) != 1: raise ValueError("The number of independent variables must be different than the number of dependent variables.")
-
-    # Construct order and knots for generalized cross product of the tangent space.
-    newOrder = []
-    newKnots = []
-    uvwValues = []
-    nCoefs = []
-    totalCoefs = [1]
-    for i, (order, knots) in enumerate(zip(self.order, self.knots)):
-        # First, calculate the order of the normal for this independent variable.
+        # Next, calculate the order of the normal for this independent variable.
         # Note that the total order will be one less than usual, because one of 
         # the tangents is the derivative with respect to that independent variable.
-        newOrd = 0
         if self.nInd < self.nDep:
             # If this normal involves all tangents, simply add the degree of each,
-            # so long as that tangent contains the independent variable.  
-            for j in range(self.nInd):
-                newOrd += order - 1 if ccm[i, j] else 0
+            # so long as that tangent contains the independent variable.
+            order = (maxOrder - 1) * (endInd - startInd)
         else:
             # If this normal doesn't involve all tangents, find the max order of
             # each returned combination (as defined by the indices).
-            for index in range(self.nInd) if indices is None else indices:
+            order = 0
+            for index in range(startInd, endInd) if indices is None else indices:
                 # The order will be one larger if this independent variable's tangent is excluded by the index.
-                ord = 0 if index != i else 1
+                ord = 0 if index != nInd else 1
                 # Add the degree of each tangent, so long as that tangent contains the 
                 # independent variable and is not excluded by the index.  
-                for j in range(self.nInd):
-                    ord += order - 1 if ccm[i, j] and index != j else 0
-                newOrd = max(newOrd, ord)
-        newOrder.append(newOrd)
-        uniqueKnots, counts = np.unique(knots[order - 1:self.nCoef[i] + 1], return_counts=True)
-        counts += newOrd - order + 1 # Because we're multiplying all the tangents, the knot elevation is one more
-        counts[0] = newOrd # But not at the endpoints, which are full order as usual
-        counts[-1] = newOrd # But not at the endpoints, which are full order as usual
-        newKnots.append(np.repeat(uniqueKnots, counts))
+                for ind in range(startInd, endInd):
+                    ord += maxOrder - 1 if index != ind else 0
+                order = max(order, ord)
+        
+        # Now, record the order of this independent variable and adjust the knot counts.
+        newOrder.append(order)
+        counts += order - maxOrder + 1 # Because we're multiplying all the tangents, the knot elevation is one more
+        counts[0] = order # But not at the endpoints, which are full order as usual
+        counts[-1] = order # But not at the endpoints, which are full order as usual
+        newKnots.append(np.repeat(knots, counts))
+        
         # Also calculate the total number of coefficients, capturing how it progressively increases, and
         # using that calculation to span uvw from the starting knot to the end for each variable.
         nCoef = len(newKnots[-1]) - newOrder[-1]
         totalCoefs.append(totalCoefs[-1] * nCoef)
-        knotAverages = bspy.Spline(1, 0, [newOrd], [nCoef], [newKnots[-1]], []).greville()
+        knotAverages = bspy.Spline(1, 0, [order], [nCoef], [newKnots[-1]], []).greville()
         for iKnot in range(1, len(knotAverages) - 1):
             if knotAverages[iKnot] == knotAverages[iKnot + 1]:
                 knotAverages[iKnot] = 0.5 * (knotAverages[iKnot - 1] + knotAverages[iKnot])
                 knotAverages[iKnot + 1] = 0.5 * (knotAverages[iKnot + 1] + knotAverages[iKnot + 2])
         uvwValues.append(knotAverages)
         nCoefs.append(nCoef)
+    
+    # Construct data points for normal.
     points = []
-    ijk = [0 for order in self.order]
+    ijk = [0] * self.nInd
     for i in range(totalCoefs[-1]):
         uvw = [uvwValues[j][k] for j, k in enumerate(ijk)]
         points.append(self.normal(uvw, False, indices))
@@ -745,7 +731,7 @@ def normal_spline(splineMatrix, indices=None):
     nCoefs.reverse()
     points = np.reshape(points, [nDep] + nCoefs)
     points = np.transpose(points, [0] + list(range(self.nInd, 0, -1)))
-    return bspy.Spline.least_squares(uvwValues, points, order = newOrder, knots = newKnots, metadata = self.metadata)
+    return bspy.Spline.least_squares(uvwValues, points, order = newOrder, knots = newKnots)
 
 def rotate(self, vector, angle):
     vector = np.atleast_1d(vector)

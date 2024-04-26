@@ -56,8 +56,6 @@ class SplineBlock:
                 rowInd += spline.nInd
             self.nInd = max(self.nInd, rowInd)
             self.nDep += rowDep
-
-        if self.nInd != self.nDep: raise ValueError("The number of independent variables (nInd) must match the number of dependent variables (nDep).")
         self.domain = np.array(self.domain, self.knotsDtype)
 
     def __call__(self, uvw):
