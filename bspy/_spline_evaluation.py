@@ -64,6 +64,15 @@ def block_normal(self, uvw, normalize=True, indices=None):
     
     return normal
 
+def block_range_bounds(self, uwv):
+    bounds = np.zeros((self.nDep, 2))
+    nDep = 0
+    for row in self.block:
+        for spline in row:
+            bounds[nDep:nDep + spline.nDep] += spline.range_bounds()
+        nDep += spline.nDep
+    return bounds
+
 def bspline_values(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs = False):
     basis = np.zeros(splineOrder, knots.dtype)
     if knot is None:

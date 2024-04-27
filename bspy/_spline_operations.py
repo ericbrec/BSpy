@@ -1,5 +1,6 @@
 import numpy as np
 import bspy.spline
+import bspy.spline_block
 from collections import namedtuple
 from enum import Enum
 from math import comb
@@ -58,6 +59,17 @@ def add(self, other, indMap = None):
     coefs = coefs.transpose(np.argsort(permutation)) 
     
     return type(self)(nInd, self.nDep, order, nCoef, knots, coefs, self.metadata)
+
+def block_contract(self, uvw):
+    newBlock = []
+    for row in self.block:
+        newRow = []
+        nInd = 0
+        for spline in row:
+            newRow.append(spline.contract(uvw[nInd:nInd + spline.nInd]))
+            nInd += spline.nInd
+        newBlock.append(newRow)
+    return bspy.spline_block.SplineBlock(newBlock)
 
 def confine(self, range_bounds):
     if self.nInd != 1: raise ValueError("Confine only works on curves (nInd == 1)")
