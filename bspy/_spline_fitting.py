@@ -95,14 +95,14 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     knownXValues = (knownXValues - coefsMin) * coefsMaxMinMinReciprocal # Rescale to [0 , 1]
 
     # Record domain of F.
-    if isinstance(F, bspy.Spline):
+    if isinstance(F, (bspy.Spline, bspy.SplineBlock)):
         FDomain = F.domain().T
     else:
         FDomain = np.array(nDep * [[-np.inf, np.inf]]).T
 
     # Establish the Jacobian of F.
     if dF is None:
-        if isinstance(F, bspy.Spline):
+        if isinstance(F, (bspy.Spline, bspy.SplineBlock)):
             dF = F.jacobian
         else:
             def fJacobian(x):
@@ -289,7 +289,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     # Rescale x(t) back to original data points.
     coefs = (coefsMin + coefs * coefsMaxMinusMin).T
     spline = bspy.Spline(1, nDep, (order,), (nCoef,), (knots,), coefs, metadata)
-    if isinstance(F, bspy.Spline):
+    if isinstance(F, (bspy.Spline, bspy.SplineBlock)):
         spline = spline.confine(F.domain())
     return spline
 

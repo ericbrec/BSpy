@@ -419,8 +419,8 @@ class Spline(Manifold):
 
         Parameters
         ----------
-        F : function or `Spline`
-            A function or spline that takes an array-like argument of length `n` and returns an 
+        F : function, `Spline`, or `SplineBlock`
+            A function, spline, or spline block that takes an array-like argument of length `n` and returns an 
             array-like result of length `n - 1`.
 
         knownXValues : `iterable` of array-like
@@ -433,8 +433,8 @@ class Spline(Manifold):
             A function that returns the Jacobian of F as an array with shape (n - 1, n). 
             Can also be an `iterable` of `n` functions that return the `n` first derivatives of `F`. 
             If `dF` is `None` (the default), the first derivatives will be computed for you. 
-            If `F` is not a spline, computing the first derivatives involves multiple calls to `F` 
-            and can be numerically unstable. 
+            If `F` is not a spline or spline block, computing the first derivatives involves 
+            multiple calls to `F` and can be numerically unstable. 
 
         epsilon : `float`, optional
             Tolerance for contour precision. Evaluating `F` with contour values will be within epsilon 
@@ -457,7 +457,7 @@ class Spline(Manifold):
         Notes
         -----
         The returned spline has constant parametric speed (the length of its derivative is constant). 
-        If `F` is a `Spline`, then the range of the returned contour is confined to the domain of `F`. 
+        If `F` is a `Spline` or a `SplineBlock`, then the range of the returned contour is confined to the domain of `F`. 
         Implements the algorithm described in section 7 of Grandine, Thomas A. 
         "Applications of contouring." Siam Review 42, no. 2 (2000): 297-316.
         """
