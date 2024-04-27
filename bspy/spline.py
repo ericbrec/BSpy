@@ -429,8 +429,9 @@ class Spline(Manifold):
             All x values must be length `n` and be listed in the order they appear on the contour.  
             `F(x)` for all known x values must be a zero vector of length `n-1`.
 
-        dF : `iterable` or `None`, optional
-            An `iterable` of the `n` functions representing the `n` first derivatives of `F`. 
+        dF : function, `iterable`, or `None`, optional
+            A function that returns the Jacobian of F as an array with shape (n - 1, n). 
+            Can also be an `iterable` of `n` functions that return the `n` first derivatives of `F`. 
             If `dF` is `None` (the default), the first derivatives will be computed for you. 
             If `F` is not a spline, computing the first derivatives involves multiple calls to `F` 
             and can be numerically unstable. 

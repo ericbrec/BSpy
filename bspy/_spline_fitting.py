@@ -94,31 +94,37 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     coefsMaxMinMinReciprocal = np.reciprocal(coefsMaxMinusMin)
     knownXValues = (knownXValues - coefsMin) * coefsMaxMinMinReciprocal # Rescale to [0 , 1]
 
-    # Establish the first derivatives of F.
+    # Record domain of F.
+    if isinstance(F, bspy.Spline):
+        FDomain = F.domain().T
+    else:
+        FDomain = np.array(nDep * [[-np.inf, np.inf]]).T
+
+    # Establish the Jacobian of F.
     if dF is None:
-        dF = []
         if isinstance(F, bspy.Spline):
-            for i in range(nDep):
-                def splineDerivative(x, i=i):
-                    wrt = [0] * nDep
-                    wrt[i] = 1
-                    return F.derivative(wrt, x)
-                dF.append(splineDerivative)
-            FDomain = F.domain().T
+            dF = F.jacobian
         else:
-            for i in range(nDep):
-                def fDerivative(x, i=i):
+            def fJacobian(x):
+                value = np.empty((nDep - 1, nDep), float)
+                for i in range(nDep):
                     h = epsilon * (1.0 + abs(x[i]))
                     xShift = np.array(x, copy=True)
                     xShift[i] -= h
                     fLeft = np.array(F(xShift))
                     h2 = h * 2.0
                     xShift[i] += h2
-                    return (np.array(F(xShift)) - fLeft) / h2
-                dF.append(fDerivative)
-            FDomain = np.array(nDep * [[-np.inf, np.inf]]).T
-    else:
+                    value[:, i] = (np.array(F(xShift)) - fLeft) / h2
+                return value
+            dF = fJacobian
+    elif not callable(dF):
         if not(len(dF) == nDep): raise ValueError(f"Must provide {nDep} first derivatives.")
+        def fJacobian(x):
+            value = np.empty((nDep - 1, nDep), float)
+            for i in range(nDep):
+                value[:, i] = dF[i]
+            return value
+        dF = fJacobian
 
     # Construct knots, t values, and GSamples.
     tValues = np.empty(nUnknownCoefs, contourDtype)
@@ -167,8 +173,6 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         # Array to hold the Jacobian of the FSamples with respect to the coefficients.
         # The Jacobian is banded due to B-spline local support, so initialize it to zero.
         dFCoefs = np.zeros((nUnknownCoefs, nDep, nCoef, nDep), contourDtype)
-        # Working array to hold the transpose of the Jacobian of F for a particular x(t).
-        dFX = np.empty((nDep, nDep - 1), contourDtype)
 
         # Start Newton's method loop.
         previousFSamplesNorm = 0.0
@@ -201,9 +205,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                 FSamples[i, -1] = dotValues
 
                 # Compute the Jacobian of FSamples with respect to the coefficients of x(t).
-                for j in range(nDep):
-                    dFX[j] = dF[j](x) * coefsMaxMinusMin[j]
-                FValues = np.outer(dFX.T, bValues).reshape(nDep - 1, nDep, order).swapaxes(1, 2)
+                FValues = np.outer(dF(x) * coefsMaxMinusMin, bValues).reshape(nDep - 1, nDep, order).swapaxes(1, 2)
                 dotValues = (np.outer(d2Values, compactCoefs.T @ dValues) + np.outer(dValues, compactCoefs.T @ d2Values)).reshape(order, nDep)
                 dFCoefs[i, :-1, ix - order:ix, :] = FValues
                 dFCoefs[i, -1, ix - order:ix, :] = dotValues
