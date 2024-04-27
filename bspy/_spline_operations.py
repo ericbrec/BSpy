@@ -630,79 +630,94 @@ def multiplyAndConvolve(self, other, indMap = None, productType = 'S'):
 
     return type(self)(nInd, nDep, order, nCoef, knots, coefs, self.metadata)
 
-# Return a matrix of booleans whose [i,j] value indicates if self's partial wrt variable i depends on variable j. 
-def _cross_correlation_matrix(self):
-    ccm = np.empty((self.nInd, self.nInd), bool)
-    for i in range(self.nInd - 1):
-        tangent = self.differentiate(i)
-        totalCoefs = tangent.coefs.size // tangent.nDep
-        ccm[i, i] = True
-        for j in range(i + 1, self.nInd):
-            coefs = np.moveaxis(tangent.coefs, (0, j + 1), (-1, -2))
-            coefs = coefs.reshape(totalCoefs // tangent.nCoef[j], tangent.nCoef[j], tangent.nDep)
-            match = True
-            for row in coefs:
-                first = row[0]
-                for point in row[1:]:
-                    match = np.allclose(point, first)
-                    if not match:
-                        break
-                if not match:
-                    break
-            ccm[i, j] = ccm[j, i] = not match
-    ccm[-1, -1] = True
-    return ccm
-
 def normal_spline(self, indices=None):
-    if abs(self.nInd - self.nDep) != 1: raise ValueError("The number of independent variables must be one less than the number of dependent variables.")
+    if abs(self.nInd - self.nDep) != 1: raise ValueError("The number of independent variables must be different than the number of dependent variables.")
 
-    # Construct order and knots for generalized cross product of the tangent space.
+    # Construct order, nCoef, knots, and sample values for generalized cross product of the tangent space.
     newOrder = []
     newKnots = []
     uvwValues = []
     nCoefs = []
     totalCoefs = [1]
-    ccm = _cross_correlation_matrix(self)
-    for i, (order, knots) in enumerate(zip(self.order, self.knots)):
-        # First, calculate the order of the normal for this independent variable.
+    for nInd in range(self.nInd):
+        knots = None
+        counts = None
+        maxOrder = 0
+        startInd = 0
+        endInd = 0
+        # First, collect the order, knots, and number of relevant columns for this independent variable.
+        for row in self.block:
+            rowInd = 0
+            for spline in row:
+                if rowInd <= nInd < rowInd + spline.nInd:
+                    ind = nInd - rowInd
+                    order = spline.order[ind]
+                    k, c = np.unique(spline.knots[ind][order-1:spline.nCoef[ind]+1], return_counts=True)
+                    if knots:
+                        if maxOrder < order:
+                            counts += order - maxOrder
+                            maxOrder = order
+                        endInd = max(endInd, rowInd + spline.nInd)
+                        for knot, count in zip(k[1:-1], c[1:-1]):
+                            ix = np.searchsorted(knots, knot)
+                            if knots[ix] == knot:
+                                counts[ix] = max(counts[ix], count + maxOrder - order)
+                            else:
+                                knots = np.insert(knots, ix, knot)
+                                counts = np.insert(counts, ix, count + maxOrder - order)
+                    else:
+                        knots = k
+                        counts = c
+                        maxOrder = order
+                        startInd = rowInd
+                        endInd = rowInd + spline.nInd
+                    
+                    break
+
+                rowInd += spline.nInd
+
+        # Next, calculate the order of the normal for this independent variable.
         # Note that the total order will be one less than usual, because one of 
         # the tangents is the derivative with respect to that independent variable.
-        newOrd = 0
         if self.nInd < self.nDep:
             # If this normal involves all tangents, simply add the degree of each,
-            # so long as that tangent contains the independent variable.  
-            for j in range(self.nInd):
-                newOrd += order - 1 if ccm[i, j] else 0
+            # so long as that tangent contains the independent variable.
+            order = (maxOrder - 1) * (endInd - startInd)
         else:
             # If this normal doesn't involve all tangents, find the max order of
             # each returned combination (as defined by the indices).
-            for index in range(self.nInd) if indices is None else indices:
+            order = 0
+            for index in range(startInd, endInd) if indices is None else indices:
                 # The order will be one larger if this independent variable's tangent is excluded by the index.
-                ord = 0 if index != i else 1
+                ord = 0 if index != nInd else 1
                 # Add the degree of each tangent, so long as that tangent contains the 
                 # independent variable and is not excluded by the index.  
-                for j in range(self.nInd):
-                    ord += order - 1 if ccm[i, j] and index != j else 0
-                newOrd = max(newOrd, ord)
-        newOrder.append(newOrd)
-        uniqueKnots, counts = np.unique(knots[order - 1:self.nCoef[i] + 1], return_counts=True)
-        counts += newOrd - order + 1 # Because we're multiplying all the tangents, the knot elevation is one more
-        counts[0] = newOrd # But not at the endpoints, which are full order as usual
-        counts[-1] = newOrd # But not at the endpoints, which are full order as usual
-        newKnots.append(np.repeat(uniqueKnots, counts))
+                for ind in range(startInd, endInd):
+                    ord += maxOrder - 1 if index != ind else 0
+                order = max(order, ord)
+        
+        # Now, record the order of this independent variable and adjust the knot counts.
+        newOrder.append(order)
+        counts += order - maxOrder + 1 # Because we're multiplying all the tangents, the knot elevation is one more
+        counts[0] = order # But not at the endpoints, which are full order as usual
+        counts[-1] = order # But not at the endpoints, which are full order as usual
+        newKnots.append(np.repeat(knots, counts))
+        
         # Also calculate the total number of coefficients, capturing how it progressively increases, and
         # using that calculation to span uvw from the starting knot to the end for each variable.
         nCoef = len(newKnots[-1]) - newOrder[-1]
         totalCoefs.append(totalCoefs[-1] * nCoef)
-        knotAverages = bspy.Spline(1, 0, [newOrd], [nCoef], [newKnots[-1]], []).greville()
+        knotAverages = bspy.Spline(1, 0, [order], [nCoef], [newKnots[-1]], []).greville()
         for iKnot in range(1, len(knotAverages) - 1):
             if knotAverages[iKnot] == knotAverages[iKnot + 1]:
                 knotAverages[iKnot] = 0.5 * (knotAverages[iKnot - 1] + knotAverages[iKnot])
                 knotAverages[iKnot + 1] = 0.5 * (knotAverages[iKnot + 1] + knotAverages[iKnot + 2])
         uvwValues.append(knotAverages)
         nCoefs.append(nCoef)
+    
+    # Construct data points for normal.
     points = []
-    ijk = [0 for order in self.order]
+    ijk = [0] * self.nInd
     for i in range(totalCoefs[-1]):
         uvw = [uvwValues[j][k] for j, k in enumerate(ijk)]
         points.append(self.normal(uvw, False, indices))
@@ -716,7 +731,7 @@ def normal_spline(self, indices=None):
     nCoefs.reverse()
     points = np.reshape(points, [nDep] + nCoefs)
     points = np.transpose(points, [0] + list(range(self.nInd, 0, -1)))
-    return bspy.Spline.least_squares(uvwValues, points, order = newOrder, knots = newKnots, metadata = self.metadata)
+    return bspy.Spline.least_squares(uvwValues, points, order = newOrder, knots = newKnots)
 
 def rotate(self, vector, angle):
     vector = np.atleast_1d(vector)

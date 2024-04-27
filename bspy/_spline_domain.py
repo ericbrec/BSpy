@@ -559,7 +559,6 @@ def split(self, minContinuity = 0, breaks = None):
         splineCount.append(splines)
         totalSplineCount *= splines
 
-
     # Step 4: Slice up the spline.
     splineArray = np.empty(totalSplineCount, object)
     for i in range(totalSplineCount):
