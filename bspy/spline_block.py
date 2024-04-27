@@ -34,7 +34,7 @@ class SplineBlock:
         self.knotsDtype = None
         self.coefsDtype = None
         self.size = 0
-        self.domain = []
+        self._domain = []
         for row in self.block:
             rowInd = 0
             rowDep = 0
@@ -50,15 +50,15 @@ class SplineBlock:
                 for i in range(rowInd, rowInd + spline.nInd):
                     ind = i - rowInd
                     if i < self.nInd:
-                        if self.domain[i][0] != d[ind, 0] or self.domain[i][1] != d[ind, 1]:
+                        if self._domain[i][0] != d[ind, 0] or self._domain[i][1] != d[ind, 1]:
                             raise ValueError("Domains of independent variables must match")
                     else:
-                        self.domain.append(d[ind])
+                        self._domain.append(d[ind])
                 rowInd += spline.nInd
             self.nInd = max(self.nInd, rowInd)
             self.nDep += rowDep
             self.size += len(row)
-        self.domain = np.array(self.domain, self.knotsDtype)
+        self._domain = np.array(self._domain, self.knotsDtype)
 
     def __call__(self, uvw):
         return self.evaluate(uvw)
@@ -134,7 +134,7 @@ class SplineBlock:
         bounds : `numpy.array`
             nInd x 2 array of the lower and upper bounds on each of the independent variables.
         """
-        return self.domain
+        return self._domain
     
     def evaluate(self, uvw):
         """

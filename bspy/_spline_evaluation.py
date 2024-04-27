@@ -64,7 +64,7 @@ def block_normal(self, uvw, normalize=True, indices=None):
     
     return normal
 
-def block_range_bounds(self, uwv):
+def block_range_bounds(self):
     bounds = np.zeros((self.nDep, 2))
     nDep = 0
     for row in self.block:

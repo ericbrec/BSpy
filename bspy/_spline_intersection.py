@@ -614,17 +614,13 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
     # a panel boundary: u * cosTheta + v * sinTheta = d. Basically, we add this panel boundary plane
     # to the contour condition. We'll define it for d = 0, and add the actual d later.
     # We didn't construct the panel system earlier, because we didn't have theta.
-    panelCoefs = np.empty((self.nDep + 1, *self.coefs.shape[1:]), self.coefs.dtype) # Note that self.nDep + 1 == self.nInd
-    panelCoefs[:self.nDep] = self.coefs
-    # The following value should be -d. We're setting it for d = 0 to start.
-    panelCoefs[self.nDep, 0, 0] = 0.0 
-    degree = self.order[0] - 1
-    for i in range(1, self.nCoef[0]):
-        panelCoefs[self.nDep, i, 0] = panelCoefs[self.nDep, i - 1, 0] + ((self.knots[0][degree + i] - self.knots[0][i]) / degree) * cosTheta
-    degree = self.order[1] - 1
-    for i in range(1, self.nCoef[1]):
-        panelCoefs[self.nDep, :, i] = panelCoefs[self.nDep, :, i - 1] + ((self.knots[1][degree + i] - self.knots[1][i]) / degree) * sinTheta
-    panel = type(self)(self.nInd, self.nInd, self.order, self.nCoef, self.knots, panelCoefs, self.metadata)
+    panelCoefs = np.array((((0.0, sinTheta), (cosTheta, cosTheta + sinTheta)),), self.coefsDtype)
+    panelSpline = bspy.spline.Spline(2, 1, (2, 2), (2, 2), 
+        (np.array((0.0, 0.0, 1.0, 1.0), self.knotsDtype), np.array((0.0, 0.0, 1.0, 1.0), self.knotsDtype)), 
+        panelCoefs)
+    panelBlock = self.block.copy()
+    panelBlock.append([panelSpline])
+    panel = bspy.spline_block.SplineBlock(panelBlock)
 
     # Okay, we have everything we need to determine the contour topology and points along each contour.
     # We've done the first two steps of Grandine and Klein's algorithm:
@@ -712,7 +708,7 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
             # points. Either insert two new contours in the list or delete two existing ones from
             # the list. Go back to Step (5).
             # First, construct panel, whose zeros lie along the panel boundary, u * cosTheta + v * sinTheta - d = 0.
-            panel.coefs[self.nDep] -= point.d
+            panelSpline.coefs = panelCoefs - point.d
 
             if point.turningPoint and point.uvw is None:
                 # For an inserted panel between two consecutive turning points, just find zeros along the panel.
@@ -754,8 +750,6 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
                 else:
                     panelPoints = [point.uvw]
 
-            # Add d back to prepare for next turning point.
-            panel.coefs[self.nDep] += point.d
             # Sort zero points by their position along the panel boundary (using vector orthogonal to its normal).
             panelPoints.sort(key=lambda uvw: uvw[1] * cosTheta - uvw[0] * sinTheta)
             # Go through panel points, adding them to existing contours, creating new ones, or closing old ones.
