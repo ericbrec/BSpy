@@ -591,6 +591,10 @@ def test_circular_arc():
         maxError = max(maxError, np.abs(np.linalg.norm(spline(t)) - radius))
     assert maxError < tolerance
 
+def test_continuity():
+    smoothness = mySurface.continuity()
+    assert smoothness[0] == 1 and smoothness[1] == 2
+
 def test_contours():
     maxError = 0.0
     F = lambda x: (x[0] - x[2], x[1] - x[3], x[0]*x[0] + x[1]*x[1]/9.0 - 1.0 + x[2]*x[2] + x[3]*x[3]/9.0 - 1.0)

@@ -409,6 +409,24 @@ class Spline(Manifold):
         """
         return bspy._spline_operations.confine(self, range_bounds)
 
+    def continuity(self):
+        """
+        Return the smoothness of the spline in each of its independent variables.
+
+        Returns
+        -------
+        `smoothness` : `iterable`
+            An array of length nInd containing the number of times the function is continuously
+            in each of the independent variables of the input spline.
+
+        Notes
+        -----
+        The value -1 is returned if the spline is discontinuous in that variable.  The degree of the spline
+        is returned if the spline contains no interior knots even though the spline is an analytic function
+        of that variable.
+        """
+        return bspy._spline_evaluation.continuity(self)
+
     @staticmethod
     def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         """

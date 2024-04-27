@@ -26,6 +26,11 @@ def bspline_values(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs
             b += 1
     return knot, basis
 
+def continuity(self):
+    multiplicity = np.array([np.max(np.unique(knots, return_counts = True)[1][1 : -1]) for knots in self.knots])
+    continuity = self.order - multiplicity - 1
+    return continuity
+
 def curvature(self, uv):
     if self.nInd == 1:
         if self.nDep == 1:
@@ -170,6 +175,9 @@ def moment(self, exponent = None, domain = None):
     else:
         if len(exponent) != self.nDep:  raise ValueError("Incorrect number of exponents specified")
 
+    # Set tolerance
+    tolerance = 1.0e-13 / self.nInd
+
     # Establish the callback function
     def momentIntegrand(u, nIndSoFar, uValues):
         uValues[nIndSoFar] = u
@@ -184,7 +192,7 @@ def moment(self, exponent = None, domain = None):
             for ix in range(len(uniqueKnots[nIndSoFar]) - 1):
                 value = sp.integrate.quad(momentIntegrand, uniqueKnots[nIndSoFar][ix],
                                           uniqueKnots[nIndSoFar][ix + 1], (nIndSoFar, uValues),
-                                          epsabs = 1.0e-13, epsrel = 1.0e-13)
+                                          epsabs = tolerance, epsrel = tolerance)
                 total += value[0]
         return total    
     
