@@ -33,6 +33,7 @@ class SplineBlock:
         self.nDep = 0
         self.knotsDtype = None
         self.coefsDtype = None
+        self.size = 0
         self.domain = []
         for row in self.block:
             rowInd = 0
@@ -56,6 +57,7 @@ class SplineBlock:
                 rowInd += spline.nInd
             self.nInd = max(self.nInd, rowInd)
             self.nDep += rowDep
+            self.size += len(row)
         self.domain = np.array(self.domain, self.knotsDtype)
 
     def __call__(self, uvw):
@@ -76,19 +78,35 @@ class SplineBlock:
 
         See Also
         --------
-        `contours` : Find all the contour curves of a spline whose `nInd` is one larger than its `nDep`.
-        `contour` : Fit a spline to the contour defined by `F(x) = 0`.
-        `zeros` : Find the roots of a spline (nInd must match nDep).
-        `zeros_extended` : Find the roots of a block of splines (nInd must match nDep).
-        `intersect` : Intersect two splines.
+        `zeros` : Find the roots of a block of splines (nInd must match nDep).
 
         Notes
         -----
-        Uses `zeros` to find all intersection points and `contour` to find individual intersection curves. 
+        Uses `zeros` to find all intersection points and `Spline.contour` to find individual intersection curves. 
         The algorithm used to to find all intersection curves is from Grandine, Thomas A., and Frederick W. Klein IV. 
         "A new approach to the surface intersection problem." Computer Aided Geometric Design 14, no. 2 (1997): 111-134.
         """
         return bspy._spline_intersection.contours(self)
+
+    def derivative(self, with_respect_to, uvw):
+        """
+        Compute the derivative of the spline block at given parameter values.
+
+        Parameters
+        ----------
+        with_respect_to : `iterable`
+            An iterable of length `nInd` that specifies the integer order of derivative for each independent variable.
+            A zero-order derivative just evaluates the spline normally.
+        
+        uvw : `iterable`
+            An iterable of length `nInd` that specifies the values of each independent variable (the parameter values).
+
+        Returns
+        -------
+        value : `numpy.array`
+            The value of the derivative of the spline block at the given parameter values (array of size nDep).
+       """
+        return bspy._spline_evaluation.block_derivative(self, with_respect_to, uvw)
     
     def evaluate(self, uvw):
         """
@@ -145,6 +163,10 @@ class SplineBlock:
         normal : `numpy.array`
             The normal vector of the spline block at the given parameter values.
 
+        See Also
+        --------
+        `normal_spline` : Compute a spline that evaluates to the normal of the given spline block (not normalized).
+
         Notes
         -----
         Attentive readers will notice that the number of independent variables could be one more than the number of 
@@ -173,8 +195,7 @@ class SplineBlock:
 
         See Also
         --------
-        `normal` : Compute the normal of the spline at given parameter values.
-        `normal_spline` : Compute a spline that evaluates to the normal of the given spline (not normalized).
+        `normal` : Compute the normal of the spline block at given parameter values.
 
         Notes
         -----
@@ -203,10 +224,7 @@ class SplineBlock:
         
         See Also
         --------
-        `zeros` : Find the roots of a spline.
-        `intersect` : Intersect two splines.
-        `contours` : Find all the contour curves of a spline whose `nInd` is one larger than its `nDep`.
-        `contour_extended` : Find all the contour curves of a block of splines whose `nInd` is one larger than its `nDep`.
+        `contours` : Find all the contour curves of a spline block whose `nInd` is one larger than its `nDep`.
 
         Notes
         -----

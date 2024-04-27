@@ -4,6 +4,7 @@ import numpy as np
 from bspy.manifold import Manifold
 from bspy.hyperplane import Hyperplane
 import bspy.spline
+import bspy.spline_block
 from bspy.solid import Solid, Boundary
 from collections import namedtuple
 from multiprocessing import Pool
@@ -487,7 +488,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
 
     return roots
 
-def _contours_of_C1_spline(self, epsilon, evaluationEpsilon):
+def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
     Point = namedtuple('Point', ('d', 'det', 'onUVBoundary', 'turningPoint', 'uvw'))
 
     # Go through each nDep of the spline, checking bounds.
@@ -848,12 +849,30 @@ def _contours_of_C1_spline(self, epsilon, evaluationEpsilon):
 
 def contours(self):
     if self.nInd - self.nDep != 1: raise ValueError("The number of free variables (self.nInd - self.nDep) must be one.")
-    epsilon = np.sqrt(np.finfo(self.coefs.dtype).eps)
+    epsilon = np.sqrt(np.finfo(self.coefsDtype).eps)
     evaluationEpsilon = np.sqrt(epsilon)
-    splines = self.split(minContinuity = 1)
+
+    # Split the splines in the block to ensure C1 continuity within each block
+    blocks = [self]
+    for i, row in enumerate(self.block):
+        for j, spline in enumerate(row):
+            splines = spline.split(minContinuity = 1)
+            if splines.size == 1 and self.size == 1:
+                break # Special case of a block with one C1 spline 
+            blockCount = len(blocks)
+            for spline in splines.ravel():
+                newBlocks = []
+                for block in blocks:
+                    newBlock = block.block.copy()
+                    newRow = newBlock[i].copy()
+                    newBlock[i] = newRow
+                    newRow[j] = spline
+                    newBlocks.append(bspy.spline_block.SplineBlock(newBlock))
+                blocks = newBlocks
+
     contours = []
-    for spline in splines.ravel():
-        splineContours = _contours_of_C1_spline(spline, epsilon, evaluationEpsilon)
+    for block in blocks:
+        splineContours = _contours_of_C1_spline_block(block, epsilon, evaluationEpsilon)
         for newContour in splineContours:
             newStart = newContour(0.0)
             newFinish = newContour(1.0)

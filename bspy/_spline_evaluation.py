@@ -11,6 +11,17 @@ def block_evaluate(self, uwv):
         nDep += spline.nDep
     return value
 
+def block_derivative(self, with_respect_to, uwv):
+    value = np.zeros(self.nDep, self.coefsDtype)
+    nDep = 0
+    for row in self.block:
+        nInd = 0
+        for spline in row:
+            value[nDep:nDep + spline.nDep] += spline.derivative(with_respect_to[nInd:nInd + spline.nInd], uwv[nInd:nInd + spline.nInd])
+            nInd += spline.nInd
+        nDep += spline.nDep
+    return value
+
 def block_jacobian(self, uwv):
     jacobian = np.zeros((self.nDep, self.nInd), self.coefsDtype)
     nDep = 0
