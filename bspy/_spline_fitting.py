@@ -88,17 +88,21 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         FValues = F(knownXValue)
         if not(len(FValues) == nDep - 1 and np.linalg.norm(FValues) < evaluationEpsilon):
             raise ValueError(f"F(known x) must be a zero vector of length {nDep - 1}.")
-    coefsMin = knownXValues.min(axis=0)
-    coefsMaxMinusMin = knownXValues.max(axis=0) - coefsMin
-    coefsMaxMinusMin = np.where(coefsMaxMinusMin < 1.0, 1.0, coefsMaxMinusMin)
-    coefsMaxMinMinReciprocal = np.reciprocal(coefsMaxMinusMin)
-    knownXValues = (knownXValues - coefsMin) * coefsMaxMinMinReciprocal # Rescale to [0 , 1]
 
-    # Record domain of F.
+    # Record domain of F and scaling of coefficients.
     if isinstance(F, (bspy.Spline, bspy.SplineBlock)):
         FDomain = F.domain().T
+        coefsMin = FDomain[0]
+        coefsMaxMinusMin = FDomain[1] - FDomain[0]
     else:
         FDomain = np.array(nDep * [[-np.inf, np.inf]]).T
+        coefsMin = knownXValues.min(axis=0)
+        coefsMaxMinusMin = knownXValues.max(axis=0) - coefsMin
+        coefsMaxMinusMin = np.where(coefsMaxMinusMin < 1.0, 1.0, coefsMaxMinusMin)
+
+    # Rescale known values.
+    coefsMaxMinMinReciprocal = np.reciprocal(coefsMaxMinusMin)
+    knownXValues = (knownXValues - coefsMin) * coefsMaxMinMinReciprocal # Rescale to [0 , 1]
 
     # Establish the Jacobian of F.
     if dF is None:

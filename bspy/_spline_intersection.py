@@ -848,15 +848,15 @@ def contours(self):
             splines = spline.split(minContinuity = 1)
             if splines.size == 1 and self.size == 1:
                 break # Special case of a block with one C1 spline 
+            newBlocks = []
             for spline in splines.ravel():
-                newBlocks = []
                 for block in blocks:
                     newBlock = block.block.copy()
                     newRow = newBlock[i].copy()
                     newBlock[i] = newRow
                     newRow[j] = spline
                     newBlocks.append(bspy.spline_block.SplineBlock(newBlock))
-                blocks = newBlocks
+            blocks = newBlocks
 
     contours = []
     for block in blocks:
