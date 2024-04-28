@@ -148,6 +148,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         previousPoint = point
     knots += [t] * 2 # Clamp last knot
     knots = np.array(knots, contourDtype)
+    knots[nCoef:] = 1.0 # Ensure last knot is exactly 1.0
     print("original", knots, tValues)
     assert i == nUnknownCoefs
     
