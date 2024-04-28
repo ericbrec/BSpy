@@ -133,13 +133,12 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     # Construct knots, t values, and GSamples.
     tValues = np.empty(nUnknownCoefs, contourDtype)
     GSamples = np.empty((nUnknownCoefs, nDep), contourDtype)
-    t = 0.0 # We start with t measuring contour length.
+    t = 0.0 # t ranges from 0 to 1
+    dt = 1.0 / m
     knots = [t] * order
     i = 0
     previousPoint = knownXValues[0]
     for point in knownXValues[1:]:
-        dt = np.linalg.norm(point - previousPoint)
-        if not(dt > epsilon): raise ValueError("Points must be separated by at least epsilon.")
         for gaussNode in gaussNodes:
             tValues[i] = t + gaussNode * dt
             GSamples[i] = (1.0 - gaussNode) * previousPoint + gaussNode * point
@@ -148,8 +147,8 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         knots += [t] * (order - 2)
         previousPoint = point
     knots += [t] * 2 # Clamp last knot
-    knots = np.array(knots, contourDtype) / t # Rescale knots
-    tValues /= t # Rescale t values
+    knots = np.array(knots, contourDtype)
+    print("original", knots, tValues)
     assert i == nUnknownCoefs
     
     # Start subdivision loop.
@@ -287,6 +286,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         nCoef = nUnknownCoefs + 2
         newKnots += [knot] * 2 # Clamp last knot
         knots = np.array(newKnots, contourDtype)
+        print("refined", knots, tValues)
         assert i == nUnknownCoefs
         assert len(knots) == nCoef + order
 
@@ -295,6 +295,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     spline = bspy.Spline(1, nDep, (order,), (nCoef,), (knots,), coefs, metadata)
     if isinstance(F, (bspy.Spline, bspy.SplineBlock)):
         spline = spline.confine(F.domain())
+    print("confined", spline.knots[0])
     return spline
 
 def cylinder(radius, height, tolerance = None):
