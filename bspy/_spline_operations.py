@@ -117,9 +117,9 @@ def confine(self, range_bounds):
     intersections.sort(key=lambda intersection: intersection[0])
 
     # Remove repeat points at start and end.
-    if intersections[1][0] - intersections[0][0] < epsilon:
+    while intersections[1][0] - intersections[0][0] < epsilon:
         del intersections[1]
-    if intersections[-1][0] - intersections[-2][0] < epsilon:
+    while intersections[-1][0] - intersections[-2][0] < epsilon:
         del intersections[-2]
 
     # Insert order-1 knots at each intersection point.
