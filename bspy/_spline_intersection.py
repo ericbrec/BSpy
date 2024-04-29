@@ -971,13 +971,13 @@ def intersect(self, other):
     
     # Spline-Spline intersection.
     elif isinstance(other, bspy.Spline):
-        # Construct a new spline that represents the intersection.
-        spline = self.subtract(other)
+        # Construct a spline block that represents the intersection.
+        block = bspy.spline_block.SplineBlock([[self, -other]])
 
         # Curve-Curve intersection.
         if nDep == 1:
             # Find the intersection points and intervals.
-            zeros = spline.zeros()
+            zeros = block.zeros()
             # Convert each intersection point into a Manifold.Crossing and each intersection interval into a Manifold.Coincidence.
             for zero in zeros:
                 if isinstance(zero, tuple):
@@ -1021,17 +1021,17 @@ def intersect(self, other):
             swap = False
             try:
                 # First try the intersection as is.
-                contours = spline.contours()
+                contours = block.contours()
             except ValueError:
                 # If that fails, swap the manifolds. Worth a shot since intersections are touchy.
                 swap = True
 
             # Convert each contour into a Manifold.Crossing.
             if swap:
-                spline = other.subtract(self)
+                block = bspy.spline_block.SplineBlock([[other, -self]])
                 if "Name" in self.metadata and "Name" in other.metadata:
                     logging.info(f"intersect({other.metadata['Name']}, {self.metadata['Name']})")
-                contours = spline.contours()
+                contours = block.contours()
                 for contour in contours:
                     # Swap left and right, compared to not swapped.
                     left = bspy.Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[nDep:], contour.metadata)

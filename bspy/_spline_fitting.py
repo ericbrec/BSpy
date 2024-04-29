@@ -149,7 +149,6 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     knots += [t] * 2 # Clamp last knot
     knots = np.array(knots, contourDtype)
     knots[nCoef:] = 1.0 # Ensure last knot is exactly 1.0
-    print("original", knots, tValues)
     assert i == nUnknownCoefs
     
     # Start subdivision loop.
@@ -287,7 +286,6 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         nCoef = nUnknownCoefs + 2
         newKnots += [knot] * 2 # Clamp last knot
         knots = np.array(newKnots, contourDtype)
-        print("refined", knots, tValues)
         assert i == nUnknownCoefs
         assert len(knots) == nCoef + order
 
@@ -296,7 +294,6 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
     spline = bspy.Spline(1, nDep, (order,), (nCoef,), (knots,), coefs, metadata)
     if isinstance(F, (bspy.Spline, bspy.SplineBlock)):
         spline = spline.confine(F.domain())
-    print("confined", spline.knots[0])
     return spline
 
 def cylinder(radius, height, tolerance = None):
