@@ -1,5 +1,6 @@
 import numpy as np
 import bspy.spline
+import bspy.spline_block
 from collections import namedtuple
 from enum import Enum
 from math import comb
@@ -59,6 +60,17 @@ def add(self, other, indMap = None):
     
     return type(self)(nInd, self.nDep, order, nCoef, knots, coefs, self.metadata)
 
+def block_contract(self, uvw):
+    newBlock = []
+    for row in self.block:
+        newRow = []
+        nInd = 0
+        for spline in row:
+            newRow.append(spline.contract(uvw[nInd:nInd + spline.nInd]))
+            nInd += spline.nInd
+        newBlock.append(newRow)
+    return bspy.spline_block.SplineBlock(newBlock)
+
 def confine(self, range_bounds):
     if self.nInd != 1: raise ValueError("Confine only works on curves (nInd == 1)")
     if len(range_bounds) != self.nDep: raise ValueError("len(range_bounds) must equal nDep")
@@ -105,9 +117,9 @@ def confine(self, range_bounds):
     intersections.sort(key=lambda intersection: intersection[0])
 
     # Remove repeat points at start and end.
-    if intersections[1][0] - intersections[0][0] < epsilon:
+    while intersections[1][0] - intersections[0][0] < epsilon:
         del intersections[1]
-    if intersections[-1][0] - intersections[-2][0] < epsilon:
+    while intersections[-1][0] - intersections[-2][0] < epsilon:
         del intersections[-2]
 
     # Insert order-1 knots at each intersection point.

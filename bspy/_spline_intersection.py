@@ -222,13 +222,12 @@ def create_interval(domain, block, unknowns, scale, slope, intercept, epsilon):
         # Trim and reparametrize splines, and sum bounds.
         for spline in row:
             spline = spline.trim(domain[nInd:nInd + spline.nInd]).reparametrize(((0.0, 1.0),) * spline.nInd)
-            rowDep = spline.nDep
-            bounds[nDep:nDep + rowDep] += spline.range_bounds()
+            bounds[nDep:nDep + spline.nDep] += spline.range_bounds()
             nInd += spline.nInd
             newRow.append(spline)
 
         # Check row bounds for potential roots.
-        for dep in range(rowDep):
+        for dep in range(spline.nDep):
             coefsMin = bounds[nDep, 0] * scale[nDep]
             coefsMax = bounds[nDep, 1] * scale[nDep]
             if coefsMax < -epsilon or coefsMin > epsilon:
@@ -414,7 +413,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
     roots = []
 
     # Set initial interval.
-    domain = self.domain.T
+    domain = self.domain().T
     newInterval = create_interval(domain.T, self.block, [*range(self.nInd)], np.full(self.nDep, 1.0, self.coefsDtype), domain[1] - domain[0], domain[0], epsilon)
     if newInterval:
         if newInterval.block:
@@ -491,11 +490,10 @@ def zeros_using_projected_polyhedron(self, epsilon=None):
 def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
     Point = namedtuple('Point', ('d', 'det', 'onUVBoundary', 'turningPoint', 'uvw'))
 
-    # Go through each nDep of the spline, checking bounds.
-    for coefs in self.coefs:
-        coefsMin = coefs.min()
-        coefsMax = coefs.max()
-        if coefsMax < -evaluationEpsilon or coefsMin > evaluationEpsilon:
+    # Go through each nDep of the spline block, checking bounds.
+    bounds = self.range_bounds()
+    for bound in bounds:
+        if bound[1] < -evaluationEpsilon or bound[0] > evaluationEpsilon:
             # No contours for this spline.
             return []
 
@@ -503,10 +501,7 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
     domain = self.domain().T
     self = self.reparametrize(((0.0, 1.0),) * self.nInd)
     
-    # Construct self's tangents and normal.
-    tangents = []
-    for nInd in range(self.nInd):
-        tangents.append(self.differentiate(nInd))
+    # Construct self's normal.
     normal = self.normal_spline((0, 1)) # We only need the first two indices
 
     theta = np.sqrt(2) # Arbitrary starting value for theta (picked one in [0, pi/2] unlikely to be a stationary point)
@@ -533,10 +528,24 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
                     break
                 uvw = np.insert(np.array(zero), nInd, boundary)
                 d = uvw[0] * cosTheta + uvw[1] * sinTheta
-                det = (0.5 - boundary) * normal(uvw)[nInd] * turningPointDeterminant(uvw)
+                n = normal(uvw)
+                tpd = turningPointDeterminant(uvw)
+                det = (0.5 - boundary) * n[nInd] * tpd
                 if abs(det) < epsilon:
                     abort = True
                     break
+                # Check for literal corner case.
+                otherInd = 1 - nInd
+                otherValue = uvw[otherInd]
+                if otherValue < epsilon or otherValue + epsilon > 1.0:
+                    otherDet = (0.5 - otherValue) * n[otherInd] * tpd
+                    if det * otherDet < 0.0:
+                        continue # Corner that starts and ends, ignore it
+                    elif max(otherValue, boundary) < epsilon and det < 0.0:
+                        continue # End point at (0, 0), ignore it
+                    elif min(otherValue, boundary) + epsilon > 1.0 and det > 0.0:
+                        continue # Start point at (1, 1), ignore it
+                # Append boundary point.
                 points.append(Point(d, det, True, False, uvw))
             return abort
         for nInd in range(2):
@@ -560,12 +569,13 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
                 uvw = np.insert(np.array(zero), nInd, boundary)
                 d = uvw[0] * cosTheta + uvw[1] * sinTheta
                 columns = np.empty((self.nDep, self.nInd - 1))
+                tangents = self.jacobian(uvw).T
                 i = 0
                 for j in range(self.nInd):
                     if j != nInd:
-                        columns[:, i] = tangents[j](uvw)
+                        columns[:, i] = tangents[j]
                         i += 1
-                duv = np.linalg.solve(columns, -tangents[nInd](uvw))
+                duv = np.linalg.solve(columns, -tangents[nInd])
                 det = np.arctan2((0.5 - boundary) * (duv[0] * cosTheta + duv[1] * sinTheta), (0.5 - boundary) * (duv[0] * cosTheta - duv[1] * sinTheta))
                 if abs(det) < epsilon:
                     abort = True
@@ -583,10 +593,9 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
             continue # Try a different theta
 
         # Find turning points by combining self and turningPointDeterminant into a system and processing its zeros.
-        systemSelf, systemTurningPointDeterminant = bspy.Spline.common_basis((self, turningPointDeterminant))
-        system = type(systemSelf)(self.nInd, self.nInd, systemSelf.order, systemSelf.nCoef, systemSelf.knots, \
-            np.concatenate((systemSelf.coefs, systemTurningPointDeterminant.coefs)), systemSelf.metadata)
-        zeros = system.zeros()
+        systemBlock = self.block.copy()
+        systemBlock.append([turningPointDeterminant])
+        zeros = bspy.spline_block.SplineBlock(systemBlock).zeros()
         for uvw in zeros:
             if isinstance(uvw, tuple):
                 abort = True
@@ -619,17 +628,13 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
     # a panel boundary: u * cosTheta + v * sinTheta = d. Basically, we add this panel boundary plane
     # to the contour condition. We'll define it for d = 0, and add the actual d later.
     # We didn't construct the panel system earlier, because we didn't have theta.
-    panelCoefs = np.empty((self.nDep + 1, *self.coefs.shape[1:]), self.coefs.dtype) # Note that self.nDep + 1 == self.nInd
-    panelCoefs[:self.nDep] = self.coefs
-    # The following value should be -d. We're setting it for d = 0 to start.
-    panelCoefs[self.nDep, 0, 0] = 0.0 
-    degree = self.order[0] - 1
-    for i in range(1, self.nCoef[0]):
-        panelCoefs[self.nDep, i, 0] = panelCoefs[self.nDep, i - 1, 0] + ((self.knots[0][degree + i] - self.knots[0][i]) / degree) * cosTheta
-    degree = self.order[1] - 1
-    for i in range(1, self.nCoef[1]):
-        panelCoefs[self.nDep, :, i] = panelCoefs[self.nDep, :, i - 1] + ((self.knots[1][degree + i] - self.knots[1][i]) / degree) * sinTheta
-    panel = type(self)(self.nInd, self.nInd, self.order, self.nCoef, self.knots, panelCoefs, self.metadata)
+    panelCoefs = np.array((((0.0, sinTheta), (cosTheta, cosTheta + sinTheta)),), self.coefsDtype)
+    panelSpline = bspy.spline.Spline(2, 1, (2, 2), (2, 2), 
+        (np.array((0.0, 0.0, 1.0, 1.0), self.knotsDtype), np.array((0.0, 0.0, 1.0, 1.0), self.knotsDtype)), 
+        panelCoefs)
+    panelBlock = self.block.copy()
+    panelBlock.append([panelSpline])
+    panel = bspy.spline_block.SplineBlock(panelBlock)
 
     # Okay, we have everything we need to determine the contour topology and points along each contour.
     # We've done the first two steps of Grandine and Klein's algorithm:
@@ -717,7 +722,7 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
             # points. Either insert two new contours in the list or delete two existing ones from
             # the list. Go back to Step (5).
             # First, construct panel, whose zeros lie along the panel boundary, u * cosTheta + v * sinTheta - d = 0.
-            panel.coefs[self.nDep] -= point.d
+            panelSpline.coefs = panelCoefs - point.d
 
             if point.turningPoint and point.uvw is None:
                 # For an inserted panel between two consecutive turning points, just find zeros along the panel.
@@ -759,8 +764,6 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
                 else:
                     panelPoints = [point.uvw]
 
-            # Add d back to prepare for next turning point.
-            panel.coefs[self.nDep] += point.d
             # Sort zero points by their position along the panel boundary (using vector orthogonal to its normal).
             panelPoints.sort(key=lambda uvw: uvw[1] * cosTheta - uvw[0] * sinTheta)
             # Go through panel points, adding them to existing contours, creating new ones, or closing old ones.
@@ -859,16 +862,15 @@ def contours(self):
             splines = spline.split(minContinuity = 1)
             if splines.size == 1 and self.size == 1:
                 break # Special case of a block with one C1 spline 
-            blockCount = len(blocks)
+            newBlocks = []
             for spline in splines.ravel():
-                newBlocks = []
                 for block in blocks:
                     newBlock = block.block.copy()
                     newRow = newBlock[i].copy()
                     newBlock[i] = newRow
                     newRow[j] = spline
                     newBlocks.append(bspy.spline_block.SplineBlock(newBlock))
-                blocks = newBlocks
+            blocks = newBlocks
 
     contours = []
     for block in blocks:

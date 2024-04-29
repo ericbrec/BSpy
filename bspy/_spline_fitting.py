@@ -88,48 +88,57 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         FValues = F(knownXValue)
         if not(len(FValues) == nDep - 1 and np.linalg.norm(FValues) < evaluationEpsilon):
             raise ValueError(f"F(known x) must be a zero vector of length {nDep - 1}.")
-    coefsMin = knownXValues.min(axis=0)
-    coefsMaxMinusMin = knownXValues.max(axis=0) - coefsMin
-    coefsMaxMinusMin = np.where(coefsMaxMinusMin < 1.0, 1.0, coefsMaxMinusMin)
+
+    # Record domain of F and scaling of coefficients.
+    if isinstance(F, (bspy.Spline, bspy.SplineBlock)):
+        FDomain = F.domain().T
+        coefsMin = FDomain[0]
+        coefsMaxMinusMin = FDomain[1] - FDomain[0]
+    else:
+        FDomain = np.array(nDep * [[-np.inf, np.inf]]).T
+        coefsMin = knownXValues.min(axis=0)
+        coefsMaxMinusMin = knownXValues.max(axis=0) - coefsMin
+        coefsMaxMinusMin = np.where(coefsMaxMinusMin < 1.0, 1.0, coefsMaxMinusMin)
+
+    # Rescale known values.
     coefsMaxMinMinReciprocal = np.reciprocal(coefsMaxMinusMin)
     knownXValues = (knownXValues - coefsMin) * coefsMaxMinMinReciprocal # Rescale to [0 , 1]
 
-    # Establish the first derivatives of F.
+    # Establish the Jacobian of F.
     if dF is None:
-        dF = []
-        if isinstance(F, bspy.Spline):
-            for i in range(nDep):
-                def splineDerivative(x, i=i):
-                    wrt = [0] * nDep
-                    wrt[i] = 1
-                    return F.derivative(wrt, x)
-                dF.append(splineDerivative)
-            FDomain = F.domain().T
+        if isinstance(F, (bspy.Spline, bspy.SplineBlock)):
+            dF = F.jacobian
         else:
-            for i in range(nDep):
-                def fDerivative(x, i=i):
+            def fJacobian(x):
+                value = np.empty((nDep - 1, nDep), float)
+                for i in range(nDep):
                     h = epsilon * (1.0 + abs(x[i]))
                     xShift = np.array(x, copy=True)
                     xShift[i] -= h
                     fLeft = np.array(F(xShift))
                     h2 = h * 2.0
                     xShift[i] += h2
-                    return (np.array(F(xShift)) - fLeft) / h2
-                dF.append(fDerivative)
-            FDomain = np.array(nDep * [[-np.inf, np.inf]]).T
-    else:
+                    value[:, i] = (np.array(F(xShift)) - fLeft) / h2
+                return value
+            dF = fJacobian
+    elif not callable(dF):
         if not(len(dF) == nDep): raise ValueError(f"Must provide {nDep} first derivatives.")
+        def fJacobian(x):
+            value = np.empty((nDep - 1, nDep), float)
+            for i in range(nDep):
+                value[:, i] = dF[i]
+            return value
+        dF = fJacobian
 
     # Construct knots, t values, and GSamples.
     tValues = np.empty(nUnknownCoefs, contourDtype)
     GSamples = np.empty((nUnknownCoefs, nDep), contourDtype)
-    t = 0.0 # We start with t measuring contour length.
+    t = 0.0 # t ranges from 0 to 1
+    dt = 1.0 / m
     knots = [t] * order
     i = 0
     previousPoint = knownXValues[0]
     for point in knownXValues[1:]:
-        dt = np.linalg.norm(point - previousPoint)
-        if not(dt > epsilon): raise ValueError("Points must be separated by at least epsilon.")
         for gaussNode in gaussNodes:
             tValues[i] = t + gaussNode * dt
             GSamples[i] = (1.0 - gaussNode) * previousPoint + gaussNode * point
@@ -138,8 +147,9 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         knots += [t] * (order - 2)
         previousPoint = point
     knots += [t] * 2 # Clamp last knot
-    knots = np.array(knots, contourDtype) / t # Rescale knots
-    tValues /= t # Rescale t values
+    knots = np.array(knots, contourDtype)
+    knots[nCoef:] = 1.0 # Ensure last knot is exactly 1.0
+    print("original", knots, tValues)
     assert i == nUnknownCoefs
     
     # Start subdivision loop.
@@ -167,8 +177,6 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         # Array to hold the Jacobian of the FSamples with respect to the coefficients.
         # The Jacobian is banded due to B-spline local support, so initialize it to zero.
         dFCoefs = np.zeros((nUnknownCoefs, nDep, nCoef, nDep), contourDtype)
-        # Working array to hold the transpose of the Jacobian of F for a particular x(t).
-        dFX = np.empty((nDep, nDep - 1), contourDtype)
 
         # Start Newton's method loop.
         previousFSamplesNorm = 0.0
@@ -201,9 +209,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
                 FSamples[i, -1] = dotValues
 
                 # Compute the Jacobian of FSamples with respect to the coefficients of x(t).
-                for j in range(nDep):
-                    dFX[j] = dF[j](x) * coefsMaxMinusMin[j]
-                FValues = np.outer(dFX.T, bValues).reshape(nDep - 1, nDep, order).swapaxes(1, 2)
+                FValues = np.outer(dF(x) * coefsMaxMinusMin, bValues).reshape(nDep - 1, nDep, order).swapaxes(1, 2)
                 dotValues = (np.outer(d2Values, compactCoefs.T @ dValues) + np.outer(dValues, compactCoefs.T @ d2Values)).reshape(order, nDep)
                 dFCoefs[i, :-1, ix - order:ix, :] = FValues
                 dFCoefs[i, -1, ix - order:ix, :] = dotValues
@@ -281,14 +287,16 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
         nCoef = nUnknownCoefs + 2
         newKnots += [knot] * 2 # Clamp last knot
         knots = np.array(newKnots, contourDtype)
+        print("refined", knots, tValues)
         assert i == nUnknownCoefs
         assert len(knots) == nCoef + order
 
     # Rescale x(t) back to original data points.
     coefs = (coefsMin + coefs * coefsMaxMinusMin).T
     spline = bspy.Spline(1, nDep, (order,), (nCoef,), (knots,), coefs, metadata)
-    if isinstance(F, bspy.Spline):
+    if isinstance(F, (bspy.Spline, bspy.SplineBlock)):
         spline = spline.confine(F.domain())
+    print("confined", spline.knots[0])
     return spline
 
 def cylinder(radius, height, tolerance = None):

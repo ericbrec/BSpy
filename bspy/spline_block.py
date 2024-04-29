@@ -34,7 +34,7 @@ class SplineBlock:
         self.knotsDtype = None
         self.coefsDtype = None
         self.size = 0
-        self.domain = []
+        self._domain = []
         for row in self.block:
             rowInd = 0
             rowDep = 0
@@ -50,15 +50,15 @@ class SplineBlock:
                 for i in range(rowInd, rowInd + spline.nInd):
                     ind = i - rowInd
                     if i < self.nInd:
-                        if self.domain[i][0] != d[ind, 0] or self.domain[i][1] != d[ind, 1]:
+                        if self._domain[i][0] != d[ind, 0] or self._domain[i][1] != d[ind, 1]:
                             raise ValueError("Domains of independent variables must match")
                     else:
-                        self.domain.append(d[ind])
+                        self._domain.append(d[ind])
                 rowInd += spline.nInd
             self.nInd = max(self.nInd, rowInd)
             self.nDep += rowDep
             self.size += len(row)
-        self.domain = np.array(self.domain, self.knotsDtype)
+        self._domain = np.array(self._domain, self.knotsDtype)
 
     def __call__(self, uvw):
         return self.evaluate(uvw)
@@ -88,6 +88,23 @@ class SplineBlock:
         """
         return bspy._spline_intersection.contours(self)
 
+    def contract(self, uvw):
+        """
+        Contract a spline block by assigning a fixed value to one or more of its independent variables.
+
+        Parameters
+        ----------
+        uvw : `iterable`
+            An iterable of length `nInd` that specifies the values of each independent variable to contract.
+            A value of `None` for an independent variable indicates that variable should remain unchanged.
+
+        Returns
+        -------
+        block : `SplineBlock`
+            The contracted spline block.
+        """
+        return bspy._spline_operations.block_contract(self, uvw)
+
     def derivative(self, with_respect_to, uvw):
         """
         Compute the derivative of the spline block at given parameter values.
@@ -107,6 +124,17 @@ class SplineBlock:
             The value of the derivative of the spline block at the given parameter values (array of size nDep).
        """
         return bspy._spline_evaluation.block_derivative(self, with_respect_to, uvw)
+
+    def domain(self):
+        """
+        Return the domain of a spline block.
+
+        Returns
+        -------
+        bounds : `numpy.array`
+            nInd x 2 array of the lower and upper bounds on each of the independent variables.
+        """
+        return self._domain
     
     def evaluate(self, uvw):
         """
@@ -204,6 +232,52 @@ class SplineBlock:
         the matrix formed by the tangents of the spline block. If the null space is greater than one dimension, the normal will be zero.
         """
         return bspy._spline_operations.normal_spline(self, indices)
+    
+    def range_bounds(self):
+        """
+        Return the range of a spline block as lower and upper bounds on each of the
+        dependent variables.
+        """
+        return bspy._spline_evaluation.block_range_bounds(self)
+    
+    def reparametrize(self, newDomain):
+        """
+        Reparametrize a spline block to match new domain bounds. The number of knots and coefficients remain unchanged.
+
+        Parameters
+        ----------
+        newDomain : array-like
+            nInd x 2 array of the new lower and upper bounds on each of the independent variables (same form as 
+            returned from `domain`). If a bound pair is `None` then the original bound (and knots) are left unchanged. 
+            For example, `[[0.0, 1.0], None]` will reparametrize the first independent variable and leave the second unchanged)
+
+        Returns
+        -------
+        block : `SplineBlock`
+            Reparametrized spline block.
+
+        See Also
+        --------
+        `domain` : Return the domain of a spline block.
+        """
+        return bspy._spline_domain.block_reparametrize(self, newDomain)
+
+    def trim(self, newDomain):
+        """
+        Trim the domain of a spline block.
+
+        Parameters
+        ----------
+        newDomain : array-like
+            nInd x 2 array of the new lower and upper bounds on each of the independent variables (same form as 
+            returned from `domain`). If a bound is None or nan then the original bound (and knots) are left unchanged.
+
+        Returns
+        -------
+        block : `SplineBlock`
+            Trimmed spline block.
+        """
+        return bspy._spline_domain.block_trim(self, newDomain)
     
     def zeros(self, epsilon=None):
         """
