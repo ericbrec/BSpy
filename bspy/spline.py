@@ -125,6 +125,9 @@ class Spline(Manifold):
         else:
             return self.scale(other)
 
+    def __neg__(self):
+        return self.scale(-1.0)
+    
     def __sub__(self, other):
         if isinstance(other, Spline):
             return self.subtract(other, [(ix, ix) for ix in range(min(self.nInd, other.nInd))])
