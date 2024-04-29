@@ -528,10 +528,24 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
                     break
                 uvw = np.insert(np.array(zero), nInd, boundary)
                 d = uvw[0] * cosTheta + uvw[1] * sinTheta
-                det = (0.5 - boundary) * normal(uvw)[nInd] * turningPointDeterminant(uvw)
+                n = normal(uvw)
+                tpd = turningPointDeterminant(uvw)
+                det = (0.5 - boundary) * n[nInd] * tpd
                 if abs(det) < epsilon:
                     abort = True
                     break
+                # Check for literal corner case.
+                otherInd = 1 - nInd
+                otherValue = uvw[otherInd]
+                if otherValue < epsilon or otherValue + epsilon > 1.0:
+                    otherDet = (0.5 - otherValue) * n[otherInd] * tpd
+                    if det * otherDet < 0.0:
+                        continue # Corner that starts and ends, ignore it
+                    elif max(otherValue, boundary) < epsilon and det < 0.0:
+                        continue # End point at (0, 0), ignore it
+                    elif min(otherValue, boundary) + epsilon > 1.0 and det > 0.0:
+                        continue # Start point at (1, 1), ignore it
+                # Append boundary point.
                 points.append(Point(d, det, True, False, uvw))
             return abort
         for nInd in range(2):
