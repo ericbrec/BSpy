@@ -268,6 +268,8 @@ def _refine_projected_polyhedron(interval):
     # Loop through each independent variable to determine a tighter domain around roots.
     domain = []
     for nInd in range(len(interval.slope)):
+        # Loop through each dependent variable to compute the interval containing the root for this independent variable.
+        xInterval = (0.0, 1.0)
         nDep = 0
         for row in interval.block:
             rowInd = 0
@@ -293,8 +295,7 @@ def _refine_projected_polyhedron(interval):
             for i in range(1, nCoef):
                 xData[i] = xData[i - 1] + (knots[i + degree] - knots[i])/degree
             
-            # Loop through each dependent variable to compute the interval containing the root for this independent variable.
-            xInterval = (0.0, 1.0)
+            # Loop through each dependent variable in this row to refine the interval containing the root for this independent variable.
             for yData, ySplineBounds, yBounds in zip(coefs, spline.range_bounds(), interval.bounds[nDep:nDep + spline.nDep]):
                 # Compute the 2D convex hull of the knot coefficients and the spline's coefficients
                 hull = _convex_hull_2D(xData, yData.ravel(), yBounds, yBounds - ySplineBounds, epsilon)
@@ -971,13 +972,13 @@ def intersect(self, other):
     
     # Spline-Spline intersection.
     elif isinstance(other, bspy.Spline):
-        # Construct a new spline that represents the intersection.
-        spline = self.subtract(other)
+        # Construct a spline block that represents the intersection.
+        block = bspy.spline_block.SplineBlock([[self, -other]])
 
         # Curve-Curve intersection.
         if nDep == 1:
             # Find the intersection points and intervals.
-            zeros = spline.zeros()
+            zeros = block.zeros()
             # Convert each intersection point into a Manifold.Crossing and each intersection interval into a Manifold.Coincidence.
             for zero in zeros:
                 if isinstance(zero, tuple):
@@ -1021,17 +1022,17 @@ def intersect(self, other):
             swap = False
             try:
                 # First try the intersection as is.
-                contours = spline.contours()
+                contours = block.contours()
             except ValueError:
                 # If that fails, swap the manifolds. Worth a shot since intersections are touchy.
                 swap = True
 
             # Convert each contour into a Manifold.Crossing.
             if swap:
-                spline = other.subtract(self)
+                block = bspy.spline_block.SplineBlock([[other, -self]])
                 if "Name" in self.metadata and "Name" in other.metadata:
                     logging.info(f"intersect({other.metadata['Name']}, {self.metadata['Name']})")
-                contours = spline.contours()
+                contours = block.contours()
                 for contour in contours:
                     # Swap left and right, compared to not swapped.
                     left = bspy.Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[nDep:], contour.metadata)
