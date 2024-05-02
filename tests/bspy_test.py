@@ -677,7 +677,8 @@ def test_curvature():
     assert abs(testCurve.curvature(1.0) - 2.0) < 2.0e-15
     testCurve = testCurve @ [0, 1]
     testVals = [testCurve.curvature(u) for u in np.linspace(0.0, 1.0, 101)]
-    return
+    gaussCurvature = mySurface.curvature([0.25, 0.5])
+    assert abs(gaussCurvature - 1.024) < 1.0e-14
 
 def test_derivative():
     maxError = 0.0

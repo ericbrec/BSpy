@@ -105,9 +105,9 @@ def continuity(self):
     return continuity
 
 def curvature(self, uv):
+    if self.nDep == 1:
+        self = self.graph()
     if self.nInd == 1:
-        if self.nDep == 1:
-            self = self.graph()
         fp = self.derivative([1], uv)
         fpp = self.derivative([2], uv)
         fpDotFp = fp @ fp
@@ -117,7 +117,21 @@ def curvature(self, uv):
             numerator = fp[0] * fpp[1] - fp[1] * fpp[0]
         else:
             numerator = np.sqrt((fpp @ fpp) * fpDotFp - fpDotFpp ** 2)
-        return numerator / denom 
+        return numerator / denom
+    if self.nInd == 2:
+        su = self.derivative([1, 0], uv)
+        sv = self.derivative([0, 1], uv)
+        normal = self.normal(uv)
+        suu = self.derivative([2, 0], uv)
+        suv = self.derivative([1, 1], uv)
+        svv = self.derivative([0, 2], uv)
+        E = su @ su
+        F = su @ sv
+        G = sv @ sv
+        L = suu @ normal
+        M = suv @ normal
+        N = svv @ normal
+        return (L * N - M ** 2) / (E * G - F ** 2)
 
 def derivative(self, with_respect_to, uvw):
     # Make work for scalar valued functions

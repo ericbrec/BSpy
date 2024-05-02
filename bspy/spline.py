@@ -601,7 +601,7 @@ class Spline(Manifold):
 
     def curvature(self, uvw):
         """
-        Compute the curvature of a univariate spline.
+        Compute the curvature of a univariate or bivariate spline.
 
         Parameters
         ----------
@@ -611,7 +611,8 @@ class Spline(Manifold):
         Returns
         -------
         value : scalar
-            The value of the curvature at the given point on the curve.
+            The value of the curvature at the given point on the curve or surface.  If called on a surface,
+            the value will represent the Gaussian curvature of the surface at the given point.
         
         Notes
         -----
