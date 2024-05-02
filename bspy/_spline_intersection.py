@@ -268,6 +268,8 @@ def _refine_projected_polyhedron(interval):
     # Loop through each independent variable to determine a tighter domain around roots.
     domain = []
     for nInd in range(len(interval.slope)):
+        # Loop through each dependent variable to compute the interval containing the root for this independent variable.
+        xInterval = (0.0, 1.0)
         nDep = 0
         for row in interval.block:
             rowInd = 0
@@ -293,8 +295,7 @@ def _refine_projected_polyhedron(interval):
             for i in range(1, nCoef):
                 xData[i] = xData[i - 1] + (knots[i + degree] - knots[i])/degree
             
-            # Loop through each dependent variable to compute the interval containing the root for this independent variable.
-            xInterval = (0.0, 1.0)
+            # Loop through each dependent variable in this row to refine the interval containing the root for this independent variable.
             for yData, ySplineBounds, yBounds in zip(coefs, spline.range_bounds(), interval.bounds[nDep:nDep + spline.nDep]):
                 # Compute the 2D convex hull of the knot coefficients and the spline's coefficients
                 hull = _convex_hull_2D(xData, yData.ravel(), yBounds, yBounds - ySplineBounds, epsilon)
