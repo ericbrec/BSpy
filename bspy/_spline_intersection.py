@@ -1023,22 +1023,21 @@ def intersect(self, other):
             try:
                 # First try the intersection as is.
                 contours = block.contours()
-            except ValueError:
+            except ValueError as e:
+                logging.info(e)
                 # If that fails, swap the manifolds. Worth a shot since intersections are touchy.
-                swap = True
-
-            # Convert each contour into a Manifold.Crossing.
-            if swap:
                 block = bspy.spline_block.SplineBlock([[other, -self]])
                 if "Name" in self.metadata and "Name" in other.metadata:
                     logging.info(f"intersect:{other.metadata['Name']}:{self.metadata['Name']}")
                 contours = block.contours()
+                # Convert each contour into a Manifold.Crossing, swapping the manifolds back.
                 for contour in contours:
                     # Swap left and right, compared to not swapped.
                     left = bspy.Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[nDep:], contour.metadata)
                     right = bspy.Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[:nDep], contour.metadata)
                     intersections.append(Manifold.Crossing(left, right))
             else:
+                # Convert each contour into a Manifold.Crossing.
                 for contour in contours:
                     left = bspy.Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[:nDep], contour.metadata)
                     right = bspy.Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[nDep:], contour.metadata)
