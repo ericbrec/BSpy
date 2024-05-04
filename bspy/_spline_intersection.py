@@ -594,9 +594,9 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
             continue # Try a different theta
 
         # Find turning points by combining self and turningPointDeterminant into a system and processing its zeros.
-        systemBlock = self.block.copy()
-        systemBlock.append([turningPointDeterminant])
-        zeros = bspy.spline_block.SplineBlock(systemBlock).zeros()
+        turningPointBlock = self.block.copy()
+        turningPointBlock.append([turningPointDeterminant])
+        zeros = bspy.spline_block.SplineBlock(turningPointBlock).zeros()
         for uvw in zeros:
             if isinstance(uvw, tuple):
                 abort = True
@@ -649,7 +649,6 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
     # Extra step not in paper.
     # Run a checksum on the points, ensuring starting and ending points balance.
     # Start by flipping endpoints as needed, since we can miss turning points near endpoints.
-
     if points[0].det < 0.0:
         point = points[0]
         points[0] = Point(point.d, -point.det, point.onUVBoundary, point.turningPoint, point.uvw)
