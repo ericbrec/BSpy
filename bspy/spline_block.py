@@ -188,7 +188,15 @@ class SplineBlock:
         value : `numpy.array`
             The value of the spline block's Jacobian at the given parameter values. The shape of the return value is (nDep, nInd).
         """
-        return self._block_evaluation((self.nDep, self.nInd), bspy._spline_evaluation.jacobian, (uvw,))
+        jacobian = np.zeros((self.nDep, self.nInd), self.coefsDtype)
+        nDep = 0
+        for row in self.block:
+            nInd = 0
+            for spline in row:
+                jacobian[nDep:nDep + spline.nDep, nInd:nInd + spline.nInd] += spline.jacobian(uvw[nInd:nInd + spline.nInd])
+                nInd += spline.nInd
+            nDep += spline.nDep
+        return jacobian
 
     def normal(self, uvw, normalize=True, indices=None):
         """

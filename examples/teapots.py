@@ -379,7 +379,7 @@ if __name__ == "__main__":
         teapot3 = teapot1 - teapot2
         viewer.draw(teapot3)
 
-    if True: # Wide intersection
+    if False: # Wide intersection
         viewer.list(teapot1, fillColor=np.array((1, 1, 0, 1),np.float32))
         theta = 120.0 * np.pi / 180
         teapot2 = teapot2.transform(np.array(((np.cos(theta), 0.0, np.sin(theta)),
@@ -389,41 +389,20 @@ if __name__ == "__main__":
         teapot3 = teapot1 * teapot2
         viewer.draw(teapot3)
 
-    if False:
+    if True:
         theta = 120.0 * np.pi / 180
         teapot2 = teapot2.transform(np.array(((np.cos(theta), 0.0, np.sin(theta)),
             (0.0, 1.0, 0.0), (-np.sin(theta), 0.0, np.cos(theta)))))
         teapot2 = teapot2.translate((0.6, -2.0, 2.0))
 
-        name2 = "2: Upper section 1"
-        name1 = "1: Bottom 2"
-        #name2 = "2: Lid knob 1"
-        #name1 = "1: Lower section 4"
+        name2 = "2 Upper section 1"
+        name1 = "1 Lower section 3"
         boundary1 = utils.find_boundary(teapot1, name1)
         boundary2 = utils.find_boundary(teapot2, name2)
+        viewer.draw(boundary1)
+        viewer.draw(boundary2)
 
         cache = {}
         intersections, isTwin = boundary2.manifold.cached_intersect(boundary1.manifold, cache)
-
-        for u in np.linspace(0.0, 1.0, 21):
-            leftPoint = boundary2.manifold.spline(intersections[0].left.spline(u))
-            rightPoint = boundary1.manifold.spline(intersections[0].right.spline(u))
-            print(leftPoint - rightPoint, np.linalg.norm(leftPoint - rightPoint))
-
-        manifold = boundary1.manifold.copy()
-        slice = teapot2.slice(manifold, cache)
-        slicedBoundary = Boundary(manifold, slice)
-        viewer.draw(slicedBoundary, f"Sliced {name1}")
-        trimmedSlice = boundary1.domain.intersection(slice)
-        trimmedSlicedBoundary = Boundary(manifold.copy(), trimmedSlice)
-        viewer.draw(trimmedSlicedBoundary, f"Trimmed sliced {name1}")
-
-        manifold = boundary2.manifold.copy()
-        slice = teapot1.slice(manifold, cache)
-        slicedBoundary = Boundary(manifold, slice)
-        viewer.draw(slicedBoundary, f"Sliced {name2}")
-        trimmedSlice = boundary2.domain.intersection(slice)
-        trimmedSlicedBoundary = Boundary(manifold.copy(), trimmedSlice)
-        viewer.draw(trimmedSlicedBoundary, f"Trimmed sliced {name2}")
         
     viewer.mainloop()
