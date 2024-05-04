@@ -364,9 +364,9 @@ if __name__ == "__main__":
                 coefficients[1,i,j] = teapotVertices[vertex][2]
                 coefficients[2,i,j] = teapotVertices[vertex][1]
         teapot1.add_boundary(Boundary(
-            Spline(2, 3, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=f"1: {patch[0]}"))))
+            Spline(2, 3, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=f"1 {patch[0]}"))))
         teapot2.add_boundary(Boundary(
-            Spline(2, 3, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=f"2: {patch[0]}"))))
+            Spline(2, 3, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=f"2 {patch[0]}"))))
 
 
     if False: # Touching spouts

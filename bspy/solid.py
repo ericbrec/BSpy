@@ -113,7 +113,7 @@ class Solid:
         if boundary.manifold.range_dimension() != self.dimension: raise ValueError("Dimensions don't match")
         self.boundaries.append(boundary)
         if self.bounds is None:
-            self.bounds = boundary.bounds
+            self.bounds = boundary.bounds.copy()
         elif boundary.bounds is None:
             raise ValueError("Mix of infinite and bounded boundaries")
         else:
