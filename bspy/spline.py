@@ -2243,7 +2243,7 @@ class Spline(Manifold):
         """
         return bspy._spline_domain.unfold(self, foldedInd, coefficientlessSpline)
 
-    def zeros(self, epsilon=None):
+    def zeros(self, epsilon=None, initialScale=None):
         """
         Find the roots of a spline (nInd must match nDep).
 
@@ -2252,6 +2252,10 @@ class Spline(Manifold):
         epsilon : `float`, optional
             Tolerance for root precision. The root will be within epsilon of the actual root. 
             The default is the machine epsilon.
+
+        initialScale : array-like, optional
+            The initial scale of each dependent variable (as opposed to the current scale of 
+            the spline, which may have been normalized). The default is an array of ones (size nDep).
 
         Returns
         -------
@@ -2276,5 +2280,5 @@ class Spline(Manifold):
         if self.nInd <= 1:
             return bspy._spline_intersection.zeros_using_interval_newton(self)
         else:
-            return bspy._spline_intersection.zeros_using_projected_polyhedron(bspy.spline_block.SplineBlock(self), epsilon)
+            return bspy._spline_intersection.zeros_using_projected_polyhedron(bspy.spline_block.SplineBlock(self), epsilon, initialScale)
  

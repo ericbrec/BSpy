@@ -309,7 +309,7 @@ class SplineBlock:
         """
         return self._block_operation(bspy._spline_domain.trim, (newDomain,))
     
-    def zeros(self, epsilon=None):
+    def zeros(self, epsilon=None, initialScale=None):
         """
         Find the roots of a block of splines (nInd must match nDep).
 
@@ -318,6 +318,10 @@ class SplineBlock:
         epsilon : `float`, optional
             Tolerance for root precision. The root will be within epsilon of the actual root. 
             The default is the machine epsilon.
+
+        initialScale : array-like, optional
+            The initial scale of each dependent variable (as opposed to the current scale of 
+            the spline block, which may have been normalized). The default is an array of ones (size nDep).
 
         Returns
         -------
@@ -335,4 +339,4 @@ class SplineBlock:
         Implements a variation of the projected-polyhedron technique from Sherbrooke, Evan C., and Nicholas M. Patrikalakis. 
         "Computation of the solutions of nonlinear polynomial systems." Computer Aided Geometric Design 10, no. 5 (1993): 379-405.
         """
-        return bspy._spline_intersection.zeros_using_projected_polyhedron(self, epsilon)
+        return bspy._spline_intersection.zeros_using_projected_polyhedron(self, epsilon, initialScale)
