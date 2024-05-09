@@ -150,8 +150,8 @@ def normal(self, uvw, normalize=True, indices=None):
 
     if abs(self.nInd - self.nDep) != 1: raise ValueError("The number of independent variables must be one different than the number of dependent variables.")
 
-    # Evaluate the tangents at the point.
-    tangentSpace = self.tangent_space(uvw)
+    # Evaluate the Jacobian at the point.
+    tangentSpace = self.jacobian(uvw)
     
     # Record the larger dimension and ensure it comes first.
     if self.nInd > self.nDep:
@@ -161,15 +161,15 @@ def normal(self, uvw, normalize=True, indices=None):
         nDep = self.nDep
     
     # Compute the normal using cofactors (determinants of subsets of the tangent space).
-    sign = -1 if self.metadata.get("flipNormal", False) else 1
+    sign = -1 if hasattr(self, "metadata") and self.metadata.get("flipNormal", False) else 1
+    dtype = self.coefs.dtype if hasattr(self, "coefs") else self.coefsDtype
     if indices is None:
         indices = range(nDep)
-        normal = np.empty(nDep, self.coefs.dtype)
+        normal = np.empty(nDep, dtype)
     else:
-        normal = np.empty(len(indices), self.coefs.dtype)
+        normal = np.empty(len(indices), dtype)
     for i in indices:
-        normal[i] = sign * np.linalg.det(tangentSpace[[j for j in range(nDep) if i != j]])
-        sign *= -1
+        normal[i] = sign * ((-1) ** i) * np.linalg.det(tangentSpace[[j for j in range(nDep) if i != j]])
     
     # Normalize the result as needed.
     if normalize:
@@ -181,12 +181,3 @@ def range_bounds(self):
     # Assumes self.nDep is the first value in self.coefs.shape
     bounds = [[coefficient.min(), coefficient.max()] for coefficient in self.coefs]
     return np.array(bounds, self.coefs.dtype)
-
-def tangent_space(self, uvw):
-    tangentSpace = np.empty((self.nDep, self.nInd), self.coefs.dtype)
-    wrt = [0] * self.nInd
-    for i in range(self.nInd):
-        wrt[i] = 1
-        tangentSpace[:, i] = self.derivative(wrt, uvw)
-        wrt[i] = 0
-    return tangentSpace

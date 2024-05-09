@@ -12,6 +12,8 @@ Available subpackages
 `bspy.spline` : Provides the `Spline` subclass of `Manifold` that models, represents, and processes 
     piecewise polynomial tensor product functions (spline functions) as linear combinations of B-splines.
 
+`bspy.spline_block` : Provides the `SplineBlock` class that represents and processes an array-like collection of splines.
+
 `bspy.splineOpenGLFrame` : Provides the `SplineOpenGLFrame` class, a tkinter `OpenGLFrame` with shaders to display splines.
 
 `bspy.viewer` : Provides the `Viewer` tkinter app (`tkinter.Tk`) that hosts a `SplineOpenGLFrame`, a listbox full of 
@@ -22,5 +24,6 @@ from bspy.solid import Solid, Boundary
 from bspy.manifold import Manifold
 from bspy.hyperplane import Hyperplane
 from bspy.spline import Spline
+from bspy.spline_block import SplineBlock
 from bspy.splineOpenGLFrame import SplineOpenGLFrame
 from bspy.viewer import Viewer, Graphics

@@ -2,6 +2,7 @@ import numpy as np
 from os import path
 import json
 from bspy.manifold import Manifold
+import bspy.spline_block
 import bspy._spline_domain
 import bspy._spline_evaluation
 import bspy._spline_intersection
@@ -124,6 +125,9 @@ class Spline(Manifold):
         else:
             return self.scale(other)
 
+    def __neg__(self):
+        return self.scale(-1.0)
+    
     def __sub__(self, other):
         if isinstance(other, Spline):
             return self.subtract(other, [(ix, ix) for ix in range(min(self.nInd, other.nInd))])
@@ -418,8 +422,8 @@ class Spline(Manifold):
 
         Parameters
         ----------
-        F : function or `Spline`
-            A function or spline that takes an array-like argument of length `n` and returns an 
+        F : function, `Spline`, or `SplineBlock`
+            A function, spline, or spline block that takes an array-like argument of length `n` and returns an 
             array-like result of length `n - 1`.
 
         knownXValues : `iterable` of array-like
@@ -428,11 +432,12 @@ class Spline(Manifold):
             All x values must be length `n` and be listed in the order they appear on the contour.  
             `F(x)` for all known x values must be a zero vector of length `n-1`.
 
-        dF : `iterable` or `None`, optional
-            An `iterable` of the `n` functions representing the `n` first derivatives of `F`. 
+        dF : function, `iterable`, or `None`, optional
+            A function that returns the Jacobian of F as an array with shape (n - 1, n). 
+            Can also be an `iterable` of `n` functions that return the `n` first derivatives of `F`. 
             If `dF` is `None` (the default), the first derivatives will be computed for you. 
-            If `F` is not a spline, computing the first derivatives involves multiple calls to `F` 
-            and can be numerically unstable. 
+            If `F` is not a spline or spline block, computing the first derivatives involves 
+            multiple calls to `F` and can be numerically unstable. 
 
         epsilon : `float`, optional
             Tolerance for contour precision. Evaluating `F` with contour values will be within epsilon 
@@ -455,7 +460,7 @@ class Spline(Manifold):
         Notes
         -----
         The returned spline has constant parametric speed (the length of its derivative is constant). 
-        If `F` is a `Spline`, then the range of the returned contour is confined to the domain of `F`. 
+        If `F` is a `Spline` or a `SplineBlock`, then the range of the returned contour is confined to the domain of `F`. 
         Implements the algorithm described in section 7 of Grandine, Thomas A. 
         "Applications of contouring." Siam Review 42, no. 2 (2000): 297-316.
         """
@@ -483,7 +488,7 @@ class Spline(Manifold):
         The algorithm used to to find all intersection curves is from Grandine, Thomas A., and Frederick W. Klein IV. 
         "A new approach to the surface intersection problem." Computer Aided Geometric Design 14, no. 2 (1997): 111-134.
         """
-        return bspy._spline_intersection.contours(self)
+        return bspy._spline_intersection.contours(bspy.spline_block.SplineBlock(self))
 
     def contract(self, uvw):
         """
@@ -1546,7 +1551,7 @@ class Spline(Manifold):
         dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of 
         the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.
         """
-        return bspy._spline_operations.normal_spline(self, indices)
+        return bspy._spline_operations.normal_spline(bspy.spline_block.SplineBlock(self), indices)
 
     @staticmethod
     def point(point):
@@ -2010,7 +2015,7 @@ class Spline(Manifold):
 
     def tangent_space(self, uvw):
         """
-        Return the tangent space of the spline.
+        Return the tangent space of the spline. (Same as Jacobian.)
 
         Parameters
         ----------
@@ -2022,7 +2027,7 @@ class Spline(Manifold):
         tangentSpace : `numpy.array`
             The nDep x nInd matrix of tangent vectors (tangents are the columns).
         """
-        return bspy._spline_evaluation.tangent_space(self, uvw)
+        return bspy._spline_evaluation.jacobian(self, uvw)
 
     def to_dict(self):
         """
@@ -2238,7 +2243,7 @@ class Spline(Manifold):
         """
         return bspy._spline_domain.unfold(self, foldedInd, coefficientlessSpline)
 
-    def zeros(self, epsilon=None):
+    def zeros(self, epsilon=None, initialScale=None):
         """
         Find the roots of a spline (nInd must match nDep).
 
@@ -2247,6 +2252,10 @@ class Spline(Manifold):
         epsilon : `float`, optional
             Tolerance for root precision. The root will be within epsilon of the actual root. 
             The default is the machine epsilon.
+
+        initialScale : array-like, optional
+            The initial scale of each dependent variable (as opposed to the current scale of 
+            the spline, which may have been normalized). The default is an array of ones (size nDep).
 
         Returns
         -------
@@ -2258,7 +2267,7 @@ class Spline(Manifold):
         See Also
         --------
         `intersect` : Intersect two splines.
-        `contour` : Fit a spline to the contour defined by `F(x) = 0`.
+        `contours` : Find all the contour curves of a spline whose `nInd` is one larger than its `nDep`.
 
         Notes
         -----
@@ -2271,4 +2280,5 @@ class Spline(Manifold):
         if self.nInd <= 1:
             return bspy._spline_intersection.zeros_using_interval_newton(self)
         else:
-            return bspy._spline_intersection.zeros_using_projected_polyhedron(self, epsilon)
+            return bspy._spline_intersection.zeros_using_projected_polyhedron(bspy.spline_block.SplineBlock(self), epsilon, initialScale)
+ 
