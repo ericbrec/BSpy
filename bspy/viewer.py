@@ -426,7 +426,7 @@ class Viewer(tk.Tk):
         fillColor : `numpy.array`
             Array of four floats (r, g, b, a) in the range [0, 1].
         """
-        return spline.metadata["fillColor"]
+        return np.array(spline.metadata["fillColor"], np.float32)
 
     @staticmethod
     def set_fill_color(spline, r, g=None, b=None, a=None):
@@ -467,7 +467,7 @@ class Viewer(tk.Tk):
         lineColor : `numpy.array`
             Array of four floats (r, g, b, a) in the range [0, 1].
         """
-        return spline.metadata["lineColor"]
+        return np.array(spline.metadata["lineColor"], np.float32)
 
     @staticmethod
     def set_line_color(spline, r, g=None, b=None, a=None):
