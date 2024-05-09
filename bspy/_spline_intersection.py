@@ -266,7 +266,7 @@ def _refine_projected_polyhedron(interval):
     
     # Loop through each independent variable to determine a tighter domain around roots.
     domain = []
-    for nInd in range(len(interval.slope)):
+    for nInd in range(len(interval.unknowns)):
         # Loop through each dependent variable to compute the interval containing the root for this independent variable.
         xInterval = (0.0, 1.0)
         nDep = 0
