@@ -21,6 +21,28 @@ class SplineBlock:
         and h is a spline with nInd = 2 and nDep = 1, then [[F, G], [h]] is a valid block (total nDep is 3 
         and max nInd is 4).
     """
+
+    def _block_evaluation(self, returnShape, splineFunction, args):
+        value = np.zeros(returnShape, self.coefsDtype)
+        nDep = 0
+        for row in self.block:
+            nInd = 0
+            for spline in row:
+                value[nDep:nDep + spline.nDep] += splineFunction(spline, *[arg[nInd:nInd + spline.nInd] for arg in args])
+                nInd += spline.nInd
+            nDep += spline.nDep
+        return value
+    
+    def _block_operation(self, splineFunction, args):
+        newBlock = []
+        for row in self.block:
+            newRow = []
+            nInd = 0
+            for spline in row:
+                newRow.append(splineFunction(spline, *[arg[nInd:nInd + spline.nInd] for arg in args]))
+                nInd += spline.nInd
+            newBlock.append(newRow)
+        return SplineBlock(newBlock)
     
     def __init__(self, block):
         if isinstance(block, bspy.spline.Spline):
@@ -103,7 +125,7 @@ class SplineBlock:
         block : `SplineBlock`
             The contracted spline block.
         """
-        return bspy._spline_operations.block_contract(self, uvw)
+        return self._block_operation(bspy._spline_operations.contract, (uvw,))
 
     def derivative(self, with_respect_to, uvw):
         """
@@ -122,8 +144,8 @@ class SplineBlock:
         -------
         value : `numpy.array`
             The value of the derivative of the spline block at the given parameter values (array of size nDep).
-       """
-        return bspy._spline_evaluation.block_derivative(self, with_respect_to, uvw)
+        """
+        return self._block_evaluation(self.nDep, bspy._spline_evaluation.derivative, (with_respect_to, uvw))
 
     def domain(self):
         """
@@ -150,7 +172,7 @@ class SplineBlock:
         value : `numpy.array`
             The value of the spline block at the given parameter values (array of size nDep).
         """
-        return bspy._spline_evaluation.block_evaluate(self, uvw)
+        return self._block_evaluation(self.nDep, bspy._spline_evaluation.evaluate, (uvw,))
     
     def jacobian(self, uvw):
         """
@@ -166,7 +188,15 @@ class SplineBlock:
         value : `numpy.array`
             The value of the spline block's Jacobian at the given parameter values. The shape of the return value is (nDep, nInd).
         """
-        return bspy._spline_evaluation.block_jacobian(self, uvw)
+        jacobian = np.zeros((self.nDep, self.nInd), self.coefsDtype)
+        nDep = 0
+        for row in self.block:
+            nInd = 0
+            for spline in row:
+                jacobian[nDep:nDep + spline.nDep, nInd:nInd + spline.nInd] += spline.jacobian(uvw[nInd:nInd + spline.nInd])
+                nInd += spline.nInd
+            nDep += spline.nDep
+        return jacobian
 
     def normal(self, uvw, normalize=True, indices=None):
         """
@@ -201,7 +231,7 @@ class SplineBlock:
         dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of 
         the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.
         """
-        return bspy._spline_evaluation.block_normal(self, uvw, normalize, indices)
+        return bspy._spline_evaluation.normal(self, uvw, normalize, indices)
 
     def normal_spline(self, indices=None):
         """
@@ -238,7 +268,7 @@ class SplineBlock:
         Return the range of a spline block as lower and upper bounds on each of the
         dependent variables.
         """
-        return bspy._spline_evaluation.block_range_bounds(self)
+        return self._block_evaluation((self.nDep, 2), bspy._spline_evaluation.range_bounds, [])
     
     def reparametrize(self, newDomain):
         """
@@ -260,7 +290,7 @@ class SplineBlock:
         --------
         `domain` : Return the domain of a spline block.
         """
-        return bspy._spline_domain.block_reparametrize(self, newDomain)
+        return self._block_operation(bspy._spline_domain.reparametrize, (newDomain,))
 
     def trim(self, newDomain):
         """
@@ -277,9 +307,9 @@ class SplineBlock:
         block : `SplineBlock`
             Trimmed spline block.
         """
-        return bspy._spline_domain.block_trim(self, newDomain)
+        return self._block_operation(bspy._spline_domain.trim, (newDomain,))
     
-    def zeros(self, epsilon=None):
+    def zeros(self, epsilon=None, initialScale=None):
         """
         Find the roots of a block of splines (nInd must match nDep).
 
@@ -288,6 +318,10 @@ class SplineBlock:
         epsilon : `float`, optional
             Tolerance for root precision. The root will be within epsilon of the actual root. 
             The default is the machine epsilon.
+
+        initialScale : array-like, optional
+            The initial scale of each dependent variable (as opposed to the current scale of 
+            the spline block, which may have been normalized). The default is an array of ones (size nDep).
 
         Returns
         -------
@@ -305,4 +339,4 @@ class SplineBlock:
         Implements a variation of the projected-polyhedron technique from Sherbrooke, Evan C., and Nicholas M. Patrikalakis. 
         "Computation of the solutions of nonlinear polynomial systems." Computer Aided Geometric Design 10, no. 5 (1993): 379-405.
         """
-        return bspy._spline_intersection.zeros_using_projected_polyhedron(self, epsilon)
+        return bspy._spline_intersection.zeros_using_projected_polyhedron(self, epsilon, initialScale)

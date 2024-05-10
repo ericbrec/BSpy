@@ -1,79 +1,6 @@
 import numpy as np
 import scipy as sp
 
-def block_evaluate(self, uwv):
-    value = np.zeros(self.nDep, self.coefsDtype)
-    nDep = 0
-    for row in self.block:
-        nInd = 0
-        for spline in row:
-            value[nDep:nDep + spline.nDep] += spline(uwv[nInd:nInd + spline.nInd])
-            nInd += spline.nInd
-        nDep += spline.nDep
-    return value
-
-def block_derivative(self, with_respect_to, uwv):
-    value = np.zeros(self.nDep, self.coefsDtype)
-    nDep = 0
-    for row in self.block:
-        nInd = 0
-        for spline in row:
-            value[nDep:nDep + spline.nDep] += spline.derivative(with_respect_to[nInd:nInd + spline.nInd], uwv[nInd:nInd + spline.nInd])
-            nInd += spline.nInd
-        nDep += spline.nDep
-    return value
-
-def block_jacobian(self, uwv):
-    jacobian = np.zeros((self.nDep, self.nInd), self.coefsDtype)
-    nDep = 0
-    for row in self.block:
-        nInd = 0
-        for spline in row:
-            jacobian[nDep:nDep + spline.nDep, nInd:nInd + spline.nInd] += spline.jacobian(uwv[nInd:nInd + spline.nInd])
-            nInd += spline.nInd
-        nDep += spline.nDep
-    return jacobian
-
-def block_normal(self, uvw, normalize=True, indices=None):
-    # Make work for scalar valued functions
-    uvw = np.atleast_1d(uvw)
-
-    if abs(self.nInd - self.nDep) != 1: raise ValueError("The number of independent variables must be one different than the number of dependent variables.")
-
-    # Evaluate the Jacobian at the point.
-    tangentSpace = self.jacobian(uvw)
-    
-    # Record the larger dimension and ensure it comes first.
-    if self.nInd > self.nDep:
-        nDep = self.nInd
-        tangentSpace = tangentSpace.T
-    else:
-        nDep = self.nDep
-    
-    # Compute the normal using cofactors (determinants of subsets of the tangent space).
-    if indices is None:
-        indices = range(nDep)
-        normal = np.empty(nDep, self.coefsDtype)
-    else:
-        normal = np.empty(len(indices), self.coefsDtype)
-    for i in indices:
-        normal[i] = ((-1) ** i) * np.linalg.det(tangentSpace[[j for j in range(nDep) if i != j]])
-    
-    # Normalize the result as needed.
-    if normalize:
-        normal /= np.linalg.norm(normal)
-    
-    return normal
-
-def block_range_bounds(self):
-    bounds = np.zeros((self.nDep, 2))
-    nDep = 0
-    for row in self.block:
-        for spline in row:
-            bounds[nDep:nDep + spline.nDep] += spline.range_bounds()
-        nDep += spline.nDep
-    return bounds
-
 def bspline_values(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs = False):
     basis = np.zeros(splineOrder, knots.dtype)
     if knot is None:
@@ -304,12 +231,13 @@ def normal(self, uvw, normalize=True, indices=None):
         nDep = self.nDep
     
     # Compute the normal using cofactors (determinants of subsets of the tangent space).
-    sign = -1 if self.metadata.get("flipNormal", False) else 1
+    sign = -1 if hasattr(self, "metadata") and self.metadata.get("flipNormal", False) else 1
+    dtype = self.coefs.dtype if hasattr(self, "coefs") else self.coefsDtype
     if indices is None:
         indices = range(nDep)
-        normal = np.empty(nDep, self.coefs.dtype)
+        normal = np.empty(nDep, dtype)
     else:
-        normal = np.empty(len(indices), self.coefs.dtype)
+        normal = np.empty(len(indices), dtype)
     for i in indices:
         normal[i] = sign * ((-1) ** i) * np.linalg.det(tangentSpace[[j for j in range(nDep) if i != j]])
     

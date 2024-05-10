@@ -279,7 +279,7 @@ def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
             previousKnot = knot
         
         # Test if F(GSamples) is close enough to zero.
-        if FSamplesNorm / np.linalg.norm(dHCoefs, np.inf) < epsilon:
+        if FSamplesNorm < evaluationEpsilon:
             break # We're done! Exit subdivision loop and return x(t).
 
         # Otherwise, update nCoef and knots array, and then re-run Newton's method.

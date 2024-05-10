@@ -364,12 +364,12 @@ if __name__ == "__main__":
                 coefficients[1,i,j] = teapotVertices[vertex][2]
                 coefficients[2,i,j] = teapotVertices[vertex][1]
         teapot1.add_boundary(Boundary(
-            Spline(2, 3, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=f"1: {patch[0]}"))))
+            Spline(2, 3, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=f"1 {patch[0]}"))))
         teapot2.add_boundary(Boundary(
-            Spline(2, 3, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=f"2: {patch[0]}"))))
+            Spline(2, 3, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=f"2 {patch[0]}"))))
 
-
-    if False: # Touching spouts
+    case = "wide"
+    if case == "spouts": # Touching spouts
         viewer.list(teapot1, fillColor=np.array((1, 1, 0, 1),np.float32))
         theta = 180.0 * np.pi / 180
         teapot2 = teapot2.transform(np.array(((np.cos(theta), 0.0, np.sin(theta)),
@@ -379,7 +379,7 @@ if __name__ == "__main__":
         teapot3 = teapot1 - teapot2
         viewer.draw(teapot3)
 
-    if True: # Wide intersection
+    elif case == "wide": # Wide intersection
         viewer.list(teapot1, fillColor=np.array((1, 1, 0, 1),np.float32))
         theta = 120.0 * np.pi / 180
         teapot2 = teapot2.transform(np.array(((np.cos(theta), 0.0, np.sin(theta)),
@@ -389,41 +389,21 @@ if __name__ == "__main__":
         teapot3 = teapot1 * teapot2
         viewer.draw(teapot3)
 
-    if False:
+    elif case == "test":
         theta = 120.0 * np.pi / 180
         teapot2 = teapot2.transform(np.array(((np.cos(theta), 0.0, np.sin(theta)),
             (0.0, 1.0, 0.0), (-np.sin(theta), 0.0, np.cos(theta)))))
         teapot2 = teapot2.translate((0.6, -2.0, 2.0))
 
-        name2 = "2: Upper section 1"
-        name1 = "1: Bottom 2"
-        #name2 = "2: Lid knob 1"
-        #name1 = "1: Lower section 4"
+        name2 = "2 Upper section 1"
+        name1 = "1 Lower section 3"
         boundary1 = utils.find_boundary(teapot1, name1)
         boundary2 = utils.find_boundary(teapot2, name2)
+        viewer.draw(boundary1)
+        viewer.draw(boundary2)
 
         cache = {}
         intersections, isTwin = boundary2.manifold.cached_intersect(boundary1.manifold, cache)
-
-        for u in np.linspace(0.0, 1.0, 21):
-            leftPoint = boundary2.manifold.spline(intersections[0].left.spline(u))
-            rightPoint = boundary1.manifold.spline(intersections[0].right.spline(u))
-            print(leftPoint - rightPoint, np.linalg.norm(leftPoint - rightPoint))
-
-        manifold = boundary1.manifold.copy()
-        slice = teapot2.slice(manifold, cache)
-        slicedBoundary = Boundary(manifold, slice)
-        viewer.draw(slicedBoundary, f"Sliced {name1}")
-        trimmedSlice = boundary1.domain.intersection(slice)
-        trimmedSlicedBoundary = Boundary(manifold.copy(), trimmedSlice)
-        viewer.draw(trimmedSlicedBoundary, f"Trimmed sliced {name1}")
-
-        manifold = boundary2.manifold.copy()
-        slice = teapot1.slice(manifold, cache)
-        slicedBoundary = Boundary(manifold, slice)
-        viewer.draw(slicedBoundary, f"Sliced {name2}")
-        trimmedSlice = boundary2.domain.intersection(slice)
-        trimmedSlicedBoundary = Boundary(manifold.copy(), trimmedSlice)
-        viewer.draw(trimmedSlicedBoundary, f"Trimmed sliced {name2}")
+        exit()
         
     viewer.mainloop()

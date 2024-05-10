@@ -1,28 +1,5 @@
 import numpy as np
 from bspy.manifold import Manifold
-import bspy.spline_block
-
-def block_reparametrize(self, newDomain):
-    newBlock = []
-    for row in self.block:
-        newRow = []
-        nInd = 0
-        for spline in row:
-            newRow.append(spline.reparametrize(newDomain[nInd:nInd + spline.nInd]))
-            nInd += spline.nInd
-        newBlock.append(newRow)
-    return bspy.spline_block.SplineBlock(newBlock)
-
-def block_trim(self, newDomain):
-    newBlock = []
-    for row in self.block:
-        newRow = []
-        nInd = 0
-        for spline in row:
-            newRow.append(spline.trim(newDomain[nInd:nInd + spline.nInd]))
-            nInd += spline.nInd
-        newBlock.append(newRow)
-    return bspy.spline_block.SplineBlock(newBlock)
 
 def clamp(self, left, right):
     bounds = [[None, None] for i in range(self.nInd)]
