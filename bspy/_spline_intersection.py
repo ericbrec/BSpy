@@ -209,7 +209,7 @@ def _intersect_convex_hull_with_x_interval(hullPoints, epsilon, xInterval):
 
 Interval = namedtuple('Interval', ('block', 'unknowns', 'scale', 'bounds', 'slope', 'intercept', 'epsilon', 'atMachineEpsilon'))
 
-def create_interval(domain, block, unknowns, scale, slope, intercept, epsilon):
+def _create_interval(domain, block, unknowns, scale, slope, intercept, epsilon):
     nDep = 0
     bounds = np.zeros((len(scale), 2), scale.dtype)
     newScale = np.empty_like(scale)
@@ -265,6 +265,8 @@ def _refine_projected_polyhedron(interval):
     intervals = []
     
     # Loop through each independent variable to determine a tighter domain around roots.
+    # The interval block's remaining number of independent variables (nInd) is len(interval.unknowns).
+    # The interval block's remaining number of dependent variables (nDep) is len(interval.scale).
     domain = []
     for nInd in range(len(interval.unknowns)):
         # Loop through each dependent variable to compute the interval containing the root for this independent variable.
@@ -385,7 +387,7 @@ def _refine_projected_polyhedron(interval):
         for i, w, d in zip(newUnknowns, width, domain.T):
             splitSlope[i] = w * interval.slope[i]
             splitIntercept[i] = d[0] * interval.slope[i] + interval.intercept[i]
-        newInterval = create_interval(domain.T, interval.block, newUnknowns, interval.scale, splitSlope, splitIntercept, epsilon)
+        newInterval = _create_interval(domain.T, interval.block, newUnknowns, interval.scale, splitSlope, splitIntercept, epsilon)
         if newInterval:
             if newInterval.block:
                 intervals.append(newInterval)
@@ -415,7 +417,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None, initialScale=None):
     # Set initial interval.
     domain = self.domain().T
     initialScale = np.full(self.nDep, 1.0, self.coefsDtype) if initialScale is None else np.array(initialScale, self.coefsDtype)
-    newInterval = create_interval(domain.T, self.block, [*range(self.nInd)], initialScale, domain[1] - domain[0], domain[0], epsilon)
+    newInterval = _create_interval(domain.T, self.block, [*range(self.nInd)], initialScale, domain[1] - domain[0], domain[0], epsilon)
     if newInterval:
         if newInterval.block:
             intervals.append(newInterval)
