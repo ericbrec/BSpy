@@ -85,11 +85,11 @@ def zeros_using_interval_newton(self):
                     myZeros = refine(trimmedSpline, intervalSize, functionMax)
                     if len(myZeros) == 0 and mySpline.order[0] == mySpline.nCoef[0] and \
                        mySpline.coefs[0][0] * mySpline.coefs[0][-1] < 0.0:
-                        return provisionalZero
+                        myZeros = provisionalZero
             else:
                if mySpline.order[0] == mySpline.nCoef[0] and \
                   mySpline.coefs[0][0] * mySpline.coefs[0][-1] < 0.0:
-                   return provisionalZero
+                   myZeros = provisionalZero
                else:
                    return []
         else:                           # . . . or split as needed
