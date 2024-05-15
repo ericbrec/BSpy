@@ -657,6 +657,23 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
     points.sort()
 
     # Extra step not in paper.
+    # Remove duplicate points (typically appear at corners).
+    i = 0
+    while i < len(points):
+        previousPoint = points[i]
+        j = i + 1
+        while j < len(points):
+            point = points[j]
+            if point.d < previousPoint.d + epsilon:
+                if np.linalg.norm(point.uvw - previousPoint.uvw) < epsilon:
+                    del points[j]
+                else:
+                    j += 1
+            else:
+                break
+        i += 1
+
+    # Extra step not in paper.
     # Run a checksum on the points, ensuring starting and ending points balance.
     # Start by flipping endpoints as needed, since we can miss turning points near endpoints.
     if points[0].det < 0.0:
