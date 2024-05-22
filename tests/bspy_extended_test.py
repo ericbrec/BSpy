@@ -619,11 +619,11 @@ def test_geodesic():
     s1ms2 = section1_3D.subtract(section2_3D)
     determinant = s1xs2 @ s1ms2
     [u1u2] = determinant.contours()
-    tValues = np.linspace(0.0, 1.0, 51)
+    tValues = np.linspace(0.0, 1.0, 101)
     u1Fit, u2Fit = u1u2(tValues)
     rulings = [bspy.Spline.line(section1_3D(u1), section2_3D(u2)) for u1, u2 in zip(u1Fit, u2Fit)]
-    developable = bspy.Spline.least_squares(tValues, rulings, tolerance = 1.0e-4).transpose()
-    geodesic = developable.geodesic([0.0, 0.5], [1.0, 0.5])
+    developable = bspy.Spline.least_squares(tValues, rulings, compression = 0.25).transpose()
+    geodesic = developable.geodesic([0.0, 0.7], [1.0, 0.7])
     assert np.linalg.norm(geodesic(0.5) - [0.50987084, 0.37462251]) < 1.0e-5
 
 def test_intersect():

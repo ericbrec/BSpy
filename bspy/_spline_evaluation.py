@@ -26,6 +26,52 @@ def bspline_values(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs
             b += 1
     return knot, basis
 
+def composed_integral(self, integrand = None, domain = None):
+    # Determine domain and check its validity
+    actualDomain = self.domain()
+    if domain is None:
+        domain = actualDomain
+    else:
+        for iInd in range(self.nInd):
+            if domain[iInd, 0] < actualDomain[iInd, 0] or \
+               domain[iInd, 1] > actualDomain[iInd, 1]:
+                raise ValueError("Can't integrate beyond the domain of the spline")
+
+    # Determine breakpoints for quadrature intervals; require functions to be analytic
+
+    uniqueKnots = []
+    for iInd in range(self.nInd):
+        iStart = np.searchsorted(self.knots[iInd], domain[iInd, 0], side = 'right')
+        iEnd = np.searchsorted(self.knots[iInd], domain[iInd, 1], side = 'right')
+        uniqueKnots.append(np.unique(np.insert(self.knots[iInd], [iStart, iEnd], domain[iInd])[iStart : iEnd + 2]))
+
+    # Set integrand function if none is given
+    if integrand is None:
+        integrand = lambda x : 1.0
+
+    # Set tolerance
+    tolerance = 1.0e-13 / self.nInd
+
+    # Establish the callback function
+    def composedIntegrand(u, nIndSoFar, uValues):
+        uValues[nIndSoFar] = u
+        nIndSoFar += 1
+        if self.nInd == nIndSoFar:
+            total = integrand(self(uValues)) * \
+                    np.prod(np.linalg.svd(self.jacobian(uValues), compute_uv = False))
+        else:
+            total = 0.0
+            for ix in range(len(uniqueKnots[nIndSoFar]) - 1):
+                value = sp.integrate.quad(composedIntegrand, uniqueKnots[nIndSoFar][ix],
+                                          uniqueKnots[nIndSoFar][ix + 1], (nIndSoFar, uValues),
+                                          epsabs = tolerance, epsrel = tolerance)
+                total += value[0]
+        return total    
+    
+    # Compute the value by calling the callback routine
+    total = composedIntegrand(0.0, -1, self.nInd * [0.0])
+    return total
+
 def continuity(self):
     multiplicity = np.array([np.max(np.unique(knots, return_counts = True)[1][1 : -1]) for knots in self.knots])
     continuity = self.order - multiplicity - 1
@@ -163,56 +209,6 @@ def jacobian(self, uvw):
         wrt[i] = 0
     
     return value
-
-def moment(self, exponent = None, domain = None):
-    # Determine domain and check its validity
-    actualDomain = self.domain()
-    if domain is None:
-        domain = actualDomain
-    else:
-        for iInd in range(self.nInd):
-            if domain[iInd, 0] < actualDomain[iInd, 0] or \
-               domain[iInd, 1] > actualDomain[iInd, 1]:
-                raise ValueError("Can't integrate beyond the domain of the spline")
-
-    # Determine breakpoints for quadrature intervals; require functions to be analytic
-
-    uniqueKnots = []
-    for iInd in range(self.nInd):
-        iStart = np.searchsorted(self.knots[iInd], domain[iInd, 0], side = 'right')
-        iEnd = np.searchsorted(self.knots[iInd], domain[iInd, 1], side = 'right')
-        uniqueKnots.append(np.unique(np.insert(self.knots[iInd], [iStart, iEnd], domain[iInd])[iStart : iEnd + 2]))
-
-    # Determine exponents and check validity
-    if exponent is None:
-        exponent = self.nDep * [0]
-    else:
-        if len(exponent) != self.nDep:  raise ValueError("Incorrect number of exponents specified")
-
-    # Set tolerance
-    tolerance = 1.0e-13 / self.nInd
-
-    # Establish the callback function
-    def momentIntegrand(u, nIndSoFar, uValues):
-        uValues[nIndSoFar] = u
-        nIndSoFar += 1
-        if self.nInd == nIndSoFar:
-            x = self(uValues)
-            total = np.prod(np.linalg.svd(self.jacobian(uValues), compute_uv = False))
-            for iDep in range(self.nDep):
-                total *= x[iDep] ** exponent[iDep]
-        else:
-            total = 0.0
-            for ix in range(len(uniqueKnots[nIndSoFar]) - 1):
-                value = sp.integrate.quad(momentIntegrand, uniqueKnots[nIndSoFar][ix],
-                                          uniqueKnots[nIndSoFar][ix + 1], (nIndSoFar, uValues),
-                                          epsabs = tolerance, epsrel = tolerance)
-                total += value[0]
-        return total    
-    
-    # Compute the value by calling the callback routine
-    total = momentIntegrand(0.0, -1, self.nInd * [0.0])
-    return total
 
 def normal(self, uvw, normalize=True, indices=None):
     # Make work for scalar valued functions

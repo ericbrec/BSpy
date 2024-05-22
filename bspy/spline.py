@@ -347,6 +347,48 @@ class Spline(Manifold):
         if slice.dimension != 1 and slice.dimension != 2: raise ValueError("Only works for nInd = 1 or 2")
         return bspy._spline_intersection.complete_slice(self, slice, solid)
 
+    def composed_integral(self, integrand = None, domain = None):
+        """
+        Compute the integral of a function composed with a spline.  In particular, compute the
+        nInd-dimensional integral over the specified domain of the quantity f(x_0, x_1, ..., x_{nDep - 1})dA,
+        where x_i is the (i+1)-th dependent variable, and dA is the multivariate measure of the spline mapping.
+
+        Parameters
+        ----------
+        integrand : Python function, optional
+            A Python function which takes an array-like object of length nDep as input and returns a
+            scalar.  If None is specified for integrand, then the function which returns a constant value
+            of one is used.  This computes the volume measure of the spline itself (arc length, surface area,
+            volume, etc.) depending on the dimensionality of the spline itself.
+    
+        domain : array-like
+            nInd x 2 array of the lower and upper limits of integration for the spline on each of the
+            independent variables.  If domain is None, then the actual domain of the spline is used.
+        
+        Returns
+        -------
+        integral_value : `float`
+            The computed value of the specified integral
+        
+        See Also
+        --------
+        `integral` : Compute the integral of the spline at given parameter values.
+        `integrate` : Integrate a spline with respect to one of its independent variables, returning
+                      the resulting spline.
+
+        Notes
+        -----
+        This function is very useful for computing mass properties of splines.  If the integrand function
+        returns one, then the volume measure of the spline itself is computed (arc length, surface area,
+        volume, etc.).  If the integrand function returns one of the dependent variable values, then the
+        integral will be the first moment of the spline with respect to that variable, making it possible
+        to compute centroids and center of mass.  The integrand function should be smooth, but is otherwise
+        unrestricted.
+
+        Attempts to compute the integral to two digits less than machine precision.
+        """
+        return bspy._spline_evaluation.composed_integral(self, integrand, domain)
+
     @staticmethod
     def cone(radius1, radius2, height, tolerance = None):
         """
@@ -1459,40 +1501,6 @@ class Spline(Manifold):
         for splineDict in splineData:
             splines.append(Spline.from_dict(splineDict))
         return splines
-
-    def moment(self, exponent = None, domain = None):
-        """
-        Compute any moment of a spline.  In particular, compute the nInd-dimensional integral over the
-        specified domain of the quantity x_0^(j_0)x_1^(j_1)...x_{nDep-1}^(j_{nDep-1})dA, where the x_1 is
-        the i-th dependent variable, j_i is the i-th exponent as passed in the exponent array, and dA is
-        the multivariate measure of the spline mapping.
-
-        Parameters
-        ----------
-        exponent : `iterable` or `None`, optional
-            An iterable of length nDep which expresses the exponents of the dependent variables of the
-            spline.  If exponent is None, then zero exponents are assumed.
-    
-        domain : array-like
-            nInd x 2 array of the lower and upper limits of integration for the spline on each of the
-            independent variables.  If domain is None, then the actual domain of the spline is used.
-        
-        Returns
-        -------
-        moment : `float`
-            The computed value of the specified integral
-        
-        See Also
-        --------
-        `integral` : Compute the integral of the spline at given parameter values.
-        `integrate` : Integrate a spline with respect to one of its independent variables, returning
-                      the resulting spline.
-
-        Notes
-        -----
-        Attempts to compute the integral to two digits less than machine precision.
-        """
-        return bspy._spline_evaluation.moment(self, exponent, domain)
 
     def multiply(self, other, indMap = None, productType = 'S'):
         """

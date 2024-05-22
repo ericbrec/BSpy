@@ -591,6 +591,26 @@ def test_circular_arc():
         maxError = max(maxError, np.abs(np.linalg.norm(spline(t)) - radius))
     assert maxError < tolerance
 
+def test_composed_integral():
+    arc = bspy.Spline.circular_arc(1.0, 90.0)
+    arcLength = arc.composed_integral()
+    assert abs(arcLength - np.pi / 2.0) < 1.0e-12
+    xMoment = arc.composed_integral(lambda x : x[0])
+    assert abs(xMoment - 1.0) < 1.0e-12
+    yMoment = arc.composed_integral(lambda x : x[1])
+    assert abs(yMoment - 1.0) < 1.0e-12
+
+    outer = bspy.Spline.circular_arc(2.0, 90.0)
+    annulus = bspy.Spline.ruled_surface(outer, arc)
+    area = annulus.composed_integral()
+    assert abs(area - 0.75 * np.pi) < 1.0e-12
+    xMoment = annulus.composed_integral(lambda x : x[0])
+    assert abs(xMoment - 7.0 / 3.0) < 1.0e-12
+    yMoment = annulus.composed_integral(lambda x : x[1])
+    assert abs(yMoment - 7.0 / 3.0) < 1.0e-12
+    xBar = xMoment / area
+    yBar = yMoment / area  
+
 def test_continuity():
     smoothness = mySurface.continuity()
     assert smoothness[0] == 1 and smoothness[1] == 2
@@ -1045,26 +1065,6 @@ def test_matmul():
         assert prodSpline.coefs[1][0] == 2.0, "Wrong dot product computed"
     except:
         return NotImplementedError
-
-def test_moment():
-    arc = bspy.Spline.circular_arc(1.0, 90.0)
-    arcLength = arc.moment()
-    assert abs(arcLength - np.pi / 2.0) < 1.0e-12
-    xMoment = arc.moment([1, 0])
-    assert abs(xMoment - 1.0) < 1.0e-12
-    yMoment = arc.moment([0, 1])
-    assert abs(yMoment - 1.0) < 1.0e-12
-
-    outer = bspy.Spline.circular_arc(2.0, 90.0)
-    annulus = bspy.Spline.ruled_surface(outer, arc)
-    area = annulus.moment()
-    assert abs(area - 0.75 * np.pi) < 1.0e-12
-    xMoment = annulus.moment([1, 0])
-    assert abs(xMoment - 7.0 / 3.0) < 1.0e-12
-    yMoment = annulus.moment([0, 1])
-    assert abs(yMoment - 7.0 / 3.0) < 1.0e-12
-    xBar = xMoment / area
-    yBar = yMoment / area  
 
 def test_multiply():
     maxError = 0.0
