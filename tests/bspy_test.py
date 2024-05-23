@@ -4,6 +4,14 @@ import pytest
 import bspy
 import math
 
+def ffe(xVector):
+    x = xVector[0]
+    y = xVector[1]
+    fValue = 0.75 * np.exp(-0.25 * ((9 * x - 2) ** 2 + (9 * y - 2) ** 2)) + \
+             0.75 * np.exp(-(9 * x + 1) ** 2 / 49.0 - ((9 * y + 1) ** 2 / 10.0)) + \
+             0.5 * np.exp(-0.25 * ((9 * x - 7) ** 2 + (9 * y - 3) ** 2)) - \
+             0.2 * np.exp(-(9 * x - 4) ** 2 - (9 * x - 7) ** 2)
+    return np.array([fValue])
 myCurve = bspy.Spline(1, 2, [4], [5], [[0,0,0,0,0.3,1,1,1,1]], [[0, 0], [0.3, 1],
                     [0.5, 0.0], [0.7, -0.5], [1, 1]])
 truthCurve = \
@@ -776,6 +784,26 @@ def test_extrapolate():
             maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
             assert maxError <= np.finfo(float).eps
 
+def test_fit():
+    # Test the fit in one variable
+    def test_func(u):
+        return [np.exp(u[0] ** 2)]
+    myFit = bspy.Spline.fit([[0.0, 1.0]], test_func)
+    for uValue in np.linspace(0.0, 1.0, 1001):
+        assert np.linalg.norm(myFit(uValue) - test_func([uValue])) < 1.0e-4
+
+    # Test the case with multiple dependent variables
+    def test_func_2d(u):
+        return [np.exp(u[0] ** 2), np.exp(1.0 - u[0] ** 2)]
+    myFit = bspy.Spline.fit([[0.0, 1.0]], test_func_2d)
+    for uValue in np.linspace(0.0, 1.0, 1001):
+        assert np.linalg.norm(myFit(uValue) - test_func_2d([uValue])) < 1.0e-4
+    
+    myFit = bspy.Spline.fit(2 * [[0.0, 1.0]], ffe)
+    for u in np.linspace(0.0, 1.0, 101):
+        for v in np.linspace(0.0, 1.0, 101):
+            assert np.linalg.norm(myFit(u, v) - ffe([u, v])) < 1.0e-4
+
 def test_fold_unfold():
     nInd = 3
     nDep = 3
@@ -998,18 +1026,13 @@ def test_least_squares():
     assert maxError <= 0.0025
 
     # Attempt an adaptive fit of Franke's famous exponential
-    def ffe(x, y):
-        return 0.75 * np.exp(-0.25 * ((9 * x - 2) ** 2 + (9 * y - 2) ** 2)) + \
-               0.75 * np.exp(-(9 * x + 1) ** 2 / 49.0 - ((9 * y + 1) ** 2 / 10.0)) + \
-               0.5 * np.exp(-0.25 * ((9 * x - 7) ** 2 + (9 * y - 3) ** 2)) - \
-               0.2 * np.exp(-(9 * x - 4) ** 2 - (9 * x - 7) ** 2)
     uValues = np.linspace(0.0, 1.0, 201)
-    dataPoints = np.array([[u, v, ffe(u, v)] for u in uValues for v in uValues]).T
+    dataPoints = np.array([[u, v, ffe([u, v])[0]] for u in uValues for v in uValues]).T
     dataPoints = np.reshape(dataPoints, (3, 201, 201))
     fit = bspy.Spline.least_squares([uValues, uValues], dataPoints, tolerance = 1.0e-5)
     u = 2.0 / 9.0
     fitPoint = fit(u, u)
-    actualPoint = ffe(u, u)
+    actualPoint = ffe([u, u])[0]
     myError = abs(fitPoint[2] - actualPoint)
     assert myError < 1.0e-7
 

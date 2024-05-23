@@ -961,6 +961,46 @@ class Spline(Manifold):
         """
         return bspy._spline_domain.extrapolate(self, newDomain, continuityOrder)
 
+    @staticmethod
+    def fit(domain, f, order = None, knots = None, tolerance = 1.0e-4):
+        """
+        Fit the function f with a spline to a given tolerance.
+
+        Parameters
+        ----------
+        domain - `array-like`
+            An nInd x 2 array which specifies the rectangular domain (in nInd dimensions)
+            over which the function f is defined.  The approximating spline which is the
+            output will be defined over the same rectangular domain
+        
+        f : Python function
+            The function to approximate.  It is a vector-valued function of nDep
+            components in nInd variables.
+        
+        order : `array-like`
+            An optional integer array of length nInd which specifies the polynomial
+            order to use in each of the independent variables.  It will default to order
+            4 (degree 3) if None is specified (the default)
+        
+        knots : `array-like`
+            The initial knot sequence to use, if given
+        
+        tolerance : `scalar`
+            The maximum 2-norm of the difference between the given function and the
+            spline fit.  Defaults to 1.0e-4.
+        
+        Returns
+        -------
+        spline : `Spline`
+            A spline which approximates the given function to within the specified
+            tolerance.
+        
+        See Also
+        --------
+        `least_squares` : Fit a least squares approximation to given data.
+        """
+        return bspy._spline_fitting.fit(domain, f, order, knots, tolerance)
+    
     def flip_normal(self):
         """
         Flip the direction of the normal.
@@ -1059,7 +1099,7 @@ class Spline(Manifold):
     @staticmethod
     def from_dict(dictionary):
         """
-        Create a `Spline` from a data in a `dict`.
+        Create a `Spline` from data in a `dict`.
 
         Parameters
         ----------

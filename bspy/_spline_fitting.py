@@ -303,6 +303,112 @@ def cylinder(radius, height, tolerance = None):
     top = bottom + [0.0, 0.0, height]
     return bspy.Spline.ruled_surface(bottom, top)
 
+def fit(domain, f, order = None, knots = None, tolerance = 1.0e-4):
+    # Determine number of independent variables
+    domain = np.array(domain)
+    nInd = len(domain)
+    midPoint = f(0.5 * (domain.T[0] + domain.T[1]))
+    nDep = len(midPoint)
+
+    # Make sure order and knots conform to this
+    if order is None:
+        order = nInd * [4]
+    if len(order) != nInd:
+        raise ValueError("Inconsistent number of independent variables")
+
+    # Establish the initial knot sequence
+    if knots is None:
+        knots = np.array([order[iInd] * [domain[iInd, 0]] + order[iInd] * [domain[iInd, 1]] for iInd in range(nInd)])
+    
+    # Determine initial nCoef
+    nCoef = [len(knotVector) - iOrder for iOrder, knotVector in zip(order, knots)]
+
+    # Define function to insert midpoints
+    def addMidPoints(u):
+        newArray = np.empty([2, len(u)])
+        newArray[0] = u
+        newArray[1, :-1] = 0.5 * (u[1:] + u[:-1])
+        return newArray.T.flatten()[:-1]
+    
+    # Track the current spline space we're fitting in
+    currentSpace = bspy.Spline(nInd, 0, order, nCoef, knots, [])
+
+    # Generate the Greville points for these knots
+    uvw = [currentSpace.greville(iInd) for iInd in range(nInd)]
+
+    # Enrich the sample points
+    for iInd in range(nInd):
+        for iLevel in range(1):
+            uvw[iInd] = addMidPoints(uvw[iInd])
+
+    # Initialize the dictionary of function values
+
+    fDictionary = {}
+
+    # Keep looping until done
+    while True:
+
+        # Evaluate the function on this data set
+        fValues = []
+        indices = nInd * [0]
+        iLast = nInd
+        while iLast >= 0:
+            uValue = tuple([uvw[i][indices[i]] for i in range(nInd)])
+            if not uValue in fDictionary:
+                fDictionary[uValue] = f(uValue)
+            fValues.append(fDictionary[uValue])
+            iLast = nInd - 1
+            while iLast >= 0:
+                indices[iLast] += 1
+                if indices[iLast] < len(uvw[iLast]):
+                    break
+                indices[iLast] = 0
+                iLast -= 1
+
+        # Adjust the ordering
+        pointShape = [len(uvw[i]) for i in range(nInd)]
+        fValues = np.array(fValues).reshape(pointShape + [nDep]).transpose([nInd] + list(range(nInd)))
+
+        # Call the least squares fitter on this data
+        bestSoFar = bspy.Spline.least_squares(uvw, fValues, order, currentSpace.knots, fixEnds = True)
+
+        # Determine the maximum error
+        maxError = 0.0
+        for key in fDictionary:
+            thisError = np.linalg.norm(fDictionary[key] - bestSoFar(key))
+            if thisError > maxError:
+                maxError = thisError
+                maxKey = key
+        if maxError <= tolerance:
+            break
+
+        # Split the interval and try again
+        maxGap = 0.0
+        for iInd in range(nInd):
+            insert = bspy.Spline.bspline_values(None, currentSpace.knots[iInd], order[iInd], maxKey[iInd])[0]
+            leftKnot = currentSpace.knots[iInd][insert - 1]
+            rightKnot = currentSpace.knots[iInd][insert]
+            if rightKnot - leftKnot > maxGap:
+                maxGap = rightKnot - leftKnot
+                iFirst = np.searchsorted(uvw[iInd], leftKnot, side = 'right')
+                iLast = np.searchsorted(uvw[iInd], rightKnot, side = 'right')
+                maxLeft = leftKnot
+                maxRight = rightKnot
+                maxInsert = insert
+                maxInd = iInd
+        splitAt = 0.5 * (maxLeft + maxRight)
+        newKnots = [[] for iInd in range(nInd)]
+        newKnots[maxInd] = [splitAt]
+        currentSpace = currentSpace.insert_knots(newKnots)
+
+        # Add samples for the new knot
+        uvw[maxInd] = np.array(list(uvw[maxInd][:iFirst - 1]) +
+                               list(addMidPoints(uvw[maxInd][iFirst - 1:iLast])) +
+                               list(uvw[maxInd][iLast:]))
+
+    # Return the best spline found so far
+    return bestSoFar
+
 def four_sided_patch(bottom, right, top, left, surfParam = 0.5):
     if bottom.nInd != 1 or right.nInd != 1 or top.nInd != 1 or left.nInd != 1:
         raise ValueError("Input curves must have one independent variable")
