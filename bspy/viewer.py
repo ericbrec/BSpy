@@ -152,12 +152,14 @@ class Viewer(tk.Tk):
             if draw:
                 self.treeview.selection_add(iid)
             for i, boundary in enumerate(solid.boundaries):
-                self.list(boundary, f"{name} boundary {i+1}", fillColor, lineColor, options, False, iid)
+                self.list(boundary, f"Boundary {i}", fillColor, lineColor, options, False, iid)
         elif isinstance(spline, Boundary):
             boundary = spline
             if isinstance(boundary.manifold, Hyperplane):
                 uvMin = boundary.domain.bounds[:,0]
                 uvMax = boundary.domain.bounds[:,1]
+                if (uvMax - uvMin).min() < 1.0e-8:
+                    return
                 xyzMinMin = boundary.manifold.evaluate(uvMin)
                 xyzMinMax = boundary.manifold.evaluate((uvMin[0], uvMax[1]))
                 xyzMaxMin = boundary.manifold.evaluate((uvMax[0], uvMin[1]))

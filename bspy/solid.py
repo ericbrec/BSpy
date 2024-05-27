@@ -509,25 +509,28 @@ class Solid:
                         slice.add_boundary(Boundary(right, domainSlice))
 
                 elif isinstance(intersection, Manifold.Coincidence):
-                    # First, intersect domain coincidence with the domain boundary.
-                    coincidence = left.intersection(boundary.domain)
-                    # Next, invert the domain coincidence (which will remove it) if this is a twin or if the normals point in opposite directions.
+                    # Intersect domain coincidence with the boundary's domain.
+                    left = left.intersection(boundary.domain)
+                    # Invert the domain coincidence (which will remove it) if this is a twin or if the normals point in opposite directions.
+                    #invertCoincidence = trimTwin and (isTwin or intersection.alignment < 0.0)
                     invertCoincidence = (trimTwin and isTwin) or intersection.alignment < 0.0
+                    # Create the coincidence to hold the trimmed and transformed domain coincidence (left).
+                    coincidence = Solid(left.dimension, left.containsInfinity)
                     if invertCoincidence:
                         coincidence.containsInfinity = not coincidence.containsInfinity
                     # Next, transform the domain coincidence from the boundary to the given manifold.
                     # Create copies of the manifolds and boundaries, since we are changing them.
-                    for i in range(len(coincidence.boundaries)):
-                        domainManifold = coincidence.boundaries[i].manifold
+                    for coincidenceBoundary in left.boundaries:
+                        coincidenceManifold = coincidenceBoundary.manifold
                         if invertCoincidence:
-                            domainManifold = domainManifold.flip_normal()
+                            coincidenceManifold = coincidenceManifold.flip_normal()
                         if isTwin:
-                            domainManifold = domainManifold.translate(-intersection.translation)
-                            domainManifold = domainManifold.transform(intersection.inverse, intersection.transform.T)
+                            coincidenceManifold = coincidenceManifold.translate(-intersection.translation)
+                            coincidenceManifold = coincidenceManifold.transform(intersection.inverse, intersection.transform.T)
                         else:
-                            domainManifold = domainManifold.transform(intersection.transform, intersection.inverse.T)
-                            domainManifold = domainManifold.translate(intersection.translation)
-                        coincidence.boundaries[i] = Boundary(domainManifold, coincidence.boundaries[i].domain)
+                            coincidenceManifold = coincidenceManifold.transform(intersection.transform, intersection.inverse.T)
+                            coincidenceManifold = coincidenceManifold.translate(intersection.translation)
+                        coincidence.add_boundary(Boundary(coincidenceManifold, coincidenceBoundary.domain))
                     # Finally, add the domain coincidence to the list of coincidences.
                     coincidences.append((invertCoincidence, coincidence))
 
