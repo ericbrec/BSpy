@@ -595,7 +595,8 @@ def transpose(self, axes=None):
 def trim(self, newDomain):
     if not(len(newDomain) == self.nInd): raise ValueError("Invalid newDomain")
     if self.nInd < 1: return self
-    newDomain = np.array(newDomain, self.knots[0].dtype) # Force dtype and convert None to nan
+    newDomain = np.array(newDomain, self.knots[0].dtype, copy=True) # Force dtype and convert None to nan
+    epsilon = np.finfo(newDomain.dtype).eps
 
     # Step 1: Determine the knots to insert at the new domain bounds.
     newKnotsList = []
@@ -608,20 +609,31 @@ def trim(self, newDomain):
         if not np.isnan(bounds[0]):
             if not(knots[order - 1] <= bounds[0] <= knots[-order]): raise ValueError("Invalid newDomain")
             leftBound = True
-            multiplicity = order
             i = np.searchsorted(unique, bounds[0])
-            if unique[i] == bounds[0]:
-                multiplicity -= counts[i]
+            if unique[i] - bounds[0] < epsilon:
+                bounds[0] = unique[i]
+                multiplicity = order - counts[i]
+            elif i > 0 and bounds[0] - unique[i - 1] < epsilon:
+                bounds[0] = unique[i - 1]
+                multiplicity = order - counts[i - i]
+            else:
+                multiplicity = order
+        
             newKnots += multiplicity * [bounds[0]]
 
         if not np.isnan(bounds[1]):
             if not(knots[order - 1] <= bounds[1] <= knots[-order]): raise ValueError("Invalid newDomain")
             if leftBound:
                 if not(bounds[0] < bounds[1]): raise ValueError("Invalid newDomain")
-            multiplicity = order
             i = np.searchsorted(unique, bounds[1])
-            if unique[i] == bounds[1]:
-                multiplicity -= counts[i]
+            if unique[i] - bounds[1] < epsilon:
+                bounds[1] = unique[i]
+                multiplicity = order - counts[i]
+            elif i > 0 and bounds[1] - unique[i - 1] < epsilon:
+                bounds[1] = unique[i - 1]
+                multiplicity = order - counts[i - i]
+            else:
+                multiplicity = order
             newKnots += multiplicity * [bounds[1]]
 
         newKnotsList.append(newKnots)
