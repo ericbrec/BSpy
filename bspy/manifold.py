@@ -7,8 +7,8 @@ class Manifold:
     normals and tangent spaces whose range is one dimension higher than their domain.
     """
 
-    minSeparation = 0.01
-    """If two points are within 0.01 of each each other, they are coincident."""
+    minSeparation = 0.0001
+    """If two points are within minSeparation of each each other, they are coincident."""
 
     Crossing = namedtuple('Crossing', ('left','right'))
     Coincidence = namedtuple('Coincidence', ('left', 'right', 'alignment', 'transform', 'inverse', 'translation'))
