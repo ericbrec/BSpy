@@ -615,7 +615,7 @@ def trim(self, newDomain):
                 multiplicity = order - counts[i]
             elif i > 0 and bounds[0] - unique[i - 1] < epsilon:
                 bounds[0] = unique[i - 1]
-                multiplicity = order - counts[i - i]
+                multiplicity = order - counts[i - 1]
             else:
                 multiplicity = order
         
