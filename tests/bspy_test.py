@@ -1,5 +1,5 @@
 import numpy as np
-import scipy.integrate
+import scipy as sp
 import pytest
 import bspy
 import math
@@ -599,26 +599,6 @@ def test_circular_arc():
         maxError = max(maxError, np.abs(np.linalg.norm(spline(t)) - radius))
     assert maxError < tolerance
 
-def test_composed_integral():
-    arc = bspy.Spline.circular_arc(1.0, 90.0)
-    arcLength = arc.composed_integral()
-    assert abs(arcLength - np.pi / 2.0) < 1.0e-12
-    xMoment = arc.composed_integral(lambda x : x[0])
-    assert abs(xMoment - 1.0) < 1.0e-12
-    yMoment = arc.composed_integral(lambda x : x[1])
-    assert abs(yMoment - 1.0) < 1.0e-12
-
-    outer = bspy.Spline.circular_arc(2.0, 90.0)
-    annulus = bspy.Spline.ruled_surface(outer, arc)
-    area = annulus.composed_integral()
-    assert abs(area - 0.75 * np.pi) < 1.0e-12
-    xMoment = annulus.composed_integral(lambda x : x[0])
-    assert abs(xMoment - 7.0 / 3.0) < 1.0e-12
-    yMoment = annulus.composed_integral(lambda x : x[1])
-    assert abs(yMoment - 7.0 / 3.0) < 1.0e-12
-    xBar = xMoment / area
-    yBar = yMoment / area  
-
 def test_composition():
     myPCurve = bspy.Spline.circular_arc(0.4, 360.0) + [0.5, 0.55]
     myFit = bspy.Spline.composition([mySurface, myPCurve])
@@ -676,7 +656,7 @@ def test_convolve():
     convolution = spline1.convolve(spline2, [[0, 0]])
     maxError = 0.0
     for u in np.linspace(convolution.knots[0][convolution.order[0]-1], convolution.knots[0][convolution.nCoef[0]], 21):
-        x = scipy.integrate.quad(lambda s: spline1([u - s])[0] * spline2([s]), \
+        x = sp.integrate.quad(lambda s: spline1([u - s])[0] * spline2([s]), \
             max(u - spline1.knots[0][spline1.nCoef[0]], spline2.knots[0][spline2.order[0]-1]), 
             min(u - spline1.knots[0][spline1.order[0]-1], spline2.knots[0][spline2.nCoef[0]]))[0]
         xTest = convolution.evaluate([u])
@@ -912,6 +892,26 @@ def test_insert_knots():
     assert maxError <= np.finfo(float).eps
 
 def test_integral():
+    arc = bspy.Spline.circular_arc(1.0, 90.0)
+    arcLength = arc.integral()
+    assert abs(arcLength - np.pi / 2.0) < 1.0e-12
+    xMoment = arc.integral(lambda x : x[0])
+    assert abs(xMoment - 1.0) < 1.0e-12
+    yMoment = arc.integral(lambda x : x[1])
+    assert abs(yMoment - 1.0) < 1.0e-12
+
+    outer = bspy.Spline.circular_arc(2.0, 90.0)
+    annulus = bspy.Spline.ruled_surface(outer, arc)
+    area = annulus.integral()
+    assert abs(area - 0.75 * np.pi) < 1.0e-12
+    xMoment = annulus.integral(lambda x : x[0])
+    assert abs(xMoment - 7.0 / 3.0) < 1.0e-12
+    yMoment = annulus.integral(lambda x : x[1])
+    assert abs(yMoment - 7.0 / 3.0) < 1.0e-12
+    xBar = xMoment / area
+    yBar = yMoment / area  
+
+def test_integrate():
     maxError = 0.0
     myIntegral = myCurve.integrate()
     myDerivative = myIntegral.differentiate()
@@ -922,9 +922,10 @@ def test_integral():
     assert maxError <= np.finfo(float).eps
 
     limits = myCurve.domain()
+    xTestF = myCurve.integrate()
     for u in np.linspace(limits[0][0], limits[0][1], 11):
-        x = scipy.integrate.quad(lambda s: myCurve([s])[0], limits[0][0], u)[0]
-        xTest = myCurve.integral([1], [limits[0][0]], [u])[0]
+        x = sp.integrate.quad(lambda s: myCurve([s])[0], limits[0][0], u)[0]
+        xTest = xTestF(u)[0]
         maxError = max(maxError, (xTest - x) ** 2)
     assert maxError <= np.finfo(float).eps
 

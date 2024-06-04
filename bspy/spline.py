@@ -347,48 +347,6 @@ class Spline(Manifold):
         if slice.dimension != 1 and slice.dimension != 2: raise ValueError("Only works for nInd = 1 or 2")
         return bspy._spline_intersection.complete_slice(self, slice, solid)
 
-    def composed_integral(self, integrand = None, domain = None):
-        """
-        Compute the integral of a function composed with a spline.  In particular, compute the
-        nInd-dimensional integral over the specified domain of the quantity f(x_0, x_1, ..., x_{nDep - 1})dA,
-        where x_i is the (i+1)-th dependent variable, and dA is the multivariate measure of the spline mapping.
-
-        Parameters
-        ----------
-        integrand : Python function, optional
-            A Python function which takes an array-like object of length nDep as input and returns a
-            scalar.  If None is specified for integrand, then the function which returns a constant value
-            of one is used.  This computes the volume measure of the spline itself (arc length, surface area,
-            volume, etc.) depending on the dimensionality of the spline itself.
-    
-        domain : array-like
-            nInd x 2 array of the lower and upper limits of integration for the spline on each of the
-            independent variables.  If domain is None, then the actual domain of the spline is used.
-        
-        Returns
-        -------
-        integral_value : `float`
-            The computed value of the specified integral
-        
-        See Also
-        --------
-        `integral` : Compute the integral of the spline at given parameter values.
-        `integrate` : Integrate a spline with respect to one of its independent variables, returning
-                      the resulting spline.
-
-        Notes
-        -----
-        This function is very useful for computing mass properties of splines.  If the integrand function
-        returns one, then the volume measure of the spline itself is computed (arc length, surface area,
-        volume, etc.).  If the integrand function returns one of the dependent variable values, then the
-        integral will be the first moment of the spline with respect to that variable, making it possible
-        to compute centroids and center of mass.  The integrand function should be smooth, but is otherwise
-        unrestricted.
-
-        Attempts to compute the integral to two digits less than machine precision.
-        """
-        return bspy._spline_evaluation.composed_integral(self, integrand, domain)
-
     @staticmethod
     def composition(splines, tolerance = 1.0e-6):
         """
@@ -1270,48 +1228,46 @@ class Spline(Manifold):
         """
         return bspy._spline_domain.insert_knots(self, newKnots)
 
-    def integral(self, with_respect_to, uvw1, uvw2, returnSpline = False):
+    def integral(self, integrand = None, domain = None):
         """
-        Compute the integral of the spline at given parameter values.
+        Compute the integral of a function composed with a spline.  In particular, compute the
+        nInd-dimensional integral over the specified domain of the quantity f(x_0, x_1, ..., x_{nDep - 1})dA,
+        where x_i is the (i+1)-th dependent variable, and dA is the multivariate measure of the spline mapping.
 
         Parameters
         ----------
-        with_respect_to : `iterable`
-            An iterable of length `nInd` that specifies the integer order of integral for each independent variable.
-            A zero-order integral just evaluates the spline normally.
+        integrand : Python function, optional
+            A Python function which takes an array-like object of length nDep as input and returns a
+            scalar.  If None is specified for integrand, then the function which returns a constant value
+            of one is used.  This computes the volume measure of the spline itself (arc length, surface area,
+            volume, etc.) depending on the dimensionality of the spline itself.
+    
+        domain : array-like
+            nInd x 2 array of the lower and upper limits of integration for the spline on each of the
+            independent variables.  If domain is None, then the actual domain of the spline is used.
         
-        uvw1 : `iterable`
-            An iterable of length `nInd` that specifies the lower limit of each independent variable (the parameter values).
-        
-        uvw2 : `iterable`
-            An iterable of length `nInd` that specifies the upper limit of each independent variable (the parameter values).
-
-        returnSpline : `boolean`, optional
-            A boolean flag that if true returns the integrated spline along with the value of its integral. Default is false.
- 
         Returns
         -------
-        value : `numpy.ndarray`
-            The value of the integral of the spline at the given parameter limits.
-
-        spline : `Spline`
-            The integrated spline, which is only returned if `returnSpline` is `True`.
-
+        integral_value : `float`
+            The computed value of the specified integral
+        
         See Also
         --------
-        `integrate` : Integrate a spline with respect to one of its independent variables, returning the resulting spline.
-        `evaluate` : Compute the value of the spline at a given parameter value.
-        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.
-        `derivative` : Compute the derivative of the spline at a given parameter value.
+        `integrate` : Integrate a spline with respect to one of its independent variables, returning
+                      the resulting spline.
 
         Notes
         -----
-        The integral method uses the integrate method to integrate the spline `with_respect_to` times for each independent variable.
-        Then the method returns that integrated spline's value at `uw2` minus its value at `uw1` (optionally along with the spline).
-        The method doesn't calculate the integral directly because the number of operations required is nearly the same as constructing
-        the integrated spline.
+        This function is very useful for computing mass properties of splines.  If the integrand function
+        returns one, then the volume measure of the spline itself is computed (arc length, surface area,
+        volume, etc.).  If the integrand function returns one of the dependent variable values, then the
+        integral will be the first moment of the spline with respect to that variable, making it possible
+        to compute centroids and center of mass.  The integrand function should be smooth, but is otherwise
+        unrestricted.
+
+        Attempts to compute the integral to two digits less than machine precision.
         """
-        return bspy._spline_evaluation.integral(self, with_respect_to, uvw1, uvw2, returnSpline)
+        return bspy._spline_evaluation.composed_integral(self, integrand, domain)
 
     def integrate(self, with_respect_to = 0):
         """
@@ -1320,7 +1276,7 @@ class Spline(Manifold):
         Parameters
         ----------
         with_respect_to : integer, optional
-            The number of the independent variable to integrate. Default is zero.
+            The index of the independent variable to integrate. Default is zero.
 
         Returns
         -------
