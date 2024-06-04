@@ -25,8 +25,8 @@ class Hyperplane(Manifold):
     Thus the dimension of the domain is one less than that of the range.
     """
 
-    maxAlignment = 0.99 # 1 - 1/10^2
-    """ If a shift of 1 in the normal direction of one manifold yields a shift of 10 in the tangent plane intersection, the manifolds are parallel."""
+    maxAlignment = 0.9999 # 1 - 1/10^4
+    """ If the absolute value of the dot product of two unit normals is greater than maxAlignment, the manifolds are parallel."""
 
     def __init__(self, normal, point, tangentSpace):
         self._normal = np.atleast_1d(np.array(normal))
