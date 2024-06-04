@@ -390,6 +390,42 @@ class Spline(Manifold):
         return bspy._spline_evaluation.composed_integral(self, integrand, domain)
 
     @staticmethod
+    def composition(splines, tolerance = 1.0e-6):
+        """
+        Construct a spline approximation to a composition of splines sequence.
+
+        Parameters
+        ----------
+        splines : `array-like`
+            An array of splines.  The splines should have the property that the number
+            of independent variables of the ith spline should be the same as the number
+            of dependent variables of the (i+1)st spline.  The number of dependent
+            variables of the first spline is arbitrary, as is the number of independent
+            variables of the last one.  Moreover, the range of the ith spline should be
+            a subset of the domain of the (i-1)st spline.  The interpretation of the
+            sequence is s_0(s_1(... s_(n-1)(u)))).
+        
+        tolerance : `scalar`
+            The maximum 2-norm of the difference between the given function and the
+            spline fit.  Defaults to 1.0e-6.
+        
+        Returns
+        -------
+        spline : `Spline`
+            The spline which approximates the given composition.
+
+        Notes
+        -----
+        This currently defaults to a cubic spline.  Depending on user experience, this
+        may change in the future.
+
+        See also
+        --------
+        `fit` : Fit a given function to a specified tolerance.
+        """
+        return bspy._spline_fitting.composition(splines, tolerance)
+
+    @staticmethod
     def cone(radius1, radius2, height, tolerance = None):
         """
         Construct a cone of the two given radii and height.

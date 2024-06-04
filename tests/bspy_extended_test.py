@@ -610,7 +610,7 @@ def test_contours():
 
 def test_geodesic():
     section1 = bspy.Spline.section([[0.0, 0.0, 75.0, -50.0], [1.0, 0.0, -85.0, -30.0]])
-    section2 = bspy.Spline.section([[1.0, 0.0, 75.0, -0.1], [1.5, 0.0, -85.0, -0.1]])
+    section2 = bspy.Spline.section([[1.0, 0.0, 75.0, -1.0], [1.5, 0.0, -85.0, -1.0]])
     section1_3D = [[1.0, 0.0], [0.0, 0.0], [0.0, 1.0]] @ section1
     section2_3D = [[1.0, 0.0], [0.0, 0.0], [0.0, 1.0]] @ section2 + [0.0, 1.0, 0.0]
     section1_tan = section1_3D.differentiate()
@@ -619,12 +619,11 @@ def test_geodesic():
     s1ms2 = section1_3D.subtract(section2_3D)
     determinant = s1xs2 @ s1ms2
     [u1u2] = determinant.contours()
-    tValues = np.linspace(0.0, 1.0, 101)
-    u1Fit, u2Fit = u1u2(tValues)
-    rulings = [bspy.Spline.line(section1_3D(u1), section2_3D(u2)) for u1, u2 in zip(u1Fit, u2Fit)]
-    developable = bspy.Spline.least_squares(tValues, rulings, compression = 0.25).transpose()
-    geodesic = developable.geodesic([0.0, 0.7], [1.0, 0.7])
-    assert np.linalg.norm(geodesic(0.5) - [0.50987084, 0.37462251]) < 1.0e-5
+    bottom = bspy.Spline.composition([section1_3D, [1.0, 0.0] @ u1u2])
+    top = bspy.Spline.composition([section2_3D, [0.0, 1.0] @ u1u2])
+    developable = bspy.Spline.ruled_surface(bottom, top)
+    geodesic = developable.geodesic([0.0, 0.5], [1.0, 0.5])
+    assert np.linalg.norm(geodesic(0.5) - [0.49205572, 0.47548781]) < 1.0e-5
 
 def test_intersect():
 #  This test brings BSpy to its knees

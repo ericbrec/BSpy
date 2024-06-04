@@ -619,6 +619,12 @@ def test_composed_integral():
     xBar = xMoment / area
     yBar = yMoment / area  
 
+def test_composition():
+    myPCurve = bspy.Spline.circular_arc(0.4, 360.0) + [0.5, 0.55]
+    myFit = bspy.Spline.composition([mySurface, myPCurve])
+    for u in np.linspace(0.0, 1.0, 201):
+        assert np.linalg.norm(myFit(u) - mySurface(myPCurve(u))) < 2.0e-6
+
 def test_continuity():
     smoothness = mySurface.continuity()
     assert smoothness[0] == 1 and smoothness[1] == 2

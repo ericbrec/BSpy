@@ -11,6 +11,16 @@ def circular_arc(radius, angle, tolerance = None):
     samples = int(max(np.ceil(((1.1536e-5 * radius / tolerance)**(1/8)) * angle / 90), 2.0)) + 1
     return bspy.Spline.section([(radius * np.cos(u * angle * np.pi / 180), radius * np.sin(u * angle * np.pi / 180), 90 + u * angle, 1.0 / radius) for u in np.linspace(0.0, 1.0, samples)])
 
+def composition(splines, tolerance):
+    # Define the callback function
+    def composition_of_splines(u):
+        for f in splines[::-1]:
+            u = f(u)
+        return u
+    
+    # Approximate this composition
+    return bspy.Spline.fit(splines[-1].domain(), composition_of_splines, tolerance = tolerance)
+
 def cone(radius1, radius2, height, tolerance = None):
     if tolerance is None:
         tolerance = 1.0e-12
