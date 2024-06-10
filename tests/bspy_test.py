@@ -1,9 +1,17 @@
 import numpy as np
-import scipy.integrate
+import scipy as sp
 import pytest
 import bspy
 import math
 
+def ffe(xVector):
+    x = xVector[0]
+    y = xVector[1]
+    fValue = 0.75 * np.exp(-0.25 * ((9 * x - 2) ** 2 + (9 * y - 2) ** 2)) + \
+             0.75 * np.exp(-(9 * x + 1) ** 2 / 49.0 - ((9 * y + 1) ** 2 / 10.0)) + \
+             0.5 * np.exp(-0.25 * ((9 * x - 7) ** 2 + (9 * y - 3) ** 2)) - \
+             0.2 * np.exp(-(9 * x - 4) ** 2 - (9 * x - 7) ** 2)
+    return np.array([fValue])
 myCurve = bspy.Spline(1, 2, [4], [5], [[0,0,0,0,0.3,1,1,1,1]], [[0, 0], [0.3, 1],
                     [0.5, 0.0], [0.7, -0.5], [1, 1]])
 truthCurve = \
@@ -591,6 +599,16 @@ def test_circular_arc():
         maxError = max(maxError, np.abs(np.linalg.norm(spline(t)) - radius))
     assert maxError < tolerance
 
+def test_composition():
+    myPCurve = bspy.Spline.circular_arc(0.4, 360.0) + [0.5, 0.55]
+    myFit = bspy.Spline.composition([mySurface, myPCurve])
+    for u in np.linspace(0.0, 1.0, 201):
+        assert np.linalg.norm(myFit(u) - mySurface(myPCurve(u))) < 2.0e-6
+
+def test_continuity():
+    smoothness = mySurface.continuity()
+    assert smoothness[0] == 1 and smoothness[1] == 2
+
 def test_contours():
     maxError = 0.0
     F = lambda x: (x[0] - x[2], x[1] - x[3], x[0]*x[0] + x[1]*x[1]/9.0 - 1.0 + x[2]*x[2] + x[3]*x[3]/9.0 - 1.0)
@@ -638,7 +656,7 @@ def test_convolve():
     convolution = spline1.convolve(spline2, [[0, 0]])
     maxError = 0.0
     for u in np.linspace(convolution.knots[0][convolution.order[0]-1], convolution.knots[0][convolution.nCoef[0]], 21):
-        x = scipy.integrate.quad(lambda s: spline1([u - s])[0] * spline2([s]), \
+        x = sp.integrate.quad(lambda s: spline1([u - s])[0] * spline2([s]), \
             max(u - spline1.knots[0][spline1.nCoef[0]], spline2.knots[0][spline2.order[0]-1]), 
             min(u - spline1.knots[0][spline1.order[0]-1], spline2.knots[0][spline2.nCoef[0]]))[0]
         xTest = convolution.evaluate([u])
@@ -673,7 +691,8 @@ def test_curvature():
     assert abs(testCurve.curvature(1.0) - 2.0) < 2.0e-15
     testCurve = testCurve @ [0, 1]
     testVals = [testCurve.curvature(u) for u in np.linspace(0.0, 1.0, 101)]
-    return
+    gaussCurvature = mySurface.curvature([0.25, 0.5])
+    assert abs(gaussCurvature - 1.024) < 1.0e-14
 
 def test_derivative():
     maxError = 0.0
@@ -750,6 +769,26 @@ def test_extrapolate():
             [xTest, yTest] = extrapolated.derivative([i],[u - np.finfo(float).eps])
             maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
             assert maxError <= np.finfo(float).eps
+
+def test_fit():
+    # Test the fit in one variable
+    def test_func(u):
+        return [np.exp(u[0] ** 2)]
+    myFit = bspy.Spline.fit([[0.0, 1.0]], test_func)
+    for uValue in np.linspace(0.0, 1.0, 1001):
+        assert np.linalg.norm(myFit(uValue) - test_func([uValue])) < 1.0e-4
+
+    # Test the case with multiple dependent variables
+    def test_func_2d(u):
+        return [np.exp(u[0] ** 2), np.exp(1.0 - u[0] ** 2)]
+    myFit = bspy.Spline.fit([[0.0, 1.0]], test_func_2d)
+    for uValue in np.linspace(0.0, 1.0, 1001):
+        assert np.linalg.norm(myFit(uValue) - test_func_2d([uValue])) < 1.0e-4
+    
+    myFit = bspy.Spline.fit(2 * [[0.0, 1.0]], ffe)
+    for u in np.linspace(0.0, 1.0, 101):
+        for v in np.linspace(0.0, 1.0, 101):
+            assert np.linalg.norm(myFit(u, v) - ffe([u, v])) < 1.0e-4
 
 def test_fold_unfold():
     nInd = 3
@@ -853,6 +892,26 @@ def test_insert_knots():
     assert maxError <= np.finfo(float).eps
 
 def test_integral():
+    arc = bspy.Spline.circular_arc(1.0, 90.0)
+    arcLength = arc.integral()
+    assert abs(arcLength - np.pi / 2.0) < 1.0e-12
+    xMoment = arc.integral(lambda x : x[0])
+    assert abs(xMoment - 1.0) < 1.0e-12
+    yMoment = arc.integral(lambda x : x[1])
+    assert abs(yMoment - 1.0) < 1.0e-12
+
+    outer = bspy.Spline.circular_arc(2.0, 90.0)
+    annulus = bspy.Spline.ruled_surface(outer, arc)
+    area = annulus.integral()
+    assert abs(area - 0.75 * np.pi) < 1.0e-12
+    xMoment = annulus.integral(lambda x : x[0])
+    assert abs(xMoment - 7.0 / 3.0) < 1.0e-12
+    yMoment = annulus.integral(lambda x : x[1])
+    assert abs(yMoment - 7.0 / 3.0) < 1.0e-12
+    xBar = xMoment / area
+    yBar = yMoment / area  
+
+def test_integrate():
     maxError = 0.0
     myIntegral = myCurve.integrate()
     myDerivative = myIntegral.differentiate()
@@ -863,9 +922,10 @@ def test_integral():
     assert maxError <= np.finfo(float).eps
 
     limits = myCurve.domain()
+    xTestF = myCurve.integrate()
     for u in np.linspace(limits[0][0], limits[0][1], 11):
-        x = scipy.integrate.quad(lambda s: myCurve([s])[0], limits[0][0], u)[0]
-        xTest = myCurve.integral([1], [limits[0][0]], [u])[0]
+        x = sp.integrate.quad(lambda s: myCurve([s])[0], limits[0][0], u)[0]
+        xTest = xTestF(u)[0]
         maxError = max(maxError, (xTest - x) ** 2)
     assert maxError <= np.finfo(float).eps
 
@@ -973,18 +1033,13 @@ def test_least_squares():
     assert maxError <= 0.0025
 
     # Attempt an adaptive fit of Franke's famous exponential
-    def ffe(x, y):
-        return 0.75 * np.exp(-0.25 * ((9 * x - 2) ** 2 + (9 * y - 2) ** 2)) + \
-               0.75 * np.exp(-(9 * x + 1) ** 2 / 49.0 - ((9 * y + 1) ** 2 / 10.0)) + \
-               0.5 * np.exp(-0.25 * ((9 * x - 7) ** 2 + (9 * y - 3) ** 2)) - \
-               0.2 * np.exp(-(9 * x - 4) ** 2 - (9 * x - 7) ** 2)
     uValues = np.linspace(0.0, 1.0, 201)
-    dataPoints = np.array([[u, v, ffe(u, v)] for u in uValues for v in uValues]).T
+    dataPoints = np.array([[u, v, ffe([u, v])[0]] for u in uValues for v in uValues]).T
     dataPoints = np.reshape(dataPoints, (3, 201, 201))
     fit = bspy.Spline.least_squares([uValues, uValues], dataPoints, tolerance = 1.0e-5)
     u = 2.0 / 9.0
     fitPoint = fit(u, u)
-    actualPoint = ffe(u, u)
+    actualPoint = ffe([u, u])[0]
     myError = abs(fitPoint[2] - actualPoint)
     assert myError < 1.0e-7
 
@@ -1501,7 +1556,7 @@ def test_zeros():
                          -72.18590229675817227, 11.794124162484582286, 18.432444303536296815]])
     expectedRoots = (0.7293143009710111,)
     roots = spline.zeros(tolerance)
-    check_1D_roots(expectedRoots, roots, 1.0e-8) # TODO: Find out why this produces different values on different PCs
+    check_1D_roots(expectedRoots, roots, tolerance)
 
     uValues = [np.linspace(-2.0, 2.0, 3), np.linspace(-2.0, 2.0, 7)]
     data = np.array([[9 * u ** 2 + v ** 2 - 1.0, u - v] for u in uValues[0] for v in uValues[1]])
