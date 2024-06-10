@@ -318,7 +318,8 @@ def fit(domain, f, order = None, knots = None, tolerance = 1.0e-4):
     domain = np.array(domain)
     nInd = len(domain)
     midPoint = f(0.5 * (domain.T[0] + domain.T[1]))
-    nDep = len(midPoint)
+    if not type(midPoint) is bspy.Spline:
+        nDep = len(midPoint)
 
     # Make sure order and knots conform to this
     if order is None:
@@ -377,18 +378,31 @@ def fit(domain, f, order = None, knots = None, tolerance = 1.0e-4):
 
         # Adjust the ordering
         pointShape = [len(uvw[i]) for i in range(nInd)]
-        fValues = np.array(fValues).reshape(pointShape + [nDep]).transpose([nInd] + list(range(nInd)))
+        if type(midPoint) is bspy.Spline:
+            fValues = np.array(fValues).reshape(pointShape)
+        else:
+            fValues = np.array(fValues).reshape(pointShape + [nDep]).transpose([nInd] + list(range(nInd)))
 
         # Call the least squares fitter on this data
         bestSoFar = bspy.Spline.least_squares(uvw, fValues, order, currentSpace.knots, fixEnds = True)
 
         # Determine the maximum error
         maxError = 0.0
-        for key in fDictionary:
-            thisError = np.linalg.norm(fDictionary[key] - bestSoFar(key))
-            if thisError > maxError:
-                maxError = thisError
-                maxKey = key
+        if type(midPoint) is bspy.Spline:
+            folded, basis  = bestSoFar.fold(tuple(range(nInd)))
+            for key in fDictionary:
+                sampled = bspy.Spline.point(folded(key)).unfold(tuple(range(midPoint.nInd)), basis).coefs
+                trueCoefs = fDictionary[key].coefs
+                thisError = np.max(np.linalg.norm(sampled - trueCoefs, axis = 0))
+                if thisError > maxError:
+                    maxError = thisError
+                    maxKey = key
+        else:
+            for key in fDictionary:
+                thisError = np.linalg.norm(fDictionary[key] - bestSoFar(key))
+                if thisError > maxError:
+                    maxError = thisError
+                    maxKey = key
         if maxError <= tolerance:
             break
 

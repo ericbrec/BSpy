@@ -622,8 +622,33 @@ def test_geodesic():
     bottom = bspy.Spline.composition([section1_3D, [1.0, 0.0] @ u1u2])
     top = bspy.Spline.composition([section2_3D, [0.0, 1.0] @ u1u2])
     developable = bspy.Spline.ruled_surface(bottom, top)
-    geodesic = developable.geodesic([0.0, 0.5], [1.0, 0.5])
-    assert np.linalg.norm(geodesic(0.5) - [0.49205572, 0.47548781]) < 1.0e-5
+    geodesic2D = developable.geodesic([0.0, 0.5], [1.0, 0.5])
+    assert np.linalg.norm(geodesic2D(0.5) - [0.49205572, 0.47548781]) < 1.0e-5
+    geodesic3D = bspy.Spline.composition([developable, geodesic2D])
+    def flatPattern(u):
+        u = u[0]
+        if u != 0.0:
+            trimmedGeodesic = geodesic3D.trim([[0.0, u]])
+            xAxisPoint = np.array([trimmedGeodesic.integral(), 0.0])
+        else:
+            xAxisPoint = np.array([0.0, 0.0])
+        uv = geodesic2D(u)
+        xyzGeodesic = developable(uv)
+        xyzBottom = developable(uv[0], 0.0)
+        xyzTop = developable(uv[0], 1.0)
+        toBottom = np.linalg.norm(xyzGeodesic - xyzBottom)
+        toTop = np.linalg.norm(xyzTop - xyzGeodesic)
+        xyzTangent = geodesic3D.derivative([1], u)
+        xyzTangent /= np.linalg.norm(xyzTangent)
+        xyzRuling = xyzTop - xyzBottom
+        xyzRuling /= np.linalg.norm(xyzRuling)
+        angle = np.arccos(xyzTangent @ xyzRuling)
+        xyRuleVector = np.array([np.cos(angle), np.sin(angle)])
+        bottomPoint = xAxisPoint - toBottom * xyRuleVector
+        topPoint = xAxisPoint + toTop * xyRuleVector
+        return bspy.Spline.line(bottomPoint, topPoint)
+    template = bspy.Spline.fit([[0.0, 1.0]], flatPattern)
+    assert np.linalg.norm(template(0.5, 0.5) - [0.5086638362955938, 0.02758673451648419]) < 1.0e-4
 
 def test_intersect():
 #  This test brings BSpy to its knees
