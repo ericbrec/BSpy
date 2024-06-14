@@ -85,11 +85,11 @@ def zeros_using_interval_newton(self):
                     myZeros = refine(trimmedSpline, intervalSize, functionMax)
                     if len(myZeros) == 0 and mySpline.order[0] == mySpline.nCoef[0] and \
                        mySpline.coefs[0][0] * mySpline.coefs[0][-1] < 0.0:
-                        return provisionalZero
+                        myZeros = provisionalZero
             else:
                if mySpline.order[0] == mySpline.nCoef[0] and \
                   mySpline.coefs[0][0] * mySpline.coefs[0][-1] < 0.0:
-                   return provisionalZero
+                   myZeros = provisionalZero
                else:
                    return []
         else:                           # . . . or split as needed
@@ -655,6 +655,23 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
     # Next, sort the edge and turning points by panel distance (d) and then by the determinant (det)
     # (3) Take all the points found in Step (1) and Step (2) and order them by distance in the theta direction from the origin.
     points.sort()
+
+    # Extra step not in paper.
+    # Remove duplicate points (typically appear at corners).
+    i = 0
+    while i < len(points):
+        previousPoint = points[i]
+        j = i + 1
+        while j < len(points):
+            point = points[j]
+            if point.d < previousPoint.d + epsilon:
+                if np.linalg.norm(point.uvw - previousPoint.uvw) < epsilon:
+                    del points[j]
+                else:
+                    j += 1
+            else:
+                break
+        i += 1
 
     # Extra step not in paper.
     # Run a checksum on the points, ensuring starting and ending points balance.

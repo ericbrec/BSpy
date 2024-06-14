@@ -348,6 +348,42 @@ class Spline(Manifold):
         return bspy._spline_intersection.complete_slice(self, slice, solid)
 
     @staticmethod
+    def composition(splines, tolerance = 1.0e-6):
+        """
+        Construct a spline approximation to a composition of splines sequence.
+
+        Parameters
+        ----------
+        splines : `array-like`
+            An array of splines.  The splines should have the property that the number
+            of independent variables of the ith spline should be the same as the number
+            of dependent variables of the (i+1)st spline.  The number of dependent
+            variables of the first spline is arbitrary, as is the number of independent
+            variables of the last one.  Moreover, the range of the ith spline should be
+            a subset of the domain of the (i-1)st spline.  The interpretation of the
+            sequence is s_0(s_1(... s_(n-1)(u)))).
+        
+        tolerance : `scalar`
+            The maximum 2-norm of the difference between the given function and the
+            spline fit.  Defaults to 1.0e-6.
+        
+        Returns
+        -------
+        spline : `Spline`
+            The spline which approximates the given composition.
+
+        Notes
+        -----
+        This currently defaults to a cubic spline.  Depending on user experience, this
+        may change in the future.
+
+        See also
+        --------
+        `fit` : Fit a given function to a specified tolerance.
+        """
+        return bspy._spline_fitting.composition(splines, tolerance)
+
+    @staticmethod
     def cone(radius1, radius2, height, tolerance = None):
         """
         Construct a cone of the two given radii and height.
@@ -412,6 +448,24 @@ class Spline(Manifold):
         become lines along the boundary.
         """
         return bspy._spline_operations.confine(self, range_bounds)
+
+    def continuity(self):
+        """
+        Return the smoothness of the spline in each of its independent variables.
+
+        Returns
+        -------
+        `smoothness` : `iterable`
+            An array of length nInd containing the number of times the function is continuously
+            in each of the independent variables of the input spline.
+
+        Notes
+        -----
+        The value -1 is returned if the spline is discontinuous in that variable.  The degree of the spline
+        is returned if the spline contains no interior knots even though the spline is an analytic function
+        of that variable.
+        """
+        return bspy._spline_evaluation.continuity(self)
 
     @staticmethod
     def contour(F, knownXValues, dF = None, epsilon = None, metadata = {}):
@@ -586,7 +640,7 @@ class Spline(Manifold):
 
     def curvature(self, uvw):
         """
-        Compute the curvature of a univariate spline.
+        Compute the curvature of a univariate or bivariate spline.
 
         Parameters
         ----------
@@ -596,7 +650,8 @@ class Spline(Manifold):
         Returns
         -------
         value : scalar
-            The value of the curvature at the given point on the curve.
+            The value of the curvature at the given point on the curve or surface.  If called on a surface,
+            the value will represent the Gaussian curvature of the surface at the given point.
         
         Notes
         -----
@@ -900,6 +955,46 @@ class Spline(Manifold):
         """
         return bspy._spline_domain.extrapolate(self, newDomain, continuityOrder)
 
+    @staticmethod
+    def fit(domain, f, order = None, knots = None, tolerance = 1.0e-4):
+        """
+        Fit the function f with a spline to a given tolerance.
+
+        Parameters
+        ----------
+        domain - `array-like`
+            An nInd x 2 array which specifies the rectangular domain (in nInd dimensions)
+            over which the function f is defined.  The approximating spline which is the
+            output will be defined over the same rectangular domain
+        
+        f : Python function
+            The function to approximate.  It is a vector-valued function of nDep
+            components in nInd variables.
+        
+        order : `array-like`
+            An optional integer array of length nInd which specifies the polynomial
+            order to use in each of the independent variables.  It will default to order
+            4 (degree 3) if None is specified (the default)
+        
+        knots : `array-like`
+            The initial knot sequence to use, if given
+        
+        tolerance : `scalar`
+            The maximum 2-norm of the difference between the given function and the
+            spline fit.  Defaults to 1.0e-4.
+        
+        Returns
+        -------
+        spline : `Spline`
+            A spline which approximates the given function to within the specified
+            tolerance.
+        
+        See Also
+        --------
+        `least_squares` : Fit a least squares approximation to given data.
+        """
+        return bspy._spline_fitting.fit(domain, f, order, knots, tolerance)
+    
     def flip_normal(self):
         """
         Flip the direction of the normal.
@@ -998,7 +1093,7 @@ class Spline(Manifold):
     @staticmethod
     def from_dict(dictionary):
         """
-        Create a `Spline` from a data in a `dict`.
+        Create a `Spline` from data in a `dict`.
 
         Parameters
         ----------
@@ -1133,48 +1228,46 @@ class Spline(Manifold):
         """
         return bspy._spline_domain.insert_knots(self, newKnots)
 
-    def integral(self, with_respect_to, uvw1, uvw2, returnSpline = False):
+    def integral(self, integrand = None, domain = None):
         """
-        Compute the derivative of the spline at given parameter values.
+        Compute the integral of a function composed with a spline.  In particular, compute the
+        nInd-dimensional integral over the specified domain of the quantity f(x_0, x_1, ..., x_{nDep - 1})dA,
+        where x_i is the (i+1)-th dependent variable, and dA is the multivariate measure of the spline mapping.
 
         Parameters
         ----------
-        with_respect_to : `iterable`
-            An iterable of length `nInd` that specifies the integer order of integral for each independent variable.
-            A zero-order integral just evaluates the spline normally.
+        integrand : Python function, optional
+            A Python function which takes an array-like object of length nDep as input and returns a
+            scalar.  If None is specified for integrand, then the function which returns a constant value
+            of one is used.  This computes the volume measure of the spline itself (arc length, surface area,
+            volume, etc.) depending on the dimensionality of the spline itself.
+    
+        domain : array-like
+            nInd x 2 array of the lower and upper limits of integration for the spline on each of the
+            independent variables.  If domain is None, then the actual domain of the spline is used.
         
-        uvw1 : `iterable`
-            An iterable of length `nInd` that specifies the lower limit of each independent variable (the parameter values).
-        
-        uvw2 : `iterable`
-            An iterable of length `nInd` that specifies the upper limit of each independent variable (the parameter values).
-
-        returnSpline : `boolean`, optional
-            A boolean flag that if true returns the integrated spline along with the value of its integral. Default is false.
- 
         Returns
         -------
-        value : `numpy.ndarray`
-            The value of the integral of the spline at the given parameter limits.
-
-        spline : `Spline`
-            The integrated spline, which is only returned if `returnSpline` is `True`.
-
+        integral_value : `float`
+            The computed value of the specified integral
+        
         See Also
         --------
-        `integrate` : Integrate a spline with respect to one of its independent variables, returning the resulting spline.
-        `evaluate` : Compute the value of the spline at a given parameter value.
-        `differentiate` : Differentiate a spline with respect to one of its independent variables, returning the resulting spline.
-        `derivative` : Compute the derivative of the spline at a given parameter value.
+        `integrate` : Integrate a spline with respect to one of its independent variables, returning
+                      the resulting spline.
 
         Notes
         -----
-        The integral method uses the integrate method to integrate the spline `with_respect_to` times for each independent variable.
-        Then the method returns that integrated spline's value at `uw2` minus its value at `uw1` (optionally along with the spline).
-        The method doesn't calculate the integral directly because the number of operations required is nearly the same as constructing
-        the integrated spline.
+        This function is very useful for computing mass properties of splines.  If the integrand function
+        returns one, then the volume measure of the spline itself is computed (arc length, surface area,
+        volume, etc.).  If the integrand function returns one of the dependent variable values, then the
+        integral will be the first moment of the spline with respect to that variable, making it possible
+        to compute centroids and center of mass.  The integrand function should be smooth, but is otherwise
+        unrestricted.
+
+        Attempts to compute the integral to two digits less than machine precision.
         """
-        return bspy._spline_evaluation.integral(self, with_respect_to, uvw1, uvw2, returnSpline)
+        return bspy._spline_evaluation.composed_integral(self, integrand, domain)
 
     def integrate(self, with_respect_to = 0):
         """
@@ -1183,7 +1276,7 @@ class Spline(Manifold):
         Parameters
         ----------
         with_respect_to : integer, optional
-            The number of the independent variable to integrate. Default is zero.
+            The index of the independent variable to integrate. Default is zero.
 
         Returns
         -------

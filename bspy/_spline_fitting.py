@@ -11,6 +11,16 @@ def circular_arc(radius, angle, tolerance = None):
     samples = int(max(np.ceil(((1.1536e-5 * radius / tolerance)**(1/8)) * angle / 90), 2.0)) + 1
     return bspy.Spline.section([(radius * np.cos(u * angle * np.pi / 180), radius * np.sin(u * angle * np.pi / 180), 90 + u * angle, 1.0 / radius) for u in np.linspace(0.0, 1.0, samples)])
 
+def composition(splines, tolerance):
+    # Define the callback function
+    def composition_of_splines(u):
+        for f in splines[::-1]:
+            u = f(u)
+        return u
+    
+    # Approximate this composition
+    return bspy.Spline.fit(splines[-1].domain(), composition_of_splines, tolerance = tolerance)
+
 def cone(radius1, radius2, height, tolerance = None):
     if tolerance is None:
         tolerance = 1.0e-12
@@ -303,6 +313,126 @@ def cylinder(radius, height, tolerance = None):
     top = bottom + [0.0, 0.0, height]
     return bspy.Spline.ruled_surface(bottom, top)
 
+def fit(domain, f, order = None, knots = None, tolerance = 1.0e-4):
+    # Determine number of independent variables
+    domain = np.array(domain)
+    nInd = len(domain)
+    midPoint = f(0.5 * (domain.T[0] + domain.T[1]))
+    if not type(midPoint) is bspy.Spline:
+        nDep = len(midPoint)
+
+    # Make sure order and knots conform to this
+    if order is None:
+        order = nInd * [4]
+    if len(order) != nInd:
+        raise ValueError("Inconsistent number of independent variables")
+
+    # Establish the initial knot sequence
+    if knots is None:
+        knots = np.array([order[iInd] * [domain[iInd, 0]] + order[iInd] * [domain[iInd, 1]] for iInd in range(nInd)])
+    
+    # Determine initial nCoef
+    nCoef = [len(knotVector) - iOrder for iOrder, knotVector in zip(order, knots)]
+
+    # Define function to insert midpoints
+    def addMidPoints(u):
+        newArray = np.empty([2, len(u)])
+        newArray[0] = u
+        newArray[1, :-1] = 0.5 * (u[1:] + u[:-1])
+        return newArray.T.flatten()[:-1]
+    
+    # Track the current spline space we're fitting in
+    currentSpace = bspy.Spline(nInd, 0, order, nCoef, knots, [])
+
+    # Generate the Greville points for these knots
+    uvw = [currentSpace.greville(iInd) for iInd in range(nInd)]
+
+    # Enrich the sample points
+    for iInd in range(nInd):
+        for iLevel in range(1):
+            uvw[iInd] = addMidPoints(uvw[iInd])
+
+    # Initialize the dictionary of function values
+
+    fDictionary = {}
+
+    # Keep looping until done
+    while True:
+
+        # Evaluate the function on this data set
+        fValues = []
+        indices = nInd * [0]
+        iLast = nInd
+        while iLast >= 0:
+            uValue = tuple([uvw[i][indices[i]] for i in range(nInd)])
+            if not uValue in fDictionary:
+                fDictionary[uValue] = f(uValue)
+            fValues.append(fDictionary[uValue])
+            iLast = nInd - 1
+            while iLast >= 0:
+                indices[iLast] += 1
+                if indices[iLast] < len(uvw[iLast]):
+                    break
+                indices[iLast] = 0
+                iLast -= 1
+
+        # Adjust the ordering
+        pointShape = [len(uvw[i]) for i in range(nInd)]
+        if type(midPoint) is bspy.Spline:
+            fValues = np.array(fValues).reshape(pointShape)
+        else:
+            fValues = np.array(fValues).reshape(pointShape + [nDep]).transpose([nInd] + list(range(nInd)))
+
+        # Call the least squares fitter on this data
+        bestSoFar = bspy.Spline.least_squares(uvw, fValues, order, currentSpace.knots, fixEnds = True)
+
+        # Determine the maximum error
+        maxError = 0.0
+        if type(midPoint) is bspy.Spline:
+            folded, basis  = bestSoFar.fold(tuple(range(nInd)))
+            for key in fDictionary:
+                sampled = bspy.Spline.point(folded(key)).unfold(tuple(range(midPoint.nInd)), basis).coefs
+                trueCoefs = fDictionary[key].coefs
+                thisError = np.max(np.linalg.norm(sampled - trueCoefs, axis = 0))
+                if thisError > maxError:
+                    maxError = thisError
+                    maxKey = key
+        else:
+            for key in fDictionary:
+                thisError = np.linalg.norm(fDictionary[key] - bestSoFar(key))
+                if thisError > maxError:
+                    maxError = thisError
+                    maxKey = key
+        if maxError <= tolerance:
+            break
+
+        # Split the interval and try again
+        maxGap = 0.0
+        for iInd in range(nInd):
+            insert = bspy.Spline.bspline_values(None, currentSpace.knots[iInd], order[iInd], maxKey[iInd])[0]
+            leftKnot = currentSpace.knots[iInd][insert - 1]
+            rightKnot = currentSpace.knots[iInd][insert]
+            if rightKnot - leftKnot > maxGap:
+                maxGap = rightKnot - leftKnot
+                iFirst = np.searchsorted(uvw[iInd], leftKnot, side = 'right')
+                iLast = np.searchsorted(uvw[iInd], rightKnot, side = 'right')
+                maxLeft = leftKnot
+                maxRight = rightKnot
+                maxInsert = insert
+                maxInd = iInd
+        splitAt = 0.5 * (maxLeft + maxRight)
+        newKnots = [[] for iInd in range(nInd)]
+        newKnots[maxInd] = [splitAt]
+        currentSpace = currentSpace.insert_knots(newKnots)
+
+        # Add samples for the new knot
+        uvw[maxInd] = np.array(list(uvw[maxInd][:iFirst - 1]) +
+                               list(addMidPoints(uvw[maxInd][iFirst - 1:iLast])) +
+                               list(uvw[maxInd][iLast:]))
+
+    # Return the best spline found so far
+    return bestSoFar
+
 def four_sided_patch(bottom, right, top, left, surfParam = 0.5):
     if bottom.nInd != 1 or right.nInd != 1 or top.nInd != 1 or left.nInd != 1:
         raise ValueError("Input curves must have one independent variable")
@@ -419,26 +549,51 @@ def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-6):
         suvv = surface.derivative([1, 2], u[:, 0])
         svvv = surface.derivative([0, 3], u[:, 0])
 
+        # Calculate inner products
+        su_su = su @ su
+        su_sv = su @ sv
+        sv_sv = sv @ sv
+        suu_su = suu @ su
+        suu_sv = suu @ sv
+        suv_su = suv @ su
+        suv_sv = suv @ sv
+        svv_su = svv @ su
+        svv_sv = svv @ sv
+        suu_suu = suu @ suu
+        suu_suv = suu @ suv
+        suu_svv = suu @ svv
+        suv_suv = suv @ suv
+        suv_svv = suv @ svv
+        svv_svv = svv @ svv
+        suuu_su = suuu @ su
+        suuu_sv = suuu @ sv
+        suuv_su = suuv @ su
+        suuv_sv = suuv @ sv
+        suvv_su = suvv @ su
+        suvv_sv = suvv @ sv
+        svvv_su = svvv @ su
+        svvv_sv = svvv @ sv
+
         # Calculate the first fundamental form and derivatives
-        E = su @ su
-        E_u = 2.0 * suu @ su
-        E_v = 2.0 * suv @ su
-        F = su @ sv
-        F_u = suu @ sv + suv @ su
-        F_v = suv @ sv + svv @ su
-        G = sv @ sv
-        G_u = 2.0 * suv @ sv
-        G_v = 2.0 * svv @ sv
+        E = su_su
+        E_u = 2.0 * suu_su
+        E_v = 2.0 * suv_su
+        F = su_sv
+        F_u = suu_sv + suv_su
+        F_v = suv_sv + svv_su
+        G = sv_sv
+        G_u = 2.0 * suv_sv
+        G_v = 2.0 * svv_sv
         A = np.array([[E, F], [F, G]])
         A_u = np.array([[E_u, F_u], [F_u, G_u]])
         A_v = np.array([[E_v, F_v], [F_v, G_v]])
 
         # Compute right hand side entries
-        R = np.array([[suu @ su, suv @ su, svv @ su], [suu @ sv, suv @ sv, svv @ sv]])
-        R_u = np.array([[suuu @ su + suu @ suu, suuv @ su + suv @ suu, suvv @ su + svv @ suu],
-                        [suuu @ sv + suu @ suv, suuv @ sv + suv @ suv, suvv @ sv + svv @ suv]])
-        R_v = np.array([[suuv @ su + suu @ suv, suvv @ su + suv @ suv, suvv @ su + svv @ suv],
-                        [suuv @ sv + suu @ svv, suvv @ sv + suv @ svv, svvv @ sv + svv @ svv]])
+        R = np.array([[suu_su, suv_su, svv_su], [suu_sv, suv_sv, svv_sv]])
+        R_u = np.array([[suuu_su + suu_suu, suuv_su + suu_suv, suvv_su + suu_svv],
+                        [suuu_sv + suu_suv, suuv_sv + suv_suv, suvv_sv + suv_svv]])
+        R_v = np.array([[suuv_su + suu_suv, suvv_su + suv_suv, svvv_su + suv_svv],
+                        [suuv_sv + suu_svv, suvv_sv + suv_svv, svvv_sv + svv_svv]])
 
         # Solve for the Christoffel symbols
         luAndPivot = sp.linalg.lu_factor(A)
