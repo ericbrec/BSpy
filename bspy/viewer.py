@@ -212,7 +212,7 @@ class Viewer(tk.Tk):
                 if isinstance(spline, Spline):
                     self.list(spline)
                 else:
-                    self.list_solid(spline)
+                    self.list(spline)
     
     def erase_all(self):
         """Stop drawing all splines. Splines remain in the treeview."""
