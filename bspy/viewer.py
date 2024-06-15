@@ -225,8 +225,7 @@ class Viewer(tk.Tk):
         """Remove splines from the treeview."""
         for item in self.treeview.selection():
             spline = self.splineList.pop(item)
-            self.splineDrawList.remove(spline)
-        self.treeview.delete(*self.treeview.selection())
+            self.treeview.delete(item)
         self.update()
 
     def empty(self):
