@@ -172,7 +172,7 @@ class Hyperplane(Manifold):
         -------
         point : `numpy.array`
         """
-        return np.dot(self._tangentSpace, domainPoint) + self._point
+        return np.dot(self._tangentSpace, np.atleast_1d(domainPoint)) + self._point
 
     def flip_normal(self):
         """
