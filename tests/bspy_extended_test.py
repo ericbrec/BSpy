@@ -653,6 +653,8 @@ def test_geodesic():
 def test_intersect():
 #  This test brings BSpy to its knees
 #
+#  On Tom's laptop, it runs for over 15.5 hours without computing the intersection
+#
 #    def myFunction(t):
 #        return 1.0 + 0.25 * np.cos(6.0 * np.pi * t)
 #    tValues = np.linspace(0.0, 1.0, 51)

@@ -388,21 +388,16 @@ def fit(domain, f, order = None, knots = None, tolerance = 1.0e-4):
 
         # Determine the maximum error
         maxError = 0.0
-        if type(midPoint) is bspy.Spline:
-            folded, basis  = bestSoFar.fold(tuple(range(nInd)))
-            for key in fDictionary:
-                sampled = bspy.Spline.point(folded(key)).unfold(tuple(range(midPoint.nInd)), basis).coefs
+        for key in fDictionary:
+            if type(midPoint) is bspy.Spline:
+                sampled = bestSoFar.contract(midPoint.nInd * [None] + list(key)).coefs
                 trueCoefs = fDictionary[key].coefs
                 thisError = np.max(np.linalg.norm(sampled - trueCoefs, axis = 0))
-                if thisError > maxError:
-                    maxError = thisError
-                    maxKey = key
-        else:
-            for key in fDictionary:
+            else:
                 thisError = np.linalg.norm(fDictionary[key] - bestSoFar(key))
-                if thisError > maxError:
-                    maxError = thisError
-                    maxKey = key
+            if thisError > maxError:
+                maxError = thisError
+                maxKey = key
         if maxError <= tolerance:
             break
 
