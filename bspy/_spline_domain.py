@@ -600,6 +600,7 @@ def trim(self, newDomain):
 
     # Step 1: Determine the knots to insert at the new domain bounds.
     newKnotsList = []
+    noChange = True
     for (order, knots, bounds) in zip(self.order, self.knots, newDomain):
         if not(len(bounds) == 2): raise ValueError("Invalid newDomain")
         unique, counts = np.unique(knots, return_counts=True)
@@ -613,9 +614,13 @@ def trim(self, newDomain):
             if unique[i] - bounds[0] < epsilon:
                 bounds[0] = unique[i]
                 multiplicity = order - counts[i]
+                if i > 0:
+                    noChange = False
             elif i > 0 and bounds[0] - unique[i - 1] < epsilon:
                 bounds[0] = unique[i - 1]
                 multiplicity = order - counts[i - 1]
+                if i - 1 > 0:
+                    noChange = False
             else:
                 multiplicity = order
         
@@ -629,19 +634,25 @@ def trim(self, newDomain):
             if unique[i] - bounds[1] < epsilon:
                 bounds[1] = unique[i]
                 multiplicity = order - counts[i]
+                if i < len(unique) - 1:
+                    noChange = False
             elif i > 0 and bounds[1] - unique[i - 1] < epsilon:
                 bounds[1] = unique[i - 1]
                 multiplicity = order - counts[i - i]
+                noChange = False # i < len(unique) - 1
             else:
                 multiplicity = order
             newKnots += multiplicity * [bounds[1]]
 
         newKnotsList.append(newKnots)
+        if len(newKnots) > 0:
+            noChange = False
+    
+    if noChange:
+        return self
     
     # Step 2: Insert the knots.
     spline = self.insert_knots(newKnotsList)
-    if spline is self:
-        return spline
 
     # Step 3: Trim the knots and coefficients.
     knotsList = []
