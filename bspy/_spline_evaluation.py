@@ -173,7 +173,7 @@ def greville(self, ind = 0):
         for ix in range(1, self.order[ind]):
             knotAverages = knotAverages + myKnots[ix : ix + self.nCoef[ind]]
         knotAverages /= (self.order[ind] - 1)
-    domain = self.domain()[0]
+    domain = self.domain()[ind]
     knotAverages = np.minimum(domain[1], np.maximum(domain[0], knotAverages))
     return knotAverages
 
