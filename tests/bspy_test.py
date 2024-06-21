@@ -778,6 +778,19 @@ def test_fit():
     for uValue in np.linspace(0.0, 1.0, 1001):
         assert np.linalg.norm(myFit(uValue) - test_func([uValue])) < 1.0e-4
 
+    # Eric's test case from a STEP file
+    nurb = bspy.Spline(1, 3, [3], [3],
+                       [[0.7639972120296223, 0.7639972120296223, 0.7639972120296223,
+                         2.020634273465543, 2.020634273465543, 2.020634273465543]],
+                       [[-37.18693781289299, -11.30140255402112, 22.393209809406958],
+                        [35.62838273203023, 62.64627453938775, 46.376655274306714],
+                        [1.0, 0.8090169943749465, 1.0]])
+    def evaluate_curve(uvw):
+        value = nurb(uvw)
+        return value[:-1] / value[-1]
+    unique, counts = np.unique(nurb.knots[0], return_counts=True)
+    curve = bspy.Spline.fit(nurb.domain(), evaluate_curve, (4,), (np.repeat(unique, counts + 1),))
+
     # Test the case with multiple dependent variables
     def test_func_2d(u):
         return [np.exp(u[0] ** 2), np.exp(1.0 - u[0] ** 2)]

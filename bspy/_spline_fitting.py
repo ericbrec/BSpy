@@ -349,6 +349,8 @@ def fit(domain, f, order = None, knots = None, tolerance = 1.0e-4):
 
     # Enrich the sample points
     for iInd in range(nInd):
+        uvw[iInd][0] = knots[iInd][order[iInd] - 1]
+        uvw[iInd][-1] = knots[iInd][nCoef[iInd]]
         for iLevel in range(1):
             uvw[iInd] = addMidPoints(uvw[iInd])
 
@@ -413,7 +415,6 @@ def fit(domain, f, order = None, knots = None, tolerance = 1.0e-4):
                 iLast = np.searchsorted(uvw[iInd], rightKnot, side = 'right')
                 maxLeft = leftKnot
                 maxRight = rightKnot
-                maxInsert = insert
                 maxInd = iInd
         splitAt = 0.5 * (maxLeft + maxRight)
         newKnots = [[] for iInd in range(nInd)]
