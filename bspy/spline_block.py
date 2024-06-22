@@ -8,7 +8,8 @@ import bspy._spline_operations
 
 class SplineBlock:
     """
-    A class to represent and process an array-like collection of splines.
+    A class to represent and process an array-like collection of splines. 
+    Spline blocks are useful for efficiently manipulating and solving systems of equations with splines.
 
     Parameters
     ----------
