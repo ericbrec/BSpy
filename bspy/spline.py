@@ -2287,9 +2287,11 @@ class Spline(Manifold):
 
         Returns
         -------
-        trimmedSpline, rangeBounds : `Spline`, `np.array`
-            A spline trimmed to the given domain bounds, and the range of the trimmed spline given as 
-            lower and upper bounds on each dependent variable.
+        trimmedSpline : `Spline`
+            A spline trimmed to the given domain bounds.
+        
+        rangeBounds : `np.array`
+            The range of the trimmed spline given as lower and upper bounds on each dependent variable.
 
         See Also
         --------
