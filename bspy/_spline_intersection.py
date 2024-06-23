@@ -490,6 +490,34 @@ def zeros_using_projected_polyhedron(self, epsilon=None, initialScale=None):
 
     return roots
 
+def _turning_point_determinant(self, uvw, cosTheta, sinTheta):
+    sign = -1 if hasattr(self, "metadata") and self.metadata.get("flipNormal", False) else 1
+    tangentSpace = self.jacobian(uvw).T
+    return cosTheta * sign * np.linalg.det(tangentSpace[[j for j in range(self.nInd) if j != 0]]) - \
+        sinTheta * sign * np.linalg.det(tangentSpace[[j for j in range(self.nInd) if j != 1]])
+
+def _turning_point_determinant_gradient(self, uvw, cosTheta, sinTheta):
+    dtype = self.coefs.dtype if hasattr(self, "coefs") else self.coefsDtype
+    gradient = np.zeros(self.nInd, dtype)
+
+    sign = -1 if hasattr(self, "metadata") and self.metadata.get("flipNormal", False) else 1
+    tangentSpace = self.jacobian(uvw).T
+    dTangentSpace = tangentSpace.copy()
+
+    wrt = [0] * self.nInd
+    for i in range(self.nInd):
+        wrt[i] = 1
+        for j in range(self.nInd):
+            wrt[j] = 1 if i != j else 2
+            dTangentSpace[j, :] = self.derivative(wrt, uvw) # tangentSpace and dTangentSpace are the transpose of the jacobian
+            gradient[i] += cosTheta * sign * np.linalg.det(dTangentSpace[[k for k in range(self.nInd) if k != 0]]) - \
+                sinTheta * sign * np.linalg.det(dTangentSpace[[k for k in range(self.nInd) if k != 1]])
+            dTangentSpace[j, :] = tangentSpace[j, :] # tangentSpace and dTangentSpace are the transpose of the jacobian
+            wrt[j] = 0 if i != j else 1
+        wrt[i] = 0
+    
+    return gradient
+
 def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
     Point = namedtuple('Point', ('d', 'det', 'onUVBoundary', 'turningPoint', 'uvw'))
 
@@ -538,8 +566,8 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
                     break
                 uvw = np.insert(np.array(zero), nInd, boundary)
                 d = uvw[0] * cosTheta + uvw[1] * sinTheta
-                n = normal(uvw)
-                tpd = turningPointDeterminant(uvw)
+                n = self.normal(uvw, False, (0, 1))
+                tpd = _turning_point_determinant(self, uvw, cosTheta, sinTheta)
                 det = (0.5 - boundary) * n[nInd] * tpd
                 if abs(det) < epsilon:
                     abort = True
@@ -611,13 +639,7 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
                 abort = True
                 break
             d = uvw[0] * cosTheta + uvw[1] * sinTheta 
-            n = self.normal(uvw, False) # Computing all indices of the normal this time
-            wrt = [0] * self.nInd
-            det = 0.0
-            for nInd in range(self.nInd):
-                wrt[nInd] = 1
-                det += turningPointDeterminant.derivative(wrt, uvw) * n[nInd]
-                wrt[nInd] = 0
+            det = np.dot(self.normal(uvw, False), _turning_point_determinant_gradient(self, uvw, cosTheta, sinTheta))
             if abs(det) < epsilon:
                 abort = True
                 break
