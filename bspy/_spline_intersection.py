@@ -631,9 +631,48 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
             continue # Try a different theta
 
         # Find turning points by combining self and turningPointDeterminant into a system and processing its zeros.
-        turningPointBlock = self.block.copy()
-        turningPointBlock.append([turningPointDeterminant])
-        zeros = bspy.spline_block.SplineBlock(turningPointBlock).zeros(epsilon, np.append(initialScale, 1.0))
+        if False:
+            # Add the turning point determinant constraint to the system.
+            turningPointBlock = self.block.copy()
+            turningPointBlock.append([turningPointDeterminant])
+            turningPointInitialScale = np.append(initialScale, 1.0)
+        else:
+            # Add the null space constraint to the system.
+            # dot(self's gradient, (r * sinTheta, -r * cosTheta, c, d, ...) = 0.
+            otherSpline = bspy.Spline(1, 1, (2,), (2,), ((-1.0, -1.0, 1.0, 1.0),), ((-1.0, 1.0),))
+            rSpline = bspy.Spline(1, 1, (2,), (2,), ((0.0, 0.0, 1.0, 1.0),), ((0.0, 1.0),))
+            turningPointBlock = self.block.copy()
+            for row in self.block:
+                newRow = []
+                nInd = 0
+                for spline in row:
+                    # Start with a nDep dimensional zero spline.
+                    newSpline = bspy.Spline(0, spline.nDep, [], [], [], [0.0] * spline.nDep)
+                    # Add each portion of dot(self's gradient, (r * sinTheta, -r * cosTheta, c, d, ...). 
+                    for i in range(spline.nInd):
+                        dSpline = spline.differentiate(i)
+                        if nInd == 0:
+                            newSpline = newSpline + dSpline.multiply(sinTheta * rSpline)
+                        elif nInd == 1:
+                            newSpline = newSpline + dSpline.multiply(-cosTheta * rSpline)
+                        else:
+                            newSpline = newSpline + dSpline.multiple(otherSpline)
+                        nInd += 1
+                    newRow.append(newSpline)
+                turningPointBlock.append(newRow)
+
+            # Add unit vector constrain to the system.
+            # r^2 + c^2 + d^2 + ... = 1
+            otherSquared = bspy.Spline(1, 1, (3,), (3,), ((-1.0, -1.0, -1.0, 1.0, 1.0, 1.0),), ((1.0, -1.0, 1.0),))
+            rSquaredMinus1 = bspy.Spline(1, 1, (3,), (3,), ((0.0, 0.0, 0.0, 1.0, 1.0, 1.0),), ((-1.0, -1.0, 0.0),))
+            newRow = [rSquaredMinus1]
+            for i in range(self.nInd - 2):
+                newRow.append(otherSquared)
+            turningPointBlock.append(newRow)
+            turningPointInitialScale = np.append(initialScale, (1.0,) * (self.nDep + 1))
+        
+        zeros = bspy.spline_block.SplineBlock(turningPointBlock).zeros(epsilon, turningPointInitialScale)
+        print(zeros)
         for uvw in zeros:
             if isinstance(uvw, tuple):
                 abort = True
