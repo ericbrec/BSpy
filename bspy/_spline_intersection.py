@@ -338,10 +338,20 @@ def _refine_projected_polyhedron(interval):
 
     # Contract spline matrix as needed.
     if newDomain.shape[1] < domain.shape[1]:
+        # First, remap the independent variables.
+        remap = []
+        newIndex = 0
+        for value in uvw:
+            if value is not None:
+                remap.append(newIndex)
+                newIndex += 1
+            else:
+                remap.append(None)
+        # Next, rebuild the block with contracted splines.
         for row in interval.block:
             for i, (map, spline) in enumerate(row):
                 spline = spline.contract([uvw[index] for index in map])
-                map = [ind for ind in map if uvw[ind] is not None]
+                map = [remap[ind] for ind in map if uvw[ind] is not None]
                 row[i] = (map, spline)
 
     # Special case optimization: Use interval newton for one-dimensional splines.
@@ -530,13 +540,12 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
     self = self.reparametrize(((0.0, 1.0),) * self.nInd)
 
     # Rescale self in all dimensions.
-    nDep = 0
     initialScale = np.max(np.abs(bounds), axis=1)
     rescale = np.reciprocal(initialScale)
+    nDep = 0
     for row in self.block:
-        nInd = 0
-        for spline in row:
-            for coefs, scale in zip(spline.coefs, rescale):
+        for map, spline in row:
+            for coefs, scale in zip(spline.coefs, rescale[nDep:nDep + spline.nDep]):
                 coefs *= scale
         nDep += spline.nDep
     
@@ -628,43 +637,57 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
             continue # Try a different theta
 
         # Find turning points by combining self and turningPointDeterminant into a system and processing its zeros.
-        if False:
+        if True:
             # Add the turning point determinant constraint to the system.
             turningPointBlock = self.block.copy()
-            turningPointBlock.append([turningPointDeterminant])
+            turningPointBlock.append([(list(range(turningPointDeterminant.nInd)), turningPointDeterminant)])
             turningPointInitialScale = np.append(initialScale, 1.0)
         else:
-            # Add the null space constraint to the system.
-            # dot(self's gradient, (r * sinTheta, -r * cosTheta, c, d, ...) = 0.
-            otherSpline = bspy.Spline(1, 1, (2,), (2,), ((-1.0, -1.0, 1.0, 1.0),), ((-1.0, 1.0),))
-            rSpline = bspy.Spline(1, 1, (2,), (2,), ((0.0, 0.0, 1.0, 1.0),), ((0.0, 1.0),))
+            # Add the null space constraint to the system: dot(self's gradient, (r * sinTheta, -r * cosTheta, c, d, ...) = 0.
+            # This introduces self.nInd - 1 new independent variables: r, c, d, ...
             turningPointBlock = self.block.copy()
+            rSpline = bspy.Spline(1, 1, (2,), (2,), ((0.0, 0.0, 1.0, 1.0),), ((0.0, 1.0),))
+            otherSpline = bspy.Spline(1, 1, (2,), (2,), ((-1.0, -1.0, 1.0, 1.0),), ((-1.0, 1.0),))
+            # Track indices of other independent variables (c, d, ...).
+            otherNInd = self.nInd + 1 # Add one since r is always the first new variable (index for r is self.nInd)
+            otherDictionary = {}
+            # Go through each row building the null space constraint.
             for row in self.block:
                 newRow = []
-                nInd = 0
-                for spline in row:
-                    # Start with a nDep dimensional zero spline.
+                for map, spline in row:
+                    # Start with a nDep dimensional zero spline and current spline map.
                     newSpline = bspy.Spline(0, spline.nDep, [], [], [], [0.0] * spline.nDep)
-                    # Add each portion of dot(self's gradient, (r * sinTheta, -r * cosTheta, c, d, ...). 
+                    newMap = map.copy()
+                    # Add each portion of spline's contribution to dot(self's gradient, (r * sinTheta, -r * cosTheta, c, d, ...). 
                     for i in range(spline.nInd):
                         dSpline = spline.differentiate(i)
+                        nInd = map[i]
                         if nInd == 0:
                             newSpline = newSpline + dSpline.multiply(sinTheta * rSpline)
+                            if self.nInd not in newMap:
+                                newMap.append(self.nInd)
                         elif nInd == 1:
                             newSpline = newSpline + dSpline.multiply(-cosTheta * rSpline)
+                            if self.nInd not in newMap:
+                                newMap.append(self.nInd)
                         else:
                             newSpline = newSpline + dSpline.multiple(otherSpline)
-                        nInd += 1
-                    newRow.append(newSpline)
+                            if nInd not in otherDictionary:
+                                otherDictionary[nInd] = otherNInd
+                                otherNInd += 1
+                            newMap.append(otherDictionary[nInd])
+
+                    newRow.append((newMap, newSpline))
                 turningPointBlock.append(newRow)
 
             # Add unit vector constrain to the system.
             # r^2 + c^2 + d^2 + ... = 1
-            otherSquared = bspy.Spline(1, 1, (3,), (3,), ((-1.0, -1.0, -1.0, 1.0, 1.0, 1.0),), ((1.0, -1.0, 1.0),))
             rSquaredMinus1 = bspy.Spline(1, 1, (3,), (3,), ((0.0, 0.0, 0.0, 1.0, 1.0, 1.0),), ((-1.0, -1.0, 0.0),))
-            newRow = [rSquaredMinus1]
-            for i in range(self.nInd - 2):
-                newRow.append(otherSquared)
+            otherSquared = bspy.Spline(1, 1, (3,), (3,), ((-1.0, -1.0, -1.0, 1.0, 1.0, 1.0),), ((1.0, -1.0, 1.0),))
+            newRow = [((self.nInd,), rSquaredMinus1)]
+            assert otherNInd == 2 * self.nInd - 1
+            for nInd in range(self.nInd + 1, otherNInd):
+                newRow.append(((otherDictionary[nInd],), otherSquared))
             turningPointBlock.append(newRow)
             turningPointInitialScale = np.append(initialScale, (1.0,) * (self.nDep + 1))
         
@@ -943,7 +966,7 @@ def contours(self):
     # Split the splines in the block to ensure C1 continuity within each block
     blocks = [self]
     for i, row in enumerate(self.block):
-        for j, spline in enumerate(row):
+        for j, (map, spline) in enumerate(row):
             splines = spline.split(minContinuity = 1)
             if splines.size == 1 and self.size == 1:
                 break # Special case of a block with one C1 spline 
@@ -953,7 +976,7 @@ def contours(self):
                     newBlock = block.block.copy()
                     newRow = newBlock[i].copy()
                     newBlock[i] = newRow
-                    newRow[j] = spline
+                    newRow[j] = (map, spline)
                     newBlocks.append(bspy.spline_block.SplineBlock(newBlock))
             blocks = newBlocks
 

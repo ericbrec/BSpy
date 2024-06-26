@@ -147,7 +147,26 @@ class SplineBlock:
         block : `SplineBlock`
             The contracted spline block.
         """
-        return self._block_operation(bspy._spline_operations.contract, (uvw,))
+        # First, remap the independent variables.
+        remap = []
+        newIndex = 0
+        for value in uvw:
+            if value is not None:
+                remap.append(newIndex)
+                newIndex += 1
+            else:
+                remap.append(None)
+
+        # Next, rebuild the block with contracted splines.
+        newBlock = []
+        for row in self.block:
+            newRow = []
+            for map, spline in row:
+                spline = spline.contract([uvw[index] for index in map])
+                map = [remap[ind] for ind in map if uvw[ind] is not None]
+                newRow.append((map, spline))
+            newBlock.append(newRow)
+        return SplineBlock(newBlock)
 
     def derivative(self, with_respect_to, uvw):
         """
