@@ -69,6 +69,7 @@ class SplineBlock:
                     map = list(range(rowInd, rowInd + spline.nInd))
                 else:
                     (map, spline) = entry
+                    map = list(map) # Convert to list and make a copy
                 rowInd += spline.nInd
                 if rowDep == 0:
                     rowDep = spline.nDep
