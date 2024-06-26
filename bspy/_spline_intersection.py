@@ -640,7 +640,7 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
         if True:
             # Add the turning point determinant constraint to the system.
             turningPointBlock = self.block.copy()
-            turningPointBlock.append([(list(range(turningPointDeterminant.nInd)), turningPointDeterminant)])
+            turningPointBlock.append([turningPointDeterminant])
             turningPointInitialScale = np.append(initialScale, 1.0)
         else:
             # Add the null space constraint to the system: dot(self's gradient, (r * sinTheta, -r * cosTheta, c, d, ...) = 0.

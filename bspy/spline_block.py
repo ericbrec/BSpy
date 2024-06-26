@@ -58,11 +58,11 @@ class SplineBlock:
         self.coefsDtype = None
         self.size = 0
         domain = {}
-        newRow = []
         for row in block:
             rowInd = 0
             rowDep = 0
             indSet = set()
+            newRow = []
             for entry in row:
                 if isinstance(entry, bspy.spline.Spline):
                     spline = entry
