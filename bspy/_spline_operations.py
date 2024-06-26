@@ -643,21 +643,20 @@ def normal_spline(self, indices=None):
         knots = None
         counts = None
         maxOrder = 0
-        startInd = 0
-        endInd = 0
+        maxMap = []
         # First, collect the order, knots, and number of relevant columns for this independent variable.
         for row in self.block:
-            rowInd = 0
-            for spline in row:
-                if rowInd <= nInd < rowInd + spline.nInd:
-                    ind = nInd - rowInd
+            for map, spline in row:
+                if nInd in map:
+                    ind = map.index(nInd)
                     order = spline.order[ind]
                     k, c = np.unique(spline.knots[ind][order-1:spline.nCoef[ind]+1], return_counts=True)
                     if knots:
                         if maxOrder < order:
                             counts += order - maxOrder
                             maxOrder = order
-                        endInd = max(endInd, rowInd + spline.nInd)
+                        if len(maxMap) < len(map):
+                            maxMap = map
                         for knot, count in zip(k[1:-1], c[1:-1]):
                             ix = np.searchsorted(knots, knot)
                             if knots[ix] == knot:
@@ -669,12 +668,9 @@ def normal_spline(self, indices=None):
                         knots = k
                         counts = c
                         maxOrder = order
-                        startInd = rowInd
-                        endInd = rowInd + spline.nInd
-                    
+                        maxMap = map
+                  
                     break
-
-                rowInd += spline.nInd
 
         # Next, calculate the order of the normal for this independent variable.
         # Note that the total order will be one less than usual, because one of 
@@ -682,17 +678,17 @@ def normal_spline(self, indices=None):
         if self.nInd < self.nDep:
             # If this normal involves all tangents, simply add the degree of each,
             # so long as that tangent contains the independent variable.
-            order = (maxOrder - 1) * (endInd - startInd)
+            order = (maxOrder - 1) * len(maxMap)
         else:
             # If this normal doesn't involve all tangents, find the max order of
             # each returned combination (as defined by the indices).
             order = 0
-            for index in range(startInd, endInd) if indices is None else indices:
+            for index in maxMap if indices is None else indices:
                 # The order will be one larger if this independent variable's tangent is excluded by the index.
                 ord = 0 if index != nInd else 1
                 # Add the degree of each tangent, so long as that tangent contains the 
                 # independent variable and is not excluded by the index.  
-                for ind in range(startInd, endInd):
+                for ind in maxMap:
                     ord += maxOrder - 1 if index != ind else 0
                 order = max(order, ord)
         

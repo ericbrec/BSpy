@@ -216,14 +216,12 @@ def _create_interval(domain, block, unknowns, scale, slope, intercept, epsilon):
     newBlock = []
     for row in block:
         newRow = []
-        nInd = 0
         keepDep = []
         # Trim and reparametrize splines, and sum bounds.
-        for spline in row:
-            spline = spline.trim(domain[nInd:nInd + spline.nInd]).reparametrize(((0.0, 1.0),) * spline.nInd)
+        for map, spline in row:
+            spline = spline.trim(domain[map]).reparametrize(((0.0, 1.0),) * spline.nInd)
             bounds[nDep:nDep + spline.nDep] += spline.range_bounds()
-            nInd += spline.nInd
-            newRow.append(spline)
+            newRow.append((map, spline))
 
         # Check row bounds for potential roots.
         for dep in range(spline.nDep):
@@ -238,7 +236,7 @@ def _create_interval(domain, block, unknowns, scale, slope, intercept, epsilon):
                 newScale[nDep] = max(-coefsMin, coefsMax)
                 # Rescale spline coefficients to max 1.0.
                 rescale = 1.0 / max(-bounds[nDep, 0], bounds[nDep, 1])
-                for spline in newRow:
+                for map, spline in newRow:
                     spline.coefs[dep] *= rescale
                 bounds[nDep] *= rescale
                 nDep += 1
@@ -249,7 +247,7 @@ def _create_interval(domain, block, unknowns, scale, slope, intercept, epsilon):
         
         if keepDep:
             # Remove dependent variables that are zero over the domain
-            for spline in newRow:
+            for map, spline in newRow:
                 spline.nDep = len(keepDep)
                 spline.coefs = spline.coefs[keepDep]
 
@@ -273,17 +271,16 @@ def _refine_projected_polyhedron(interval):
         xInterval = (0.0, 1.0)
         nDep = 0
         for row in interval.block:
-            rowInd = 0
             order = 0
-            for spline in row:
-                if rowInd <= nInd < rowInd + spline.nInd:
-                    order = spline.order[nInd - rowInd]
-                    nCoef = spline.nCoef[nInd - rowInd]
-                    knots = spline.knots[nInd - rowInd]
+            for map, spline in row:
+                if nInd in map:
+                    ind = map.index(nInd)
+                    order = spline.order[ind]
+                    nCoef = spline.nCoef[ind]
+                    knots = spline.knots[ind]
                     # Move independent variable to the last (fastest) axis, adding 1 to account for the dependent variables.
-                    coefs = np.moveaxis(spline.coefs, nInd - rowInd + 1, -1)
+                    coefs = np.moveaxis(spline.coefs, ind + 1, -1)
                     break
-                rowInd += spline.nInd
             
             # Skip this row if it doesn't contains this independent variable.
             if order < 1:
@@ -342,14 +339,14 @@ def _refine_projected_polyhedron(interval):
     # Contract spline matrix as needed.
     if newDomain.shape[1] < domain.shape[1]:
         for row in interval.block:
-            rowInd = 0
-            for i, spline in enumerate(row):
-                row[i] = spline.contract(uvw[rowInd:rowInd + spline.nInd])
-                rowInd += spline.nInd
+            for i, (map, spline) in enumerate(row):
+                spline = spline.contract([uvw[index] for index in map])
+                map = [ind for ind in map if uvw[ind] is not None]
+                row[i] = (map, spline)
 
     # Special case optimization: Use interval newton for one-dimensional splines.
     if nInd == 1 and nDep == 1 and len(interval.block[0]) == 1:
-        spline = interval.block[0][0]
+        spline = interval.block[0][0][1]
         i = newUnknowns[0]
         for root in zeros_using_interval_newton(spline):
             if not isinstance(root, tuple):
