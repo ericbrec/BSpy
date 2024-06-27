@@ -672,7 +672,7 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
                             if self.nInd not in newMap:
                                 newMap.append(self.nInd)
                         else:
-                            newSpline = newSpline + dSpline.multiple(otherSpline)
+                            newSpline = newSpline + dSpline.multiply(otherSpline)
                             if nInd not in otherDictionary:
                                 otherDictionary[nInd] = otherNInd
                                 otherNInd += 1
@@ -688,7 +688,7 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
             newRow = [((self.nInd,), rSquaredMinus1)]
             assert otherNInd == 2 * self.nInd - 1
             for nInd in range(self.nInd + 1, otherNInd):
-                newRow.append(((otherDictionary[nInd],), otherSquared))
+                newRow.append(((nInd,), otherSquared))
             turningPointBlock.append(newRow)
             turningPointInitialScale = np.append(initialScale, (1.0,) * (self.nDep + 1))
         
@@ -698,6 +698,7 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
             if isinstance(uvw, tuple):
                 abort = True
                 break
+            uvw = uvw[:self.nInd] # Remove any new independent variables added by the turning point system
             d = uvw[0] * cosTheta + uvw[1] * sinTheta 
             det = np.dot(self.normal(uvw, False), _turning_point_determinant_gradient(self, uvw, cosTheta, sinTheta))
             if abs(det) < epsilon:
