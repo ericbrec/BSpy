@@ -284,6 +284,7 @@ def _refine_projected_polyhedron(interval):
             
             # Skip this row if it doesn't contains this independent variable.
             if order < 1:
+                nDep += spline.nDep # Assumes there is at least one spline per block row
                 continue
 
             # Compute the coefficients for f(x) = x for the independent variable and its knots.
@@ -338,11 +339,11 @@ def _refine_projected_polyhedron(interval):
 
     # Contract spline matrix as needed.
     if newDomain.shape[1] < domain.shape[1]:
-        # First, remap the independent variables.
+        # First, remap the remaining independent variables (the ones not fixed by uvw).
         remap = []
         newIndex = 0
         for value in uvw:
-            if value is not None:
+            if value is None:
                 remap.append(newIndex)
                 newIndex += 1
             else:
@@ -351,7 +352,7 @@ def _refine_projected_polyhedron(interval):
         for row in interval.block:
             for i, (map, spline) in enumerate(row):
                 spline = spline.contract([uvw[index] for index in map])
-                map = [remap[ind] for ind in map if uvw[ind] is not None]
+                map = [remap[ind] for ind in map if uvw[ind] is None]
                 row[i] = (map, spline)
 
     # Special case optimization: Use interval newton for one-dimensional splines.
@@ -637,7 +638,7 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
             continue # Try a different theta
 
         # Find turning points by combining self and turningPointDeterminant into a system and processing its zeros.
-        if True:
+        if False:
             # Add the turning point determinant constraint to the system.
             turningPointBlock = self.block.copy()
             turningPointBlock.append([turningPointDeterminant])
