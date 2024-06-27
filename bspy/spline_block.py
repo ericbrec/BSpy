@@ -148,11 +148,11 @@ class SplineBlock:
         block : `SplineBlock`
             The contracted spline block.
         """
-        # First, remap the independent variables.
+        # First, remap the remaining independent variables (the ones not fixed by uvw).
         remap = []
         newIndex = 0
         for value in uvw:
-            if value is not None:
+            if value is None:
                 remap.append(newIndex)
                 newIndex += 1
             else:
@@ -164,7 +164,7 @@ class SplineBlock:
             newRow = []
             for map, spline in row:
                 spline = spline.contract([uvw[index] for index in map])
-                map = [remap[ind] for ind in map if uvw[ind] is not None]
+                map = [remap[ind] for ind in map if uvw[ind] is None]
                 newRow.append((map, spline))
             newBlock.append(newRow)
         return SplineBlock(newBlock)
