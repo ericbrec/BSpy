@@ -656,27 +656,34 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
             for row in self.block:
                 newRow = []
                 for map, spline in row:
-                    # Start with a nDep dimensional zero spline and current spline map.
-                    newSpline = bspy.Spline(0, spline.nDep, [], [], [], [0.0] * spline.nDep)
-                    newMap = map.copy()
-                    # Add each portion of spline's contribution to dot(self's gradient, (r * sinTheta, -r * cosTheta, c, d, ...). 
+                    newSpline = None # The spline's portion of the null space constraint starts with None
+                    newMap = map.copy() # The map for spline's contribution to the null space constraint starts with its existing map
+                    # Create addition indMap with existing independent variables for use in summing the dot product.
+                    indMapForAdd = [(index, index) for index in range(spline.nInd)]
+                    rIndex = None # Index of r in newSpline, which we need to track since rSpline may be added twice
+
+                    # Add each term of spline's contribution to dot(self's gradient, (r * sinTheta, -r * cosTheta, c, d, ...). 
                     for i in range(spline.nInd):
                         dSpline = spline.differentiate(i)
                         nInd = map[i]
-                        if nInd == 0:
-                            newSpline = newSpline + dSpline.multiply(sinTheta * rSpline)
-                            if self.nInd not in newMap:
+                        if nInd < 2:
+                            factor = sinTheta if nInd == 0 else -cosTheta
+                            term = dSpline.multiply(factor * rSpline)
+                            if rIndex is None:
+                                # Adding rSpline for the first time, so add r to newMap and track its index.
                                 newMap.append(self.nInd)
-                        elif nInd == 1:
-                            newSpline = newSpline + dSpline.multiply(-cosTheta * rSpline)
-                            if self.nInd not in newMap:
-                                newMap.append(self.nInd)
+                                newSpline = term if newSpline is None else newSpline.add(term, indMapForAdd)
+                                rIndex = newSpline.nInd - 1
+                            else:
+                                # The same rSpline is being added again, so enhance the indMapForAdd to associate the two rSplines.
+                                newSpline = newSpline.add(term, indMapForAdd + [(rIndex, term.nInd - 1)])
                         else:
-                            newSpline = newSpline + dSpline.multiply(otherSpline)
                             if nInd not in otherDictionary:
                                 otherDictionary[nInd] = otherNInd
                                 otherNInd += 1
                             newMap.append(otherDictionary[nInd])
+                            term = dSpline.multiply(otherSpline)
+                            newSpline = term if newSpline is None else newSpline.add(term, indMapForAdd)
 
                     newRow.append((newMap, newSpline))
                 turningPointBlock.append(newRow)

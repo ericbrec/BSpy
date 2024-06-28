@@ -24,22 +24,25 @@ def add(self, other, indMap = None):
             otherToSelf[map[1]] = map[0]
 
     # Construct new spline parameters.
-    # We index backwards because we're adding transposed coefficients (see below). 
     nInd = self.nInd
     order = [*self.order]
     nCoef = [*self.nCoef]
     knots = list(self.knots)
+    for i in range(other.nInd):
+        if i not in otherMapped:
+            order.append(other.order[i])
+            nCoef.append(other.nCoef[i])
+            knots.append(other.knots[i])
+            nInd += 1
+
+    # Construct permutation of coefs, indexing permutation backwards because we're adding transposed coefficients (see below).
     permutation = [] # Used to transpose coefs to match other.coefs.T.
     for i in range(self.nInd - 1, -1, -1):
         if i not in selfMapped:
             permutation.append(i + 1) # Add 1 to account for dependent variables.
     for i in range(other.nInd - 1, -1, -1):
         if i not in otherMapped:
-            order.append(other.order[other.nInd - 1 - i])
-            nCoef.append(other.nCoef[other.nInd - 1 - i])
-            knots.append(other.knots[other.nInd - 1 - i])
             permutation.append(self.nInd + i + 1) # Add 1 to account for dependent variables.
-            nInd += 1
         else:
             permutation.append(otherToSelf[i] + 1) # Add 1 to account for dependent variables.
     permutation.append(0) # Account for dependent variables.
