@@ -23,14 +23,16 @@ class SplineBlock:
         and max nInd is 4).
     """
 
+    @staticmethod
+    def _map_args(map, args):
+        return [arg[map] if isinstance(arg, np.ndarray) else [arg[index] for index in map] for arg in args]
+    
     def _block_evaluation(self, returnShape, splineFunction, args):
         value = np.zeros(returnShape, self.coefsDtype)
         nDep = 0
         for row in self.block:
-            nInd = 0
-            for spline in row:
-                value[nDep:nDep + spline.nDep] += splineFunction(spline, *[arg[nInd:nInd + spline.nInd] for arg in args])
-                nInd += spline.nInd
+            for map, spline in row:
+                value[nDep:nDep + spline.nDep] += splineFunction(spline, *SplineBlock._map_args(map, args))
             nDep += spline.nDep
         return value
     
@@ -38,49 +40,69 @@ class SplineBlock:
         newBlock = []
         for row in self.block:
             newRow = []
-            nInd = 0
-            for spline in row:
-                newRow.append(splineFunction(spline, *[arg[nInd:nInd + spline.nInd] for arg in args]))
-                nInd += spline.nInd
+            for map, spline in row:
+                newRow.append((map, splineFunction(spline, *SplineBlock._map_args(map, args))))
             newBlock.append(newRow)
         return SplineBlock(newBlock)
     
     def __init__(self, block):
         if isinstance(block, bspy.spline.Spline):
-            self.block = [[block]]
-        elif isinstance(block[0], bspy.spline.Spline):
-            self.block = [block]
-        else:
-            self.block = block
+            block = [[block]]
+        elif isinstance(block[0], bspy.spline.Spline) or (len(block) > 1 and isinstance(block[1], bspy.spline.Spline)):
+            block = [block]
+
+        self.block = []
         self.nInd = 0
         self.nDep = 0
         self.knotsDtype = None
         self.coefsDtype = None
         self.size = 0
-        self._domain = []
-        for row in self.block:
+        domain = {}
+        for row in block:
             rowInd = 0
             rowDep = 0
-            for spline in row:
+            indSet = set()
+            newRow = []
+            for entry in row:
+                if isinstance(entry, bspy.spline.Spline):
+                    spline = entry
+                    map = list(range(rowInd, rowInd + spline.nInd))
+                else:
+                    (map, spline) = entry
+                    map = list(map) # Convert to list and make a copy
+                rowInd += spline.nInd
                 if rowDep == 0:
                     rowDep = spline.nDep
-                    if self.nInd == 0:
+                    if self.nDep == 0:
                         self.knotsDtype = spline.knots[0].dtype
                         self.coefsDtype = spline.coefs.dtype
                 elif rowDep != spline.nDep:
                     raise ValueError("All splines in the same row must have the same nDep")
                 d = spline.domain()
-                for i in range(rowInd, rowInd + spline.nInd):
-                    ind = i - rowInd
-                    if i < self.nInd:
-                        if self._domain[i][0] != d[ind, 0] or self._domain[i][1] != d[ind, 1]:
+                for ind, i in enumerate(map):
+                    if i in indSet:
+                        raise ValueError(f"Multiple splines in the same row map to independent variable {i}")
+                    else:
+                        indSet.add(i)
+                    if i in domain:
+                        if domain[i][0] != d[ind, 0] or domain[i][1] != d[ind, 1]:
                             raise ValueError("Domains of independent variables must match")
                     else:
-                        self._domain.append(d[ind])
-                rowInd += spline.nInd
-            self.nInd = max(self.nInd, rowInd)
-            self.nDep += rowDep
-            self.size += len(row)
+                        domain[i] = d[ind]
+                newRow.append((map, spline))
+            
+            if rowDep > 0:
+                self.nDep += rowDep
+                self.size += len(row)
+                self.block.append(newRow)
+
+        self.nInd = len(domain)
+        self._domain = []
+        for i in range(self.nInd):
+            if i in domain:
+                self._domain.append(domain[i])
+            else:
+                raise ValueError(f"Block is missing independent variable {i}")
         self._domain = np.array(self._domain, self.knotsDtype)
 
     def __call__(self, uvw):
@@ -126,7 +148,26 @@ class SplineBlock:
         block : `SplineBlock`
             The contracted spline block.
         """
-        return self._block_operation(bspy._spline_operations.contract, (uvw,))
+        # First, remap the remaining independent variables (the ones not fixed by uvw).
+        remap = []
+        newIndex = 0
+        for value in uvw:
+            if value is None:
+                remap.append(newIndex)
+                newIndex += 1
+            else:
+                remap.append(None)
+
+        # Next, rebuild the block with contracted splines.
+        newBlock = []
+        for row in self.block:
+            newRow = []
+            for map, spline in row:
+                spline = spline.contract([uvw[index] for index in map])
+                map = [remap[ind] for ind in map if uvw[ind] is None]
+                newRow.append((map, spline))
+            newBlock.append(newRow)
+        return SplineBlock(newBlock)
 
     def derivative(self, with_respect_to, uvw):
         """
@@ -190,12 +231,11 @@ class SplineBlock:
             The value of the spline block's Jacobian at the given parameter values. The shape of the return value is (nDep, nInd).
         """
         jacobian = np.zeros((self.nDep, self.nInd), self.coefsDtype)
+        uvw = np.atleast_1d(uvw)
         nDep = 0
         for row in self.block:
-            nInd = 0
-            for spline in row:
-                jacobian[nDep:nDep + spline.nDep, nInd:nInd + spline.nInd] += spline.jacobian(uvw[nInd:nInd + spline.nInd])
-                nInd += spline.nInd
+            for map, spline in row:
+                jacobian[nDep:nDep + spline.nDep, map] += spline.jacobian(uvw[map])
             nDep += spline.nDep
         return jacobian
 

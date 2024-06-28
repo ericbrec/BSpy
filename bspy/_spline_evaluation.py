@@ -236,8 +236,8 @@ def normal(self, uvw, normalize=True, indices=None):
         normal = np.empty(nDep, dtype)
     else:
         normal = np.empty(len(indices), dtype)
-    for i in indices:
-        normal[i] = sign * ((-1) ** i) * np.linalg.det(tangentSpace[[j for j in range(nDep) if i != j]])
+    for ix, i in enumerate(indices):
+        normal[ix] = sign * ((-1) ** i) * np.linalg.det(tangentSpace[[j for j in range(nDep) if i != j]])
     
     # Normalize the result as needed.
     if normalize:
