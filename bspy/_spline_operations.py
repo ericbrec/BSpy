@@ -13,14 +13,12 @@ def _shiftPolynomial(polynomial, delta):
 
 def add(self, other, indMap = None):
     if not(self.nDep == other.nDep): raise ValueError("self and other must have same nDep")
-    selfMapped = []
-    otherMapped = []
+    selfMapped = set()
     otherToSelf = {}
     if indMap is not None:
         (self, other) = bspy.Spline.common_basis((self, other), indMap)
         for map in indMap:
-            selfMapped.append(map[0])
-            otherMapped.append(map[1])
+            selfMapped.add(map[0])
             otherToSelf[map[1]] = map[0]
 
     # Construct new spline parameters.
@@ -29,34 +27,41 @@ def add(self, other, indMap = None):
     nCoef = [*self.nCoef]
     knots = list(self.knots)
     for i in range(other.nInd):
-        if i not in otherMapped:
+        if i not in otherToSelf:
             order.append(other.order[i])
             nCoef.append(other.nCoef[i])
             knots.append(other.knots[i])
             nInd += 1
 
-    # Construct permutation of coefs, indexing permutation backwards because we're adding transposed coefficients (see below).
-    permutation = [] # Used to transpose coefs to match other.coefs.T.
-    for i in range(self.nInd - 1, -1, -1):
-        if i not in selfMapped:
-            permutation.append(i + 1) # Add 1 to account for dependent variables.
-    for i in range(other.nInd - 1, -1, -1):
-        if i not in otherMapped:
-            permutation.append(self.nInd + i + 1) # Add 1 to account for dependent variables.
-        else:
-            permutation.append(otherToSelf[i] + 1) # Add 1 to account for dependent variables.
-    permutation.append(0) # Account for dependent variables.
-    permutation = np.array(permutation)
+    # Build coefs array.
     coefs = np.zeros((self.nDep, *nCoef), self.coefs.dtype)
 
-    # Build coefs array by transposing the changing coefficients to the end, including the dependent variables.
-    # First, add in self.coefs.
+    # Add in self.coefs (you need to transpose coefs for the addition to work properly).
     coefs = coefs.T
     coefs += self.coefs.T
-    # Permutation for other.coefs.T accounts for coefs being transposed by subtracting permutation from ndim - 1.
-    coefs = coefs.transpose((coefs.ndim - 1) - permutation)
-    # Add in other.coefs. 
+    coefs = coefs.T
+
+    # Construct permutation of coefs to transpose coefs to match other.coefs.
+    otherUnmappedCount = 0
+    permutation = [0] # Account for dependent variables
+    for i in range(other.nInd):
+        if i in otherToSelf:
+            permutation.append(otherToSelf[i] + 1) # Add 1 to account for dependent variables.
+        else:
+            permutation.append(self.nInd + otherUnmappedCount + 1) # Add 1 to account for dependent variables.
+            otherUnmappedCount += 1
+    for i in range(self.nInd):
+        if i not in selfMapped:
+            permutation.append(i + 1) # Add 1 to account for dependent variables.
+
+    # Permute coefs to match other.coefs
+    coefs = coefs.transpose(permutation)
+
+    # Add in other.coefs (you need to transpose coefs for the addition to work properly).
+    coefs = coefs.T
     coefs += other.coefs.T
+    coefs = coefs.T
+
     # Reverse the permutation.
     coefs = coefs.transpose(np.argsort(permutation)) 
     
