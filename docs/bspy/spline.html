@@ -76,10 +76,16 @@
                                 <a class="function" href="#Spline.complete_slice">complete_slice</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.composition">composition</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.cone">cone</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.confine">confine</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.continuity">continuity</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.contour">contour</a>
@@ -131,6 +137,9 @@
                         </li>
                         <li>
                                 <a class="function" href="#Spline.extrapolate">extrapolate</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.fit">fit</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.flip_normal">flip_normal</a>
@@ -236,6 +245,9 @@
                         </li>
                         <li>
                                 <a class="function" href="#Spline.sphere">sphere</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.split">split</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.subtract">subtract</a>
@@ -682,6 +694,54 @@ nInd of 1 or 2.</p>
 
 
                             </div>
+                            <div id="Spline.composition" class="classattr">
+                                <div class="attr function">
+                    <div class="decorator">@staticmethod</div>
+
+        <span class="def">def</span>
+        <span class="name">composition</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">splines</span>, </span><span class="param"><span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-06</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.composition"></a>
+    
+            <div class="docstring"><p>Construct a spline approximation to a composition of splines sequence.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>splines</strong> (<code>array-like</code>):
+An array of splines.  The splines should have the property that the number
+of independent variables of the ith spline should be the same as the number
+of dependent variables of the (i+1)st spline.  The number of dependent
+variables of the first spline is arbitrary, as is the number of independent
+variables of the last one.  Moreover, the range of the ith spline should be
+a subset of the domain of the (i-1)st spline.  The interpretation of the
+sequence is s_0(s_1(... s_(n-1)(u)))).</li>
+<li><strong>tolerance</strong> (<code>scalar</code>):
+The maximum 2-norm of the difference between the given function and the
+spline fit.  Defaults to 1.0e-6.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+The spline which approximates the given composition.</li>
+</ul>
+
+<h6 id="notes">Notes</h6>
+
+<p>This currently defaults to a cubic spline.  Depending on user experience, this
+may change in the future.</p>
+
+<h6 id="see-also">See also</h6>
+
+<p><code><a href="#Spline.fit">fit</a></code> : Fit a given function to a specified tolerance.</p>
+</div>
+
+
+                            </div>
                             <div id="Spline.cone" class="classattr">
                                 <div class="attr function">
                     <div class="decorator">@staticmethod</div>
@@ -771,6 +831,35 @@ become lines along the boundary.</p>
 
 
                             </div>
+                            <div id="Spline.continuity" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">continuity</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.continuity"></a>
+    
+            <div class="docstring"><p>Return the smoothness of the spline in each of its independent variables.</p>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong><code>smoothness</code></strong> (<code>iterable</code>):
+An array of length nInd containing the number of times the function is continuously
+in each of the independent variables of the input spline.</li>
+</ul>
+
+<h6 id="notes">Notes</h6>
+
+<p>The value -1 is returned if the spline is discontinuous in that variable.  The degree of the spline
+is returned if the spline contains no interior knots even though the spline is an analytic function
+of that variable.</p>
+</div>
+
+
+                            </div>
                             <div id="Spline.contour" class="classattr">
                                 <div class="attr function">
                     <div class="decorator">@staticmethod</div>
@@ -789,19 +878,20 @@ returned in the form of a spline.</p>
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>F</strong> (function or <code><a href="#Spline">Spline</a></code>):
-A function or spline that takes an array-like argument of length <code>n</code> and returns an 
+<li><strong>F</strong> (function, <code><a href="#Spline">Spline</a></code>, or <code>SplineBlock</code>):
+A function, spline, or spline block that takes an array-like argument of length <code>n</code> and returns an 
 array-like result of length <code>n - 1</code>.</li>
 <li><strong>knownXValues</strong> (<code>iterable</code> of array-like):
 An <code>iterable</code> of known x values (array-like) that lie on the desired contour. 
 The length of <code>knownXValues</code> must be at least 2 (for the two boundary conditions). 
 All x values must be length <code>n</code> and be listed in the order they appear on the contour. <br />
 <code>F(x)</code> for all known x values must be a zero vector of length <code>n-1</code>.</li>
-<li><strong>dF</strong> (<code>iterable</code> or <code>None</code>, optional):
-An <code>iterable</code> of the <code>n</code> functions representing the <code>n</code> first derivatives of <code>F</code>. 
+<li><strong>dF</strong> (function, <code>iterable</code>, or <code>None</code>, optional):
+A function that returns the Jacobian of F as an array with shape (n - 1, n). 
+Can also be an <code>iterable</code> of <code>n</code> functions that return the <code>n</code> first derivatives of <code>F</code>. 
 If <code>dF</code> is <code>None</code> (the default), the first derivatives will be computed for you. 
-If <code>F</code> is not a spline, computing the first derivatives involves multiple calls to <code>F</code> 
-and can be numerically unstable.</li>
+If <code>F</code> is not a spline or spline block, computing the first derivatives involves 
+multiple calls to <code>F</code> and can be numerically unstable.</li>
 <li><strong>epsilon</strong> (<code>float</code>, optional):
 Tolerance for contour precision. Evaluating <code>F</code> with contour values will be within epsilon 
 of zero. The default is square root of machine epsilon.</li>
@@ -825,7 +915,7 @@ The spline contour, <code>x(t)</code>, with nInd == 1 and nDep == n.</li>
 <h6 id="notes">Notes</h6>
 
 <p>The returned spline has constant parametric speed (the length of its derivative is constant). 
-If <code>F</code> is a <code><a href="#Spline">Spline</a></code>, then the range of the returned contour is confined to the domain of <code>F</code>. 
+If <code>F</code> is a <code><a href="#Spline">Spline</a></code> or a <code>SplineBlock</code>, then the range of the returned contour is confined to the domain of <code>F</code>. 
 Implements the algorithm described in section 7 of Grandine, Thomas A. 
 "Applications of contouring." Siam Review 42, no. 2 (2000): 297-316.</p>
 </div>
@@ -1017,7 +1107,7 @@ The crossed spline: self x vector.</li>
     </div>
     <a class="headerlink" href="#Spline.curvature"></a>
     
-            <div class="docstring"><p>Compute the curvature of a univariate spline.</p>
+            <div class="docstring"><p>Compute the curvature of a univariate or bivariate spline.</p>
 
 <h6 id="parameters">Parameters</h6>
 
@@ -1030,7 +1120,8 @@ An iterable of length <code><a href="#Spline.nInd">nInd</a></code> that specifie
 
 <ul>
 <li><strong>value</strong> (scalar):
-The value of the curvature at the given point on the curve.</li>
+The value of the curvature at the given point on the curve or surface.  If called on a surface,
+the value will represent the Gaussian curvature of the surface at the given point.</li>
 </ul>
 
 <h6 id="notes">Notes</h6>
@@ -1427,6 +1518,54 @@ Extrapolated spline. If all the knots are unchanged, the original spline is retu
 
 
                             </div>
+                            <div id="Spline.fit" class="classattr">
+                                <div class="attr function">
+                    <div class="decorator">@staticmethod</div>
+
+        <span class="def">def</span>
+        <span class="name">fit</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">domain</span>, </span><span class="param"><span class="n">f</span>, </span><span class="param"><span class="n">order</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">knots</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">tolerance</span><span class="o">=</span><span class="mf">0.0001</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.fit"></a>
+    
+            <div class="docstring"><p>Fit the function f with a spline to a given tolerance.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>domain - <code>array-like</code></strong>: An nInd x 2 array which specifies the rectangular domain (in nInd dimensions)
+over which the function f is defined.  The approximating spline which is the
+output will be defined over the same rectangular domain</li>
+<li><strong>f</strong> (Python function):
+The function to approximate.  It is a vector-valued function of nDep
+components in nInd variables.</li>
+<li><strong>order</strong> (<code>array-like</code>):
+An optional integer array of length nInd which specifies the polynomial
+order to use in each of the independent variables.  It will default to order
+4 (degree 3) if None is specified (the default)</li>
+<li><strong>knots</strong> (<code>array-like</code>):
+The initial knot sequence to use, if given</li>
+<li><strong>tolerance</strong> (<code>scalar</code>):
+The maximum 2-norm of the difference between the given function and the
+spline fit.  Defaults to 1.0e-4.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+A spline which approximates the given function to within the specified
+tolerance.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.least_squares">least_squares</a></code>:  Fit a least squares approximation to given data.  </p>
+</div>
+
+
+                            </div>
                             <div id="Spline.flip_normal" class="classattr">
                                 <div class="attr function">
             
@@ -1564,7 +1703,7 @@ parametrization of the curves may also get reversed in order to best match endpo
     </div>
     <a class="headerlink" href="#Spline.from_dict"></a>
     
-            <div class="docstring"><p>Create a <code><a href="#Spline">Spline</a></code> from a data in a <code>dict</code>.</p>
+            <div class="docstring"><p>Create a <code><a href="#Spline">Spline</a></code> from data in a <code>dict</code>.</p>
 
 <h6 id="parameters">Parameters</h6>
 
@@ -1766,50 +1905,51 @@ A spline with the new knots inserted. If no knots were inserted, the original sp
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">integral</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">with_respect_to</span>, </span><span class="param"><span class="n">uvw1</span>, </span><span class="param"><span class="n">uvw2</span>, </span><span class="param"><span class="n">returnSpline</span><span class="o">=</span><span class="kc">False</span></span><span class="return-annotation">):</span></span>
+        <span class="name">integral</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">integrand</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">domain</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
     <a class="headerlink" href="#Spline.integral"></a>
     
-            <div class="docstring"><p>Compute the derivative of the spline at given parameter values.</p>
+            <div class="docstring"><p>Compute the integral of a function composed with a spline.  In particular, compute the
+nInd-dimensional integral over the specified domain of the quantity f(x_0, x_1, ..., x_{nDep - 1})dA,
+where x_i is the (i+1)-th dependent variable, and dA is the multivariate measure of the spline mapping.</p>
 
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>with_respect_to</strong> (<code>iterable</code>):
-An iterable of length <code><a href="#Spline.nInd">nInd</a></code> that specifies the integer order of integral for each independent variable.
-A zero-order integral just evaluates the spline normally.</li>
-<li><strong>uvw1</strong> (<code>iterable</code>):
-An iterable of length <code><a href="#Spline.nInd">nInd</a></code> that specifies the lower limit of each independent variable (the parameter values).</li>
-<li><strong>uvw2</strong> (<code>iterable</code>):
-An iterable of length <code><a href="#Spline.nInd">nInd</a></code> that specifies the upper limit of each independent variable (the parameter values).</li>
-<li><strong>returnSpline</strong> (<code>boolean</code>, optional):
-A boolean flag that if true returns the integrated spline along with the value of its integral. Default is false.</li>
+<li><strong>integrand</strong> (Python function, optional):
+A Python function which takes an array-like object of length nDep as input and returns a
+scalar.  If None is specified for integrand, then the function which returns a constant value
+of one is used.  This computes the volume measure of the spline itself (arc length, surface area,
+volume, etc.) depending on the dimensionality of the spline itself.</li>
+<li><strong>domain</strong> (array-like):
+nInd x 2 array of the lower and upper limits of integration for the spline on each of the
+independent variables.  If domain is None, then the actual domain of the spline is used.</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
 
 <ul>
-<li><strong>value</strong> (<code>numpy.ndarray</code>):
-The value of the integral of the spline at the given parameter limits.</li>
-<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
-The integrated spline, which is only returned if <code>returnSpline</code> is <code>True</code>.</li>
+<li><strong>integral_value</strong> (<code>float</code>):
+The computed value of the specified integral</li>
 </ul>
 
 <h6 id="see-also">See Also</h6>
 
-<p><code><a href="#Spline.integrate">integrate</a></code>:  Integrate a spline with respect to one of its independent variables, returning the resulting spline. <br />
-<code><a href="#Spline.evaluate">evaluate</a></code>:  Compute the value of the spline at a given parameter value. <br />
-<code><a href="#Spline.differentiate">differentiate</a></code>:  Differentiate a spline with respect to one of its independent variables, returning the resulting spline. <br />
-<code><a href="#Spline.derivative">derivative</a></code>:  Compute the derivative of the spline at a given parameter value.  </p>
+<p><code><a href="#Spline.integrate">integrate</a></code>:  Integrate a spline with respect to one of its independent variables, returning
+the resulting spline.  </p>
 
 <h6 id="notes">Notes</h6>
 
-<p>The integral method uses the integrate method to integrate the spline <code>with_respect_to</code> times for each independent variable.
-Then the method returns that integrated spline's value at <code>uw2</code> minus its value at <code>uw1</code> (optionally along with the spline).
-The method doesn't calculate the integral directly because the number of operations required is nearly the same as constructing
-the integrated spline.</p>
+<p>This function is very useful for computing mass properties of splines.  If the integrand function
+returns one, then the volume measure of the spline itself is computed (arc length, surface area,
+volume, etc.).  If the integrand function returns one of the dependent variable values, then the
+integral will be the first moment of the spline with respect to that variable, making it possible
+to compute centroids and center of mass.  The integrand function should be smooth, but is otherwise
+unrestricted.</p>
+
+<p>Attempts to compute the integral to two digits less than machine precision.</p>
 </div>
 
 
@@ -1830,7 +1970,7 @@ the integrated spline.</p>
 
 <ul>
 <li><strong>with_respect_to</strong> (integer, optional):
-The number of the independent variable to integrate. Default is zero.</li>
+The index of the independent variable to integrate. Default is zero.</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -2846,6 +2986,43 @@ a given tolerance. <br />
 
 
                             </div>
+                            <div id="Spline.split" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">split</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">minContinuity</span><span class="o">=</span><span class="mi">0</span>, </span><span class="param"><span class="n">breaks</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.split"></a>
+    
+            <div class="docstring"><p>Split a spline into separate spline pieces.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>minContinuity</strong> (<code>int</code>, optional):
+The minimum expected continuity of each spline piece. The default is zero, for C0 continuity.</li>
+<li><strong>breaks</strong> (<code>iterable</code> of length <code><a href="#Spline.nInd">nInd</a></code> or <code>None</code>, optional):
+An iterable that specifies the breaks at which to separate the spline. 
+len(breaks[ind]) == 0 if there the spline isn't separated for the <code>ind</code> independent variable. 
+If breaks is <code>None</code> (the default), the spline will only be separated at discontinuities.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>splineArray</strong> (array of <code><a href="#Spline">Spline</a></code>):
+A array of splines with nInd dimensions containing the spline pieces.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.join">join</a></code>:  Join a list of splines together into a single spline.  </p>
+</div>
+
+
+                            </div>
                             <div id="Spline.subtract" class="classattr">
                                 <div class="attr function">
             
@@ -2905,7 +3082,7 @@ The result of subtracting other from self.</li>
     </div>
     <a class="headerlink" href="#Spline.tangent_space"></a>
     
-            <div class="docstring"><p>Return the tangent space of the spline.</p>
+            <div class="docstring"><p>Return the tangent space of the spline. (Same as Jacobian.)</p>
 
 <h6 id="parameters">Parameters</h6>
 
@@ -3172,9 +3349,10 @@ An array with shape (nInd, 2) of lower and upper and lower bounds on each indepe
 <h6 id="returns">Returns</h6>
 
 <ul>
-<li><strong>trimmedSpline, rangeBounds</strong> (<code><a href="#Spline">Spline</a></code>, <code>np.array</code>):
-A spline trimmed to the given domain bounds, and the range of the trimmed spline given as 
-lower and upper bounds on each dependent variable.</li>
+<li><strong>trimmedSpline</strong> (<code><a href="#Spline">Spline</a></code>):
+A spline trimmed to the given domain bounds.</li>
+<li><strong>rangeBounds</strong> (<code>np.array</code>):
+The range of the trimmed spline given as lower and upper bounds on each dependent variable.</li>
 </ul>
 
 <h6 id="see-also">See Also</h6>
@@ -3239,7 +3417,7 @@ so long as unfold unscrambles things in the corresponding way.  The second splin
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">zeros</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">epsilon</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+        <span class="name">zeros</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">epsilon</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">initialScale</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -3253,6 +3431,9 @@ so long as unfold unscrambles things in the corresponding way.  The second splin
 <li><strong>epsilon</strong> (<code>float</code>, optional):
 Tolerance for root precision. The root will be within epsilon of the actual root. 
 The default is the machine epsilon.</li>
+<li><strong>initialScale</strong> (array-like, optional):
+The initial scale of each dependent variable (as opposed to the current scale of 
+the spline, which may have been normalized). The default is an array of ones (size nDep).</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -3267,7 +3448,7 @@ For curves (nInd == 1), the roots are ordered.</li>
 <h6 id="see-also">See Also</h6>
 
 <p><code><a href="#Spline.intersect">intersect</a></code>:  Intersect two splines. <br />
-<code><a href="#Spline.contour">contour</a></code>:  Fit a spline to the contour defined by <code>F(x) = 0</code>.  </p>
+<code><a href="#Spline.contours">contours</a></code>:  Find all the contour curves of a spline whose <code><a href="#Spline.nInd">nInd</a></code> is one larger than its <code><a href="#Spline.nDep">nDep</a></code>.  </p>
 
 <h6 id="notes">Notes</h6>
 

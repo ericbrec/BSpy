@@ -79,7 +79,7 @@ class Spline(Manifold):
 
     def __repr__(self):
         return f"Spline({self.nInd}, {self.nDep}, {self.order}, " + \
-               f"{self.nCoef}, {self.knots} {self.coefs}, {self.metadata})"
+               f"{self.nCoef}, {self.knots}, {self.coefs}, {self.metadata})"
 
     def __add__(self, other):
         if isinstance(other, Spline):
@@ -2290,9 +2290,11 @@ class Spline(Manifold):
 
         Returns
         -------
-        trimmedSpline, rangeBounds : `Spline`, `np.array`
-            A spline trimmed to the given domain bounds, and the range of the trimmed spline given as 
-            lower and upper bounds on each dependent variable.
+        trimmedSpline : `Spline`
+            A spline trimmed to the given domain bounds.
+        
+        rangeBounds : `np.array`
+            The range of the trimmed spline given as lower and upper bounds on each dependent variable.
 
         See Also
         --------
