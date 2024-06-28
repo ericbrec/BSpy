@@ -549,9 +549,6 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
             for coefs, scale in zip(spline.coefs, rescale[nDep:nDep + spline.nDep]):
                 coefs *= scale
         nDep += spline.nDep
-    
-    # Construct self's normal.
-    normal = self.normal_spline((0, 1)) # We only need the first two indices
 
     # Try arbitrary values for theta between [0, pi/2] that are unlikely to be a stationary points.
     for theta in (1.0 / np.sqrt(2), np.pi / 6.0, 1.0/ np.e):
@@ -559,9 +556,6 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
         cosTheta = np.cos(theta)
         sinTheta = np.sin(theta)
         abort = False
-
-        # Construct the turning point determinant.
-        turningPointDeterminant = normal.dot((cosTheta, sinTheta))
 
         # Find intersections with u and v boundaries.
         def uvIntersections(nInd, boundary):
@@ -638,69 +632,64 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
             continue # Try a different theta
 
         # Find turning points by combining self and turningPointDeterminant into a system and processing its zeros.
-        if False:
-            # Add the turning point determinant constraint to the system.
-            turningPointBlock = self.block.copy()
-            turningPointBlock.append([turningPointDeterminant])
-            turningPointInitialScale = np.append(initialScale, 1.0)
-        else:
-            # Add the null space constraint to the system: dot(self's gradient, (r * sinTheta, -r * cosTheta, c, d, ...) = 0.
-            # This introduces self.nInd - 1 new independent variables: r, c, d, ...
-            turningPointBlock = self.block.copy()
-            rSpline = bspy.Spline(1, 1, (2,), (2,), ((0.0, 0.0, 1.0, 1.0),), ((0.0, 1.0),))
-            otherSpline = bspy.Spline(1, 1, (2,), (2,), ((-1.0, -1.0, 1.0, 1.0),), ((-1.0, 1.0),))
-            # Track indices of other independent variables (c, d, ...).
-            otherNInd = self.nInd + 1 # Add one since r is always the first new variable (index for r is self.nInd)
-            otherDictionary = {}
-            # Go through each row building the null space constraint.
-            for row in self.block:
-                newRow = []
-                for map, spline in row:
-                    newSpline = None # The spline's portion of the null space constraint starts with None
-                    newMap = map.copy() # The map for spline's contribution to the null space constraint starts with its existing map
-                    # Create addition indMap with existing independent variables for use in summing the dot product.
-                    indMapForAdd = [(index, index) for index in range(spline.nInd)]
-                    rIndex = None # Index of r in newSpline, which we need to track since rSpline may be added twice
 
-                    # Add each term of spline's contribution to dot(self's gradient, (r * sinTheta, -r * cosTheta, c, d, ...). 
-                    for i in range(spline.nInd):
-                        dSpline = spline.differentiate(i)
-                        nInd = map[i]
-                        if nInd < 2:
-                            factor = sinTheta if nInd == 0 else -cosTheta
-                            term = dSpline.multiply(factor * rSpline)
-                            if rIndex is None:
-                                # Adding rSpline for the first time, so add r to newMap and track its index.
-                                newMap.append(self.nInd)
-                                newSpline = term if newSpline is None else newSpline.add(term, indMapForAdd)
-                                rIndex = newSpline.nInd - 1
-                            else:
-                                # The same rSpline is being added again, so enhance the indMapForAdd to associate the two rSplines.
-                                newSpline = newSpline.add(term, indMapForAdd + [(rIndex, term.nInd - 1)])
-                        else:
-                            if nInd not in otherDictionary:
-                                otherDictionary[nInd] = otherNInd
-                                otherNInd += 1
-                            newMap.append(otherDictionary[nInd])
-                            term = dSpline.multiply(otherSpline)
+        # First, add the null space constraint to the system: dot(self's gradient, (r * sinTheta, -r * cosTheta, c, d, ...) = 0.
+        # This introduces self.nInd - 1 new independent variables: r, c, d, ...
+        turningPointBlock = self.block.copy()
+        rSpline = bspy.Spline(1, 1, (2,), (2,), ((0.0, 0.0, 1.0, 1.0),), ((0.0, 1.0),))
+        otherSpline = bspy.Spline(1, 1, (2,), (2,), ((-1.0, -1.0, 1.0, 1.0),), ((-1.0, 1.0),))
+        # Track indices of other independent variables (c, d, ...).
+        otherNInd = self.nInd + 1 # Add one since r is always the first new variable (index for r is self.nInd)
+        otherDictionary = {}
+        # Go through each row building the null space constraint.
+        for row in self.block:
+            newRow = []
+            for map, spline in row:
+                newSpline = None # The spline's portion of the null space constraint starts with None
+                newMap = map.copy() # The map for spline's contribution to the null space constraint starts with its existing map
+                # Create addition indMap with existing independent variables for use in summing the dot product.
+                indMapForAdd = [(index, index) for index in range(spline.nInd)]
+                rIndex = None # Index of r in newSpline, which we need to track since rSpline may be added twice
+
+                # Add each term of spline's contribution to dot(self's gradient, (r * sinTheta, -r * cosTheta, c, d, ...). 
+                for i in range(spline.nInd):
+                    dSpline = spline.differentiate(i)
+                    nInd = map[i]
+                    if nInd < 2:
+                        factor = sinTheta if nInd == 0 else -cosTheta
+                        term = dSpline.multiply(factor * rSpline)
+                        if rIndex is None:
+                            # Adding rSpline for the first time, so add r to newMap and track its index.
+                            newMap.append(self.nInd)
                             newSpline = term if newSpline is None else newSpline.add(term, indMapForAdd)
+                            rIndex = newSpline.nInd - 1
+                        else:
+                            # The same rSpline is being added again, so enhance the indMapForAdd to associate the two rSplines.
+                            newSpline = newSpline.add(term, indMapForAdd + [(rIndex, term.nInd - 1)])
+                    else:
+                        if nInd not in otherDictionary:
+                            otherDictionary[nInd] = otherNInd
+                            otherNInd += 1
+                        newMap.append(otherDictionary[nInd])
+                        term = dSpline.multiply(otherSpline)
+                        newSpline = term if newSpline is None else newSpline.add(term, indMapForAdd)
 
-                    newRow.append((newMap, newSpline))
-                turningPointBlock.append(newRow)
-
-            # Add unit vector constrain to the system.
-            # r^2 + c^2 + d^2 + ... = 1
-            rSquaredMinus1 = bspy.Spline(1, 1, (3,), (3,), ((0.0, 0.0, 0.0, 1.0, 1.0, 1.0),), ((-1.0, -1.0, 0.0),))
-            otherSquared = bspy.Spline(1, 1, (3,), (3,), ((-1.0, -1.0, -1.0, 1.0, 1.0, 1.0),), ((1.0, -1.0, 1.0),))
-            newRow = [((self.nInd,), rSquaredMinus1)]
-            assert otherNInd == 2 * self.nInd - 1
-            for nInd in range(self.nInd + 1, otherNInd):
-                newRow.append(((nInd,), otherSquared))
+                newRow.append((newMap, newSpline))
             turningPointBlock.append(newRow)
-            turningPointInitialScale = np.append(initialScale, (1.0,) * (self.nDep + 1))
+
+        # Second, add unit vector constrain to the system.
+        # r^2 + c^2 + d^2 + ... = 1
+        rSquaredMinus1 = bspy.Spline(1, 1, (3,), (3,), ((0.0, 0.0, 0.0, 1.0, 1.0, 1.0),), ((-1.0, -1.0, 0.0),))
+        otherSquared = bspy.Spline(1, 1, (3,), (3,), ((-1.0, -1.0, -1.0, 1.0, 1.0, 1.0),), ((1.0, -1.0, 1.0),))
+        newRow = [((self.nInd,), rSquaredMinus1)]
+        assert otherNInd == 2 * self.nInd - 1
+        for nInd in range(self.nInd + 1, otherNInd):
+            newRow.append(((nInd,), otherSquared))
+        turningPointBlock.append(newRow)
+        turningPointInitialScale = np.append(initialScale, (1.0,) * (self.nDep + 1))
         
+        # Finally, find the zeros of the system (only the first self.nInd values are of interest).
         zeros = bspy.spline_block.SplineBlock(turningPointBlock).zeros(epsilon, turningPointInitialScale)
-        print(zeros)
         for uvw in zeros:
             if isinstance(uvw, tuple):
                 abort = True
