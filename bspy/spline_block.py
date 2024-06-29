@@ -8,19 +8,25 @@ import bspy._spline_operations
 
 class SplineBlock:
     """
-    A class to represent and process an array-like collection of splines. 
-    Spline blocks are useful for efficiently manipulating and solving systems of equations with splines.
+    A class to process an array-like collection of splines that represent a system of equations. 
 
     Parameters
     ----------
-    block : an array-like collection of splines (may be a list of lists)
-        Splines in the same row are treated as if they are added together. 
+    block : an array-like collection of rows of splines (a list of lists)
+        The block of splines represents a system of equations. Splines in the same row are treated as if they are added together. 
         Each row need not have the same number of splines, but all splines in a row must have the same 
         number of dependent variables (same nDep). Corresponding independent variables must have the same domain.
 
-        For example, if F is a spline with nInd = 3 and nDep = 2, G is a spline with nInd = 1 and nDep = 2, 
-        and h is a spline with nInd = 2 and nDep = 1, then [[F, G], [h]] is a valid block (total nDep is 3 
-        and max nInd is 4).
+        For example, say you wanted to represent the system: 
+        F(u, v, w) + G(u) = 0, h(u, v) = 0, where F and G are 2D vector functions and h is a scalar function. 
+        After fitting F, G, and h with splines, you'd form the following spline block: [[F, G], [h]].
+
+        You may optionally supply maps for independent variables to represent complex systems of equations. For example, 
+        say you wanted to represent a similar systems as before, but with a more complicated relationship between the 
+        independent variables: F(u, v, w) + G(v, s) = 0, h(u, t, w, s) = 0. 
+        First, you'd assign consecutive indices for each variable starting at zero. For example, (s, t, u, v, w) could be indexed as (0, 1, 2, 3, 4, 5). 
+        Then, you'd provide maps for each splines independent variables to form the following spline block: 
+        [[((3, 4, 5), F), ((4, 0), G], [(3, 1, 5, 0), h]].
     """
 
     def _block_evaluation(self, returnShape, splineFunction, args):
