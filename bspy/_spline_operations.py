@@ -13,47 +13,55 @@ def _shiftPolynomial(polynomial, delta):
 
 def add(self, other, indMap = None):
     if not(self.nDep == other.nDep): raise ValueError("self and other must have same nDep")
-    selfMapped = []
-    otherMapped = []
+    selfMapped = set()
     otherToSelf = {}
     if indMap is not None:
         (self, other) = bspy.Spline.common_basis((self, other), indMap)
         for map in indMap:
-            selfMapped.append(map[0])
-            otherMapped.append(map[1])
+            selfMapped.add(map[0])
             otherToSelf[map[1]] = map[0]
 
     # Construct new spline parameters.
-    # We index backwards because we're adding transposed coefficients (see below). 
     nInd = self.nInd
     order = [*self.order]
     nCoef = [*self.nCoef]
     knots = list(self.knots)
-    permutation = [] # Used to transpose coefs to match other.coefs.T.
-    for i in range(self.nInd - 1, -1, -1):
-        if i not in selfMapped:
-            permutation.append(i + 1) # Add 1 to account for dependent variables.
-    for i in range(other.nInd - 1, -1, -1):
-        if i not in otherMapped:
-            order.append(other.order[other.nInd - 1 - i])
-            nCoef.append(other.nCoef[other.nInd - 1 - i])
-            knots.append(other.knots[other.nInd - 1 - i])
-            permutation.append(self.nInd + i + 1) # Add 1 to account for dependent variables.
+    for i in range(other.nInd):
+        if i not in otherToSelf:
+            order.append(other.order[i])
+            nCoef.append(other.nCoef[i])
+            knots.append(other.knots[i])
             nInd += 1
-        else:
-            permutation.append(otherToSelf[i] + 1) # Add 1 to account for dependent variables.
-    permutation.append(0) # Account for dependent variables.
-    permutation = np.array(permutation)
+
+    # Build coefs array.
     coefs = np.zeros((self.nDep, *nCoef), self.coefs.dtype)
 
-    # Build coefs array by transposing the changing coefficients to the end, including the dependent variables.
-    # First, add in self.coefs.
+    # Add in self.coefs (you need to transpose coefs for the addition to work properly).
     coefs = coefs.T
     coefs += self.coefs.T
-    # Permutation for other.coefs.T accounts for coefs being transposed by subtracting permutation from ndim - 1.
-    coefs = coefs.transpose((coefs.ndim - 1) - permutation)
-    # Add in other.coefs. 
+    coefs = coefs.T
+
+    # Construct permutation of coefs to transpose coefs to match other.coefs.
+    otherUnmappedCount = 0
+    permutation = [0] # Account for dependent variables
+    for i in range(other.nInd):
+        if i in otherToSelf:
+            permutation.append(otherToSelf[i] + 1) # Add 1 to account for dependent variables.
+        else:
+            permutation.append(self.nInd + otherUnmappedCount + 1) # Add 1 to account for dependent variables.
+            otherUnmappedCount += 1
+    for i in range(self.nInd):
+        if i not in selfMapped:
+            permutation.append(i + 1) # Add 1 to account for dependent variables.
+
+    # Permute coefs to match other.coefs
+    coefs = coefs.transpose(permutation)
+
+    # Add in other.coefs (you need to transpose coefs for the addition to work properly).
+    coefs = coefs.T
     coefs += other.coefs.T
+    coefs = coefs.T
+
     # Reverse the permutation.
     coefs = coefs.transpose(np.argsort(permutation)) 
     
@@ -643,21 +651,20 @@ def normal_spline(self, indices=None):
         knots = None
         counts = None
         maxOrder = 0
-        startInd = 0
-        endInd = 0
+        maxMap = []
         # First, collect the order, knots, and number of relevant columns for this independent variable.
         for row in self.block:
-            rowInd = 0
-            for spline in row:
-                if rowInd <= nInd < rowInd + spline.nInd:
-                    ind = nInd - rowInd
+            for map, spline in row:
+                if nInd in map:
+                    ind = map.index(nInd)
                     order = spline.order[ind]
                     k, c = np.unique(spline.knots[ind][order-1:spline.nCoef[ind]+1], return_counts=True)
                     if knots:
                         if maxOrder < order:
                             counts += order - maxOrder
                             maxOrder = order
-                        endInd = max(endInd, rowInd + spline.nInd)
+                        if len(maxMap) < len(map):
+                            maxMap = map
                         for knot, count in zip(k[1:-1], c[1:-1]):
                             ix = np.searchsorted(knots, knot)
                             if knots[ix] == knot:
@@ -669,12 +676,9 @@ def normal_spline(self, indices=None):
                         knots = k
                         counts = c
                         maxOrder = order
-                        startInd = rowInd
-                        endInd = rowInd + spline.nInd
-                    
+                        maxMap = map
+                  
                     break
-
-                rowInd += spline.nInd
 
         # Next, calculate the order of the normal for this independent variable.
         # Note that the total order will be one less than usual, because one of 
@@ -682,17 +686,17 @@ def normal_spline(self, indices=None):
         if self.nInd < self.nDep:
             # If this normal involves all tangents, simply add the degree of each,
             # so long as that tangent contains the independent variable.
-            order = (maxOrder - 1) * (endInd - startInd)
+            order = (maxOrder - 1) * len(maxMap)
         else:
             # If this normal doesn't involve all tangents, find the max order of
             # each returned combination (as defined by the indices).
             order = 0
-            for index in range(startInd, endInd) if indices is None else indices:
+            for index in maxMap if indices is None else indices:
                 # The order will be one larger if this independent variable's tangent is excluded by the index.
                 ord = 0 if index != nInd else 1
                 # Add the degree of each tangent, so long as that tangent contains the 
                 # independent variable and is not excluded by the index.  
-                for ind in range(startInd, endInd):
+                for ind in maxMap:
                     ord += maxOrder - 1 if index != ind else 0
                 order = max(order, ord)
         

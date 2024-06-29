@@ -79,7 +79,7 @@ class Spline(Manifold):
 
     def __repr__(self):
         return f"Spline({self.nInd}, {self.nDep}, {self.order}, " + \
-               f"{self.nCoef}, {self.knots} {self.coefs}, {self.metadata})"
+               f"{self.nCoef}, {self.knots}, {self.coefs}, {self.metadata})"
 
     def __add__(self, other):
         if isinstance(other, Spline):
