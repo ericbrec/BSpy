@@ -25,8 +25,9 @@ class SplineBlock:
         say you wanted to represent a similar systems as before, but with a more complicated relationship between the 
         independent variables: F(u, v, w) + G(v, s) = 0, h(u, t, w, s) = 0. 
         First, you'd assign consecutive indices for each variable starting at zero. For example, (s, t, u, v, w) could be indexed as (0, 1, 2, 3, 4, 5). 
-        Then, you'd provide maps for each splines independent variables to form the following spline block: 
-        [[((3, 4, 5), F), ((4, 0), G], [(3, 1, 5, 0), h]].
+        Then, you'd provide maps for each spline's independent variables to form the following spline block: 
+        [[([3, 4, 5], F), ([4, 0], G)], [([3, 1, 5, 0], h)]]. 
+        Notice how each spline from the first example is replaced by a (map, spline) tuple in the complex second example.
     """
 
     @staticmethod
