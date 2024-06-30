@@ -20,7 +20,7 @@ class Hyperplane(Manifold):
         A array of tangents that are linearly independent and orthogonal to the normal.
 
     metadata : `dict`, optional
-        A dictionary of ancillary data to store with the manifold. Default is {}.
+        A dictionary of ancillary data to store with the hyperplane. Default is {}.
     
     Notes
     -----
