@@ -144,15 +144,19 @@ class Viewer(tk.Tk):
             solid = spline
             if solid.dimension != 3:
                 return
-            if name is None:
-                name = "Solid"
-            iid = self.treeview.insert('', 'end', text=name, open=False)
+            if name is not None:
+                solid.metadata["Name"] = name
+            elif "Name" not in solid.metadata:
+                solid.metadata["Name"] = f"Solid({solid.dimension}, {solid.containsInfinity})"
+            iid = self.treeview.insert('', 'end', text=solid.metadata["Name"], open=False)
             self.splineList[iid] = solid
             self.solidList.append(solid)
             if draw:
                 self.treeview.selection_add(iid)
             for i, boundary in enumerate(solid.boundaries):
-                self.list(boundary, f"Boundary {i}", fillColor, lineColor, options, False, iid)
+                if "Name" not in boundary.manifold.metadata:
+                    boundary.manifold.metadata["Name"] = f"Boundary {i}"
+                self.list(boundary, None, fillColor, lineColor, options, False, iid)
         elif isinstance(spline, Boundary):
             boundary = spline
             if isinstance(boundary.manifold, Hyperplane):
@@ -167,6 +171,7 @@ class Viewer(tk.Tk):
                 spline = Spline(2, 3, (2, 2), (2, 2), 
                     np.array((uvMin, uvMin, uvMax, uvMax), np.float32).T,
                     np.array(((xyzMinMin, xyzMaxMin), (xyzMinMax, xyzMaxMax)), np.float32).T)
+                spline.metadata = boundary.manifold.metadata # Ensure the spline representing the hyperplane shares the same metadata
             elif isinstance(boundary.manifold, Spline):
                 spline = boundary.manifold
             if not hasattr(spline, "cache"):
@@ -174,8 +179,10 @@ class Viewer(tk.Tk):
             spline.cache["trim"] = self.frame.tessellate2DSolid(boundary.domain)
             self.list(spline, name, fillColor, lineColor, options, draw, parentIID)
         else:
-            if "Name" not in spline.metadata:
-                spline.metadata["Name"] = f"Spline({spline.nInd}, {spline.nDep})" if name is None else name
+            if name is not None:
+                spline.metadata["Name"] = name
+            elif "Name" not in spline.metadata:
+                spline.metadata["Name"] = f"Spline({spline.nInd}, {spline.nDep})"
             if fillColor is not None:
                 spline.metadata["fillColor"] = fillColor
             if lineColor is not None:
