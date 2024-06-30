@@ -1109,7 +1109,7 @@ class Spline(Manifold):
         `to_dict` : Return a `dict` with `Spline` data.
         """
         return Spline(dictionary["nInd"], dictionary["nDep"], dictionary["order"], dictionary["nCoef"],
-                [np.array(knots) for knots in dictionary["knots"]], np.array(dictionary["coefs"]), dictionary["metadata"])
+                [np.array(knots) for knots in dictionary["knots"]], np.array(dictionary["coefs"]), dictionary.get("metadata", {}))
 
     def full_domain(self):
         """
