@@ -2065,7 +2065,11 @@ class Spline(Manifold):
         --------
         `join` : Join a list of splines together into a single spline.
         """
-        return bspy._spline_domain.split(self, minContinuity, breaks)
+        splineArray = bspy.spline_block.SplineBlock(self).split(minContinuity, breaks)
+        splines = splineArray.ravel()
+        for i, block in enumerate(splines):
+            splines[i] = block[0][0][1]
+        return splineArray
     
     def subtract(self, other, indMap = None):
         """
