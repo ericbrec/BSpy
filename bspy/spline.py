@@ -2068,8 +2068,8 @@ class Spline(Manifold):
         splineArray = bspy.spline_block.SplineBlock(self).split(minContinuity, breaks)
         splines = splineArray.ravel()
         for i, block in enumerate(splines):
-            splines[i] = block[0][0][1]
-        return splineArray
+            splines[i] = block.block[0][0][1]
+        return splines.reshape(splineArray.shape)
     
     def subtract(self, other, indMap = None):
         """

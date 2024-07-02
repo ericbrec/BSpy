@@ -374,7 +374,7 @@ class SplineBlock:
 
         for row in self.block:
             for map, spline in row:
-                for i, order, knots in zip(range(self.nInd), self.order, self.knots):
+                for i, order, knots in zip(range(spline.nInd), spline.order, spline.knots):
                     unique, counts = np.unique(knots[order:], return_counts=True) # Skip left end
                     for knot, count in zip(unique, counts):
                         if count > order - 1 - minContinuity:
@@ -394,7 +394,8 @@ class SplineBlock:
         domain = self.domain().copy()
         for i in range(size):
             index = i
-            for j, count, knots in zip(range(self.nInd), shape, breakList):
+            for j, knots in enumerate(breakList):
+                count = len(knots)
                 ix = index % count
                 index = index // count
                 if domain[j, 1] != knots[ix]:
