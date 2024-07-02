@@ -59,6 +59,9 @@ class Solid:
     
     containsInfinity : `bool`
         Indicates whether or not the solid contains infinity.
+
+    metadata : `dict`, optional
+        A dictionary of ancillary data to store with the solid. Default is {}.
     
     See also
     --------
@@ -70,10 +73,11 @@ class Solid:
 
     Solids can be of zero dimension, typically acting as the domain of boundary endpoints. Zero-dimension solids have no boundaries, they only contain infinity or not.
     """
-    def __init__(self, dimension, containsInfinity):
+    def __init__(self, dimension, containsInfinity, metadata = {}):
         assert dimension >= 0
         self.dimension = dimension
         self.containsInfinity = containsInfinity
+        self.metadata = dict(metadata)
         self.boundaries = []
         self.bounds = None
 
@@ -356,7 +360,7 @@ class Solid:
         `save` : Save a solids and/or manifolds in json format to the specified filename (full path).
         """
         def from_dict(dictionary):
-            solid = Solid(dictionary["dimension"], dictionary["containsInfinity"])
+            solid = Solid(dictionary["dimension"], dictionary["containsInfinity"], dictionary.get("metadata", {}))
             for boundary in dictionary["boundaries"]:
                 manifold = boundary["manifold"]
                 solid.add_boundary(Boundary(Manifold.factory[manifold.get("type", "Spline")].from_dict(manifold), from_dict(boundary["domain"])))
@@ -428,7 +432,7 @@ class Solid:
                 if isinstance(obj, Boundary):
                     return {"type" : "Boundary", "manifold" : obj.manifold, "domain" : obj.domain}
                 if isinstance(obj, Solid):
-                    return {"type" : "Solid", "dimension" : obj.dimension, "containsInfinity" : obj.containsInfinity, "boundaries" : obj.boundaries}
+                    return {"type" : "Solid", "dimension" : obj.dimension, "containsInfinity" : obj.containsInfinity, "boundaries" : obj.boundaries, "metadata" : obj.metadata}
                 return super().default(obj)
 
         with open(fileName, 'w', encoding='utf-8') as file:

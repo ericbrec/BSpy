@@ -962,22 +962,9 @@ def contours(self):
     evaluationEpsilon = max(np.sqrt(epsilon), np.finfo(self.coefsDtype).eps ** 0.25)
 
     # Split the splines in the block to ensure C1 continuity within each block
-    blocks = [self]
-    for i, row in enumerate(self.block):
-        for j, (map, spline) in enumerate(row):
-            splines = spline.split(minContinuity = 1)
-            if splines.size == 1 and self.size == 1:
-                break # Special case of a block with one C1 spline 
-            newBlocks = []
-            for spline in splines.ravel():
-                for block in blocks:
-                    newBlock = block.block.copy()
-                    newRow = newBlock[i].copy()
-                    newBlock[i] = newRow
-                    newRow[j] = (map, spline)
-                    newBlocks.append(bspy.spline_block.SplineBlock(newBlock))
-            blocks = newBlocks
+    blocks = self.split(minContinuity=1).ravel()
 
+    # For each block, find its contours and join them to the contours from previous blocks.
     contours = []
     for block in blocks:
         splineContours = _contours_of_C1_spline_block(block, epsilon, evaluationEpsilon)
