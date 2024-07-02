@@ -310,26 +310,32 @@ def fold(self, foldedInd):
     coefficientlessSpline = type(self)(len(coefficientlessOrder), 0, coefficientlessOrder, coefficientlessNCoef, coefficientlessKnots, coefficientlessCoefs, self.metadata)
     return foldedSpline, coefficientlessSpline
 
-def insert_knots(self, newKnots):
+def insert_knots(self, newKnotList):
     if not(len(newKnots) == self.nInd): raise ValueError("Invalid newKnots")
     knotsList = list(self.knots)
-    coefs = self.coefs
-    for ind, (order, knots) in enumerate(zip(self.order, self.knots)):
-        # We can't reference self.nCoef[ind] in this loop because we are expanding the knots and coefs arrays.
-        for knot in newKnots[ind]:
+    coefs = self.coefs # Set initial value for coefs to check later if it's changed
+    for ind, (order, knots, newKnots) in enumerate(zip(self.order, self.knots, newKnotList)):
+        coefs = self.coefs.swapaxes(0, ind + 1) # Swap dependent and independent variable (seap back later)
+        for knot in newKnots:
+            if np.isscalar(knot):
+                multiplicity = 1
+            else:
+                multiplicity = knot[1]
+                knot = knot[0]
             if knot < knots[order-1] or knot > knots[-order]:
                 raise ValueError(f"Knot insertion outside domain: {knot}")
             if knot == knots[-order]:
                 position = len(knots) - order
             else:
                 position = np.searchsorted(knots, knot, 'right')
-            coefs = coefs.swapaxes(0, ind + 1) # Swap dependent and independent variable (swap back later)
-            newCoefs = np.insert(coefs, position - 1, 0.0, axis=0)
-            for i in range(position - order + 1, position):
-                alpha = (knot - knots[i]) / (knots[i + order - 1] - knots[i])
-                newCoefs[i] = (1.0 - alpha) * coefs[i - 1] + alpha * coefs[i]
+            for count in range(multiplicity):
+                newCoefs = np.insert(coefs, position - 1, 0.0, axis=0)
+                for i in range(position - order + 1, position):
+                    alpha = (knot - knots[i]) / (knots[i + order - 1] - knots[i])
+                    newCoefs[i] = (1.0 - alpha) * coefs[i - 1] + alpha * coefs[i]
+                coefs = newCoefs
             knotsList[ind] = knots = np.insert(knots, position, knot)
-            coefs = newCoefs.swapaxes(0, ind + 1)
+        coefs = self.coefs.swapaxes(0, ind + 1) # Swap back
 
     if self.coefs is coefs:
         return self
