@@ -269,44 +269,45 @@ def _refine_projected_polyhedron(interval):
     for nInd in range(len(interval.unknowns)):
         # Loop through each dependent variable to compute the interval containing the root for this independent variable.
         xInterval = (0.0, 1.0)
-        nDep = 0
-        for row in interval.block:
-            order = 0
-            for map, spline in row:
-                if nInd in map:
-                    ind = map.index(nInd)
-                    order = spline.order[ind]
-                    nCoef = spline.nCoef[ind]
-                    knots = spline.knots[ind]
-                    # Move independent variable to the last (fastest) axis, adding 1 to account for the dependent variables.
-                    coefs = np.moveaxis(spline.coefs, ind + 1, -1)
-                    break
+        if interval.split == nInd:
+            nDep = 0
+            for row in interval.block:
+                order = 0
+                for map, spline in row:
+                    if nInd in map:
+                        ind = map.index(nInd)
+                        order = spline.order[ind]
+                        nCoef = spline.nCoef[ind]
+                        knots = spline.knots[ind]
+                        # Move independent variable to the last (fastest) axis, adding 1 to account for the dependent variables.
+                        coefs = np.moveaxis(spline.coefs, ind + 1, -1)
+                        break
             
-            # Skip this row if it doesn't contains this independent variable.
-            if order < 1:
-                nDep += spline.nDep # Assumes there is at least one spline per block row
-                continue
+                # Skip this row if it doesn't contains this independent variable.
+                if order < 1:
+                    nDep += spline.nDep # Assumes there is at least one spline per block row
+                    continue
 
-            # Compute the coefficients for f(x) = x for the independent variable and its knots.
-            degree = order - 1
-            xData = np.empty((nCoef,), knots.dtype)
-            xData[0] = knots[1]
-            for i in range(1, nCoef):
-                xData[i] = xData[i - 1] + (knots[i + degree] - knots[i])/degree
-            
-            # Loop through each dependent variable in this row to refine the interval containing the root for this independent variable.
-            for yData, ySplineBounds, yBounds in zip(coefs, spline.range_bounds(), interval.bounds[nDep:nDep + spline.nDep]):
-                # Compute the 2D convex hull of the knot coefficients and the spline's coefficients
-                hull = _convex_hull_2D(xData, yData.ravel(), yBounds, yBounds - ySplineBounds, epsilon)
-                if hull is None:
-                    return roots, intervals
+                # Compute the coefficients for f(x) = x for the independent variable and its knots.
+                degree = order - 1
+                xData = np.empty((nCoef,), knots.dtype)
+                xData[0] = knots[1]
+                for i in range(1, nCoef):
+                    xData[i] = xData[i - 1] + (knots[i + degree] - knots[i])/degree
+        
+                # Loop through each dependent variable in this row to refine the interval containing the root for this independent variable.
+                for yData, ySplineBounds, yBounds in zip(coefs, spline.range_bounds(), interval.bounds[nDep:nDep + spline.nDep]):
+                    # Compute the 2D convex hull of the knot coefficients and the spline's coefficients
+                    hull = _convex_hull_2D(xData, yData.ravel(), yBounds, yBounds - ySplineBounds, epsilon)
+                    if hull is None:
+                        return roots, intervals
                 
-                # Intersect the convex hull with the xInterval along the x axis (the knot coefficients axis).
-                xInterval = _intersect_convex_hull_with_x_interval(hull, epsilon, xInterval)
-                if xInterval is None:
-                    return roots, intervals
+                    # Intersect the convex hull with the xInterval along the x axis (the knot coefficients axis).
+                    xInterval = _intersect_convex_hull_with_x_interval(hull, epsilon, xInterval)
+                    if xInterval is None:
+                        return roots, intervals
             
-            nDep += spline.nDep
+                nDep += spline.nDep
         
         domain.append(xInterval)
     
@@ -374,7 +375,7 @@ def _refine_projected_polyhedron(interval):
     width = newDomain[1] - newDomain[0]
     domains = [newDomain]
     for nInd, w in enumerate(width):
-        if w > Crit:
+        if w > Crit and nInd == interval.split:
             # Didn't get the required decrease in width, so split the domain.
             domainCount = len(domains) # Cache the domain list size, since we're increasing it mid loop
             w *= 0.5 # Halve the domain width for this independent variable
@@ -393,7 +394,7 @@ def _refine_projected_polyhedron(interval):
             xSplitLeft[i] = (1.0 - d0) * interval.xLeft[i] + d0 * interval.xRight[i]
             xSplitRight[i] = (1.0 - d1) * interval.xLeft[i] + d1 * interval.xRight[i]
         newInterval = _create_interval(domain.T, interval.block, newUnknowns,
-                                       (interval.split + 1) % len(interval.unknowns),
+                                       (interval.split + 1) % len(width),
                                        interval.scale, xSplitLeft, xSplitRight, epsilon)
         if newInterval:
             if newInterval.block:
