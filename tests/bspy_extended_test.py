@@ -655,32 +655,15 @@ def test_intersect():
 #
 #  On Tom's laptop, it runs for over 15.5 hours without computing the intersection
 #
-#    def myFunction(t):
-#        return 1.0 + 0.25 * np.cos(6.0 * np.pi * t)
-#    tValues = np.linspace(0.0, 1.0, 51)
-#    xValues = [[myFunction(t) for t in tValues]]
-#    mySpline = bspy.Spline.least_squares(tValues, xValues, tolerance = 0.001)
-#    myCurve = mySpline * bspy.Spline.circular_arc(1.0, 90.0)
-#    flower = myCurve.revolve(360.0)
-#    myCone = bspy.Spline.cone(0.25, 0.1, 2.0).rotate([0.0, 1.0, 0.0], -20.0)
+    def myFunction(t):
+        return 1.0 + 0.25 * np.cos(6.0 * np.pi * t)
+    tValues = np.linspace(0.0, 1.0, 51)
+    xValues = [[myFunction(t) for t in tValues]]
+    mySpline = bspy.Spline.least_squares(tValues, xValues, tolerance = 0.001)
+    myCurve = mySpline * bspy.Spline.circular_arc(1.0, 90.0)
+    flower = myCurve.revolve(360.0)
+    myCone = bspy.Spline.cone(0.25, 0.1, 2.0).rotate([0.0, 1.0, 0.0], -20.0)
 #    stuff = flower.intersect(myCone)
-#    x = bspy.Spline.line([-1.0], [1.0]).reparametrize([[-1.0, 1.0]])
-#    xHalf = x.trim([[0.0, 1.0]])
-#    one = bspy.Spline(1, 1, [1], [1], [[-1.0, 1.0]], [[1.0]])
-#    oneHalf = one.trim([[0.0, 1.0]])
-#    surf1 = flower.multiply(one).multiply(one)
-#    surf2 = -myCone.multiply(one).multiply(oneHalf)
-#    nullspace1 = flower.differentiate().multiply(x).multiply(one)
-#    nullspace2 = flower.differentiate(1).multiply(one).multiply(x)
-#    tSpace1 = nullspace1 + nullspace2
-#    nullspace1 = myCone.differentiate().multiply(x).multiply(oneHalf)
-#    nullspace2 = myCone.differentiate(1).multiply(one).multiply(xHalf)
-#    tSpace2 = nullspace1 - nullspace2
-#    turning = oneHalf.multiply(oneHalf).add(x).add(x)
-#    normalize1 = oneHalf.multiply(oneHalf).add(x * x).add(x * x)
-#    normalize2 = oneHalf.multiply(oneHalf).add(x * x).add(xHalf * xHalf - 1.0)
-#    system = bspy.SplineBlock([[surf1, surf2], [tSpace1, tSpace2], [turning], [normalize1, normalize2]])
-#    tentative = system.zeros()
 
     maxError = 0.0
     F = lambda u , v : (u ** 2 + (v - 3/4) ** 2 - 1/25) * \

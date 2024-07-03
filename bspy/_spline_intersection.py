@@ -207,9 +207,9 @@ def _intersect_convex_hull_with_x_interval(hullPoints, epsilon, xInterval):
     else:
         return (min(max(xMin, xInterval[0]), xInterval[1]), max(min(xMax, xInterval[1]), xInterval[0]))
 
-Interval = namedtuple('Interval', ('block', 'unknowns', 'scale', 'bounds', 'slope', 'intercept', 'epsilon', 'atMachineEpsilon'))
+Interval = namedtuple('Interval', ('block', 'unknowns', 'split', 'scale', 'bounds', 'xLeft', 'xRight', 'epsilon', 'atMachineEpsilon'))
 
-def _create_interval(domain, block, unknowns, scale, slope, intercept, epsilon):
+def _create_interval(domain, block, unknowns, split, scale, xLeft, xRight, epsilon):
     nDep = 0
     bounds = np.zeros((len(scale), 2), scale.dtype)
     newScale = np.empty_like(scale)
@@ -253,7 +253,7 @@ def _create_interval(domain, block, unknowns, scale, slope, intercept, epsilon):
 
             newBlock.append(newRow)
 
-    return Interval(newBlock, unknowns, newScale[:nDep], bounds, slope, intercept, epsilon, np.dot(slope, slope) < np.finfo(slope.dtype).eps)
+    return Interval(newBlock, unknowns, split, newScale[:nDep], bounds, xLeft, xRight, epsilon, np.dot(xRight - xLeft, xRight - xLeft) < np.finfo(xLeft.dtype).eps)
 
 # We use multiprocessing.Pool to call this function in parallel, so it cannot be nested and must take a single argument.
 def _refine_projected_polyhedron(interval):
@@ -310,31 +310,31 @@ def _refine_projected_polyhedron(interval):
         
         domain.append(xInterval)
     
-    # Compute new slope, intercept, and unknowns.
-    domain = np.array(domain, interval.slope.dtype).T
+    # Compute new interval bounds and unknowns.
+    domain = np.array(domain, interval.xLeft.dtype).T
     width = domain[1] - domain[0]
-    newSlope = interval.slope.copy()
-    newIntercept = interval.intercept.copy()
+    xNewLeft = interval.xLeft.copy()
+    xNewRight = interval.xRight.copy()
     newUnknowns = []
     newDomain = domain.copy()
     uvw = []
     nInd = 0
-    for i, w, d in zip(interval.unknowns, width, domain.T):
-        newSlope[i] = w * interval.slope[i]
-        newIntercept[i] = d[0] * interval.slope[i] + interval.intercept[i]
-        if newSlope[i] < epsilon:
-            uvw.append(0.5 * (d[0] + d[1]))
+    for i, d0, d1 in zip(interval.unknowns, domain[0], domain[1]):
+        xNewLeft[i] = (1.0 - d0) * interval.xLeft[i] + d0 * interval.xRight[i]
+        xNewRight[i] = (1.0 - d1) * interval.xLeft[i] + d1 * interval.xRight[i]
+        if xNewRight[i] - xNewLeft[i] < epsilon:
+            uvw.append(0.5 * (d0 + d1))
             newDomain = np.delete(newDomain, nInd, axis=1)
         else:
             newUnknowns.append(i)
             uvw.append(None)
             nInd += 1
 
-    # Iteration is complete if the interval actual width (slope) is either
+    # Iteration is complete if the interval actual width is either
     # one iteration past being less than sqrt(machineEpsilon) or there are no remaining independent variables.
     if interval.atMachineEpsilon or nInd == 0:
         # Return the interval center and radius.
-        roots.append((newIntercept + 0.5 * newSlope, epsilon))
+        roots.append((0.5 * (xNewLeft + xNewRight), epsilon))
         return roots, intervals
 
     # Contract spline matrix as needed.
@@ -362,14 +362,12 @@ def _refine_projected_polyhedron(interval):
         for root in zeros_using_interval_newton(spline):
             if not isinstance(root, tuple):
                 root = (root, root)
-            w = root[1] - root[0]
-            slope = newSlope.copy()
-            intercept = newIntercept.copy()
-            slope[i] = w * interval.slope[i]
-            intercept[i] = root[0] * interval.slope[i] + interval.intercept[i]
+            xLeft = xNewLeft.copy()
+            xRight = xNewRight.copy()
+            xLeft[i] = (1.0 - root[0]) * interval.xLeft[i] + root[0] * interval.xRight[i]
+            xRight[i] = (1.0 - root[1]) * interval.xLeft[i] + root[1] * interval.xRight[i]
             # Return the interval center and radius.
-            roots.append((intercept + 0.5 * slope, epsilon))
-        
+            roots.append((0.5 * (xLeft + xRight), epsilon))
         return roots, intervals
 
     # Split domain in dimensions that aren't decreasing in width sufficiently.
@@ -387,20 +385,22 @@ def _refine_projected_polyhedron(interval):
                 rightDomain[0][nInd] += w
                 domains.append(rightDomain)
     
-    # Add new intervals to interval stack.
+    # Add new intervals to interval queue.
     for domain in domains:
-        width = domain[1] - domain[0]
-        splitSlope = newSlope.copy()
-        splitIntercept = newIntercept.copy()
-        for i, w, d in zip(newUnknowns, width, domain.T):
-            splitSlope[i] = w * interval.slope[i]
-            splitIntercept[i] = d[0] * interval.slope[i] + interval.intercept[i]
-        newInterval = _create_interval(domain.T, interval.block, newUnknowns, interval.scale, splitSlope, splitIntercept, epsilon)
+        xSplitLeft = xNewLeft.copy()
+        xSplitRight = xNewRight.copy()
+        for i, d0, d1 in zip(newUnknowns, domain[0], domain[1]):
+            xSplitLeft[i] = (1.0 - d0) * interval.xLeft[i] + d0 * interval.xRight[i]
+            xSplitRight[i] = (1.0 - d1) * interval.xLeft[i] + d1 * interval.xRight[i]
+        newInterval = _create_interval(domain.T, interval.block, newUnknowns,
+                                       (interval.split + 1) % len(interval.unknowns),
+                                       interval.scale, xSplitLeft, xSplitRight, epsilon)
         if newInterval:
             if newInterval.block:
                 intervals.append(newInterval)
             else:
-                roots.append((newInterval.intercept + 0.5 * newInterval.slope, 0.5 * np.linalg.norm(newInterval.slope)))
+                roots.append((0.5 * (newInterval.xLeft + newInterval.xRight),
+                              0.5 * np.linalg.norm(newInterval.xRight - newInterval.xLeft)))
   
     return roots, intervals
 
@@ -425,12 +425,13 @@ def zeros_using_projected_polyhedron(self, epsilon=None, initialScale=None):
     # Set initial interval.
     domain = self.domain().T
     initialScale = np.full(self.nDep, 1.0, self.coefsDtype) if initialScale is None else np.array(initialScale, self.coefsDtype)
-    newInterval = _create_interval(domain.T, self.block, [*range(self.nInd)], initialScale, domain[1] - domain[0], domain[0], epsilon)
+    newInterval = _create_interval(domain.T, self.block, [*range(self.nInd)], 0, initialScale, domain[0], domain[1], epsilon)
     if newInterval:
         if newInterval.block:
             intervals.append(newInterval)
         else:
-            roots.append((newInterval.intercept + 0.5 * newInterval.slope, 0.5 * np.linalg.norm(newInterval.slope)))
+            roots.append(0.5 * (newInterval.xLeft + newInterval.xRight),
+                         0.5 * np.linalg.norm(newInterval.xRight - newInterval.xLeft))
     chunkSize = 8
     #pool = Pool() # Pool size matches CPU count
 
@@ -454,17 +455,33 @@ def zeros_using_projected_polyhedron(self, epsilon=None, initialScale=None):
         rootCenter = root[0]
         rootRadius = root[1]
 
-        # Ensure we have a real root (not a boundary special case).
+        # Take one Newton step on each root
         value = self.evaluate(rootCenter)
-        if np.linalg.norm(value) >= evaluationEpsilon:
+        residualNorm = np.linalg.norm(value)
+        try:
+            update = np.linalg.solve(self.jacobian(rootCenter), value)
+            if np.linalg.norm(update) < rootRadius:
+                rootCenter -= update
+        except:
+            pass
+
+        # Project back onto spline domain
+        selfDomain = self.domain()
+        rootCenter = np.maximum(np.minimum(rootCenter, selfDomain.T[1]), selfDomain.T[0])
+        value = self.evaluate(rootCenter)
+        newResidualNorm = np.linalg.norm(value)
+        rootRadius *= newResidualNorm / residualNorm
+        residualNorm = newResidualNorm
+
+        # Ensure we have a real root (not a boundary special case).
+        if residualNorm >= evaluationEpsilon:
             continue
 
         # Expand the radius of the root based on the approximate distance from the center needed
         # to raise the value of the spline above evaluationEpsilon.
-        jacobian = self.jacobian(rootCenter)
-        minEigenvalue = np.sqrt(np.linalg.eigvalsh(jacobian.T @ jacobian)[0])
-        if minEigenvalue > epsilon:
-            rootRadius = max(rootRadius, evaluationEpsilon / minEigenvalue)
+        minSingularValue = np.linalg.svd(self.jacobian(rootCenter), False, False)[-1]
+        if minSingularValue > epsilon:
+            rootRadius = max(rootRadius, evaluationEpsilon / minSingularValue)
         
         # Intersect this root with the existing regions, expanding and combining them as appropriate.
         firstRegion = None
