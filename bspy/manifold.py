@@ -5,6 +5,11 @@ class Manifold:
     """
     A manifold is an abstract base class for differentiable functions with
     normals and tangent spaces whose range is one dimension higher than their domain.
+
+    Parameters
+    ----------
+    metadata : `dict`, optional
+        A dictionary of ancillary data to store with the manifold. Default is {}.
     """
 
     minSeparation = 0.0001
@@ -17,8 +22,8 @@ class Manifold:
     factory = {}
     """Factory dictionary for creating manifolds."""
 
-    def __init__(self):
-        pass
+    def __init__(self, metadata = {}):
+        self.metadata = dict(metadata)
 
     def cached_intersect(self, other, cache = None):
         """
@@ -322,7 +327,7 @@ class Manifold:
         --------
         `from_dict` : Create a `Manifold` from a data in a `dict`.
         """
-        return None
+        return {"metadata" : self.metadata}
 
     def transform(self, matrix, matrixInverseTranspose = None):
         """

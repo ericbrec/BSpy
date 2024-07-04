@@ -8,19 +8,26 @@ import bspy._spline_operations
 
 class SplineBlock:
     """
-    A class to represent and process an array-like collection of splines. 
-    Spline blocks are useful for efficiently manipulating and solving systems of equations with splines.
+    A class to process an array-like collection of splines that represent a system of equations. 
 
     Parameters
     ----------
-    block : an array-like collection of splines (may be a list of lists)
-        Splines in the same row are treated as if they are added together. 
+    block : an array-like collection of rows of splines (a list of lists)
+        The block of splines represents a system of equations. Splines in the same row are treated as if they are added together. 
         Each row need not have the same number of splines, but all splines in a row must have the same 
         number of dependent variables (same nDep). Corresponding independent variables must have the same domain.
 
-        For example, if F is a spline with nInd = 3 and nDep = 2, G is a spline with nInd = 1 and nDep = 2, 
-        and h is a spline with nInd = 2 and nDep = 1, then [[F, G], [h]] is a valid block (total nDep is 3 
-        and max nInd is 4).
+        For example, say you wanted to represent the system: 
+        F(u, v, w) + G(u) = 0, h(u, v) = 0, where F and G are 2D vector functions and h is a scalar function. 
+        After fitting F, G, and h with splines, you'd form the following spline block: [[F, G], [h]].
+
+        You may optionally supply maps for independent variables to represent complex systems of equations. For example, 
+        say you wanted to represent a similar systems as before, but with a more complicated relationship between the 
+        independent variables: F(u, v, w) + G(v, s) = 0, h(u, t, w, s) = 0. 
+        First, you'd assign consecutive indices for each variable starting at zero. For example, (s, t, u, v, w) could be indexed as (0, 1, 2, 3, 4, 5). 
+        Then, you'd provide maps for each spline's independent variables to form the following spline block: 
+        [[([3, 4, 5], F), ([4, 0], G)], [([3, 1, 5, 0], h)]]. 
+        Notice how each spline from the first example is replaced by a (map, spline) tuple in the complex second example.
     """
 
     @staticmethod
@@ -332,6 +339,76 @@ class SplineBlock:
         `domain` : Return the domain of a spline block.
         """
         return self._block_operation(bspy._spline_domain.reparametrize, (newDomain,))
+
+    def split(self, minContinuity = 0, breaks = None):
+        """
+        Split a spline block into separate pieces.
+
+        Parameters
+        ----------
+        minContinuity : `int`, optional
+            The minimum expected continuity of each spline block piece. The default is zero, for C0 continuity.
+
+        breaks : `iterable` of length `nInd` or `None`, optional
+            An iterable that specifies the breaks at which to separate the spline block. 
+            len(breaks[ind]) == 0 if there the spline block isn't separated for the `ind` independent variable. 
+            If breaks is `None` (the default), the spline block will only be separated at discontinuities.
+
+        Returns
+        -------
+        splineBlockArray : array of `SplineBlock`
+            A array of spline blocks with nInd dimensions containing the spline block pieces. 
+        """
+        if minContinuity < 0: raise ValueError("minContinuity must be >= 0")
+        if self.nInd < 1: return self
+
+        # Step 1: Determine all the breaks.
+        breakList = [set() for i in range(self.nInd)]
+        if breaks is not None:
+            if len(breaks) != self.nInd: raise ValueError("Invalid breaks")
+            for breakSet, knots, domain in zip(breakList, breaks, self.domain()):
+                for knot in knots:
+                    if knot < domain[0] or knot > domain[1]: raise ValueError("Break outside of domain")
+                    if domain[0] < knot < domain[1]:
+                        breakSet.add(knot)
+
+        for row in self.block:
+            for map, spline in row:
+                for i, order, knots in zip(range(spline.nInd), spline.order, spline.knots):
+                    unique, counts = np.unique(knots[order:], return_counts=True) # Skip left end
+                    for knot, count in zip(unique, counts):
+                        if count > order - 1 - minContinuity:
+                            breakList[map[i]].add(knot)
+
+        # Step 2: Determine the size and shape of the splineBlockArray and allocate it.
+        size = 1
+        shape = []
+        for i, breakSet in enumerate(breakList):
+            count = len(breakSet)
+            shape.insert(0, count) # We build the transpose due to indexing arithmetic
+            size *= count
+            breakList[i] = sorted(breakSet)
+        splineBlockArray = np.empty(size, object)
+
+        # Step 3: Split up the spline block.
+        domain = self.domain().copy()
+        for i in range(size):
+            index = i
+            for j, knots in enumerate(breakList):
+                count = len(knots)
+                ix = index % count
+                index = index // count
+                if domain[j, 1] != knots[ix]:
+                    if ix == 0:
+                        domain[j, 0] = self._domain[j, 0]
+                    else:
+                        domain[j, 0] = domain[j, 1]
+                    domain[j, 1] = knots[ix]
+
+            splineBlockArray[i] = self.trim(domain)
+        
+        # Step 4: Reshape and transpose splineBlockArray
+        return splineBlockArray.reshape(shape).T
 
     def trim(self, newDomain):
         """

@@ -18,6 +18,9 @@ class Hyperplane(Manifold):
     
     tangentSpace : array-like
         A array of tangents that are linearly independent and orthogonal to the normal.
+
+    metadata : `dict`, optional
+        A dictionary of ancillary data to store with the hyperplane. Default is {}.
     
     Notes
     -----
@@ -28,11 +31,12 @@ class Hyperplane(Manifold):
     maxAlignment = 0.9999 # 1 - 1/10^4
     """ If the absolute value of the dot product of two unit normals is greater than maxAlignment, the manifolds are parallel."""
 
-    def __init__(self, normal, point, tangentSpace):
+    def __init__(self, normal, point, tangentSpace, metadata = {}):
         self._normal = np.atleast_1d(normal)
         self._point = np.atleast_1d(point)
         self._tangentSpace = np.atleast_1d(tangentSpace)
         if not np.allclose(self._tangentSpace.T @ self._normal, 0.0): raise ValueError("normal must be orthogonal to tangent space")
+        self.metadata = dict(metadata)
 
     def __repr__(self):
         return "Hyperplane({0}, {1}, {2})".format(self._normal, self._point, self._tangentSpace)
@@ -207,7 +211,7 @@ class Hyperplane(Manifold):
         --------
         `to_dict` : Return a `dict` with `Hyperplane` data.
         """
-        return Hyperplane(dictionary["normal"], dictionary["point"], dictionary["tangentSpace"])
+        return Hyperplane(dictionary["normal"], dictionary["point"], dictionary["tangentSpace"], dictionary.get("metadata", {}))
 
     def full_domain(self):
         """
@@ -455,7 +459,7 @@ class Hyperplane(Manifold):
         --------
         `from_dict` : Create a `Hyperplane` from a data in a `dict`.
         """
-        return {"type" : "Hyperplane", "normal" : self._normal, "point" : self._point, "tangentSpace" : self._tangentSpace}
+        return {"type" : "Hyperplane", "normal" : self._normal, "point" : self._point, "tangentSpace" : self._tangentSpace, "metadata" : self.metadata}
 
     def transform(self, matrix, matrixInverseTranspose = None):
         """

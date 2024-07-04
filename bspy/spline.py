@@ -1112,7 +1112,7 @@ class Spline(Manifold):
         `to_dict` : Return a `dict` with `Spline` data.
         """
         return Spline(dictionary["nInd"], dictionary["nDep"], dictionary["order"], dictionary["nCoef"],
-                [np.array(knots) for knots in dictionary["knots"]], np.array(dictionary["coefs"]), dictionary["metadata"])
+                [np.array(knots) for knots in dictionary["knots"]], np.array(dictionary["coefs"]), dictionary.get("metadata", {}))
 
     def full_domain(self):
         """
@@ -2068,7 +2068,11 @@ class Spline(Manifold):
         --------
         `join` : Join a list of splines together into a single spline.
         """
-        return bspy._spline_domain.split(self, minContinuity, breaks)
+        splineArray = bspy.spline_block.SplineBlock(self).split(minContinuity, breaks)
+        splines = splineArray.ravel()
+        for i, block in enumerate(splines):
+            splines[i] = block.block[0][0][1]
+        return splines.reshape(splineArray.shape)
     
     def subtract(self, other, indMap = None):
         """
