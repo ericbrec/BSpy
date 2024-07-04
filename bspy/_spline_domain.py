@@ -312,29 +312,74 @@ def fold(self, foldedInd):
 
 def insert_knots(self, newKnotList):
     if not(len(newKnots) == self.nInd): raise ValueError("Invalid newKnots")
-    knotsList = list(self.knots)
+    knotsList = list(self.knots) # Create a new knot list
     coefs = self.coefs # Set initial value for coefs to check later if it's changed
+
+    # Insert new knots into each independent variable.
     for ind, (order, knots, newKnots) in enumerate(zip(self.order, self.knots, newKnotList)):
-        coefs = self.coefs.swapaxes(0, ind + 1) # Swap dependent and independent variable (seap back later)
+        coefs = self.coefs.swapaxes(0, ind + 1) # Swap dependent and independent variable (swap back later)
+        degree = order - 1
         for knot in newKnots:
+            # Determine new knot multiplicity.
             if np.isscalar(knot):
                 multiplicity = 1
             else:
                 multiplicity = knot[1]
                 knot = knot[0]
-            if knot < knots[order-1] or knot > knots[-order]:
+
+            # Check if knot and its total multiplicity is valid.
+            if knot < knots[degree] or knot > knots[-order]:
                 raise ValueError(f"Knot insertion outside domain: {knot}")
             if knot == knots[-order]:
                 position = len(knots) - order
+                oldMultiplicity = 1
+                for k in knots[position:]:
+                    if knot == k:
+                        oldMultiplicity += 1
+                    else:
+                        break
             else:
                 position = np.searchsorted(knots, knot, 'right')
-            for count in range(multiplicity):
-                newCoefs = np.insert(coefs, position - 1, 0.0, axis=0)
-                for i in range(position - order + 1, position):
-                    alpha = (knot - knots[i]) / (knots[i + order - 1] - knots[i])
-                    newCoefs[i] = (1.0 - alpha) * coefs[i - 1] + alpha * coefs[i]
-                coefs = newCoefs
-            knotsList[ind] = knots = np.insert(knots, position, knot)
+                oldMultiplicity = 0
+                for k in knots[position - 1::-1]:
+                    if knot == k:
+                        oldMultiplicity += 1
+                    else:
+                        break
+            if oldMultiplicity + multiplicity > order:
+                raise ValueError("Knot multiplicity > order")
+
+            # Initialize a multiplicity number of insertedCoefs, the oldCoefs associated with the knot, and the size of newCoefs.
+            insertedCoefs = coefs[position - multiplicity:position].copy() # Start copy at position - multiplicity to handle oldMultiplicity = order - 1, multiplicity = 1
+            oldCoefs = coefs[position - order:position]
+            size = 0 # Start at zero to handle oldMultiplicity = order - 1, multiplicity = 1
+            # Compute inserted coefficients (multiplicity of them) and 
+            # the degree - oldMultiplicity number of changed coefficients.
+            for j in range(min(multiplicity, degree - oldMultiplicity)):
+                # Allocate new coefficients for the current multiplicity. 
+                size = degree - oldMultiplicity - j
+                newCoefs = np.empty((size, coefs.shape[1:]), coefs.dtype)
+
+                # Compute the new coefficients.
+                i = 0
+                for k in range(position - oldMultiplicity - size, position - oldMultiplicity):
+                    alpha = (knot - knots[k]) / (knots[k + degree - j] - knots[k])
+                    newCoefs[i] = (1.0 - alpha) * oldCoefs[i] + alpha * oldCoefs[i + 1]
+                    i += 1
+
+                # Assign the ends of the new coefficients into their respective positions.
+                insertedCoefs[j] = newCoefs[0]
+                coefs[position - 1 - oldMultiplicity - j] = newCoefs[-1]
+                oldCoefs = newCoefs
+            
+            # Assign remaining computed coefficients (the ones in the middle).
+            if size > 2:
+                coefs[position - degree:position - degree + size - 2] = newCoefs[1:-1]
+            
+            # Insert the inserted coefficients and inserted knots.
+            coefs = np.insert(coefs, position - 1, insertedCoefs, axis=0)
+            knotsList[ind] = knots = np.insert(knots, position, (knot,) * multiplicity)
+        
         coefs = self.coefs.swapaxes(0, ind + 1) # Swap back
 
     if self.coefs is coefs:
