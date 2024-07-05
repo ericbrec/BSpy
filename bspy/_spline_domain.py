@@ -378,39 +378,38 @@ def insert_knots(self, newKnotList):
             if oldMultiplicity + multiplicity > order:
                 raise ValueError("Knot multiplicity > order")
 
-            # Initialize a multiplicity number of insertedCoefs, the oldCoefs associated with the knot, and the size of newCoefs.
+            # Initialize oldCoefs, start position for newCoefs, and expanded coefs array with multiplicity new coefficients.
+            oldCoefs = coefs[position - order:position].copy()
             start = position - oldMultiplicity
-            insertedCoefs = coefs[start - multiplicity:start].copy() # Start copy at start - multiplicity to handle oldMultiplicity = order - 1, multiplicity = 1
-            oldCoefs = coefs[position - order:position]
-            size = 0 # Start at zero to handle oldMultiplicity = order - 1, multiplicity = 1
+            coefs = np.insert(coefs, position - degree, oldCoefs[:multiplicity], axis=0)
             # Compute inserted coefficients (multiplicity of them) and the degree - oldMultiplicity - 1 number of changed coefficients.
-            for j in range(min(multiplicity, degree - oldMultiplicity)):
+            for j in range(multiplicity):
                 # Allocate new coefficients for the current multiplicity. 
                 size = degree - oldMultiplicity - j
-                newCoefs = np.empty((size, *coefs.shape[1:]), coefs.dtype)
+                if size < 1:
+                    coefs[position - degree + j] = oldCoefs[0]
+                else:
+                    newCoefs = np.empty((size, *coefs.shape[1:]), coefs.dtype)
 
-                # Compute the new coefficients.
-                i = 0
-                for k in range(start - size, start):
-                    alpha = (knot - knots[k]) / (knots[k + degree - j] - knots[k])
-                    newCoefs[i] = (1.0 - alpha) * oldCoefs[i] + alpha * oldCoefs[i + 1]
-                    i += 1
+                    # Compute the new coefficients.
+                    i = 0
+                    for k in range(start - size, start):
+                        alpha = (knot - knots[k]) / (knots[k + degree - j] - knots[k])
+                        newCoefs[i] = (1.0 - alpha) * oldCoefs[i] + alpha * oldCoefs[i + 1]
+                        i += 1
 
-                # Assign the ends of the new coefficients into their respective positions.
-                insertedCoefs[j] = newCoefs[0]
-                if size > 1:
-                    coefs[start - j - 2] = newCoefs[-1]
-                oldCoefs = newCoefs
+                    # Assign the ends of the new coefficients into their respective positions.
+                    coefs[position - degree + j] = newCoefs[0]
+                    if size > 1:
+                        coefs[start + multiplicity - j - 2] = newCoefs[-1]
+                    oldCoefs = newCoefs
             
             # Assign remaining computed coefficients (the ones in the middle).
             if size > 2:
-                coefs[position - degree:position - degree + size - 2] = newCoefs[1:-1]
+                coefs[position - degree + multiplicity:position - degree + multiplicity + size - 2] = newCoefs[1:-1]
             
             # Insert the inserted coefficients and inserted knots.
-            coefs = np.insert(coefs, position - degree, insertedCoefs, axis=0)
             knotsList[ind] = knots = np.insert(knots, position, (knot,) * multiplicity)
-            print(knot, multiplicity)
-            print(coefs.T)
         
         coefs = coefs.swapaxes(0, ind + 1) # Swap back
 
