@@ -310,43 +310,14 @@ def fold(self, foldedInd):
     coefficientlessSpline = type(self)(len(coefficientlessOrder), 0, coefficientlessOrder, coefficientlessNCoef, coefficientlessKnots, coefficientlessCoefs, self.metadata)
     return foldedSpline, coefficientlessSpline
 
-def old_insert_knots(self, newKnots):
-    if not(len(newKnots) == self.nInd): raise ValueError("Invalid newKnots")
-    knotsList = list(self.knots)
-    coefs = self.coefs
-    for ind, (order, knots) in enumerate(zip(self.order, self.knots)):
-        # We can't reference self.nCoef[ind] in this loop because we are expanding the knots and coefs arrays.
-        for knot in newKnots[ind]:
-            if knot < knots[order-1] or knot > knots[-order]:
-                raise ValueError(f"Knot insertion outside domain: {knot}")
-            if knot == knots[-order]:
-                position = len(knots) - order
-            else:
-                position = np.searchsorted(knots, knot, 'right')
-            coefs = coefs.swapaxes(0, ind + 1) # Swap dependent and independent variable (swap back later)
-            newCoefs = np.insert(coefs, position - 1, 0.0, axis=0)
-            for i in range(position - order + 1, position):
-                alpha = (knot - knots[i]) / (knots[i + order - 1] - knots[i])
-                newCoefs[i] = (1.0 - alpha) * coefs[i - 1] + alpha * coefs[i]
-            knotsList[ind] = knots = np.insert(knots, position, knot)
-            coefs = newCoefs.swapaxes(0, ind + 1)
-
-    if self.coefs is coefs:
-        return self
-    else: 
-        return type(self)(self.nInd, self.nDep, self.order, coefs.shape[1:], knotsList, coefs, self.metadata)
-
 def insert_knots(self, newKnotList):
-    #oldSpline = old_insert_knots(self, newKnotList)
-    #print(oldSpline.knots)
-    #print(oldSpline.coefs)
     if not(len(newKnotList) == self.nInd): raise ValueError("Invalid newKnots")
     knotsList = list(self.knots) # Create a new knot list
     coefs = self.coefs # Set initial value for coefs to check later if it's changed
 
     # Insert new knots into each independent variable.
     for ind, (order, knots, newKnots) in enumerate(zip(self.order, self.knots, newKnotList)):
-        coefs = self.coefs.swapaxes(0, ind + 1) # Swap dependent and independent variable (swap back later)
+        coefs = coefs.swapaxes(0, ind + 1) # Swap dependent and independent variable (swap back later)
         degree = order - 1
         for knot in newKnots:
             # Determine new knot multiplicity.
@@ -359,22 +330,13 @@ def insert_knots(self, newKnotList):
             # Check if knot and its total multiplicity is valid.
             if knot < knots[degree] or knot > knots[-order]:
                 raise ValueError(f"Knot insertion outside domain: {knot}")
-            if knot == knots[-order]:
-                position = len(knots) - order
-                oldMultiplicity = 1
-                for k in knots[position:]:
-                    if knot == k:
-                        oldMultiplicity += 1
-                    else:
-                        break
-            else:
-                position = np.searchsorted(knots, knot, 'right')
-                oldMultiplicity = 0
-                for k in knots[position - 1::-1]:
-                    if knot == k:
-                        oldMultiplicity += 1
-                    else:
-                        break
+            position = np.searchsorted(knots, knot, 'right')
+            oldMultiplicity = 0
+            for k in knots[position - 1::-1]:
+                if knot == k:
+                    oldMultiplicity += 1
+                else:
+                    break
             if oldMultiplicity + multiplicity > order:
                 raise ValueError("Knot multiplicity > order")
 
