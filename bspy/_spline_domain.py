@@ -310,26 +310,73 @@ def fold(self, foldedInd):
     coefficientlessSpline = type(self)(len(coefficientlessOrder), 0, coefficientlessOrder, coefficientlessNCoef, coefficientlessKnots, coefficientlessCoefs, self.metadata)
     return foldedSpline, coefficientlessSpline
 
-def insert_knots(self, newKnots):
-    if not(len(newKnots) == self.nInd): raise ValueError("Invalid newKnots")
-    knotsList = list(self.knots)
-    coefs = self.coefs
-    for ind, (order, knots) in enumerate(zip(self.order, self.knots)):
-        # We can't reference self.nCoef[ind] in this loop because we are expanding the knots and coefs arrays.
-        for knot in newKnots[ind]:
-            if knot < knots[order-1] or knot > knots[-order]:
-                raise ValueError(f"Knot insertion outside domain: {knot}")
-            if knot == knots[-order]:
-                position = len(knots) - order
+def insert_knots(self, newKnotList):
+    if not(len(newKnotList) == self.nInd): raise ValueError("Invalid newKnots")
+    knotsList = list(self.knots) # Create a new knot list
+    coefs = self.coefs # Set initial value for coefs to check later if it's changed
+
+    # Insert new knots into each independent variable.
+    for ind, (order, knots, newKnots) in enumerate(zip(self.order, self.knots, newKnotList)):
+        coefs = coefs.swapaxes(0, ind + 1) # Swap dependent and independent variable (swap back later)
+        degree = order - 1
+        for knot in newKnots:
+            # Determine new knot multiplicity.
+            if np.isscalar(knot):
+                multiplicity = 1
             else:
-                position = np.searchsorted(knots, knot, 'right')
-            coefs = coefs.swapaxes(0, ind + 1) # Swap dependent and independent variable (swap back later)
-            newCoefs = np.insert(coefs, position - 1, 0.0, axis=0)
-            for i in range(position - order + 1, position):
-                alpha = (knot - knots[i]) / (knots[i + order - 1] - knots[i])
-                newCoefs[i] = (1.0 - alpha) * coefs[i - 1] + alpha * coefs[i]
-            knotsList[ind] = knots = np.insert(knots, position, knot)
-            coefs = newCoefs.swapaxes(0, ind + 1)
+                multiplicity = knot[1]
+                knot = knot[0]
+                if multiplicity < 1:
+                    continue
+
+            # Check if knot and its total multiplicity is valid.
+            if knot < knots[degree] or knot > knots[-order]:
+                raise ValueError(f"Knot insertion outside domain: {knot}")
+            position = np.searchsorted(knots, knot, 'right')
+            oldMultiplicity = 0
+            for k in knots[position - 1::-1]:
+                if knot == k:
+                    oldMultiplicity += 1
+                else:
+                    break
+            if oldMultiplicity + multiplicity > order:
+                raise ValueError("Knot multiplicity > order")
+
+            # Initialize oldCoefs and expanded coefs array with multiplicity new coefficients, as well as some indices.
+            oldCoefs = coefs[position - order:position].copy()
+            lastKnotIndex = position - oldMultiplicity
+            firstCoefIndex = position - degree
+            coefs = np.insert(coefs, firstCoefIndex, oldCoefs[:multiplicity], axis=0)
+            # Compute inserted coefficients (multiplicity of them) and the degree - oldMultiplicity - 1 number of changed coefficients.
+            for j in range(multiplicity):
+                # Allocate new coefficients for the current multiplicity. 
+                size = degree - oldMultiplicity - j
+                if size < 1:
+                    # Full multiplicity knot, so use oldCoefs.
+                    coefs[firstCoefIndex + j] = oldCoefs[0]
+                else:
+                    # Otherwise, allocate space for newCoefs.
+                    newCoefs = np.empty((size, *coefs.shape[1:]), coefs.dtype)
+
+                    # Compute the new coefficients.
+                    for i, k in zip(range(size), range(lastKnotIndex - size, lastKnotIndex)):
+                        alpha = (knot - knots[k]) / (knots[k + degree - j] - knots[k])
+                        newCoefs[i] = (1.0 - alpha) * oldCoefs[i] + alpha * oldCoefs[i + 1]
+
+                    # Assign the ends of the new coefficients into their respective positions.
+                    coefs[firstCoefIndex + j] = newCoefs[0]
+                    if size > 1:
+                        coefs[lastKnotIndex + multiplicity - j - 2] = newCoefs[-1]
+                    oldCoefs = newCoefs
+            
+            # Assign remaining computed coefficients (the ones in the middle).
+            if size > 2:
+                coefs[firstCoefIndex + multiplicity:firstCoefIndex + multiplicity + size - 2] = newCoefs[1:-1]
+            
+            # Insert the inserted coefficients and inserted knots.
+            knotsList[ind] = knots = np.insert(knots, position, (knot,) * multiplicity)
+        
+        coefs = coefs.swapaxes(0, ind + 1) # Swap back
 
     if self.coefs is coefs:
         return self
@@ -554,17 +601,14 @@ def trim(self, newDomain):
             if unique[i] - bounds[0] < epsilon:
                 bounds[0] = unique[i]
                 multiplicity = order - counts[i]
-                if i > 0:
-                    noChange = False
             elif i > 0 and bounds[0] - unique[i - 1] < epsilon:
                 bounds[0] = unique[i - 1]
                 multiplicity = order - counts[i - 1]
-                if i - 1 > 0:
-                    noChange = False
             else:
                 multiplicity = order
-        
-            newKnots += multiplicity * [bounds[0]]
+            if multiplicity > 0:
+                newKnots.append((bounds[0], multiplicity))
+                noChange = False
 
         if not np.isnan(bounds[1]):
             if not(knots[order - 1] <= bounds[1] <= knots[-order]): raise ValueError("Invalid newDomain")
@@ -574,19 +618,16 @@ def trim(self, newDomain):
             if unique[i] - bounds[1] < epsilon:
                 bounds[1] = unique[i]
                 multiplicity = order - counts[i]
-                if i < len(unique) - 1:
-                    noChange = False
             elif i > 0 and bounds[1] - unique[i - 1] < epsilon:
                 bounds[1] = unique[i - 1]
                 multiplicity = order - counts[i - i]
-                noChange = False # i < len(unique) - 1
             else:
                 multiplicity = order
-            newKnots += multiplicity * [bounds[1]]
+            if multiplicity > 0:
+                newKnots.append((bounds[1], multiplicity))
+                noChange = False
 
         newKnotsList.append(newKnots)
-        if len(newKnots) > 0:
-            noChange = False
     
     if noChange:
         return self

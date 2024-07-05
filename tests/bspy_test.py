@@ -899,6 +899,26 @@ def test_greville():
 def test_insert_knots():
     maxError = 0.0
     newCurve = myCurve.insert_knots([[.2, .3]])
+    newCurve = newCurve.insert_knots([[.2, .3]])
+    newCurve = newCurve.insert_knots([[.2, .3]])
+    print()
+    print(newCurve.coefs)
+    for [u, x, y] in truthCurve:
+        [xTest, yTest] = newCurve.evaluate([u])
+        maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxError <= np.finfo(float).eps
+
+    maxError = 0.0
+    newCurve = myCurve.insert_knots([[.2, .2, .3, .2, .3, .3]])
+    print(newCurve.coefs)
+    for [u, x, y] in truthCurve:
+        [xTest, yTest] = newCurve.evaluate([u])
+        maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
+    assert maxError <= np.finfo(float).eps
+
+    maxError = 0.0
+    newCurve = myCurve.insert_knots([[(.3, 3), (.2, 3)]])
+    print(newCurve.coefs)
     for [u, x, y] in truthCurve:
         [xTest, yTest] = newCurve.evaluate([u])
         maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)

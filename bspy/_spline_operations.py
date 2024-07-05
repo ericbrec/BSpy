@@ -124,9 +124,9 @@ def confine(self, range_bounds):
         if unique[ix] == knot:
             count = (order - 1) - counts[ix]
             if count > 0:
-                spline = spline.insert_knots(([knot] * count,))
+                spline = spline.insert_knots(((knot, count),))
         else:
-            spline = spline.insert_knots(([knot] * (order - 1),))
+            spline = spline.insert_knots(((knot, order - 1),))
 
     # Go through the boundary points, assigning boundary coefficients, interpolating between boundary points, 
     # and removing knots and coefficients where the curve stalls.
