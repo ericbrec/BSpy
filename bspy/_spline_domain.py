@@ -326,6 +326,8 @@ def insert_knots(self, newKnotList):
             else:
                 multiplicity = knot[1]
                 knot = knot[0]
+                if multiplicity < 1:
+                    continue
 
             # Check if knot and its total multiplicity is valid.
             if knot < knots[degree] or knot > knots[-order]:
@@ -340,7 +342,7 @@ def insert_knots(self, newKnotList):
             if oldMultiplicity + multiplicity > order:
                 raise ValueError("Knot multiplicity > order")
 
-            # Initialize oldCoefs, start position for newCoefs, and expanded coefs array with multiplicity new coefficients.
+            # Initialize oldCoefs and expanded coefs array with multiplicity new coefficients, as well as some indices.
             oldCoefs = coefs[position - order:position].copy()
             lastKnotIndex = position - oldMultiplicity
             firstCoefIndex = position - degree
@@ -599,17 +601,14 @@ def trim(self, newDomain):
             if unique[i] - bounds[0] < epsilon:
                 bounds[0] = unique[i]
                 multiplicity = order - counts[i]
-                if i > 0:
-                    noChange = False
             elif i > 0 and bounds[0] - unique[i - 1] < epsilon:
                 bounds[0] = unique[i - 1]
                 multiplicity = order - counts[i - 1]
-                if i - 1 > 0:
-                    noChange = False
             else:
                 multiplicity = order
-        
-            newKnots += multiplicity * [bounds[0]]
+            if multiplicity > 0:
+                newKnots.append((bounds[0], multiplicity))
+                noChange = False
 
         if not np.isnan(bounds[1]):
             if not(knots[order - 1] <= bounds[1] <= knots[-order]): raise ValueError("Invalid newDomain")
@@ -619,19 +618,16 @@ def trim(self, newDomain):
             if unique[i] - bounds[1] < epsilon:
                 bounds[1] = unique[i]
                 multiplicity = order - counts[i]
-                if i < len(unique) - 1:
-                    noChange = False
             elif i > 0 and bounds[1] - unique[i - 1] < epsilon:
                 bounds[1] = unique[i - 1]
                 multiplicity = order - counts[i - i]
-                noChange = False # i < len(unique) - 1
             else:
                 multiplicity = order
-            newKnots += multiplicity * [bounds[1]]
+            if multiplicity > 0:
+                newKnots.append((bounds[1], multiplicity))
+                noChange = False
 
         newKnotsList.append(newKnots)
-        if len(newKnots) > 0:
-            noChange = False
     
     if noChange:
         return self
