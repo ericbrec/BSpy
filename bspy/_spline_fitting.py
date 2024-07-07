@@ -904,11 +904,11 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
     for i, knot in enumerate(uniqueKnots):
         howMany = currentGuess.order[0] - indices[i + 1] + indices[i] - nOrder
         if howMany > 0:
-            knotsToAdd += howMany * [knot]
+            knotsToAdd.append((knot, howMany))
         if howMany < 0:
-            knotsToRemove += [[knot, abs(howMany)]]
+            knotsToRemove.append((knot, abs(howMany)))
     currentGuess = currentGuess.insert_knots([knotsToAdd])
-    for [knot, howMany] in knotsToRemove:
+    for (knot, howMany) in knotsToRemove:
         ix = np.searchsorted(currentGuess.knots[0], knot, side = 'left')
         for iy in range(howMany):
             currentGuess, residual = currentGuess.remove_knot(ix, nLeft, nRight)
@@ -1065,7 +1065,7 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
             knotsToAdd = []
             for knot0, knot1 in zip(currentGuess.knots[0][:-1], currentGuess.knots[0][1:]):
                 if knot0 < knot1:
-                    knotsToAdd += (currentGuess.order[0] - nOrder) * [0.5 * (knot0 + knot1)]
+                    knotsToAdd.append((0.5 * (knot0 + knot1), currentGuess.order[0] - nOrder))
             previousGuess = currentGuess
             currentGuess = currentGuess.insert_knots([knotsToAdd])
 

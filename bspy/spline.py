@@ -1214,7 +1214,12 @@ class Spline(Manifold):
         ----------
         newKnots : `iterable` of length `nInd`
             An iterable that specifies the knots to be added to each independent variable's knots. 
-            len(newKnots[ind]) == 0 if no knots are to be added for the `ind` independent variable.
+            len(newKnots[ind]) == 0 if no knots are to be added for the `ind` independent variable. 
+            
+            Each knot may be specified as its knot value or a tuple indicating the knot value and its multiplicity. 
+            For example, spline.insert_knots([[0.1, (0.3, 2)], [(.5, 3), .2, .5]]) will insert 0.1 once and 0.3 twice into 
+            the knots of the first independent variable, and will insert 0.2 once and 0.5 four times into the knots of the 
+            second independent variable. Knots do not need to be sorted.
 
         Returns
         -------
