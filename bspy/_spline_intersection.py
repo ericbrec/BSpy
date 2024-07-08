@@ -277,23 +277,17 @@ def _refine_projected_polyhedron(interval):
                     if nInd in map:
                         ind = map.index(nInd)
                         order = spline.order[ind]
-                        nCoef = spline.nCoef[ind]
-                        knots = spline.knots[ind]
                         # Move independent variable to the last (fastest) axis, adding 1 to account for the dependent variables.
                         coefs = np.moveaxis(spline.coefs, ind + 1, -1)
                         break
             
-                # Skip this row if it doesn't contains this independent variable.
+                # Skip this row if it doesn't contain this independent variable.
                 if order < 1:
                     nDep += spline.nDep # Assumes there is at least one spline per block row
                     continue
 
                 # Compute the coefficients for f(x) = x for the independent variable and its knots.
-                degree = order - 1
-                xData = np.empty((nCoef,), knots.dtype)
-                xData[0] = knots[1]
-                for i in range(1, nCoef):
-                    xData[i] = xData[i - 1] + (knots[i + degree] - knots[i])/degree
+                xData = spline.greville(ind)
         
                 # Loop through each dependent variable in this row to refine the interval containing the root for this independent variable.
                 for yData, ySplineBounds, yBounds in zip(coefs, spline.range_bounds(), interval.bounds[nDep:nDep + spline.nDep]):
