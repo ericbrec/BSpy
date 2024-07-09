@@ -380,7 +380,7 @@ def _refine_projected_polyhedron(interval):
                 rightDomain[0][nInd] += w
                 domains.append(rightDomain)
     
-    # Add new intervals to interval queue.
+    # Add new intervals to interval stack.
     for domain in domains:
         xSplitLeft = xNewLeft.copy()
         xSplitRight = xNewRight.copy()
@@ -427,21 +427,14 @@ def zeros_using_projected_polyhedron(self, epsilon=None, initialScale=None):
         else:
             roots.append(0.5 * (newInterval.xLeft + newInterval.xRight),
                          0.5 * np.linalg.norm(newInterval.xRight - newInterval.xLeft))
-    chunkSize = 8
-    #pool = Pool() # Pool size matches CPU count
 
     # Refine all the intervals, collecting roots as we go.
     while intervals:
-        nextIntervals = []
-        if False and len(intervals) > chunkSize:
-            for (newRoots, newIntervals) in pool.imap_unordered(_refine_projected_polyhedron, intervals, chunkSize):
-                roots += newRoots
-                nextIntervals += newIntervals
-        else:
-            for (newRoots, newIntervals) in map(_refine_projected_polyhedron, intervals):
-                roots += newRoots
-                nextIntervals += newIntervals
-        intervals = nextIntervals
+        interval = intervals.pop()
+        newRoots, newIntervals = _refine_projected_polyhedron(interval)
+        roots += newRoots
+        newIntervals.reverse()
+        intervals += newIntervals
 
     # Combine overlapping roots into regions.
     regions = []
