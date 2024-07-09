@@ -126,62 +126,42 @@ def zeros_using_interval_newton(self):
             return mySolution
     return refine(spline, 1.0, 1.0)
 
-def _convex_hull_2D(xData, yData, yBounds, yOtherBounds, epsilon = 1.0e-8):
+def _convex_hull_2D(xData, yData, yBounds):
     # Allow xData to be repeated for longer yData, but only if yData is a multiple.
     if not(yData.shape[0] % xData.shape[0] == 0): raise ValueError("Size of xData does not divide evenly in size of yData")
-
-    # Assign (x0, y0) to the lowest point.
-    yMinIndex = np.argmin(yData)
-    x0 = xData[yMinIndex % xData.shape[0]]
-    y0 = yOtherBounds[0] + yData[yMinIndex]
+    yData = np.reshape(yData, (yData.shape[0] // xData.shape[0], xData.shape[0]))
 
     # Calculate y adjustment as needed for values close to zero
-    yAdjustment = -yBounds[0] if yBounds[0] > 0.0 else -yBounds[1] if yBounds[1] < 0.0 else 0.0
-    y0 += yAdjustment
-    additionalPoint = yOtherBounds[1] > yOtherBounds[0] + epsilon
+    yMinAdjustment = -yBounds[0] if yBounds[0] > 0.0 else 0.0
+    yMaxAdjustment = -yBounds[1] if yBounds[1] < 0.0 else 0.0
 
-    # Sort points by angle around p0.
-    sortedPoints = []
-    xIter = iter(xData)
-    for y in yData:
-        y += yAdjustment
-        x = next(xIter, None)
-        if x is None:
-            xIter = iter(xData)
-            x = next(xIter)
-        sortedPoints.append((math.atan2(yOtherBounds[0] + y - y0, x - x0), x, yOtherBounds[0] + y))
-        if additionalPoint:
-            sortedPoints.append((math.atan2(yOtherBounds[1] + y - y0, x - x0), x, yOtherBounds[1] + y))
-    sortedPoints.sort()
+    # Calculate the yMin and yMax arrays corresponding to xData
+    yMin = np.min(yData, axis = 0) + yMinAdjustment
+    yMax = np.max(yData, axis = 0) + yMaxAdjustment
 
-    # Trim away points with the same angle (keep furthest point from p0), removing the angle from the list.
-    trimmedPoints = [sortedPoints[0][1:]] # Ensure we keep the first point
-    previousPoint = None
-    previousDistance = -1.0
-    for point in sortedPoints[1:]:
-        if previousPoint is not None and abs(previousPoint[0] - point[0]) < epsilon:
-            if previousDistance < 0.0:
-                previousDistance = (previousPoint[1] - x0) ** 2 + (previousPoint[2] - y0) ** 2
-            distance = (point[1] - x0) ** 2 + (point[2] - y0) ** 2
-            if distance > previousDistance:
-                trimmedPoints[-1] = point[1:]
-                previousPoint = point
-                previousDistance = distance
-        else:
-            trimmedPoints.append(point[1:])
-            previousPoint = point
-            previousDistance = -1.0
+    # Initialize lower and upper hulls
+    lowerHull = [[xData[0], yMin[0]], [xData[1], yMin[1]]]
+    upperHull = [[xData[0], yMax[0]], [xData[1], yMax[1]]]
 
-    # Build the convex hull by moving counterclockwise around trimmed sorted points.
-    hullPoints = []
-    for point in trimmedPoints:
-        while len(hullPoints) > 1 and \
-            (hullPoints[-1][0] - hullPoints[-2][0]) * (point[1] - hullPoints[-2][1]) - \
-            (hullPoints[-1][1] - hullPoints[-2][1]) * (point[0] - hullPoints[-2][0]) <= 0.0:
-            hullPoints.pop()
-        hullPoints.append(point)
+    # Add additional lower points one at a time, throwing out intermediates if necessary
+    for xNext, yNext in zip(xData[2:], yMin[2:]):
+        lowerHull.append([xNext, yNext])
+        while len(lowerHull) > 2 and \
+                (lowerHull[-2][0] - lowerHull[-3][0]) * (lowerHull[-1][1] - lowerHull[-2][1]) <= \
+                (lowerHull[-1][0] - lowerHull[-2][0]) * (lowerHull[-2][1] - lowerHull[-3][1]):
+            del lowerHull[-2]
 
-    return hullPoints
+    # Do the same for the upper points
+    for xNext, yNext in zip(xData[2:], yMax[2:]):
+        upperHull.append([xNext, yNext])
+        while len(upperHull) > 2 and \
+                (upperHull[-2][0] - upperHull[-3][0]) * (upperHull[-1][1] - upperHull[-2][1]) >= \
+                (upperHull[-1][0] - upperHull[-2][0]) * (upperHull[-2][1] - upperHull[-3][1]):
+            del upperHull[-2]
+
+    # Join the two hulls and return
+    upperHull.reverse()
+    return lowerHull + upperHull
 
 def _intersect_convex_hull_with_x_interval(hullPoints, epsilon, xInterval):
     xMin = xInterval[1] + epsilon
@@ -290,9 +270,9 @@ def _refine_projected_polyhedron(interval):
                 xData = spline.greville(ind)
         
                 # Loop through each dependent variable in this row to refine the interval containing the root for this independent variable.
-                for yData, ySplineBounds, yBounds in zip(coefs, spline.range_bounds(), interval.bounds[nDep:nDep + spline.nDep]):
+                for yData, yBounds in zip(coefs, interval.bounds[nDep:nDep + spline.nDep]):
                     # Compute the 2D convex hull of the knot coefficients and the spline's coefficients
-                    hull = _convex_hull_2D(xData, yData.ravel(), yBounds, yBounds - ySplineBounds, epsilon)
+                    hull = _convex_hull_2D(xData, yData.ravel(), yBounds)
                     if hull is None:
                         return roots, intervals
                 
