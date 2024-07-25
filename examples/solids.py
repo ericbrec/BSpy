@@ -14,14 +14,17 @@ if __name__ == "__main__":
     
     viewer = Viewer()
 
-    if True:
+    case = "pipes"
+    if case == "pipes":
         square = Hyperplane.create_hypercube([[-1, 1]] * 2)
         star = utils.create_star(2.0, [0.0, 0.0], 90.0*6.28/360.0)
         extrudedSquare = utils.extrude_solid(square,[[-2,2,-4],[2,-2,4]])
         extrudedStar = utils.extrude_solid(star,[[-2,-2,-4],[2,2,4]])
         combined = extrudedStar.union(extrudedSquare)
-        viewer.draw(combined)
-    if False:
+        viewer.list(extrudedSquare, "Square pipe")
+        viewer.list(extrudedStar, "Star pipe")
+        viewer.draw(combined, "Union")
+    if case == "slice":
         viewer.frame.SetBackgroundColor(1.0, 1.0, 1.0)
         sphere = Hyperplane.create_hypercube([[-1, 1]] * 3)
         #sphere = Solid(3, False)
@@ -36,7 +39,7 @@ if __name__ == "__main__":
         difference = sphere - halfSpace
         viewer.draw(difference, "difference")
         viewer.mainloop()
-    if False:
+    if case == "paraboloids":
         order = 3
         knots = [0.0] * order + [1.0] * order
         nCoef = len(knots) - order
