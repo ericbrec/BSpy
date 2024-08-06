@@ -403,7 +403,9 @@ if __name__ == "__main__":
         viewer.draw(boundary2)
 
         cache = {}
-        intersections, isTwin = boundary2.manifold.cached_intersect(boundary1.manifold, cache)
-        exit()
+        print(boundary1.manifold)
+        print(boundary2.manifold)
+    #    intersections, isTwin = boundary2.manifold.cached_intersect(boundary1.manifold, cache)
+    #    exit()
         
     viewer.mainloop()
