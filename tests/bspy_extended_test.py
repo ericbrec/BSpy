@@ -723,3 +723,33 @@ def test_intersect():
         for t in np.linspace(0.0, 1.0, 11):
             maxError = max(maxError, np.linalg.norm(spline(intersection.left(t)) - plane(intersection.right(t))))
     assert maxError <= np.finfo(float).eps ** 0.2
+
+def test_intersection():
+    epsilon = 1.0e-2
+
+    solids = bspy.Solid.load("tests/teapots.json")
+    intersection = solids[0].intersection(solids[1])
+
+    computedVolume = intersection.volume_integral(lambda x: 1.0)
+    expectedVolume = solids[2].volume_integral(lambda x: 1.0)
+    assert abs(computedVolume - expectedVolume) < epsilon
+
+    computedSurfaceArea = intersection.surface_integral(lambda x, n: n)
+    expectedSurfaceArea = solids[2].surface_integral(lambda x, n: n)
+    assert abs(computedSurfaceArea - expectedSurfaceArea) < epsilon
+    print(computedVolume, computedSurfaceArea)
+
+def test_union():
+    epsilon = 1.0e-4
+
+    solids = bspy.Solid.load("tests/pipes.json")
+    union = solids[0].union(solids[1])
+
+    computedVolume = union.volume_integral(lambda x: 1.0)
+    expectedVolume = solids[2].volume_integral(lambda x: 1.0)
+    assert abs(computedVolume - expectedVolume) < epsilon
+
+    computedSurfaceArea = union.surface_integral(lambda x, n: n)
+    expectedSurfaceArea = solids[2].surface_integral(lambda x, n: n)
+    assert abs(computedSurfaceArea - expectedSurfaceArea) < epsilon
+    print(computedVolume, computedSurfaceArea)
