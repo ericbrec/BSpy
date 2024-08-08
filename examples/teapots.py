@@ -368,7 +368,7 @@ if __name__ == "__main__":
         teapot2.add_boundary(Boundary(
             Spline(2, 3, (4,4), (4,4), (knots, knots), coefficients, metadata=dict(Name=f"2 {patch[0]}"))))
 
-    case = "test"
+    case = "wide"
     if case == "spouts": # Touching spouts
         viewer.list(teapot1, "Teapot 1", fillColor=np.array((1, 1, 0, 1),np.float32))
         theta = 180.0 * np.pi / 180

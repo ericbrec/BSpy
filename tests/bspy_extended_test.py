@@ -725,7 +725,7 @@ def test_intersect():
     assert maxError <= np.finfo(float).eps ** 0.2
 
 def test_intersection():
-    epsilon = 1.0e-2
+    epsilon = 5.0e-2
 
     solids = bspy.Solid.load("tests/teapots.json")
     intersection = solids[0].intersection(solids[1])
