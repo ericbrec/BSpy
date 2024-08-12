@@ -969,7 +969,10 @@ class Spline(Manifold):
         
         f : Python function
             The function to approximate.  It is a vector-valued function of nDep
-            components in nInd variables.
+            components in nInd variables.  Alternatively, it can return a spline of any
+            number independent variables and nDep dependent variables.  In this case, the
+            resulting spline function will have nInd + number of independent variables
+            in the splines returned independent variables and nDep dependent variables.
         
         order : `array-like`
             An optional integer array of length nInd which specifies the polynomial

@@ -126,102 +126,83 @@ def zeros_using_interval_newton(self):
             return mySolution
     return refine(spline, 1.0, 1.0)
 
-def _convex_hull_2D(xData, yData, yBounds, yOtherBounds, epsilon = 1.0e-8):
+def _convex_hull_2D(xData, yData, yBounds, yOtherBounds):
     # Allow xData to be repeated for longer yData, but only if yData is a multiple.
     if not(yData.shape[0] % xData.shape[0] == 0): raise ValueError("Size of xData does not divide evenly in size of yData")
-
-    # Assign (x0, y0) to the lowest point.
-    yMinIndex = np.argmin(yData)
-    x0 = xData[yMinIndex % xData.shape[0]]
-    y0 = yOtherBounds[0] + yData[yMinIndex]
+    yData = np.reshape(yData, (yData.shape[0] // xData.shape[0], xData.shape[0]))
 
     # Calculate y adjustment as needed for values close to zero
-    yAdjustment = -yBounds[0] if yBounds[0] > 0.0 else -yBounds[1] if yBounds[1] < 0.0 else 0.0
-    y0 += yAdjustment
-    additionalPoint = yOtherBounds[1] > yOtherBounds[0] + epsilon
+    yMinAdjustment = -yBounds[0] if yBounds[0] > 0.0 else 0.0
+    yMaxAdjustment = -yBounds[1] if yBounds[1] < 0.0 else 0.0
+    yMinAdjustment += yOtherBounds[0]
+    yMaxAdjustment += yOtherBounds[1]
 
-    # Sort points by angle around p0.
-    sortedPoints = []
-    xIter = iter(xData)
-    for y in yData:
-        y += yAdjustment
-        x = next(xIter, None)
-        if x is None:
-            xIter = iter(xData)
-            x = next(xIter)
-        sortedPoints.append((math.atan2(yOtherBounds[0] + y - y0, x - x0), x, yOtherBounds[0] + y))
-        if additionalPoint:
-            sortedPoints.append((math.atan2(yOtherBounds[1] + y - y0, x - x0), x, yOtherBounds[1] + y))
-    sortedPoints.sort()
+    # Calculate the yMin and yMax arrays corresponding to xData
+    yMin = np.min(yData, axis = 0) + yMinAdjustment
+    yMax = np.max(yData, axis = 0) + yMaxAdjustment
 
-    # Trim away points with the same angle (keep furthest point from p0), removing the angle from the list.
-    trimmedPoints = [sortedPoints[0][1:]] # Ensure we keep the first point
-    previousPoint = None
-    previousDistance = -1.0
-    for point in sortedPoints[1:]:
-        if previousPoint is not None and abs(previousPoint[0] - point[0]) < epsilon:
-            if previousDistance < 0.0:
-                previousDistance = (previousPoint[1] - x0) ** 2 + (previousPoint[2] - y0) ** 2
-            distance = (point[1] - x0) ** 2 + (point[2] - y0) ** 2
-            if distance > previousDistance:
-                trimmedPoints[-1] = point[1:]
-                previousPoint = point
-                previousDistance = distance
-        else:
-            trimmedPoints.append(point[1:])
-            previousPoint = point
-            previousDistance = -1.0
+    # Initialize lower and upper hulls
+    lowerHull = [[xData[0], yMin[0]], [xData[1], yMin[1]]]
+    upperHull = [[xData[0], yMax[0]], [xData[1], yMax[1]]]
 
-    # Build the convex hull by moving counterclockwise around trimmed sorted points.
-    hullPoints = []
-    for point in trimmedPoints:
-        while len(hullPoints) > 1 and \
-            (hullPoints[-1][0] - hullPoints[-2][0]) * (point[1] - hullPoints[-2][1]) - \
-            (hullPoints[-1][1] - hullPoints[-2][1]) * (point[0] - hullPoints[-2][0]) <= 0.0:
-            hullPoints.pop()
-        hullPoints.append(point)
+    # Add additional lower points one at a time, throwing out intermediates if necessary
+    for xNext, yNext in zip(xData[2:], yMin[2:]):
+        lowerHull.append([xNext, yNext])
+        while len(lowerHull) > 2 and \
+                (lowerHull[-2][0] - lowerHull[-3][0]) * (lowerHull[-1][1] - lowerHull[-2][1]) <= \
+                (lowerHull[-1][0] - lowerHull[-2][0]) * (lowerHull[-2][1] - lowerHull[-3][1]):
+            del lowerHull[-2]
 
-    return hullPoints
+    # Do the same for the upper points
+    for xNext, yNext in zip(xData[2:], yMax[2:]):
+        upperHull.append([xNext, yNext])
+        while len(upperHull) > 2 and \
+                (upperHull[-2][0] - upperHull[-3][0]) * (upperHull[-1][1] - upperHull[-2][1]) >= \
+                (upperHull[-1][0] - upperHull[-2][0]) * (upperHull[-2][1] - upperHull[-3][1]):
+            del upperHull[-2]
 
-def _intersect_convex_hull_with_x_interval(hullPoints, epsilon, xInterval):
-    xMin = xInterval[1] + epsilon
-    xMax = xInterval[0] - epsilon
-    previousPoint = hullPoints[-1]
-    for point in hullPoints:
-        # Check for intersection with x axis.
-        if previousPoint[1] * point[1] <= epsilon:
-            determinant = point[1] - previousPoint[1]
-            if abs(determinant) > epsilon:
-                # Crosses x axis, determine intersection.
-                x = previousPoint[0] - previousPoint[1] * (point[0] - previousPoint[0]) / determinant
-                xMin = min(xMin, x)
-                xMax = max(xMax, x)
-            elif abs(point[1]) < epsilon:
-                # Touches at endpoint. (Previous point is checked earlier.)
-                xMin = min(xMin, point[0])
-                xMax = max(xMax, point[0])
-        previousPoint = point
+    # Return the two hulls
+    return lowerHull, upperHull
 
-    if xMin - epsilon > xInterval[1] or xMax + epsilon < xInterval[0]:
+def _intersect_convex_hull_with_x_interval(lowerHull, upperHull, epsilon, xInterval):
+    xMin = xInterval[0]
+    xMax = xInterval[1]
+    sign = -1.0
+    for hull in [lowerHull, upperHull]:
+        sign = -sign
+        p0 = hull[0]
+        for p1 in hull[1:]:
+            yDelta = p0[1] - p1[1]
+            if p0[1] * p1[1] <= 0.0 and yDelta != 0.0:
+                yDelta = p0[1] - p1[1]
+                alpha = p0[1] / yDelta
+                xNew = p0[0] * (1.0 - alpha) + p1[0] * alpha
+                if sign * yDelta > 0.0:
+                    xMin = max(xMin, xNew - epsilon)
+                else:
+                    xMax = min(xMax, xNew + epsilon)
+            p0 = p1
+    if xMin > xMax:
         return None
     else:
-        return (min(max(xMin, xInterval[0]), xInterval[1]), max(min(xMax, xInterval[1]), xInterval[0]))
+        return [xMin, xMax]
 
-Interval = namedtuple('Interval', ('block', 'unknowns', 'scale', 'bounds', 'slope', 'intercept', 'epsilon', 'atMachineEpsilon'))
+Interval = namedtuple('Interval', ('block', 'active', 'split', 'scale', 'bounds', 'xLeft', 'xRight', 'epsilon', 'atMachineEpsilon'))
 
-def _create_interval(domain, block, unknowns, scale, slope, intercept, epsilon):
+def _create_interval(block, active, split, scale, xLeft, xRight, epsilon):
     nDep = 0
-    bounds = np.zeros((len(scale), 2), scale.dtype)
+    nInd = len(scale)
+    bounds = np.zeros((nInd, 2), scale.dtype)
     newScale = np.empty_like(scale)
     newBlock = []
     for row in block:
         newRow = []
-        keepDep = []
-        # Trim and reparametrize splines, and sum bounds.
+        # Reparametrize splines and sum bounds
         for map, spline in row:
-            spline = spline.trim(domain[map]).reparametrize(((0.0, 1.0),) * spline.nInd)
+            spline = spline.reparametrize(((0.0, 1.0),) * spline.nInd)
             bounds[nDep:nDep + spline.nDep] += spline.range_bounds()
             newRow.append((map, spline))
+        newBlock.append(newRow)
 
         # Check row bounds for potential roots.
         for dep in range(spline.nDep):
@@ -230,30 +211,21 @@ def _create_interval(domain, block, unknowns, scale, slope, intercept, epsilon):
             if coefsMax < -epsilon or coefsMin > epsilon:
                 # No roots in this interval.
                 return None
-            if coefsMin < -epsilon or coefsMax > epsilon:
-                # Dependent variable not near zero for entire interval.
-                keepDep.append(dep)
-                newScale[nDep] = max(-coefsMin, coefsMax)
-                # Rescale spline coefficients to max 1.0.
-                rescale = 1.0 / max(-bounds[nDep, 0], bounds[nDep, 1])
-                for map, spline in newRow:
-                    spline.coefs[dep] *= rescale
-                bounds[nDep] *= rescale
-                nDep += 1
-            else:
-                # Dependent variable near zero for entire interval.
-                bounds = np.delete(bounds, nDep, 0)
-                scale = np.delete(scale, nDep, 0)
-        
-        if keepDep:
-            # Remove dependent variables that are zero over the domain
+            newScale[nDep] = max(-coefsMin, coefsMax)
+            # Rescale spline coefficients to max 1.0.
+            rescale = 1.0 / max(-bounds[nDep, 0], bounds[nDep, 1])
             for map, spline in newRow:
-                spline.nDep = len(keepDep)
-                spline.coefs = spline.coefs[keepDep]
+                spline.coefs[dep] *= rescale
+            bounds[nDep] *= rescale
+            nDep += 1
 
-            newBlock.append(newRow)
+    for iInd in range(nInd):
+        newSplit = (split + iInd + 1) % nInd
+        if active[newSplit]:
+            return Interval(newBlock, active, newSplit, newScale, bounds, xLeft, xRight, epsilon, np.dot(xRight - xLeft, xRight - xLeft) < np.finfo(xLeft.dtype).eps)
 
-    return Interval(newBlock, unknowns, newScale[:nDep], bounds, slope, intercept, epsilon, np.dot(slope, slope) < np.finfo(slope.dtype).eps)
+    # No active variables left
+    return None
 
 # We use multiprocessing.Pool to call this function in parallel, so it cannot be nested and must take a single argument.
 def _refine_projected_polyhedron(interval):
@@ -262,145 +234,100 @@ def _refine_projected_polyhedron(interval):
     roots = []
     intervals = []
     
-    # Loop through each independent variable to determine a tighter domain around roots.
-    # The interval block's remaining number of independent variables (nInd) is len(interval.unknowns).
-    # The interval block's remaining number of dependent variables (nDep) is len(interval.scale).
-    domain = []
-    for nInd in range(len(interval.unknowns)):
-        # Loop through each dependent variable to compute the interval containing the root for this independent variable.
-        xInterval = (0.0, 1.0)
-        nDep = 0
-        for row in interval.block:
-            order = 0
-            for map, spline in row:
-                if nInd in map:
-                    ind = map.index(nInd)
-                    order = spline.order[ind]
-                    nCoef = spline.nCoef[ind]
-                    knots = spline.knots[ind]
-                    # Move independent variable to the last (fastest) axis, adding 1 to account for the dependent variables.
-                    coefs = np.moveaxis(spline.coefs, ind + 1, -1)
-                    break
+    # Explore given independent variable to determine a tighter domain around roots.
+    xInterval = [0.0, 1.0]
+    iInd = interval.split
+    nDep = 0
+    for row in interval.block:
+        order = 0
+        for map, spline in row:
+            if iInd in map:
+                ind = map.index(iInd)
+                order = spline.order[ind]
+                # Move independent variable to the last (fastest) axis, adding 1 to account for the dependent variables.
+                coefs = np.moveaxis(spline.coefs, ind + 1, -1)
+                break
             
-            # Skip this row if it doesn't contains this independent variable.
-            if order < 1:
-                nDep += spline.nDep # Assumes there is at least one spline per block row
-                continue
+        # Skip this row if it doesn't contain this independent variable.
+        if order < 1:
+            nDep += spline.nDep # Assumes there is at least one spline per block row
+            continue
 
-            # Compute the coefficients for f(x) = x for the independent variable and its knots.
-            degree = order - 1
-            xData = np.empty((nCoef,), knots.dtype)
-            xData[0] = knots[1]
-            for i in range(1, nCoef):
-                xData[i] = xData[i - 1] + (knots[i + degree] - knots[i])/degree
-            
-            # Loop through each dependent variable in this row to refine the interval containing the root for this independent variable.
-            for yData, ySplineBounds, yBounds in zip(coefs, spline.range_bounds(), interval.bounds[nDep:nDep + spline.nDep]):
-                # Compute the 2D convex hull of the knot coefficients and the spline's coefficients
-                hull = _convex_hull_2D(xData, yData.ravel(), yBounds, yBounds - ySplineBounds, epsilon)
-                if hull is None:
-                    return roots, intervals
-                
-                # Intersect the convex hull with the xInterval along the x axis (the knot coefficients axis).
-                xInterval = _intersect_convex_hull_with_x_interval(hull, epsilon, xInterval)
-                if xInterval is None:
-                    return roots, intervals
-            
-            nDep += spline.nDep
+        # Compute the coefficients for f(x) = x for the independent variable and its knots.
+        xData = spline.greville(ind)
         
-        domain.append(xInterval)
+        # Loop through each dependent variable in this row to refine the interval containing the root for this independent variable.
+        for yData, ySplineBounds, yBounds in zip(coefs, spline.range_bounds(),
+                                                 interval.bounds[nDep:nDep + spline.nDep]):
+            # Compute the 2D convex hull of the knot coefficients and the spline's coefficients
+            lowerHull, upperHull = _convex_hull_2D(xData, yData.ravel(), yBounds, yBounds - ySplineBounds)
+            if lowerHull is None or upperHull is None:
+                return roots, intervals
+            
+            # Intersect the convex hull with the xInterval along the x axis (the knot coefficients axis).
+            xInterval = _intersect_convex_hull_with_x_interval(lowerHull, upperHull, epsilon, xInterval)
+            if xInterval is None:
+                return roots, intervals
+            
+        nDep += spline.nDep
     
-    # Compute new slope, intercept, and unknowns.
-    domain = np.array(domain, interval.slope.dtype).T
-    width = domain[1] - domain[0]
-    newSlope = interval.slope.copy()
-    newIntercept = interval.intercept.copy()
-    newUnknowns = []
-    newDomain = domain.copy()
-    uvw = []
+    # Compute new interval bounds.
+
+    xNewLeft = interval.xLeft.copy()
+    xNewRight = interval.xRight.copy()
+    xNewLeft[iInd] = (1.0 - xInterval[0]) * interval.xLeft[iInd] + xInterval[0] * interval.xRight[iInd]
+    xNewRight[iInd] = (1.0 - xInterval[1]) * interval.xLeft[iInd] + xInterval[1] * interval.xRight[iInd]
+    newActive = interval.active.copy()
+    newActive[iInd] = (xNewRight[iInd] - xNewLeft[iInd] >= epsilon)
     nInd = 0
-    for i, w, d in zip(interval.unknowns, width, domain.T):
-        newSlope[i] = w * interval.slope[i]
-        newIntercept[i] = d[0] * interval.slope[i] + interval.intercept[i]
-        if newSlope[i] < epsilon:
-            uvw.append(0.5 * (d[0] + d[1]))
-            newDomain = np.delete(newDomain, nInd, axis=1)
-        else:
-            newUnknowns.append(i)
-            uvw.append(None)
+    for active in newActive:
+        if active:
             nInd += 1
 
-    # Iteration is complete if the interval actual width (slope) is either
+    # Iteration is complete if the interval actual width is either
     # one iteration past being less than sqrt(machineEpsilon) or there are no remaining independent variables.
     if interval.atMachineEpsilon or nInd == 0:
         # Return the interval center and radius.
-        roots.append((newIntercept + 0.5 * newSlope, epsilon))
+        roots.append((0.5 * (xNewLeft + xNewRight), epsilon))
         return roots, intervals
 
-    # Contract spline matrix as needed.
-    if newDomain.shape[1] < domain.shape[1]:
-        # First, remap the remaining independent variables (the ones not fixed by uvw).
-        remap = []
-        newIndex = 0
-        for value in uvw:
-            if value is None:
-                remap.append(newIndex)
-                newIndex += 1
-            else:
-                remap.append(None)
-        # Next, rebuild the block with contracted splines.
-        for row in interval.block:
-            for i, (map, spline) in enumerate(row):
-                spline = spline.contract([uvw[index] for index in map])
-                map = [remap[ind] for ind in map if uvw[ind] is None]
-                row[i] = (map, spline)
+    # Split domain if not sufficient decrease in width
+    width = xInterval[1] - xInterval[0]
+    domains = [xInterval]
+    if width > Crit:
+        # Didn't get the required decrease in width, so split the domain.
+        leftDomain = xInterval
+        rightDomain = xInterval.copy()
+        leftDomain[1] = 0.5 * (leftDomain[0] + leftDomain[1])
+        rightDomain[0] = leftDomain[1]
+        domains = [leftDomain, rightDomain]
 
-    # Special case optimization: Use interval newton for one-dimensional splines.
-    if nInd == 1 and nDep == 1 and len(interval.block[0]) == 1:
-        spline = interval.block[0][0][1]
-        i = newUnknowns[0]
-        for root in zeros_using_interval_newton(spline):
-            if not isinstance(root, tuple):
-                root = (root, root)
-            w = root[1] - root[0]
-            slope = newSlope.copy()
-            intercept = newIntercept.copy()
-            slope[i] = w * interval.slope[i]
-            intercept[i] = root[0] * interval.slope[i] + interval.intercept[i]
-            # Return the interval center and radius.
-            roots.append((intercept + 0.5 * slope, epsilon))
-        
-        return roots, intervals
-
-    # Split domain in dimensions that aren't decreasing in width sufficiently.
-    width = newDomain[1] - newDomain[0]
-    domains = [newDomain]
-    for nInd, w in enumerate(width):
-        if w > Crit:
-            # Didn't get the required decrease in width, so split the domain.
-            domainCount = len(domains) # Cache the domain list size, since we're increasing it mid loop
-            w *= 0.5 # Halve the domain width for this independent variable
-            for i in range(domainCount):
-                leftDomain = domains[i]
-                rightDomain = leftDomain.copy()
-                leftDomain[1][nInd] -= w # Alters domain in domains list
-                rightDomain[0][nInd] += w
-                domains.append(rightDomain)
-    
     # Add new intervals to interval stack.
     for domain in domains:
-        width = domain[1] - domain[0]
-        splitSlope = newSlope.copy()
-        splitIntercept = newIntercept.copy()
-        for i, w, d in zip(newUnknowns, width, domain.T):
-            splitSlope[i] = w * interval.slope[i]
-            splitIntercept[i] = d[0] * interval.slope[i] + interval.intercept[i]
-        newInterval = _create_interval(domain.T, interval.block, newUnknowns, interval.scale, splitSlope, splitIntercept, epsilon)
+        xSplitLeft = xNewLeft.copy()
+        xSplitRight = xNewRight.copy()
+        xSplitLeft[iInd] = (1.0 - domain[0]) * interval.xLeft[iInd] + domain[0] * interval.xRight[iInd]
+        xSplitRight[iInd] = (1.0 - domain[1]) * interval.xLeft[iInd] + domain[1] * interval.xRight[iInd]
+        newBlock = []
+        for row in interval.block:
+            newRow = []
+            # Trim splines
+            for map, spline in row:
+                trimRegion = [(0.0, 1.0) for i in range(spline.nInd)]
+                if iInd in map:
+                    ind = map.index(iInd)
+                    trimRegion[ind] = domain
+                spline = spline.trim(trimRegion)
+                newRow.append((map, spline))
+            newBlock.append(newRow)
+        newInterval = _create_interval(newBlock, newActive, iInd,
+                                       interval.scale, xSplitLeft, xSplitRight, epsilon)
         if newInterval:
             if newInterval.block:
                 intervals.append(newInterval)
             else:
-                roots.append((newInterval.intercept + 0.5 * newInterval.slope, 0.5 * np.linalg.norm(newInterval.slope)))
+                roots.append((0.5 * (newInterval.xLeft + newInterval.xRight),
+                              0.5 * np.linalg.norm(newInterval.xRight - newInterval.xLeft)))
   
     return roots, intervals
 
@@ -425,27 +352,22 @@ def zeros_using_projected_polyhedron(self, epsilon=None, initialScale=None):
     # Set initial interval.
     domain = self.domain().T
     initialScale = np.full(self.nDep, 1.0, self.coefsDtype) if initialScale is None else np.array(initialScale, self.coefsDtype)
-    newInterval = _create_interval(domain.T, self.block, [*range(self.nInd)], initialScale, domain[1] - domain[0], domain[0], epsilon)
+    newInterval = _create_interval(self.block, self.nInd * [True], -1, initialScale,
+                                   domain[0], domain[1], epsilon)
     if newInterval:
         if newInterval.block:
             intervals.append(newInterval)
         else:
-            roots.append((newInterval.intercept + 0.5 * newInterval.slope, 0.5 * np.linalg.norm(newInterval.slope)))
-    chunkSize = 8
-    #pool = Pool() # Pool size matches CPU count
+            roots.append(0.5 * (newInterval.xLeft + newInterval.xRight),
+                         0.5 * np.linalg.norm(newInterval.xRight - newInterval.xLeft))
 
     # Refine all the intervals, collecting roots as we go.
     while intervals:
-        nextIntervals = []
-        if False and len(intervals) > chunkSize:
-            for (newRoots, newIntervals) in pool.imap_unordered(_refine_projected_polyhedron, intervals, chunkSize):
-                roots += newRoots
-                nextIntervals += newIntervals
-        else:
-            for (newRoots, newIntervals) in map(_refine_projected_polyhedron, intervals):
-                roots += newRoots
-                nextIntervals += newIntervals
-        intervals = nextIntervals
+        interval = intervals.pop()
+        newRoots, newIntervals = _refine_projected_polyhedron(interval)
+        roots += newRoots
+        newIntervals.reverse()
+        intervals += newIntervals
 
     # Combine overlapping roots into regions.
     regions = []
@@ -454,17 +376,33 @@ def zeros_using_projected_polyhedron(self, epsilon=None, initialScale=None):
         rootCenter = root[0]
         rootRadius = root[1]
 
-        # Ensure we have a real root (not a boundary special case).
+        # Take one Newton step on each root
         value = self.evaluate(rootCenter)
-        if np.linalg.norm(value) >= evaluationEpsilon:
+        residualNorm = np.linalg.norm(value)
+        try:
+            update = np.linalg.solve(self.jacobian(rootCenter), value)
+            if np.linalg.norm(update) < rootRadius:
+                rootCenter -= update
+        except:
+            pass
+
+        # Project back onto spline domain
+        selfDomain = self.domain()
+        rootCenter = np.maximum(np.minimum(rootCenter, selfDomain.T[1]), selfDomain.T[0])
+        value = self.evaluate(rootCenter)
+        newResidualNorm = np.linalg.norm(value)
+        rootRadius *= newResidualNorm / residualNorm
+        residualNorm = newResidualNorm
+
+        # Ensure we have a real root (not a boundary special case).
+        if residualNorm >= evaluationEpsilon:
             continue
 
         # Expand the radius of the root based on the approximate distance from the center needed
         # to raise the value of the spline above evaluationEpsilon.
-        jacobian = self.jacobian(rootCenter)
-        minEigenvalue = np.sqrt(np.linalg.eigvalsh(jacobian.T @ jacobian)[0])
-        if minEigenvalue > epsilon:
-            rootRadius = max(rootRadius, evaluationEpsilon / minEigenvalue)
+        minSingularValue = np.linalg.svd(self.jacobian(rootCenter), False, False)[-1]
+        if minSingularValue > epsilon:
+            rootRadius = max(rootRadius, evaluationEpsilon / minSingularValue)
         
         # Intersect this root with the existing regions, expanding and combining them as appropriate.
         firstRegion = None
@@ -636,7 +574,10 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
         # First, add the null space constraint to the system: dot(self's gradient, (r * sinTheta, -r * cosTheta, c, d, ...) = 0.
         # This introduces self.nInd - 1 new independent variables: r, c, d, ...
         turningPointBlock = self.block.copy()
-        rSpline = bspy.Spline(1, 1, (2,), (2,), ((0.0, 0.0, 1.0, 1.0),), ((0.0, 1.0),))
+        if self.nInd > 2:
+            rSpline = bspy.Spline(1, 1, (2,), (2,), ((0.0, 0.0, 1.0, 1.0),), ((0.0, 1.0),))
+        else:
+            rSpline = bspy.Spline.point([1.0])
         otherSpline = bspy.Spline(1, 1, (2,), (2,), ((-1.0, -1.0, 1.0, 1.0),), ((-1.0, 1.0),))
         # Track indices of other independent variables (c, d, ...).
         otherNInd = self.nInd + 1 # Add one since r is always the first new variable (index for r is self.nInd)
@@ -674,6 +615,7 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
                         term = dSpline.multiply(otherSpline)
                         newSpline = term if newSpline is None else newSpline.add(term, indMapForAdd)
 
+                newMap = newMap[:newSpline.nInd]
                 newRow.append((newMap, newSpline))
             turningPointBlock.append(newRow)
 
@@ -685,8 +627,12 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
         assert otherNInd == 2 * self.nInd - 1
         for nInd in range(self.nInd + 1, otherNInd):
             newRow.append(((nInd,), otherSquared))
-        turningPointBlock.append(newRow)
-        turningPointInitialScale = np.append(initialScale, (1.0,) * (self.nDep + 1))
+        if self.nInd > 2:
+            turningPointBlock.append(newRow)
+        if self.nDep > 1:
+            turningPointInitialScale = np.append(initialScale, (1.0,) * (self.nDep + 1))
+        else:
+            turningPointInitialScale = np.append(initialScale, (1.0,))
         
         # Finally, find the zeros of the system (only the first self.nInd values are of interest).
         zeros = bspy.spline_block.SplineBlock(turningPointBlock).zeros(epsilon, turningPointInitialScale)

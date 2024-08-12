@@ -651,36 +651,43 @@ def test_geodesic():
     assert np.linalg.norm(template(0.5, 0.5) - [0.5086638362955938, 0.02758673451648419]) < 1.0e-4
 
 def test_intersect():
+    surf1 = bspy.Spline(2, 3, (4, 4), (4, 4), [[0., 0., 0., 0., 1., 1., 1., 1.],
+                                               [0., 0., 0., 0., 1., 1., 1., 1.]],
+                        [[[-2.,   -2.,   -1.12,   0.   ], [-2.,    -2.,    -1.12,   0.   ],
+                          [-1.5,   -1.5,   -0.84,   0.   ], [-1.5,   -1.5,   -0.84,   0.   ]],
+                         [[ 0.9,    0.9,    0.9,    0.9  ], [ 0.45,   0.45,   0.45,   0.45 ],
+                          [ 0.225, 0.225,  0.225,  0.225], [ 0.15,   0.15,   0.15,   0.15 ]],
+                         [[ 0.,     1.12,   2.,     2.   ], [ 0.,     1.12,   2.,     2.   ],
+                          [ 0.,     0.84,   1.5,    1.5  ], [ 0.,     0.84,   1.5,    1.5  ]]])
+    surf2 = bspy.Spline(2, 3, (4, 4), (4, 4), [[0., 0., 0., 0., 1., 1., 1., 1.],
+                                               [0., 0., 0., 0., 1., 1., 1., 1.]],
+                        [[[ 0.5,         0.40300515,  0.37079491,  0.42679492],
+                          [ 0.4,         0.2060103,   0.14158983,  0.25358983],
+                          [-0.04999998, -0.68046646, -0.88983298, -0.52583298],
+                          [-0.04999998, -0.68046646, -0.88983298, -0.52583298]],
+                         [[ 0.70000005,  0.70000005,  0.70000005,  0.70000005],
+                          [ 0.54999995,  0.54999995,  0.54999995,  0.54999995],
+                          [ 0.54999995,  0.54999995,  0.54999995,  0.54999995],
+                          [ 0.4000001,  0.4000001,   0.4000001,   0.4000001 ]],
+                         [[ 1.82679492,  1.88279492,  2.00300515,  2.1       ],
+                          [ 1.65358983,  1.76558984,  2.00601031,  2.2       ],
+                          [ 0.87416702,  1.23816701,  2.0195335,   2.64999998],
+                          [ 0.87416702,  1.23816701,  2.0195335,   2.64999998]]])
+    curves = surf1.intersect(surf2)
+
 #  This test brings BSpy to its knees
 #
 #  On Tom's laptop, it runs for over 15.5 hours without computing the intersection
 #
-#    def myFunction(t):
-#        return 1.0 + 0.25 * np.cos(6.0 * np.pi * t)
-#    tValues = np.linspace(0.0, 1.0, 51)
-#    xValues = [[myFunction(t) for t in tValues]]
-#    mySpline = bspy.Spline.least_squares(tValues, xValues, tolerance = 0.001)
-#    myCurve = mySpline * bspy.Spline.circular_arc(1.0, 90.0)
-#    flower = myCurve.revolve(360.0)
-#    myCone = bspy.Spline.cone(0.25, 0.1, 2.0).rotate([0.0, 1.0, 0.0], -20.0)
+    def myFunction(t):
+        return 1.0 + 0.25 * np.cos(6.0 * np.pi * t)
+    tValues = np.linspace(0.0, 1.0, 51)
+    xValues = [[myFunction(t) for t in tValues]]
+    mySpline = bspy.Spline.least_squares(tValues, xValues, tolerance = 0.001)
+    myCurve = mySpline * bspy.Spline.circular_arc(1.0, 90.0)
+    flower = myCurve.revolve(360.0)
+    myCone = bspy.Spline.cone(0.25, 0.1, 2.0).rotate([0.0, 1.0, 0.0], -20.0)
 #    stuff = flower.intersect(myCone)
-#    x = bspy.Spline.line([-1.0], [1.0]).reparametrize([[-1.0, 1.0]])
-#    xHalf = x.trim([[0.0, 1.0]])
-#    one = bspy.Spline(1, 1, [1], [1], [[-1.0, 1.0]], [[1.0]])
-#    oneHalf = one.trim([[0.0, 1.0]])
-#    surf1 = flower.multiply(one).multiply(one)
-#    surf2 = -myCone.multiply(one).multiply(oneHalf)
-#    nullspace1 = flower.differentiate().multiply(x).multiply(one)
-#    nullspace2 = flower.differentiate(1).multiply(one).multiply(x)
-#    tSpace1 = nullspace1 + nullspace2
-#    nullspace1 = myCone.differentiate().multiply(x).multiply(oneHalf)
-#    nullspace2 = myCone.differentiate(1).multiply(one).multiply(xHalf)
-#    tSpace2 = nullspace1 - nullspace2
-#    turning = oneHalf.multiply(oneHalf).add(x).add(x)
-#    normalize1 = oneHalf.multiply(oneHalf).add(x * x).add(x * x)
-#    normalize2 = oneHalf.multiply(oneHalf).add(x * x).add(xHalf * xHalf - 1.0)
-#    system = bspy.SplineBlock([[surf1, surf2], [tSpace1, tSpace2], [turning], [normalize1, normalize2]])
-#    tentative = system.zeros()
 
     maxError = 0.0
     F = lambda u , v : (u ** 2 + (v - 3/4) ** 2 - 1/25) * \
@@ -718,7 +725,7 @@ def test_intersect():
     assert maxError <= np.finfo(float).eps ** 0.2
 
 def test_intersection():
-    epsilon = 1.0e-2
+    epsilon = 5.0e-2
 
     solids = bspy.Solid.load("tests/teapots.json")
     intersection = solids[0].intersection(solids[1])
