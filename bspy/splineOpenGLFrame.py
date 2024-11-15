@@ -27,14 +27,10 @@ class SplineOpenGLFrame(OpenGLFrame):
 
     maxOrder = 9
     """Maximum order for drawable splines."""
-    maxCoefficients = 120
-    """Maximum number of coefficients for drawable splines."""
-    maxKnots = maxCoefficients + maxOrder
-    """Maximum number of knots for drawable splines."""
-    _knotsFloats = 4 + 2 * maxKnots
-    """Maximum total number of floats for the knots of drawable splines."""
-    _coefsFloats = 4 * maxCoefficients * maxCoefficients
-    """Maximum total number of floats for the coefs of drawable splines."""
+    maxKnots = 1024
+    """Maximum total number of knots for drawable splines (includes 4 header values)."""
+    maxCoefficients = 32768
+    """Maximum total number of coefficients for drawable splines."""
 
     HULL = (1 << 0)
     """Option to draw the convex hull of the spline (the coefficients). Off by default."""
@@ -1199,14 +1195,14 @@ class SplineOpenGLFrame(OpenGLFrame):
         glBindBuffer(GL_TEXTURE_BUFFER, self.knotsDataBuffer)
         glBindTexture(GL_TEXTURE_BUFFER, glGenTextures(1))
         glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, self.knotsDataBuffer)
-        glBufferData(GL_TEXTURE_BUFFER, 4 * self._knotsFloats, None, GL_STATIC_READ)
+        glBufferData(GL_TEXTURE_BUFFER, 4 * self.maxKnots, None, GL_STATIC_READ)
 
         glActiveTexture(GL_TEXTURE1)
         self.coefsDataBuffer = glGenBuffers(1)
         glBindBuffer(GL_TEXTURE_BUFFER, self.coefsDataBuffer)
         glBindTexture(GL_TEXTURE_BUFFER, glGenTextures(1))
         glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, self.coefsDataBuffer)
-        glBufferData(GL_TEXTURE_BUFFER, 4 * self._coefsFloats, None, GL_STATIC_READ)
+        glBufferData(GL_TEXTURE_BUFFER, 4 * self.maxCoefficients, None, GL_STATIC_READ)
 
         # Set light direction
         self.lightDirection = np.array((0.63960218, 0.63960218, 0.42640144), np.float32)
