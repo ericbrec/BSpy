@@ -165,25 +165,25 @@ class SplineOpenGLFrame(OpenGLFrame):
                 else
                 {
                     int i = outData.uKnot - outData.uOrder;
-                    int coefficientOffset = header + outData.uOrder + outData.uN + nDep * i;
+                    int coefficientOffset = nDep * i;
                     vec3 coefficient0 = vec3(
-                        texelFetch(uKnotsData, coefficientOffset+0).x, 
-                        texelFetch(uKnotsData, coefficientOffset+1).x,
-                        texelFetch(uKnotsData, coefficientOffset+2).x);
+                        texelFetch(uCoefsData, coefficientOffset+0).x, 
+                        texelFetch(uCoefsData, coefficientOffset+1).x,
+                        texelFetch(uCoefsData, coefficientOffset+2).x);
                     coefficientOffset += nDep;
                     vec3 coefficient1 = vec3(
-                        texelFetch(uKnotsData, coefficientOffset+0).x, 
-                        texelFetch(uKnotsData, coefficientOffset+1).x,
-                        texelFetch(uKnotsData, coefficientOffset+2).x);
+                        texelFetch(uCoefsData, coefficientOffset+0).x, 
+                        texelFetch(uCoefsData, coefficientOffset+1).x,
+                        texelFetch(uCoefsData, coefficientOffset+2).x);
                     float gap = texelFetch(uKnotsData, header + i+outData.uOrder).x - texelFetch(uKnotsData, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]
                     vec3 dPoint0 = ((outData.uOrder - 1) / gap) * (coefficient1 - coefficient0);
                     while (i < outData.uKnot-2)
                     {
                         coefficientOffset += nDep;
                         vec3 coefficient2 = vec3(
-                            texelFetch(uKnotsData, coefficientOffset+0).x, 
-                            texelFetch(uKnotsData, coefficientOffset+1).x,
-                            texelFetch(uKnotsData, coefficientOffset+2).x);
+                            texelFetch(uCoefsData, coefficientOffset+0).x, 
+                            texelFetch(uCoefsData, coefficientOffset+1).x,
+                            texelFetch(uCoefsData, coefficientOffset+2).x);
                         gap = texelFetch(uKnotsData, header + i+1+outData.uOrder).x - texelFetch(uKnotsData, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]
                         vec3 dPoint1 = ((outData.uOrder - 1) / gap) * (coefficient2 - coefficient1);
                         gap = texelFetch(uKnotsData, header + i+outData.uOrder).x - texelFetch(uKnotsData, header + i+2).x; // uKnots[i+uOrder] - uKnots[i+2]
@@ -225,6 +225,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         uniform vec3 uScreenScale;
         uniform vec4 uClipBounds;
         uniform samplerBuffer uKnotsData;
+        uniform samplerBuffer uCoefsData;
 
         patch out SplineInfo
         {{
@@ -270,6 +271,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         uniform mat4 uProjectionMatrix;
         uniform samplerBuffer uKnotsData;
+        uniform samplerBuffer uCoefsData;
 
         {computeBSplineCode}
 
@@ -282,12 +284,12 @@ class SplineOpenGLFrame(OpenGLFrame):
                 uBSpline, duBSpline);
             
             vec4 point = vec4(0.0, 0.0, 0.0, 1.0);
-            int i = header + inData.uOrder + inData.uN + nDep * (inData.uKnot - inData.uOrder);
+            int i = nDep * (inData.uKnot - inData.uOrder);
             for (int b = 0; b < inData.uOrder; b++) // loop from coefficient[uKnot-order] to coefficient[uKnot]
             {{
-                point.x += uBSpline[b] * texelFetch(uKnotsData, i).x;
-                point.y += uBSpline[b] * texelFetch(uKnotsData, i+1).x;
-                point.z += uBSpline[b] * texelFetch(uKnotsData, i+2).x;
+                point.x += uBSpline[b] * texelFetch(uCoefsData, i).x;
+                point.y += uBSpline[b] * texelFetch(uCoefsData, i+1).x;
+                point.z += uBSpline[b] * texelFetch(uCoefsData, i+2).x;
                 i += nDep;
             }}
 
@@ -317,6 +319,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         uniform vec3 uScreenScale;
         uniform vec4 uClipBounds;
         uniform samplerBuffer uKnotsData;
+        uniform samplerBuffer uCoefsData;
 
         struct SplineInfoStruct
         {{
@@ -350,7 +353,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                 float duBSpline[{maxOrder}];
                 float u = outData.u;
                 float deltaU = outData.uInterval / uSamples;
-                int iOffset = header + outData.uOrder + outData.uN + nDep * (outData.uKnot - outData.uOrder);
+                int iOffset = nDep * (outData.uKnot - outData.uOrder);
 
                 for (int uSample = 0; uSample <= uSamples; uSample++)
                 {{
@@ -361,9 +364,9 @@ class SplineOpenGLFrame(OpenGLFrame):
                     int i = iOffset;
                     for (int b = 0; b < outData.uOrder; b++) // loop from coefficient[uKnot-order] to coefficient[uKnot]
                     {{
-                        point.x += uBSpline[b] * texelFetch(uKnotsData, i).x;
-                        point.y += uBSpline[b] * texelFetch(uKnotsData, i+1).x;
-                        point.z += uBSpline[b] * texelFetch(uKnotsData, i+2).x;
+                        point.x += uBSpline[b] * texelFetch(uCoefsData, i).x;
+                        point.y += uBSpline[b] * texelFetch(uCoefsData, i+1).x;
+                        point.z += uBSpline[b] * texelFetch(uCoefsData, i+2).x;
                         i += nDep;
                     }}
 
@@ -461,25 +464,25 @@ class SplineOpenGLFrame(OpenGLFrame):
                     {{
                         int i = max(outData.uKnot - 1 - outData.uOrder, 0);
                         int iLimit = min(outData.uKnot - 1, outData.uN - 2);
-                        int coefficientOffset = header + outData.uOrder+outData.uN + outData.vOrder+outData.vN + nDep*outData.uN*j + nDep*i;
+                        int coefficientOffset = nDep*outData.uN*j + nDep*i;
                         vec3 coefficient0 = vec3(
-                            texelFetch(uKnotsData, coefficientOffset+0).x, 
-                            texelFetch(uKnotsData, coefficientOffset+1).x,
-                            texelFetch(uKnotsData, coefficientOffset+2).x);
+                            texelFetch(uCoefsData, coefficientOffset+0).x, 
+                            texelFetch(uCoefsData, coefficientOffset+1).x,
+                            texelFetch(uCoefsData, coefficientOffset+2).x);
                         coefficientOffset += nDep;
                         vec3 coefficient1 = vec3(
-                            texelFetch(uKnotsData, coefficientOffset+0).x, 
-                            texelFetch(uKnotsData, coefficientOffset+1).x,
-                            texelFetch(uKnotsData, coefficientOffset+2).x);
+                            texelFetch(uCoefsData, coefficientOffset+0).x, 
+                            texelFetch(uCoefsData, coefficientOffset+1).x,
+                            texelFetch(uCoefsData, coefficientOffset+2).x);
                         float gap = texelFetch(uKnotsData, header + i+outData.uOrder).x - texelFetch(uKnotsData, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]
                         vec3 dPoint0 = ((outData.uOrder - 1) / gap) * (coefficient1 - coefficient0);
                         while (i < iLimit)
                         {{
                             coefficientOffset += nDep;
                             vec3 coefficient2 = vec3(
-                                texelFetch(uKnotsData, coefficientOffset+0).x, 
-                                texelFetch(uKnotsData, coefficientOffset+1).x,
-                                texelFetch(uKnotsData, coefficientOffset+2).x);
+                                texelFetch(uCoefsData, coefficientOffset+0).x, 
+                                texelFetch(uCoefsData, coefficientOffset+1).x,
+                                texelFetch(uCoefsData, coefficientOffset+2).x);
                             gap = texelFetch(uKnotsData, header + i+1+outData.uOrder).x - texelFetch(uKnotsData, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]
                             vec3 dPoint1 = ((outData.uOrder - 1) / gap) * (coefficient2 - coefficient1);
                             gap = texelFetch(uKnotsData, header + i+outData.uOrder).x - texelFetch(uKnotsData, header + i+2).x; // uKnots[i+uOrder] - uKnots[i+2]
@@ -535,25 +538,25 @@ class SplineOpenGLFrame(OpenGLFrame):
                     {{
                         int j = max(outData.vKnot - 1 - outData.vOrder, 0);
                         int jLimit = min(outData.vKnot - 1, outData.vN - 2);
-                        int coefficientOffset = header + outData.uOrder+outData.uN + outData.vOrder+outData.vN + nDep*outData.uN*j + nDep*i;
+                        int coefficientOffset = nDep*outData.uN*j + nDep*i;
                         vec3 coefficient0 = vec3(
-                            texelFetch(uKnotsData, coefficientOffset+0).x, 
-                            texelFetch(uKnotsData, coefficientOffset+1).x,
-                            texelFetch(uKnotsData, coefficientOffset+2).x);
+                            texelFetch(uCoefsData, coefficientOffset+0).x, 
+                            texelFetch(uCoefsData, coefficientOffset+1).x,
+                            texelFetch(uCoefsData, coefficientOffset+2).x);
                         coefficientOffset += nDep*outData.uN;
                         vec3 coefficient1 = vec3(
-                            texelFetch(uKnotsData, coefficientOffset+0).x, 
-                            texelFetch(uKnotsData, coefficientOffset+1).x,
-                            texelFetch(uKnotsData, coefficientOffset+2).x);
+                            texelFetch(uCoefsData, coefficientOffset+0).x, 
+                            texelFetch(uCoefsData, coefficientOffset+1).x,
+                            texelFetch(uCoefsData, coefficientOffset+2).x);
                         float gap = texelFetch(uKnotsData, header + outData.uOrder+outData.uN + j+outData.vOrder).x - texelFetch(uKnotsData, header + outData.uOrder+outData.uN + j+1).x; // vKnots[j+vOrder] - vKnots[j+1]
                         vec3 dPoint0 = ((outData.vOrder - 1) / gap) * (coefficient1 - coefficient0);
                         while (j < jLimit)
                         {{
                             coefficientOffset += nDep*outData.uN;
                             vec3 coefficient2 = vec3(
-                                texelFetch(uKnotsData, coefficientOffset+0).x, 
-                                texelFetch(uKnotsData, coefficientOffset+1).x,
-                                texelFetch(uKnotsData, coefficientOffset+2).x);
+                                texelFetch(uCoefsData, coefficientOffset+0).x, 
+                                texelFetch(uCoefsData, coefficientOffset+1).x,
+                                texelFetch(uCoefsData, coefficientOffset+2).x);
                             gap = texelFetch(uKnotsData, header + outData.uOrder+outData.uN + j+1+outData.vOrder).x - texelFetch(uKnotsData, header + outData.uOrder+outData.uN + j+2).x; // vKnots[j+1+vOrder] - vKnots[j+2]
                             vec3 dPoint1 = ((outData.vOrder - 1) / gap) * (coefficient2 - coefficient1);
                             gap = texelFetch(uKnotsData, header + outData.uOrder+outData.uN + j+outData.vOrder).x - texelFetch(uKnotsData, header + outData.uOrder+outData.uN + j+2).x; // vKnots[j+vOrder] - vKnots[j+2]
@@ -610,6 +613,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         uniform vec3 uScreenScale;
         uniform vec4 uClipBounds;
         uniform samplerBuffer uKnotsData;
+        uniform samplerBuffer uCoefsData;
 
         patch out SplineInfo
         {{
@@ -666,6 +670,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         uniform vec3 uScreenScale;
         uniform vec4 uFillColor;
         uniform samplerBuffer uKnotsData;
+        uniform samplerBuffer uCoefsData;
 
         flat out SplineInfo
         {{
@@ -703,21 +708,21 @@ class SplineOpenGLFrame(OpenGLFrame):
             vec3 duPoint = vec3(0.0, 0.0, 0.0);
             vec3 dvPoint = vec3(0.0, 0.0, 0.0);
             {initializeSplineColor}
-            int j = header + inData.uOrder+inData.uN + inData.vOrder+inData.vN + (inData.vKnot - inData.vOrder) * inData.uN * nDep;
+            int j = (inData.vKnot - inData.vOrder) * inData.uN * nDep;
             for (int vB = 0; vB < inData.vOrder; vB++)
             {{
                 int i = j + (inData.uKnot - inData.uOrder) * nDep;
                 for (int uB = 0; uB < inData.uOrder; uB++)
                 {{
-                    point.x += uBSpline[uB] * vBSpline[vB] * texelFetch(uKnotsData, i).x;
-                    point.y += uBSpline[uB] * vBSpline[vB] * texelFetch(uKnotsData, i+1).x;
-                    point.z += uBSpline[uB] * vBSpline[vB] * texelFetch(uKnotsData, i+2).x;
-                    duPoint.x += duBSpline[uB] * vBSpline[vB] * texelFetch(uKnotsData, i).x;
-                    duPoint.y += duBSpline[uB] * vBSpline[vB] * texelFetch(uKnotsData, i+1).x;
-                    duPoint.z += duBSpline[uB] * vBSpline[vB] * texelFetch(uKnotsData, i+2).x;
-                    dvPoint.x += uBSpline[uB] * dvBSpline[vB] * texelFetch(uKnotsData, i).x;
-                    dvPoint.y += uBSpline[uB] * dvBSpline[vB] * texelFetch(uKnotsData, i+1).x;
-                    dvPoint.z += uBSpline[uB] * dvBSpline[vB] * texelFetch(uKnotsData, i+2).x;
+                    point.x += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i).x;
+                    point.y += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+1).x;
+                    point.z += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+2).x;
+                    duPoint.x += duBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i).x;
+                    duPoint.y += duBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+1).x;
+                    duPoint.z += duBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+2).x;
+                    dvPoint.x += uBSpline[uB] * dvBSpline[vB] * texelFetch(uCoefsData, i).x;
+                    dvPoint.y += uBSpline[uB] * dvBSpline[vB] * texelFetch(uCoefsData, i+1).x;
+                    dvPoint.z += uBSpline[uB] * dvBSpline[vB] * texelFetch(uCoefsData, i+2).x;
                     {computeSplineColor}
                     i += nDep;
                 }}
@@ -762,6 +767,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         uniform vec4 uFillColor;
         uniform vec3 uLightDirection;
         uniform samplerBuffer uKnotsData;
+        uniform samplerBuffer uCoefsData;
 
         out vec3 splineColor; // We restrict our output to color to reduce the number of components per vertex.
 
@@ -825,7 +831,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                 float u = outData.u;
                 ComputeBSpline(header, outData.uOrder, outData.uN, outData.uKnot, u, uBSpline, duBSpline);
 
-                int jOffset = header + outData.uOrder+outData.uN + outData.vOrder+outData.vN + (outData.vKnot - outData.vOrder) * outData.uN * nDep;
+                int jOffset = (outData.vKnot - outData.vOrder) * outData.uN * nDep;
                 int iOffset = (outData.uKnot - outData.uOrder) * nDep;
 
                 for (int uSample = 0; uSample < uSamples; uSample++)
@@ -848,15 +854,15 @@ class SplineOpenGLFrame(OpenGLFrame):
                             int i = j + iOffset;
                             for (int uB = 0; uB < outData.uOrder; uB++)
                             {{
-                                point.x += uBSpline[uB] * vBSpline[vB] * texelFetch(uKnotsData, i).x;
-                                point.y += uBSpline[uB] * vBSpline[vB] * texelFetch(uKnotsData, i+1).x;
-                                point.z += uBSpline[uB] * vBSpline[vB] * texelFetch(uKnotsData, i+2).x;
-                                duPoint.x += duBSpline[uB] * vBSpline[vB] * texelFetch(uKnotsData, i).x;
-                                duPoint.y += duBSpline[uB] * vBSpline[vB] * texelFetch(uKnotsData, i+1).x;
-                                duPoint.z += duBSpline[uB] * vBSpline[vB] * texelFetch(uKnotsData, i+2).x;
-                                dvPoint.x += uBSpline[uB] * dvBSpline[vB] * texelFetch(uKnotsData, i).x;
-                                dvPoint.y += uBSpline[uB] * dvBSpline[vB] * texelFetch(uKnotsData, i+1).x;
-                                dvPoint.z += uBSpline[uB] * dvBSpline[vB] * texelFetch(uKnotsData, i+2).x;
+                                point.x += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i).x;
+                                point.y += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+1).x;
+                                point.z += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+2).x;
+                                duPoint.x += duBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i).x;
+                                duPoint.y += duBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+1).x;
+                                duPoint.z += duBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+2).x;
+                                dvPoint.x += uBSpline[uB] * dvBSpline[vB] * texelFetch(uCoefsData, i).x;
+                                dvPoint.y += uBSpline[uB] * dvBSpline[vB] * texelFetch(uCoefsData, i+1).x;
+                                dvPoint.z += uBSpline[uB] * dvBSpline[vB] * texelFetch(uCoefsData, i+2).x;
                                 {computeSplineColor}
                                 i += nDep;
                             }}
@@ -879,15 +885,15 @@ class SplineOpenGLFrame(OpenGLFrame):
                             int i = j + iOffset;
                             for (int uB = 0; uB < outData.uOrder; uB++)
                             {{
-                                point.x += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uKnotsData, i).x;
-                                point.y += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uKnotsData, i+1).x;
-                                point.z += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uKnotsData, i+2).x;
-                                duPoint.x += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uKnotsData, i).x;
-                                duPoint.y += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uKnotsData, i+1).x;
-                                duPoint.z += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uKnotsData, i+2).x;
-                                dvPoint.x += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uKnotsData, i).x;
-                                dvPoint.y += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uKnotsData, i+1).x;
-                                dvPoint.z += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uKnotsData, i+2).x;
+                                point.x += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uCoefsData, i).x;
+                                point.y += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+1).x;
+                                point.z += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+2).x;
+                                duPoint.x += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uCoefsData, i).x;
+                                duPoint.y += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+1).x;
+                                duPoint.z += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+2).x;
+                                dvPoint.x += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uCoefsData, i).x;
+                                dvPoint.y += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uCoefsData, i+1).x;
+                                dvPoint.z += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uCoefsData, i+2).x;
                                 {computeSplineColor}
                                 i += nDep;
                             }}
@@ -1169,7 +1175,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         # Create the texture buffer for surface trims.
         self.trimTextureBuffer = glGenTextures(1)
-        glActiveTexture(GL_TEXTURE1)
+        glActiveTexture(GL_TEXTURE4)
         glBindTexture(GL_TEXTURE_2D, self.trimTextureBuffer)
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER)
@@ -1177,7 +1183,6 @@ class SplineOpenGLFrame(OpenGLFrame):
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 512, 512, 0, GL_RED, GL_UNSIGNED_BYTE, None)
-        glActiveTexture(GL_TEXTURE0)
 
         # Attach trim texture buffer to framebuffer and validate framebuffer.
         glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, self.trimTextureBuffer, 0)
@@ -1188,12 +1193,20 @@ class SplineOpenGLFrame(OpenGLFrame):
         # Set framebuffer back to default.
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
 
-        # Set up GL texture buffer for spline data
+        # Set up GL texture buffers for spline data
+        glActiveTexture(GL_TEXTURE0)
         self.knotsDataBuffer = glGenBuffers(1)
         glBindBuffer(GL_TEXTURE_BUFFER, self.knotsDataBuffer)
         glBindTexture(GL_TEXTURE_BUFFER, glGenTextures(1))
         glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, self.knotsDataBuffer)
-        glBufferData(GL_TEXTURE_BUFFER, 4 * (self._knotsFloats + self._coefsFloats), None, GL_STATIC_READ)
+        glBufferData(GL_TEXTURE_BUFFER, 4 * self._knotsFloats, None, GL_STATIC_READ)
+
+        glActiveTexture(GL_TEXTURE1)
+        self.coefsDataBuffer = glGenBuffers(1)
+        glBindBuffer(GL_TEXTURE_BUFFER, self.coefsDataBuffer)
+        glBindTexture(GL_TEXTURE_BUFFER, glGenTextures(1))
+        glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, self.coefsDataBuffer)
+        glBufferData(GL_TEXTURE_BUFFER, 4 * self._coefsFloats, None, GL_STATIC_READ)
 
         # Set light direction
         self.lightDirection = np.array((0.63960218, 0.63960218, 0.42640144), np.float32)
@@ -1216,7 +1229,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                     vec3 pVec;
                 """, "splineColor = vec3(0.0, 0.0, 0.0);",
                 """
-                    splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uKnotsData, i+3).x;
+                    splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+3).x;
                 """,
                 # Taken from http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
                 # uFillColor is passed in as HSV
@@ -1230,7 +1243,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                     vec3 pVec;
                 """, "splineColor = vec3(0.0, 0.0, 0.0);",
                 """
-                    splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uKnotsData, i+3).x;
+                    splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+3).x;
                 """,
                 # Taken from http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
                 # uFillColor is passed in as HSV
@@ -1240,15 +1253,15 @@ class SplineOpenGLFrame(OpenGLFrame):
                 """)
             self.surface6Program = SurfaceProgram(self, False, 6, "", "splineColor = vec3(0.0, 0.0, 0.0);",
                 """
-                    splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uKnotsData, i+3).x;
-                    splineColor.g += uBSpline[uB] * vBSpline[vB] * texelFetch(uKnotsData, i+4).x;
-                    splineColor.b += uBSpline[uB] * vBSpline[vB] * texelFetch(uKnotsData, i+5).x;
+                    splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+3).x;
+                    splineColor.g += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+4).x;
+                    splineColor.b += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+5).x;
                 """, "")
             self.trimmedSurface6Program = SurfaceProgram(self, True, 6, "", "splineColor = vec3(0.0, 0.0, 0.0);",
                 """
-                    splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uKnotsData, i+3).x;
-                    splineColor.g += uBSpline[uB] * vBSpline[vB] * texelFetch(uKnotsData, i+4).x;
-                    splineColor.b += uBSpline[uB] * vBSpline[vB] * texelFetch(uKnotsData, i+5).x;
+                    splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+3).x;
+                    splineColor.g += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+4).x;
+                    splineColor.b += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+5).x;
                 """, "")
         except shaders.ShaderCompilationError as exception:
             error = exception.args[0]
@@ -1688,6 +1701,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         program = self.curveProgram
         glUseProgram(program.curveProgram)
         glUniform4fv(program.uCurveLineColor, 1, spline.metadata["lineColor"])
+        glActiveTexture(GL_TEXTURE0)
         glBindBuffer(GL_TEXTURE_BUFFER, self.knotsDataBuffer)
         offset = 0
         size = 4 * 2
@@ -1696,10 +1710,11 @@ class SplineOpenGLFrame(OpenGLFrame):
         knots = spline.cache["knots32"]
         size = 4 * len(knots[0])
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, knots[0])
-        offset += size
+        glActiveTexture(GL_TEXTURE1)
+        glBindBuffer(GL_TEXTURE_BUFFER, self.coefsDataBuffer)
         size = 3 * 4 * spline.nCoef[0]
         drawCoefficients = drawCoefficients[..., :3]
-        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
+        glBufferSubData(GL_TEXTURE_BUFFER, 0, size, drawCoefficients)
         glEnableVertexAttribArray(program.aCurveParameters)
         if self.tessellationEnabled:
             glPatchParameteri(GL_PATCH_VERTICES, 1)
@@ -1764,6 +1779,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         glUniform4fv(program.uSurfaceFillColor, 1, fillColor)
         glUniform4fv(program.uSurfaceLineColor, 1, spline.metadata["lineColor"])
         glUniform1i(program.uSurfaceOptions, spline.metadata["options"])
+        glActiveTexture(GL_TEXTURE0)
         glBindBuffer(GL_TEXTURE_BUFFER, self.knotsDataBuffer)
         offset = 0
         size = 4 * 4
@@ -1775,9 +1791,10 @@ class SplineOpenGLFrame(OpenGLFrame):
         offset += size
         size = 4 * len(knots[1])
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, knots[1])
-        offset += size
+        glActiveTexture(GL_TEXTURE1)
+        glBindBuffer(GL_TEXTURE_BUFFER, self.coefsDataBuffer)
         size = nDep * 4 * spline.nCoef[0] * spline.nCoef[1]
-        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients)
+        glBufferSubData(GL_TEXTURE_BUFFER, 0, size, drawCoefficients)
         glEnableVertexAttribArray(program.aSurfaceParameters)
         if self.tessellationEnabled:
             glPatchParameteri(GL_PATCH_VERTICES, 1)
@@ -1838,6 +1855,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                 i2 = 1
                 coefSlice = (index, fullSlice, fullSlice, fullSlice)
 
+            glActiveTexture(GL_TEXTURE0)
             glBindBuffer(GL_TEXTURE_BUFFER, self.knotsDataBuffer)
             offset = 0
             size = 4 * 4
@@ -1848,9 +1866,10 @@ class SplineOpenGLFrame(OpenGLFrame):
             offset += size
             size = 4 * len(knots[i2])
             glBufferSubData(GL_TEXTURE_BUFFER, offset, size, knots[i2])
-            offset += size
+            glActiveTexture(GL_TEXTURE1)
+            glBindBuffer(GL_TEXTURE_BUFFER, self.coefsDataBuffer)
             size = nDep * 4 * spline.nCoef[i1] * spline.nCoef[i2]
-            glBufferSubData(GL_TEXTURE_BUFFER, offset, size, drawCoefficients[coefSlice])
+            glBufferSubData(GL_TEXTURE_BUFFER, 0, size, drawCoefficients[coefSlice])
             glEnableVertexAttribArray(program.aSurfaceParameters)
             if self.tessellationEnabled:
                 glPatchParameteri(GL_PATCH_VERTICES, 1)
@@ -1983,7 +2002,8 @@ class CurveProgram:
         self.uCurveScreenScale = glGetUniformLocation(self.curveProgram, 'uScreenScale')
         self.uCurveClipBounds = glGetUniformLocation(self.curveProgram, 'uClipBounds')
         self.uCurveLineColor = glGetUniformLocation(self.curveProgram, 'uLineColor')
-        glUniform1i(glGetUniformLocation(self.curveProgram, 'uKnotsData'), 0) # GL_TEXTURE0 is the spline buffer texture
+        glUniform1i(glGetUniformLocation(self.curveProgram, 'uKnotsData'), 0) # GL_TEXTURE0 is the knots buffer texture
+        glUniform1i(glGetUniformLocation(self.curveProgram, 'uCoefsData'), 1) # GL_TEXTURE1 is the coefs buffer texture
     
     def ResetBounds(self, frame):
         """Reset bounds and other frame configuration for curve program"""
@@ -2043,9 +2063,10 @@ class SurfaceProgram:
         self.uSurfaceLineColor = glGetUniformLocation(self.surfaceProgram, 'uLineColor')
         glUniform3fv(glGetUniformLocation(self.surfaceProgram, 'uLightDirection'), 1, frame.lightDirection)
         self.uSurfaceOptions = glGetUniformLocation(self.surfaceProgram, 'uOptions')
-        glUniform1i(glGetUniformLocation(self.surfaceProgram, 'uKnotsData'), 0) # GL_TEXTURE0 is the spline buffer texture
+        glUniform1i(glGetUniformLocation(self.surfaceProgram, 'uKnotsData'), 0) # GL_TEXTURE0 is the knots buffer texture
+        glUniform1i(glGetUniformLocation(self.surfaceProgram, 'uCoefsData'), 1) # GL_TEXTURE1 is the coefs buffer texture
         if trimmed and frame.tessellationEnabled:
-            glUniform1i(glGetUniformLocation(self.surfaceProgram, 'uTrimTextureMap'), 1) # GL_TEXTURE1 is the trim texture map
+            glUniform1i(glGetUniformLocation(self.surfaceProgram, 'uTrimTextureMap'), 4) # GL_TEXTURE4 is the trim texture map
 
     def ResetBounds(self, frame):
         """Reset bounds and other frame configuration for surface program"""
