@@ -710,15 +710,18 @@ class SplineOpenGLFrame(OpenGLFrame):
                 int i = j + (inData.uKnot - inData.uOrder) * nDep;
                 for (int uB = 0; uB < inData.uOrder; uB++)
                 {{
-                    point.x += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i).x;
-                    point.y += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+1).x;
-                    point.z += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+2).x;
-                    duPoint.x += duBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i).x;
-                    duPoint.y += duBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+1).x;
-                    duPoint.z += duBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+2).x;
-                    dvPoint.x += uBSpline[uB] * dvBSpline[vB] * texelFetch(uCoefsData, i).x;
-                    dvPoint.y += uBSpline[uB] * dvBSpline[vB] * texelFetch(uCoefsData, i+1).x;
-                    dvPoint.z += uBSpline[uB] * dvBSpline[vB] * texelFetch(uCoefsData, i+2).x;
+                    float x = texelFetch(uCoefsData, i).x;
+                    float y = texelFetch(uCoefsData, i+1).x;
+                    float z = texelFetch(uCoefsData, i+2).x;
+                    point.x += uBSpline[uB] * vBSpline[vB] * x;
+                    point.y += uBSpline[uB] * vBSpline[vB] * y;
+                    point.z += uBSpline[uB] * vBSpline[vB] * z;
+                    duPoint.x += duBSpline[uB] * vBSpline[vB] * x;
+                    duPoint.y += duBSpline[uB] * vBSpline[vB] * y;
+                    duPoint.z += duBSpline[uB] * vBSpline[vB] * z;
+                    dvPoint.x += uBSpline[uB] * dvBSpline[vB] * x;
+                    dvPoint.y += uBSpline[uB] * dvBSpline[vB] * y;
+                    dvPoint.z += uBSpline[uB] * dvBSpline[vB] * z;
                     {computeSplineColor}
                     i += nDep;
                 }}
@@ -850,15 +853,18 @@ class SplineOpenGLFrame(OpenGLFrame):
                             int i = j + iOffset;
                             for (int uB = 0; uB < outData.uOrder; uB++)
                             {{
-                                point.x += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i).x;
-                                point.y += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+1).x;
-                                point.z += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+2).x;
-                                duPoint.x += duBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i).x;
-                                duPoint.y += duBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+1).x;
-                                duPoint.z += duBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+2).x;
-                                dvPoint.x += uBSpline[uB] * dvBSpline[vB] * texelFetch(uCoefsData, i).x;
-                                dvPoint.y += uBSpline[uB] * dvBSpline[vB] * texelFetch(uCoefsData, i+1).x;
-                                dvPoint.z += uBSpline[uB] * dvBSpline[vB] * texelFetch(uCoefsData, i+2).x;
+                                float x = texelFetch(uCoefsData, i).x;
+                                float y = texelFetch(uCoefsData, i+1).x;
+                                float z = texelFetch(uCoefsData, i+2).x;
+                                point.x += uBSpline[uB] * vBSpline[vB] * x;
+                                point.y += uBSpline[uB] * vBSpline[vB] * y;
+                                point.z += uBSpline[uB] * vBSpline[vB] * z;
+                                duPoint.x += duBSpline[uB] * vBSpline[vB] * x;
+                                duPoint.y += duBSpline[uB] * vBSpline[vB] * y;
+                                duPoint.z += duBSpline[uB] * vBSpline[vB] * z;
+                                dvPoint.x += uBSpline[uB] * dvBSpline[vB] * x;
+                                dvPoint.y += uBSpline[uB] * dvBSpline[vB] * y;
+                                dvPoint.z += uBSpline[uB] * dvBSpline[vB] * z;
                                 {computeSplineColor}
                                 i += nDep;
                             }}
@@ -881,15 +887,18 @@ class SplineOpenGLFrame(OpenGLFrame):
                             int i = j + iOffset;
                             for (int uB = 0; uB < outData.uOrder; uB++)
                             {{
-                                point.x += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uCoefsData, i).x;
-                                point.y += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+1).x;
-                                point.z += uBSplineNext[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+2).x;
-                                duPoint.x += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uCoefsData, i).x;
-                                duPoint.y += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+1).x;
-                                duPoint.z += duBSplineNext[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+2).x;
-                                dvPoint.x += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uCoefsData, i).x;
-                                dvPoint.y += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uCoefsData, i+1).x;
-                                dvPoint.z += uBSplineNext[uB] * dvBSpline[vB] * texelFetch(uCoefsData, i+2).x;
+                                float x = texelFetch(uCoefsData, i).x;
+                                float y = texelFetch(uCoefsData, i+1).x;
+                                float z = texelFetch(uCoefsData, i+2).x;
+                                point.x += uBSplineNext[uB] * vBSpline[vB] * x;
+                                point.y += uBSplineNext[uB] * vBSpline[vB] * y;
+                                point.z += uBSplineNext[uB] * vBSpline[vB] * z;
+                                duPoint.x += duBSplineNext[uB] * vBSpline[vB] * x;
+                                duPoint.y += duBSplineNext[uB] * vBSpline[vB] * y;
+                                duPoint.z += duBSplineNext[uB] * vBSpline[vB] * z;
+                                dvPoint.x += uBSplineNext[uB] * dvBSpline[vB] * x;
+                                dvPoint.y += uBSplineNext[uB] * dvBSpline[vB] * y;
+                                dvPoint.z += uBSplineNext[uB] * dvBSpline[vB] * z;
                                 {computeSplineColor}
                                 i += nDep;
                             }}
