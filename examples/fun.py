@@ -49,8 +49,8 @@ class FunOpenGLFrame(SplineOpenGLFrame):
         #img = Image.open(path.expanduser("~/OneDrive/Pictures/Backgrounds/2020 Cannon Beach.jpg"))
         img = Image.open(path.expanduser("~/OneDrive/Pictures/Backgrounds/Tom Sailing.jpg"))
         img_data = np.array((img.getdata())).astype(np.int8)
-        self.textureBuffer = glGenTextures(1)
         glActiveTexture(GL_TEXTURE5)
+        self.textureBuffer = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, self.textureBuffer)
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER)
@@ -58,7 +58,6 @@ class FunOpenGLFrame(SplineOpenGLFrame):
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, img.size[0], img.size[1], 0, GL_RGB, GL_UNSIGNED_BYTE, img_data)            
-        glActiveTexture(GL_TEXTURE0)
 
         SplineOpenGLFrame.CreateGLResources(self)
 

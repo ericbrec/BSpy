@@ -41,6 +41,25 @@ class SplineOpenGLFrame(OpenGLFrame):
     ISOPARMS = (1 << 3)
     """Option to draw the lines of constant knot values of the spline in the line color (only useful for nInd >= 2). Off by default."""
 
+    computeShaderCode = """
+        #version 430 core
+
+        layout(local_size_x = 1) in;
+        layout(r32f, binding = 3) uniform image1D uTransformedCoefsData;
+
+        uniform samplerBuffer uCoefsData;
+
+        void main()
+        {{
+            // Use global work group to index into coefs data
+            int coefficientOffset = int(gl_GlobalInvocationID.x);
+
+            // Color vector to store in image (float r value is all that counts)
+            vec4 color = vec4(texelFetch(uCoefsData, coefficientOffset).x, 0.0, 0.0, 1.0);
+            imageStore(uTransformedCoefsData, coefficientOffset, color);
+        }}
+    """
+
     computeBSplineCode = """
         void ComputeBSpline(in int offset, in int order, in int n, in int knot, in float u, 
             out float uBSpline[{maxOrder}], out float duBSpline[{maxOrder}])
@@ -1179,8 +1198,8 @@ class SplineOpenGLFrame(OpenGLFrame):
         glBindFramebuffer(GL_FRAMEBUFFER, self.frameBuffer)
 
         # Create the texture buffer for surface trims.
-        self.trimTextureBuffer = glGenTextures(1)
         glActiveTexture(GL_TEXTURE4)
+        self.trimTextureBuffer = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, self.trimTextureBuffer)
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER)
@@ -1212,6 +1231,15 @@ class SplineOpenGLFrame(OpenGLFrame):
         glBindTexture(GL_TEXTURE_BUFFER, glGenTextures(1))
         glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, self.coefsDataBuffer)
         glBufferData(GL_TEXTURE_BUFFER, 4 * self.maxCoefficients, None, GL_STATIC_READ)
+
+        glActiveTexture(GL_TEXTURE3)
+        self.transformedCoefsDataBuffer = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_1D, self.transformedCoefsDataBuffer)
+        #glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, self.maxCoefficients, 0, GL_RED, GL_FLOAT, None);
+        print(glGetIntegerv(GL_MAX_TEXTURE_SIZE)) # 16384 at minimum
+        print(glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0)) # Just needs to be as large as max texture size
+        glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, 16384, 0, GL_RED, GL_FLOAT, None);
+        glBindImageTexture(3, self.transformedCoefsDataBuffer, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F) # GL_TEXTURE3 is the transformed coefs texture
 
         # Set light direction
         self.lightDirection = np.array((0.63960218, 0.63960218, 0.42640144), np.float32)
@@ -1268,6 +1296,8 @@ class SplineOpenGLFrame(OpenGLFrame):
                     splineColor.g += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+4).x;
                     splineColor.b += uBSpline[uB] * vBSpline[vB] * texelFetch(uCoefsData, i+5).x;
                 """, "")
+            self.computeProgram = ComputeProgram(self)
+
         except shaders.ShaderCompilationError as exception:
             error = exception.args[0]
             lineNumber = error.split(":")[3]
@@ -2079,3 +2109,16 @@ class SurfaceProgram:
         glUniformMatrix4fv(self.uSurfaceProjectionMatrix, 1, GL_FALSE, frame.projection)
         glUniform3fv(self.uSurfaceScreenScale, 1, frame.screenScale)
         glUniform4fv(self.uSurfaceClipBounds, 1, frame.clipBounds)
+
+class ComputeProgram:
+    """ Compile compute program """
+    def __init__(self, frame):
+        if frame.tessellationEnabled:
+            self.computeProgram = shaders.compileProgram(
+                shaders.compileShader(frame.computeShaderCode.format(nDep=3), GL_COMPUTE_SHADER),
+                validate = False)
+
+        glUseProgram(self.computeProgram)
+        #self.uTransformMatrix = glGetUniformLocation(self.curveProgram, 'uTransformMatrix')
+        glUniform1i(glGetUniformLocation(self.computeProgram, 'uCoefsData'), 1) # GL_TEXTURE1 is the coefs buffer texture
+        glUniform1i(glGetUniformLocation(self.computeProgram, 'uTransformedCoefsData'), 3) # GL_TEXTURE3 is the transformed coefs texture
