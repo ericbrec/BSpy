@@ -1733,9 +1733,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                 glVertex3f(point[0], point[1], point[2])
             glEnd()
 
-        program = self.curveProgram
-        glUseProgram(program.curveProgram)
-        glUniform4fv(program.uCurveLineColor, 1, spline.metadata["lineColor"])
+        # Load spline data into textures
         glActiveTexture(GL_TEXTURE0)
         glBindBuffer(GL_TEXTURE_BUFFER, self.knotsDataBuffer)
         offset = 0
@@ -1750,6 +1748,17 @@ class SplineOpenGLFrame(OpenGLFrame):
         size = 3 * 4 * spline.nCoef[0]
         drawCoefficients = drawCoefficients[..., :3]
         glBufferSubData(GL_TEXTURE_BUFFER, 0, size, drawCoefficients)
+
+        # Transform coefficients using compute program
+        glUseProgram(self.computeProgram.computeProgram);
+        glDispatchCompute(3 * spline.nCoef[0], 1, 1)
+        # Block until compute shader is done
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT)
+
+        # Render spline
+        program = self.curveProgram
+        glUseProgram(program.curveProgram)
+        glUniform4fv(program.uCurveLineColor, 1, spline.metadata["lineColor"])
         glEnableVertexAttribArray(program.aCurveParameters)
         if self.tessellationEnabled:
             glPatchParameteri(GL_PATCH_VERTICES, 1)
@@ -1810,10 +1819,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             glEnable( GL_BLEND )
             glDisable( GL_DEPTH_TEST )
 
-        glUseProgram(program.surfaceProgram)
-        glUniform4fv(program.uSurfaceFillColor, 1, fillColor)
-        glUniform4fv(program.uSurfaceLineColor, 1, spline.metadata["lineColor"])
-        glUniform1i(program.uSurfaceOptions, spline.metadata["options"])
+        # Load spline data into textures
         glActiveTexture(GL_TEXTURE0)
         glBindBuffer(GL_TEXTURE_BUFFER, self.knotsDataBuffer)
         offset = 0
@@ -1830,6 +1836,18 @@ class SplineOpenGLFrame(OpenGLFrame):
         glBindBuffer(GL_TEXTURE_BUFFER, self.coefsDataBuffer)
         size = nDep * 4 * spline.nCoef[0] * spline.nCoef[1]
         glBufferSubData(GL_TEXTURE_BUFFER, 0, size, drawCoefficients)
+
+        # Transform coefficients using compute program
+        glUseProgram(self.computeProgram.computeProgram);
+        glDispatchCompute(nDep * spline.nCoef[0] * spline.nCoef[1], 1, 1)
+        # Block until compute shader is done
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT)
+
+        # Render spline
+        glUseProgram(program.surfaceProgram)
+        glUniform4fv(program.uSurfaceFillColor, 1, fillColor)
+        glUniform4fv(program.uSurfaceLineColor, 1, spline.metadata["lineColor"])
+        glUniform1i(program.uSurfaceOptions, spline.metadata["options"])
         glEnableVertexAttribArray(program.aSurfaceParameters)
         if self.tessellationEnabled:
             glPatchParameteri(GL_PATCH_VERTICES, 1)
@@ -1890,6 +1908,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                 i2 = 1
                 coefSlice = (index, fullSlice, fullSlice, fullSlice)
 
+            # Load spline data into textures
             glActiveTexture(GL_TEXTURE0)
             glBindBuffer(GL_TEXTURE_BUFFER, self.knotsDataBuffer)
             offset = 0
@@ -1905,6 +1924,14 @@ class SplineOpenGLFrame(OpenGLFrame):
             glBindBuffer(GL_TEXTURE_BUFFER, self.coefsDataBuffer)
             size = nDep * 4 * spline.nCoef[i1] * spline.nCoef[i2]
             glBufferSubData(GL_TEXTURE_BUFFER, 0, size, drawCoefficients[coefSlice])
+
+            # Transform coefficients using compute program
+            glUseProgram(self.computeProgram.computeProgram);
+            glDispatchCompute(nDep * spline.nCoef[i1] * spline.nCoef[i2], 1, 1)
+            # Block until compute shader is done
+            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT)
+
+            # Render spline
             glEnableVertexAttribArray(program.aSurfaceParameters)
             if self.tessellationEnabled:
                 glPatchParameteri(GL_PATCH_VERTICES, 1)
