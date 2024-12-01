@@ -50,14 +50,14 @@ class SplineOpenGLFrame(OpenGLFrame):
         uniform samplerBuffer uCoefsData;
 
         void main()
-        {{
+        {
             // Use global work group to index into coefs data
             int coefficientOffset = int(gl_GlobalInvocationID.x);
 
             // Color vector to store in image (float r value is all that counts)
             vec4 color = vec4(texelFetch(uCoefsData, coefficientOffset).x, 0.0, 0.0, 1.0);
             imageStore(uTransformedCoefsData, coefficientOffset, color);
-        }}
+        }
     """
 
     computeBSplineCode = """
@@ -1932,6 +1932,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT)
 
             # Render spline
+            glUseProgram(program.surfaceProgram)
             glEnableVertexAttribArray(program.aSurfaceParameters)
             if self.tessellationEnabled:
                 glPatchParameteri(GL_PATCH_VERTICES, 1)
@@ -2142,7 +2143,7 @@ class ComputeProgram:
     def __init__(self, frame):
         if frame.tessellationEnabled:
             self.computeProgram = shaders.compileProgram(
-                shaders.compileShader(frame.computeShaderCode.format(nDep=3), GL_COMPUTE_SHADER),
+                shaders.compileShader(frame.computeShaderCode, GL_COMPUTE_SHADER),
                 validate = False)
 
         glUseProgram(self.computeProgram)
