@@ -271,7 +271,7 @@ class Viewer(tk.Tk):
         for item in self.treeview.selection():
             spline = self.splineList[item]
             if isinstance(spline, Spline):
-                coefs = spline.cache["coefs32"].T[:3]
+                coefs = spline.cache["xyzCoefs32"].T
                 coefsAxis = tuple(range(1, spline.nInd + 1))
                 if gotOne:
                     splineMin = np.minimum(splineMin, coefs.min(axis=coefsAxis))
@@ -284,7 +284,7 @@ class Viewer(tk.Tk):
             elif isinstance(spline, Solid):
                 for subitem in self.treeview.get_children(item):
                     spline = self.splineList[subitem]
-                    coefs = spline.cache["coefs32"].T[:3]
+                    coefs = spline.cache["xyzCoefs32"].T
                     coefsAxis = tuple(range(1, spline.nInd + 1))
                     if gotOne:
                         splineMin = np.minimum(splineMin, coefs.min(axis=coefsAxis))

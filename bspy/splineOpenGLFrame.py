@@ -180,25 +180,16 @@ class SplineOpenGLFrame(OpenGLFrame):
                 else
                 {
                     int i = outData.uKnot - outData.uOrder;
-                    int coefficientOffset = nDep * i;
-                    vec3 coefficient0 = vec3(
-                        texelFetch(uXYZCoefs, coefficientOffset+0).x, 
-                        texelFetch(uXYZCoefs, coefficientOffset+1).x,
-                        texelFetch(uXYZCoefs, coefficientOffset+2).x);
-                    coefficientOffset += nDep;
-                    vec3 coefficient1 = vec3(
-                        texelFetch(uXYZCoefs, coefficientOffset+0).x, 
-                        texelFetch(uXYZCoefs, coefficientOffset+1).x,
-                        texelFetch(uXYZCoefs, coefficientOffset+2).x);
+                    int coefficientOffset = i;
+                    vec3 coefficient0 = texelFetch(uXYZCoefs, coefficientOffset).xyz;
+                    coefficientOffset += 1;
+                    vec3 coefficient1 = texelFetch(uXYZCoefs, coefficientOffset).xyz;
                     float gap = texelFetch(uKnots, header + i+outData.uOrder).x - texelFetch(uKnots, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]
                     vec3 dPoint0 = ((outData.uOrder - 1) / gap) * (coefficient1 - coefficient0);
                     while (i < outData.uKnot-2)
                     {
-                        coefficientOffset += nDep;
-                        vec3 coefficient2 = vec3(
-                            texelFetch(uXYZCoefs, coefficientOffset+0).x, 
-                            texelFetch(uXYZCoefs, coefficientOffset+1).x,
-                            texelFetch(uXYZCoefs, coefficientOffset+2).x);
+                        coefficientOffset += 1;
+                        vec3 coefficient2 = texelFetch(uXYZCoefs, coefficientOffset).xyz;
                         gap = texelFetch(uKnots, header + i+1+outData.uOrder).x - texelFetch(uKnots, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]
                         vec3 dPoint1 = ((outData.uOrder - 1) / gap) * (coefficient2 - coefficient1);
                         gap = texelFetch(uKnots, header + i+outData.uOrder).x - texelFetch(uKnots, header + i+2).x; // uKnots[i+uOrder] - uKnots[i+2]
@@ -226,7 +217,6 @@ class SplineOpenGLFrame(OpenGLFrame):
         layout (vertices = 1) out;
 
         const int header = 2;
-        const int nDep = 3;
 
         in SplineInfo
         {{
@@ -273,7 +263,6 @@ class SplineOpenGLFrame(OpenGLFrame):
         layout (isolines) in;
 
         const int header = 2;
-        const int nDep = 3;
 
         patch in SplineInfo
         {{
@@ -299,13 +288,11 @@ class SplineOpenGLFrame(OpenGLFrame):
                 uBSpline, duBSpline);
             
             vec4 point = vec4(0.0, 0.0, 0.0, 1.0);
-            int i = nDep * (inData.uKnot - inData.uOrder);
+            int i = inData.uKnot - inData.uOrder;
             for (int b = 0; b < inData.uOrder; b++) // loop from coefficient[uKnot-order] to coefficient[uKnot]
             {{
-                point.x += uBSpline[b] * texelFetch(uXYZCoefs, i).x;
-                point.y += uBSpline[b] * texelFetch(uXYZCoefs, i+1).x;
-                point.z += uBSpline[b] * texelFetch(uXYZCoefs, i+2).x;
-                i += nDep;
+                point.xyz += uBSpline[b] * texelFetch(uXYZCoefs, i).xyz;
+                i += 1;
             }}
 
             gl_Position = uProjectionMatrix * point;
@@ -319,7 +306,6 @@ class SplineOpenGLFrame(OpenGLFrame):
         layout( line_strip, max_vertices = 256 ) out;
 
         const int header = 2;
-        const int nDep = 3;
 
         in SplineInfo
         {{
@@ -368,7 +354,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                 float duBSpline[{maxOrder}];
                 float u = outData.u;
                 float deltaU = outData.uInterval / uSamples;
-                int iOffset = nDep * (outData.uKnot - outData.uOrder);
+                int iOffset = outData.uKnot - outData.uOrder;
 
                 for (int uSample = 0; uSample <= uSamples; uSample++)
                 {{
@@ -379,10 +365,8 @@ class SplineOpenGLFrame(OpenGLFrame):
                     int i = iOffset;
                     for (int b = 0; b < outData.uOrder; b++) // loop from coefficient[uKnot-order] to coefficient[uKnot]
                     {{
-                        point.x += uBSpline[b] * texelFetch(uXYZCoefs, i).x;
-                        point.y += uBSpline[b] * texelFetch(uXYZCoefs, i+1).x;
-                        point.z += uBSpline[b] * texelFetch(uXYZCoefs, i+2).x;
-                        i += nDep;
+                        point.x += uBSpline[b] * texelFetch(uXYZCoefs, i).xyz;
+                        i += 1;
                     }}
 
                     gl_Position = uProjectionMatrix * point;
@@ -1230,14 +1214,14 @@ class SplineOpenGLFrame(OpenGLFrame):
         glBindBuffer(GL_TEXTURE_BUFFER, self.xyzCoefsBuffer)
         glBindTexture(GL_TEXTURE_BUFFER, glGenTextures(1))
         glTexBuffer(GL_TEXTURE_BUFFER, GL_RGB32F, self.xyzCoefsBuffer)
-        glBufferData(GL_TEXTURE_BUFFER, self.maxCoefficients, None, GL_STATIC_READ)
+        glBufferData(GL_TEXTURE_BUFFER, 4 * self.maxCoefficients, None, GL_STATIC_READ)
 
         glActiveTexture(GL_TEXTURE2)
         self.colorCoefsBuffer = glGenBuffers(1)
         glBindBuffer(GL_TEXTURE_BUFFER, self.colorCoefsBuffer)
         glBindTexture(GL_TEXTURE_BUFFER, glGenTextures(1))
         glTexBuffer(GL_TEXTURE_BUFFER, GL_RGB32F, self.colorCoefsBuffer)
-        glBufferData(GL_TEXTURE_BUFFER, self.maxCoefficients, None, GL_STATIC_READ)
+        glBufferData(GL_TEXTURE_BUFFER, 4* self.maxCoefficients, None, GL_STATIC_READ)
 
         glActiveTexture(GL_TEXTURE3)
         self.transformedCoefsBuffer = glGenTextures(1)
@@ -1540,10 +1524,6 @@ class SplineOpenGLFrame(OpenGLFrame):
             spline.cache["knots32"] = knotList  # Shaders expect float32 knots
 
         if not "xyzCoefs32" in spline.cache:
-            nDep = 3
-            if spline.nInd >= 2 and spline.nDep > 3:
-                nDep = 4 if spline.nDep == 4 else 6 # No nDep of 5
-            
             xyzCoefs = np.zeros((3, *spline.nCoef), np.float32)
             # Curves
             if spline.nInd == 1:
@@ -1740,7 +1720,6 @@ class SplineOpenGLFrame(OpenGLFrame):
         glActiveTexture(GL_TEXTURE1)
         glBindBuffer(GL_TEXTURE_BUFFER, self.xyzCoefsBuffer)
         size = 3 * 4 * spline.nCoef[0]
-        drawCoefficients = drawCoefficients[..., :3]
         glBufferSubData(GL_TEXTURE_BUFFER, 0, size, drawCoefficients)
 
         # Transform coefficients using compute program
