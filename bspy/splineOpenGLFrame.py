@@ -179,13 +179,13 @@ class SplineOpenGLFrame(OpenGLFrame):
                     int i = outData.uKnot - outData.uOrder;
                     int coefficientOffset = i;
                     vec3 coefficient0 = texelFetch(uXYZCoefs, coefficientOffset).xyz;
-                    coefficientOffset += 1;
+                    coefficientOffset++;
                     vec3 coefficient1 = texelFetch(uXYZCoefs, coefficientOffset).xyz;
                     float gap = texelFetch(uKnots, header + i+outData.uOrder).x - texelFetch(uKnots, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]
                     vec3 dPoint0 = ((outData.uOrder - 1) / gap) * (coefficient1 - coefficient0);
                     while (i < outData.uKnot-2)
                     {
-                        coefficientOffset += 1;
+                        coefficientOffset++;
                         vec3 coefficient2 = texelFetch(uXYZCoefs, coefficientOffset).xyz;
                         gap = texelFetch(uKnots, header + i+1+outData.uOrder).x - texelFetch(uKnots, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]
                         vec3 dPoint1 = ((outData.uOrder - 1) / gap) * (coefficient2 - coefficient1);
@@ -289,7 +289,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             for (int b = 0; b < inData.uOrder; b++) // loop from coefficient[uKnot-order] to coefficient[uKnot]
             {{
                 point.xyz += uBSpline[b] * texelFetch(uXYZCoefs, i).xyz;
-                i += 1;
+                i++;
             }}
 
             gl_Position = uProjectionMatrix * point;
@@ -363,7 +363,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                     for (int b = 0; b < outData.uOrder; b++) // loop from coefficient[uKnot-order] to coefficient[uKnot]
                     {{
                         point.x += uBSpline[b] * texelFetch(uXYZCoefs, i).xyz;
-                        i += 1;
+                        i++;
                     }}
 
                     gl_Position = uProjectionMatrix * point;
@@ -462,13 +462,13 @@ class SplineOpenGLFrame(OpenGLFrame):
                         int iLimit = min(outData.uKnot - 1, outData.uN - 2);
                         int coefficientOffset = outData.uN*j + i;
                         vec3 coefficient0 = texelFetch(uXYZCoefs, coefficientOffset).xyz;
-                        coefficientOffset += 1;
+                        coefficientOffset++;
                         vec3 coefficient1 = texelFetch(uXYZCoefs, coefficientOffset).xyz;
                         float gap = texelFetch(uKnots, header + i+outData.uOrder).x - texelFetch(uKnots, header + i+1).x; // uKnots[i+uOrder] - uKnots[i+1]
                         vec3 dPoint0 = ((outData.uOrder - 1) / gap) * (coefficient1 - coefficient0);
                         while (i < iLimit)
                         {{
-                            coefficientOffset += 1;
+                            coefficientOffset++;
                             vec3 coefficient2 = texelFetch(uXYZCoefs, coefficientOffset).xyz;
                             gap = texelFetch(uKnots, header + i+1+outData.uOrder).x - texelFetch(uKnots, header + i+2).x; // uKnots[i+1+uOrder] - uKnots[i+2]
                             vec3 dPoint1 = ((outData.uOrder - 1) / gap) * (coefficient2 - coefficient1);
@@ -696,7 +696,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                     duPoint += duBSpline[uB] * vBSpline[vB] * coefs;
                     dvPoint += uBSpline[uB] * dvBSpline[vB] * coefs;
                     {computeSplineColor}
-                    i += 1;
+                    i++;
                 }}
                 j += inData.uN;
             }}
@@ -831,7 +831,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                                 duPoint += duBSpline[uB] * vBSpline[vB] * coefs;
                                 dvPoint += uBSpline[uB] * dvBSpline[vB] * coefs;
                                 {computeSplineColor}
-                                i += 1;
+                                i++;
                             }}
                             j += outData.uN;
                         }}
@@ -857,7 +857,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                                 duPoint += duBSplineNext[uB] * vBSpline[vB] * coefs;
                                 dvPoint += uBSplineNext[uB] * dvBSpline[vB] * coefs;
                                 {computeSplineColor}
-                                i += 1;
+                                i++;
                             }}
                             j += outData.uN;
                         }}
