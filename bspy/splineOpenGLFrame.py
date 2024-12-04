@@ -362,7 +362,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                     int i = iOffset;
                     for (int b = 0; b < outData.uOrder; b++) // loop from coefficient[uKnot-order] to coefficient[uKnot]
                     {{
-                        point.x += uBSpline[b] * texelFetch(uXYZCoefs, i).xyz;
+                        point.xyz += uBSpline[b] * texelFetch(uXYZCoefs, i).xyz;
                         i++;
                     }}
 
@@ -826,7 +826,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                             int i = j + iOffset;
                             for (int uB = 0; uB < outData.uOrder; uB++)
                             {{
-                                vec3 coefs = texelFetch(uXYZCoefs, i);
+                                vec3 coefs = texelFetch(uXYZCoefs, i).xyz;
                                 point.xyz += uBSpline[uB] * vBSpline[vB] * coefs;
                                 duPoint += duBSpline[uB] * vBSpline[vB] * coefs;
                                 dvPoint += uBSpline[uB] * dvBSpline[vB] * coefs;
@@ -852,7 +852,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                             int i = j + iOffset;
                             for (int uB = 0; uB < outData.uOrder; uB++)
                             {{
-                                vec3 coefs = texelFetch(uXYZCoefs, i);
+                                vec3 coefs = texelFetch(uXYZCoefs, i).xyz;
                                 point.xyz += uBSplineNext[uB] * vBSpline[vB] * coefs;
                                 duPoint += duBSplineNext[uB] * vBSpline[vB] * coefs;
                                 dvPoint += uBSplineNext[uB] * dvBSpline[vB] * coefs;
@@ -1664,11 +1664,12 @@ class SplineOpenGLFrame(OpenGLFrame):
         size = 4 * 3 * spline.nCoef[0]
         glBufferSubData(GL_TEXTURE_BUFFER, 0, size, drawCoefficients)
 
-        # Transform coefficients using compute program
-        glUseProgram(self.computeProgram.computeProgram);
-        glDispatchCompute(spline.nCoef[0], 1, 1)
-        # Block until compute shader is done
-        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT)
+        if self.tessellationEnabled:
+            # Transform coefficients using compute program
+            glUseProgram(self.computeProgram.computeProgram);
+            glDispatchCompute(spline.nCoef[0], 1, 1)
+            # Block until compute shader is done
+            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT)
 
         # Render spline
         program = self.curveProgram
@@ -1756,11 +1757,12 @@ class SplineOpenGLFrame(OpenGLFrame):
             glBindBuffer(GL_TEXTURE_BUFFER, self.colorCoefsBuffer)
             glBufferSubData(GL_TEXTURE_BUFFER, 0, size, spline.cache["colorCoefs32"])
 
-        # Transform coefficients using compute program
-        glUseProgram(self.computeProgram.computeProgram);
-        glDispatchCompute(spline.nCoef[0] * spline.nCoef[1], 1, 1)
-        # Block until compute shader is done
-        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT)
+        if self.tessellationEnabled:
+            # Transform coefficients using compute program
+            glUseProgram(self.computeProgram.computeProgram);
+            glDispatchCompute(spline.nCoef[0] * spline.nCoef[1], 1, 1)
+            # Block until compute shader is done
+            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT)
 
         # Render spline
         glUseProgram(program.surfaceProgram)
@@ -1848,11 +1850,12 @@ class SplineOpenGLFrame(OpenGLFrame):
                 glBindBuffer(GL_TEXTURE_BUFFER, self.colorCoefsBuffer)
                 glBufferSubData(GL_TEXTURE_BUFFER, 0, size, spline.cache["colorCoefs32"][coefSlice])
 
-            # Transform coefficients using compute program
-            glUseProgram(self.computeProgram.computeProgram);
-            glDispatchCompute(spline.nCoef[i1] * spline.nCoef[i2], 1, 1)
-            # Block until compute shader is done
-            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT)
+            if self.tessellationEnabled:
+                # Transform coefficients using compute program
+                glUseProgram(self.computeProgram.computeProgram);
+                glDispatchCompute(spline.nCoef[i1] * spline.nCoef[i2], 1, 1)
+                # Block until compute shader is done
+                glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT)
 
             # Render spline
             glUseProgram(program.surfaceProgram)
@@ -2070,8 +2073,7 @@ class ComputeProgram:
             self.computeProgram = shaders.compileProgram(
                 shaders.compileShader(frame.computeShaderCode, GL_COMPUTE_SHADER),
                 validate = False)
-
-        glUseProgram(self.computeProgram)
-        #self.uTransformMatrix = glGetUniformLocation(self.curveProgram, 'uTransformMatrix')
-        glUniform1i(glGetUniformLocation(self.computeProgram, 'uXYZCoefs'), 1) # GL_TEXTURE1 is the coefs buffer texture
-        glUniform1i(glGetUniformLocation(self.computeProgram, 'uTransformedCoefs'), 3) # GL_TEXTURE3 is the transformed coefs texture
+            glUseProgram(self.computeProgram)
+            #self.uTransformMatrix = glGetUniformLocation(self.curveProgram, 'uTransformMatrix')
+            glUniform1i(glGetUniformLocation(self.computeProgram, 'uXYZCoefs'), 1) # GL_TEXTURE1 is the coefs buffer texture
+            glUniform1i(glGetUniformLocation(self.computeProgram, 'uTransformedCoefs'), 3) # GL_TEXTURE3 is the transformed coefs texture
