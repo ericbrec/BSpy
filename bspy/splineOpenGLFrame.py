@@ -47,13 +47,14 @@ class SplineOpenGLFrame(OpenGLFrame):
         layout(local_size_x = 1) in;
         layout(rgba32f, binding = 3) uniform image1D uTransformedCoefs;
 
+        uniform mat4 uTransformMatrix;
         uniform samplerBuffer uXYZCoefs;
 
         void main()
         {
             // Use global work group to index into coefs data
             int coefficientOffset = int(gl_GlobalInvocationID.x);
-            imageStore(uTransformedCoefs, coefficientOffset, texelFetch(uXYZCoefs, coefficientOffset));
+            imageStore(uTransformedCoefs, coefficientOffset, uTransformMatrix * texelFetch(uXYZCoefs, coefficientOffset));
         }
     """
 
@@ -980,7 +981,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.animating = False
         self.animate = 0 # Set to number of milliseconds before showing next frame (0 means no animation)
         self.frameCount = 0
-        self.tessellationEnabled = False
+        self.tessellationEnabled = True
         self.glInitialized = False
         
         self.origin = None
@@ -1944,7 +1945,12 @@ class SplineOpenGLFrame(OpenGLFrame):
                 spline.cache = {"knots32": knots, "xyzCoefs32": xyzCoefs, "colorCoefs32": coefs[..., 3:]}
 
         # Transform coefs by view transform.
-        drawCoefficients = xyzCoefs @ transform[:3,:3] + transform[3,:3]
+        if self.tessellationEnabled:
+            glUseProgram(self.computeProgram.computeProgram);
+            glUniformMatrix4fv(self.computeProgram.uTransformMatrix, 1, GL_FALSE, transform)
+            drawCoefficients = xyzCoefs
+        else:
+            drawCoefficients = xyzCoefs @ transform[:3,:3] + transform[3,:3]
 
         # Draw spline.
         if spline.nInd == 0 or spline.order[0] == 1:
@@ -1968,7 +1974,7 @@ class ComputeProgram:
 
         if frame.tessellationEnabled:
             glUseProgram(self.computeProgram)
-            #self.uTransformMatrix = glGetUniformLocation(self.curveProgram, 'uTransformMatrix')
+            self.uTransformMatrix = glGetUniformLocation(self.computeProgram, 'uTransformMatrix')
             glUniform1i(glGetUniformLocation(self.computeProgram, 'uXYZCoefs'), 1) # GL_TEXTURE1 is the coefs buffer texture
             glUniform1i(glGetUniformLocation(self.computeProgram, 'uTransformedCoefs'), 3) # GL_TEXTURE3 is the transformed coefs texture
 
