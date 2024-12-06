@@ -28,9 +28,9 @@ class SplineOpenGLFrame(OpenGLFrame):
     maxOrder = 9
     """Maximum order for drawable splines."""
     maxKnots = 1024
-    """Maximum total number of knots for drawable splines (includes 4 header values)."""
-    maxCoefficients = 32768
-    """Maximum total number of coefficients for drawable splines."""
+    """Maximum number of 2D knots for drawable splines (order[0] + nCoef[0] + order[1] + nCoef[1] + 4, includes 4 header values)."""
+    maxCoefficients = 16384
+    """Maximum number of 2D coefficients for drawable splines (nCoef[0] * nCoef[1], textures must support this width)."""
 
     HULL = (1 << 0)
     """Option to draw the convex hull of the spline (the coefficients). Off by default."""
@@ -1156,32 +1156,36 @@ class SplineOpenGLFrame(OpenGLFrame):
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
 
         # Set up GL texture buffers for spline data
+        # Knots data
         glActiveTexture(GL_TEXTURE0)
         self.knotsBuffer = glGenBuffers(1)
         glBindBuffer(GL_TEXTURE_BUFFER, self.knotsBuffer)
         glBindTexture(GL_TEXTURE_BUFFER, glGenTextures(1))
         glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, self.knotsBuffer)
-        glBufferData(GL_TEXTURE_BUFFER, 4 * self.maxKnots, None, GL_STATIC_READ)
+        glBufferData(GL_TEXTURE_BUFFER, 4 * self.maxKnots, None, GL_STATIC_READ) # Each knot is a float (4 bytes)
 
+        # XYZ coefficients data
         glActiveTexture(GL_TEXTURE1)
         self.xyzCoefsBuffer = glGenBuffers(1)
         glBindBuffer(GL_TEXTURE_BUFFER, self.xyzCoefsBuffer)
         glBindTexture(GL_TEXTURE_BUFFER, glGenTextures(1))
         glTexBuffer(GL_TEXTURE_BUFFER, GL_RGB32F, self.xyzCoefsBuffer)
-        glBufferData(GL_TEXTURE_BUFFER, 4 * self.maxCoefficients, None, GL_STATIC_READ)
+        glBufferData(GL_TEXTURE_BUFFER, 4 * 3 * self.maxCoefficients, None, GL_STATIC_READ) # Each xyz coefficient is 3 floats (12 bytes)
 
+        # Color coefficients data
         glActiveTexture(GL_TEXTURE2)
         self.colorCoefsBuffer = glGenBuffers(1)
         glBindBuffer(GL_TEXTURE_BUFFER, self.colorCoefsBuffer)
         glBindTexture(GL_TEXTURE_BUFFER, glGenTextures(1))
         glTexBuffer(GL_TEXTURE_BUFFER, GL_RGB32F, self.colorCoefsBuffer)
-        glBufferData(GL_TEXTURE_BUFFER, 4* self.maxCoefficients, None, GL_STATIC_READ)
+        glBufferData(GL_TEXTURE_BUFFER, 4 * 3 * self.maxCoefficients, None, GL_STATIC_READ) # Each color coefficient is 3 floats (12 bytes)
 
+        # Transformed XYZ coefficients data
         glActiveTexture(GL_TEXTURE3)
         self.transformedCoefsBuffer = glGenTextures(1)
         glBindTexture(GL_TEXTURE_1D, self.transformedCoefsBuffer)
         glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-        glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB32F, 16384, 0, GL_RGB, GL_FLOAT, None) # Textures must support width and height of at least 16384
+        glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB32F, self.maxCoefficients, 0, GL_RGB, GL_FLOAT, None) # Textures must support width and height of at least 16384
         glBindImageTexture(3, self.transformedCoefsBuffer, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F) # GL_TEXTURE3 is the transformed coefs texture
 
         # Set light direction
