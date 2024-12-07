@@ -1131,8 +1131,11 @@ class SplineOpenGLFrame(OpenGLFrame):
         #print("GL_SHADING_LANGUAGE_VERSION: ", glGetString(GL_SHADING_LANGUAGE_VERSION))
         #print("GL_MAX_TESS_GEN_LEVEL: ", glGetIntegerv(GL_MAX_TESS_GEN_LEVEL))
 
-        # First, try to compile compute shader. If it fails, then tesselation will not be enabled (resets tessellationEnabled flag).
-        self.computeProgram = ComputeProgram(self)
+        # First, try to compile compute shader. If it fails, then tesselation will not be enabled.
+        try:
+            self.computeProgram = ComputeProgram(self)
+        except shaders.ShaderCompilationError:
+            self.tessellationEnabled = False
 
         if self.tessellationEnabled:
             # Set up frameBuffer into which we draw surface trims.    
@@ -1522,7 +1525,6 @@ class SplineOpenGLFrame(OpenGLFrame):
         """
         Returns an array of triangles that tessellate the given 2D solid
         """
-        assert self.tessellationEnabled
         assert solid.dimension == 2
         assert solid.containsInfinity == False
 
@@ -1978,18 +1980,14 @@ class SplineOpenGLFrame(OpenGLFrame):
 class ComputeProgram:
     """ Compile compute program """
     def __init__(self, frame):
-        try:
-            self.computeProgram = shaders.compileProgram(
-                shaders.compileShader(frame.computeShaderCode, GL_COMPUTE_SHADER),
-                validate = False)
-        except shaders.ShaderCompilationError:
-            frame.tessellationEnabled = False
+        self.computeProgram = shaders.compileProgram(
+            shaders.compileShader(frame.computeShaderCode, GL_COMPUTE_SHADER),
+            validate = False)
 
-        if frame.tessellationEnabled:
-            glUseProgram(self.computeProgram)
-            self.uTransformMatrix = glGetUniformLocation(self.computeProgram, 'uTransformMatrix')
-            glUniform1i(glGetUniformLocation(self.computeProgram, 'uXYZCoefs'), 1) # GL_TEXTURE1 is the coefs buffer texture
-            glUniform1i(glGetUniformLocation(self.computeProgram, 'uTransformedCoefs'), 3) # GL_TEXTURE3 is the transformed coefs texture
+        glUseProgram(self.computeProgram)
+        self.uTransformMatrix = glGetUniformLocation(self.computeProgram, 'uTransformMatrix')
+        glUniform1i(glGetUniformLocation(self.computeProgram, 'uXYZCoefs'), 1) # GL_TEXTURE1 is the coefs buffer texture
+        glUniform1i(glGetUniformLocation(self.computeProgram, 'uTransformedCoefs'), 3) # GL_TEXTURE3 is the transformed coefs texture
 
 class CurveProgram:
     """ Compile curve program """
