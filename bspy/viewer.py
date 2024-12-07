@@ -174,9 +174,10 @@ class Viewer(tk.Tk):
                 spline.metadata = boundary.manifold.metadata # Ensure the spline representing the hyperplane shares the same metadata
             elif isinstance(boundary.manifold, Spline):
                 spline = boundary.manifold
-            if not hasattr(spline, "cache"):
-                spline.cache = {}
-            spline.cache["trim"] = self.frame.tessellate2DSolid(boundary.domain)
+            if self.frame.tessellationEnabled:
+                if not hasattr(spline, "cache"):
+                    spline.cache = {}
+                spline.cache["trim"] = self.frame.tessellate2DSolid(boundary.domain)
             self.list(spline, name, fillColor, lineColor, options, draw, parentIID)
         else:
             if name is not None:

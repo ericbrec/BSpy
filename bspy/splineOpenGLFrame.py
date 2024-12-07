@@ -981,7 +981,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.animating = False
         self.animate = 0 # Set to number of milliseconds before showing next frame (0 means no animation)
         self.frameCount = 0
-        self.tessellationEnabled = True
+        self.tessellationEnabled = False
         self.glInitialized = False
         
         self.origin = None
@@ -1131,29 +1131,33 @@ class SplineOpenGLFrame(OpenGLFrame):
         #print("GL_SHADING_LANGUAGE_VERSION: ", glGetString(GL_SHADING_LANGUAGE_VERSION))
         #print("GL_MAX_TESS_GEN_LEVEL: ", glGetIntegerv(GL_MAX_TESS_GEN_LEVEL))
 
-        # Set up frameBuffer into which we draw surface trims.    
-        self.frameBuffer = glGenFramebuffers(1)
-        glBindFramebuffer(GL_FRAMEBUFFER, self.frameBuffer)
+        # First, try to compile compute shader. If it fails, then tesselation will not be enabled (resets tessellationEnabled flag).
+        self.computeProgram = ComputeProgram(self)
 
-        # Create the texture buffer for surface trims.
-        glActiveTexture(GL_TEXTURE4)
-        self.trimTextureBuffer = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_2D, self.trimTextureBuffer)
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER)
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER)
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 512, 512, 0, GL_RED, GL_UNSIGNED_BYTE, None)
+        if self.tessellationEnabled:
+            # Set up frameBuffer into which we draw surface trims.    
+            self.frameBuffer = glGenFramebuffers(1)
+            glBindFramebuffer(GL_FRAMEBUFFER, self.frameBuffer)
 
-        # Attach trim texture buffer to framebuffer and validate framebuffer.
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, self.trimTextureBuffer, 0)
-        glDrawBuffers(1, (GL_COLOR_ATTACHMENT0,))
-        if glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE:
-            raise ValueError("Framebuffer incomplete")
-        
-        # Set framebuffer back to default.
-        glBindFramebuffer(GL_FRAMEBUFFER, 0)
+            # Create the texture buffer for surface trims.
+            glActiveTexture(GL_TEXTURE4)
+            self.trimTextureBuffer = glGenTextures(1)
+            glBindTexture(GL_TEXTURE_2D, self.trimTextureBuffer)
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER)
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER)
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 512, 512, 0, GL_RED, GL_UNSIGNED_BYTE, None)
+
+            # Attach trim texture buffer to framebuffer and validate framebuffer.
+            glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, self.trimTextureBuffer, 0)
+            glDrawBuffers(1, (GL_COLOR_ATTACHMENT0,))
+            if glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE:
+                raise ValueError("Framebuffer incomplete")
+            
+            # Set framebuffer back to default.
+            glBindFramebuffer(GL_FRAMEBUFFER, 0)
 
         # Set up GL texture buffers for spline data
         # Knots data
@@ -1181,12 +1185,13 @@ class SplineOpenGLFrame(OpenGLFrame):
         glBufferData(GL_TEXTURE_BUFFER, 4 * 3 * self.maxCoefficients, None, GL_STATIC_READ) # Each color coefficient is 3 floats (12 bytes)
 
         # Transformed XYZ coefficients data
-        glActiveTexture(GL_TEXTURE3)
-        self.transformedCoefsBuffer = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_1D, self.transformedCoefsBuffer)
-        glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-        glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB32F, self.maxCoefficients, 0, GL_RGB, GL_FLOAT, None) # Textures must support width and height of at least 16384
-        glBindImageTexture(3, self.transformedCoefsBuffer, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F) # GL_TEXTURE3 is the transformed coefs texture
+        if self.tessellationEnabled:
+            glActiveTexture(GL_TEXTURE3)
+            self.transformedCoefsBuffer = glGenTextures(1)
+            glBindTexture(GL_TEXTURE_1D, self.transformedCoefsBuffer)
+            glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+            glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB32F, self.maxCoefficients, 0, GL_RGB, GL_FLOAT, None) # Textures must support width and height of at least 16384
+            glBindImageTexture(3, self.transformedCoefsBuffer, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F) # GL_TEXTURE3 is the transformed coefs texture
 
         # Set light direction
         self.lightDirection = np.array((0.63960218, 0.63960218, 0.42640144), np.float32)
@@ -1199,24 +1204,9 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         # Compile shaders and link programs
         try:
-            # Must create ComputeProgram first, because it checks and potentially resets tessellationEnabled flag.
-            self.computeProgram = ComputeProgram(self)
             self.curveProgram = CurveProgram(self)
             self.surface3Program = SurfaceProgram(self, False, 3, "", "", "", "splineColor = uFillColor.rgb;")
-            self.trimmedSurface3Program = SurfaceProgram(self, True, 3, "", "", "", "splineColor = uFillColor.rgb;")
             self.surface4Program = SurfaceProgram(self, False, 4,
-                """
-                    vec4 kVec = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-                    vec3 pVec;
-                """, "splineColor = vec3(0.0, 0.0, 0.0);",
-                "splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uColorCoefs, i).x;",
-                # Taken from http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
-                # uFillColor is passed in as HSV
-                """
-                    pVec = abs(fract(uFillColor.xxx + kVec.xyz) * 6.0 - kVec.www);
-                    splineColor = uFillColor.z * mix(kVec.xxx, clamp(pVec - kVec.xxx, 0.0, 1.0), splineColor.r);
-                """)
-            self.trimmedSurface4Program = SurfaceProgram(self, True, 4,
                 """
                     vec4 kVec = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
                     vec3 pVec;
@@ -1230,8 +1220,23 @@ class SplineOpenGLFrame(OpenGLFrame):
                 """)
             self.surface6Program = SurfaceProgram(self, False, 6, "", "splineColor = vec3(0.0, 0.0, 0.0);",
                 "splineColor += uBSpline[uB] * vBSpline[vB] * texelFetch(uColorCoefs, i).rgb;", "")
-            self.trimmedSurface6Program = SurfaceProgram(self, True, 6, "", "splineColor = vec3(0.0, 0.0, 0.0);",
-                "splineColor += uBSpline[uB] * vBSpline[vB] * texelFetch(uColorCoefs, i).rgb;", "")
+
+            if self.tessellationEnabled:
+                self.trimmedSurface3Program = SurfaceProgram(self, True, 3, "", "", "", "splineColor = uFillColor.rgb;")
+                self.trimmedSurface4Program = SurfaceProgram(self, True, 4,
+                    """
+                        vec4 kVec = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+                        vec3 pVec;
+                    """, "splineColor = vec3(0.0, 0.0, 0.0);",
+                    "splineColor.r += uBSpline[uB] * vBSpline[vB] * texelFetch(uColorCoefs, i).x;",
+                    # Taken from http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
+                    # uFillColor is passed in as HSV
+                    """
+                        pVec = abs(fract(uFillColor.xxx + kVec.xyz) * 6.0 - kVec.www);
+                        splineColor = uFillColor.z * mix(kVec.xxx, clamp(pVec - kVec.xxx, 0.0, 1.0), splineColor.r);
+                    """)
+                self.trimmedSurface6Program = SurfaceProgram(self, True, 6, "", "splineColor = vec3(0.0, 0.0, 0.0);",
+                    "splineColor += uBSpline[uB] * vBSpline[vB] * texelFetch(uColorCoefs, i).rgb;", "")
 
         except shaders.ShaderCompilationError as exception:
             error = exception.args[0]
@@ -1272,11 +1277,12 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         self.curveProgram.ResetBounds(self)
         self.surface3Program.ResetBounds(self)
-        self.trimmedSurface3Program.ResetBounds(self)
         self.surface4Program.ResetBounds(self)
-        self.trimmedSurface4Program.ResetBounds(self)
         self.surface6Program.ResetBounds(self)
-        self.trimmedSurface6Program.ResetBounds(self)
+        if self.tessellationEnabled:
+            self.trimmedSurface3Program.ResetBounds(self)
+            self.trimmedSurface4Program.ResetBounds(self)
+            self.trimmedSurface6Program.ResetBounds(self)
 
         glUseProgram(0)
         glMatrixMode(GL_MODELVIEW)
@@ -1512,13 +1518,16 @@ class SplineOpenGLFrame(OpenGLFrame):
         if not "animate" in spline.metadata:
             spline.metadata["animate"] = None
 
-    @staticmethod
-    def tessellate2DSolid(solid):
+    def tessellate2DSolid(self, solid):
         """
         Returns an array of triangles that tessellate the given 2D solid
         """
+        assert self.tessellationEnabled
         assert solid.dimension == 2
         assert solid.containsInfinity == False
+
+        if not self.tessellationEnabled:
+            return None
 
         # First, collect all manifold contour endpoints, accounting for slight numerical error.
         class Endpoint:
