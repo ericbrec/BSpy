@@ -174,9 +174,11 @@ class Viewer(tk.Tk):
                 spline.metadata = boundary.manifold.metadata # Ensure the spline representing the hyperplane shares the same metadata
             elif isinstance(boundary.manifold, Spline):
                 spline = boundary.manifold
-            if not hasattr(spline, "cache"):
-                spline.cache = {}
-            spline.cache["trim"] = self.frame.tessellate2DSolid(boundary.domain)
+            tesselation = self.frame.tessellate2DSolid(boundary.domain)
+            if tesselation is not None:
+                if not hasattr(spline, "cache"):
+                    spline.cache = {}
+                spline.cache["trim"] = tesselation
             self.list(spline, name, fillColor, lineColor, options, draw, parentIID)
         else:
             if name is not None:
@@ -271,7 +273,7 @@ class Viewer(tk.Tk):
         for item in self.treeview.selection():
             spline = self.splineList[item]
             if isinstance(spline, Spline):
-                coefs = spline.cache["coefs32"].T[:3]
+                coefs = spline.cache["xyzCoefs32"].T
                 coefsAxis = tuple(range(1, spline.nInd + 1))
                 if gotOne:
                     splineMin = np.minimum(splineMin, coefs.min(axis=coefsAxis))
@@ -284,7 +286,7 @@ class Viewer(tk.Tk):
             elif isinstance(spline, Solid):
                 for subitem in self.treeview.get_children(item):
                     spline = self.splineList[subitem]
-                    coefs = spline.cache["coefs32"].T[:3]
+                    coefs = spline.cache["xyzCoefs32"].T
                     coefsAxis = tuple(range(1, spline.nInd + 1))
                     if gotOne:
                         splineMin = np.minimum(splineMin, coefs.min(axis=coefsAxis))
