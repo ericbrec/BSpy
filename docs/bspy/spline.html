@@ -1539,7 +1539,10 @@ over which the function f is defined.  The approximating spline which is the
 output will be defined over the same rectangular domain</li>
 <li><strong>f</strong> (Python function):
 The function to approximate.  It is a vector-valued function of nDep
-components in nInd variables.</li>
+components in nInd variables.  Alternatively, it can return a spline of any
+number independent variables and nDep dependent variables.  In this case, the
+resulting spline function will have nInd + number of independent variables
+in the splines returned independent variables and nDep dependent variables.</li>
 <li><strong>order</strong> (<code>array-like</code>):
 An optional integer array of length nInd which specifies the polynomial
 order to use in each of the independent variables.  It will default to order
@@ -1878,9 +1881,14 @@ valid collocation points, interpolation points, or quadrature points.</p>
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>newKnots</strong> (<code>iterable</code> of length <code><a href="#Spline.nInd">nInd</a></code>):
+<li><p><strong>newKnots</strong> (<code>iterable</code> of length <code><a href="#Spline.nInd">nInd</a></code>):
 An iterable that specifies the knots to be added to each independent variable's knots. 
-len(newKnots[ind]) == 0 if no knots are to be added for the <code>ind</code> independent variable.</li>
+len(newKnots[ind]) == 0 if no knots are to be added for the <code>ind</code> independent variable. </p>
+
+<p>Each knot may be specified as its knot value or a tuple indicating the knot value and its multiplicity. 
+For example, spline.insert_knots([[0.1, (0.3, 2)], [(.5, 3), .2, .5]]) will insert 0.1 once and 0.3 twice into 
+the knots of the first independent variable, and will insert 0.2 once and 0.5 four times into the knots of the 
+second independent variable. Knots do not need to be sorted.</p></li>
 </ul>
 
 <h6 id="returns">Returns</h6>

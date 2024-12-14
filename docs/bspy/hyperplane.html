@@ -40,6 +40,9 @@
                                 <a class="variable" href="#Hyperplane.maxAlignment">maxAlignment</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Hyperplane.metadata">metadata</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Hyperplane.complete_slice">complete_slice</a>
                         </li>
                         <li>
@@ -139,6 +142,8 @@ The unit normal.</li>
 A point on the hyperplane.</li>
 <li><strong>tangentSpace</strong> (array-like):
 A array of tangents that are linearly independent and orthogonal to the normal.</li>
+<li><strong>metadata</strong> (<code>dict</code>, optional):
+A dictionary of ancillary data to store with the hyperplane. Default is {}.</li>
 </ul>
 
 <h6 id="notes">Notes</h6>
@@ -151,7 +156,7 @@ Thus the dimension of the domain is one less than that of the range.</p>
                             <div id="Hyperplane.__init__" class="classattr">
                                 <div class="attr function">
             
-        <span class="name">Hyperplane</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">normal</span>, </span><span class="param"><span class="n">point</span>, </span><span class="param"><span class="n">tangentSpace</span></span>)</span>
+        <span class="name">Hyperplane</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">normal</span>, </span><span class="param"><span class="n">point</span>, </span><span class="param"><span class="n">tangentSpace</span>, </span><span class="param"><span class="n">metadata</span><span class="o">=</span><span class="p">{}</span></span>)</span>
 
         
     </div>
@@ -172,6 +177,17 @@ Thus the dimension of the domain is one less than that of the range.</p>
             <div class="docstring"><p>If the absolute value of the dot product of two unit normals is greater than maxAlignment, the manifolds are parallel.</p>
 </div>
 
+
+                            </div>
+                            <div id="Hyperplane.metadata" class="classattr">
+                                <div class="attr variable">
+            <span class="name">metadata</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Hyperplane.metadata"></a>
+    
+    
 
                             </div>
                             <div id="Hyperplane.complete_slice" class="classattr">
