@@ -974,15 +974,15 @@ class Spline(Manifold):
             resulting spline function will have nInd + number of independent variables
             in the splines returned independent variables and nDep dependent variables.
         
-        order : `array-like`
+        order : `array-like`, optional
             An optional integer array of length nInd which specifies the polynomial
             order to use in each of the independent variables.  It will default to order
             4 (degree 3) if None is specified (the default)
         
-        knots : `array-like`
+        knots : `array-like`, optional
             The initial knot sequence to use, if given
         
-        tolerance : `scalar`
+        tolerance : `scalar`, optional
             The maximum 2-norm of the difference between the given function and the
             spline fit.  Defaults to 1.0e-4.
         
@@ -1653,6 +1653,47 @@ class Spline(Manifold):
         the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.
         """
         return bspy._spline_operations.normal_spline(bspy.spline_block.SplineBlock(self), indices)
+    
+    def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, tolerance = 1.0e-4):
+        """
+        Compute the offset of a spline to a given tolerance.
+
+        Parameters
+        ----------
+        edgeRadius : scalar
+            The radius of offset. If a bit radius is specified, the edge radius is the
+            smaller radius of the cutting edge of the drill bit, whereas bit radius specifies 
+            half of the full width of the drill bit.
+        
+        bitRadius : scalar, optional
+            The radius of the drill bit (half its full width). For a ball nose cutter (the default), 
+            the bit radius is the same as the edge radius. For an end mill,
+            the bit radius is larger (typically much larger) than the edge radius.
+
+        angle : scalar, optional
+            The angle at which the drill bit transitions from the edge radius to the 
+            flatter bottom of the drill bit. The angle must be in the range [0, pi/2). 
+            Defaults to pi / 2.2.
+    
+        tolerance : `scalar`, optional
+            The maximum 2-norm of the difference between the offset and the
+            spline fit. Defaults to 1.0e-4.
+        
+        Returns
+        -------
+        spline : `Spline`
+            The spline that represents the offset.
+        
+        See Also
+        --------
+        `fit` : Fit the function f with a spline to a given tolerance.
+
+        Notes
+        -----
+        The offset is only defined for 2D curves and 3D surfaces with well-defined normals. 
+        The bottom of the drill bit tangent to its lowest y value.
+        """
+        return bspy._spline_fitting.offset(self, edgeRadius, bitRadius, angle, tolerance)
 
     @staticmethod
     def point(point):

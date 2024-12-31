@@ -771,6 +771,55 @@ def line(startPoint, endPoint):
     endPoint = bspy.Spline.point(endPoint)
     return bspy.Spline.ruled_surface(startPoint, endPoint)
 
+def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, tolerance = 1.0e-4):
+    if self.nDep < 2 or self.nDep > 3 or self.nDep - self.nInd != 1: raise ValueError("The offset is only defined for 2D curves and 3D surfaces with well-defined normals.")
+    if edgeRadius < 0:
+        raise ValueError("edgeRadius must be >= 0")
+    elif edgeRadius == 0:
+        return self
+    if bitRadius is None:
+        bitRadius = edgeRadius
+    elif bitRadius < edgeRadius:
+        raise ValueError("bitRadius must be >= edgeRadius")
+    if angle < 0 or angle >= np.pi / 2: raise ValueError("angle must in the range [0, pi/2)")
+
+    w = bitRadius - edgeRadius
+    h = w * np.tan(angle)
+    bottom = np.cos(angle)
+    bottomRadius = edgeRadius + w / bottom
+    if w < tolerance:
+        def drillBit(uv):
+            return self(uv) + edgeRadius * self.normal(uv)
+    elif self.nDep == 2:
+        def drillBit(u):
+            xy = self(u)
+            normal = self.normal(u)
+            upward = np.sign(normal[1])
+            if upward * normal[1] <= bottom:
+                xy[0] += edgeRadius * normal[0] + w * np.sign(normal[0])
+                xy[1] += edgeRadius * normal[1]
+            else:
+                xy[0] += bottomRadius * normal[0]
+                xy[1] += bottomRadius * normal[1] - upward * h
+            return xy
+    elif self.nDep == 3:
+        def drillBit(uv):
+            xyz = self(uv)
+            normal = self.normal(uv)
+            upward = np.sign(normal[1])
+            if upward * normal[1] <= bottom:
+                norm = np.sqrt(normal[0] * normal[0] + normal[2] * normal[2])
+                xyz[0] += edgeRadius * normal[0] + w * normal[0] / norm
+                xyz[1] += edgeRadius * normal[1]
+                xyz[2] += edgeRadius * normal[2] + w * normal[2] / norm
+            else:
+                xyz[0] += bottomRadius * normal[0]
+                xyz[1] += bottomRadius * normal[1] - upward * h
+                xyz[2] += bottomRadius * normal[2]
+            return xyz
+
+    return fit(self.domain(), drillBit, [max(order, 4) for order in self.order], self.knots, tolerance)
+
 def point(point):
     point = np.atleast_1d(point)
     return bspy.Spline(0, len(point), [], [], [], point)
