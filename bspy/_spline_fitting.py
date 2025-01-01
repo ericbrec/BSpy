@@ -789,11 +789,11 @@ def offset(self, edgeRadius, subtract=False, bitRadius=None, angle=np.pi / 2.2, 
         bitRadius *= -1
     w = bitRadius - edgeRadius
     h = w * np.tan(angle)
-    bottom = np.cos(angle)
-    bottomRadius = edgeRadius + w / bottom
+    bottom = np.sin(angle)
+    bottomRadius = edgeRadius + h / bottom
 
     # Define drill bit function.
-    if w < tolerance:
+    if abs(w) < tolerance:
         def drillBit(uv):
             return self(uv) + edgeRadius * self.normal(uv)
     elif self.nDep == 2:
