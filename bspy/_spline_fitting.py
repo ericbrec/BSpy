@@ -771,7 +771,7 @@ def line(startPoint, endPoint):
     endPoint = bspy.Spline.point(endPoint)
     return bspy.Spline.ruled_surface(startPoint, endPoint)
 
-def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, tolerance = 1.0e-4):
+def offset(self, edgeRadius, subtract=False, bitRadius=None, angle=np.pi / 2.2, tolerance = 1.0e-4):
     if self.nDep < 2 or self.nDep > 3 or self.nDep - self.nInd != 1: raise ValueError("The offset is only defined for 2D curves and 3D surfaces with well-defined normals.")
     if edgeRadius < 0:
         raise ValueError("edgeRadius must be >= 0")
@@ -783,10 +783,16 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, tolerance = 1.0e
         raise ValueError("bitRadius must be >= edgeRadius")
     if angle < 0 or angle >= np.pi / 2: raise ValueError("angle must in the range [0, pi/2)")
 
+    # Determine geometry of drill bit.
+    if subtract:
+        edgeRadius *= -1
+        bitRadius *= -1
     w = bitRadius - edgeRadius
     h = w * np.tan(angle)
     bottom = np.cos(angle)
     bottomRadius = edgeRadius + w / bottom
+
+    # Define drill bit function.
     if w < tolerance:
         def drillBit(uv):
             return self(uv) + edgeRadius * self.normal(uv)
@@ -818,7 +824,18 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, tolerance = 1.0e
                 xyz[2] += bottomRadius * normal[2]
             return xyz
 
-    return fit(self.domain(), drillBit, [max(order, 4) for order in self.order], self.knots, tolerance)
+    # Compute new order and knots for offset (ensure order is at least 4).
+    newOrder = []
+    newKnots = []
+    for order, knots in zip(self.order, self.knots):
+        min4Order = max(order, 4)
+        unique, count = np.unique(knots, return_counts=True)
+        count += min4Order - order
+        newOrder.append(min4Order)
+        newKnots.append(np.repeat(unique, count))
+
+    # Fit new spline to offset by drill bit.
+    return fit(self.domain(), drillBit, newOrder, newKnots, tolerance)
 
 def point(point):
     point = np.atleast_1d(point)
