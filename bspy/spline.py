@@ -1654,7 +1654,7 @@ class Spline(Manifold):
         """
         return bspy._spline_operations.normal_spline(bspy.spline_block.SplineBlock(self), indices)
     
-    def offset(self, edgeRadius, subtract=False, bitRadius=None, angle=np.pi / 2.2, tolerance = 1.0e-4):
+    def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, subtract=False, removeCusps=False, tolerance = 1.0e-4):
         """
         Compute the offset of a spline to a given tolerance.
 
@@ -1665,10 +1665,6 @@ class Spline(Manifold):
             smaller radius of the cutting edge of the drill bit, whereas bit radius specifies 
             half of the full width of the drill bit.
 
-        subtract : boolean, optional
-            Flag indicating if the drill bit should be subtracted from the spline instead of added. 
-            Subtracting the drill bit returns the tool path that cuts out the spline. Defaults to False.
-
         bitRadius : scalar, optional
             The radius of the drill bit (half its full width). For a ball nose cutter (the default), 
             the bit radius is the same as the edge radius. For an end mill,
@@ -1678,6 +1674,14 @@ class Spline(Manifold):
             The angle at which the drill bit transitions from the edge radius to the 
             flatter bottom of the drill bit. The angle must be in the range [0, pi/2). 
             Defaults to pi / 2.2.
+
+        subtract : boolean, optional
+            Flag indicating if the drill bit should be subtracted from the spline instead of added. 
+            Subtracting the drill bit returns the tool path that cuts out the spline. Defaults to False.
+
+        removeCusps : boolean, optional
+            Flag indicating if cusps and their associated self-intersections should be removed from the 
+            offset. Only applicable to offset curves. Defaults to False.
     
         tolerance : `scalar`, optional
             The maximum 2-norm of the difference between the offset and the
@@ -1685,7 +1689,7 @@ class Spline(Manifold):
         
         Returns
         -------
-        spline : `Spline`
+        offset : `Spline`
             The spline that represents the offset.
         
         See Also
@@ -1697,7 +1701,7 @@ class Spline(Manifold):
         The offset is only defined for 2D curves and 3D surfaces with well-defined normals. 
         The bottom of the drill bit tangent to its lowest y value.
         """
-        return bspy._spline_fitting.offset(self, edgeRadius, subtract, bitRadius, angle, tolerance)
+        return bspy._spline_fitting.offset(self, edgeRadius, bitRadius, angle, subtract, removeCusps, tolerance)
 
     @staticmethod
     def point(point):

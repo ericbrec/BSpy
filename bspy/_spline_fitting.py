@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 import bspy.spline
+import bspy.spline_block
 import math
 
 def circular_arc(radius, angle, tolerance = None):
@@ -771,7 +772,7 @@ def line(startPoint, endPoint):
     endPoint = bspy.Spline.point(endPoint)
     return bspy.Spline.ruled_surface(startPoint, endPoint)
 
-def offset(self, edgeRadius, subtract=False, bitRadius=None, angle=np.pi / 2.2, tolerance = 1.0e-4):
+def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, subtract=False, removeCusps=False, tolerance = 1.0e-4):
     if self.nDep < 2 or self.nDep > 3 or self.nDep - self.nInd != 1: raise ValueError("The offset is only defined for 2D curves and 3D surfaces with well-defined normals.")
     if edgeRadius < 0:
         raise ValueError("edgeRadius must be >= 0")
@@ -835,7 +836,36 @@ def offset(self, edgeRadius, subtract=False, bitRadius=None, angle=np.pi / 2.2, 
         newKnots.append(np.repeat(unique, count))
 
     # Fit new spline to offset by drill bit.
-    return fit(self.domain(), drillBit, newOrder, newKnots, tolerance)
+    offset = fit(self.domain(), drillBit, newOrder, newKnots, tolerance)
+
+    # Remove cusps as required (only applies to offset curves).
+    if removeCusps and self.nInd == 1:
+        # Find the cusps by checking for tangent direction reversal between the spline and offset.
+        cusps = []
+        previousKnot = None
+        start = None
+        for knot in offset.knots[0][offset.order[0]:offset.nCoef[0]]:
+            flipped = np.dot(self.derivative((1,), knot), offset.derivative((1,), knot)) < 0
+            if flipped and start is None:
+                start = knot
+            if not flipped and start is not None:
+                cusps.append((start, previousKnot))
+                start = None
+            previousKnot = knot
+
+        # Remove the cusps by intersecting the offset segments before and after each cusp.
+        segmentList = []
+        for cusp in cusps:
+            domain = offset.domain()
+            block = bspy.spline_block.SplineBlock([[offset.trim(((domain[0][0], cusp[0]),)), -offset.trim(((cusp[1], domain[0][1]),))]])
+            intersections = block.zeros()
+            for intersection in intersections:
+                segmentList.append(offset.trim(((domain[0][0], intersection[0]),)))
+                offset = offset.trim(((intersection[1], domain[0][1]),))
+        segmentList.append(offset)
+        offset = bspy.spline.Spline.join(segmentList)
+    
+    return offset
 
 def point(point):
     point = np.atleast_1d(point)
