@@ -1192,6 +1192,29 @@ def test_normal():
         assert np.isclose(np.dot(du((u,)), spline.normal((u,))), 0.0)
         assert np.isclose(np.dot(du((u,)), normal((u,))), 0.0)
 
+def test_offset():
+    spline = bspy.Spline(1, 2, (3,), (3,), ((0.0, 0.0, 0.0, 1.0, 1.0, 1.0),), ((0.0, 0.5, 1.0), (1.0, -1.0, 1.0)))
+    radius = 0.3
+    tolerance = 0.0001
+    offset = spline.offset(radius, tolerance=tolerance)
+    maxError = 0.0
+    for u in np.linspace(0.0, 1, 50):
+        maxError = max(maxError, np.linalg.norm(spline(u) - offset(u)) - radius)
+    assert maxError <= tolerance
+
+    spline = bspy.Spline(2, 3, (3,3), (3,3), ((0.0, 0.0, 0.0, 1.0, 1.0, 1.0),(0.0, 0.0, 0.0, 1.0, 1.0, 1.0)), 
+        (((0.0, 0.0, 0.0), (0.5, 0.5, 0.5), (1.0, 1.0, 1.0)), \
+        ((1.0, 0.0, 1.0), (0.0, -1.0, 0.0), (1.0, 0.0, 1.0)), \
+        ((0.0, 0.5, 1.0), (0.0, 0.5, 1.0), (0.0, 0.5, 1.0))))
+    radius = 0.5
+    tolerance = 0.001
+    offset = spline.offset(radius, subtract=True, tolerance=tolerance)
+    maxError = 0.0
+    for u in np.linspace(0.0, 1, 25):
+        for v in np.linspace(0.0, 1, 25):
+            maxError = max(maxError, np.linalg.norm(spline((u, v)) - offset((u, v))) - radius)
+    assert maxError <= tolerance
+
 def test_point():
     myPoint = bspy.Spline.point([0.0, 1.0, 2.0])
     mvPointEval = myPoint()
