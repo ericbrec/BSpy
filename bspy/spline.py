@@ -1129,7 +1129,7 @@ class Spline(Manifold):
         """
         return bspy._spline_intersection.full_domain(self)
     
-    def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-6):
+    def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-5):
         """
         Determine a geodesic between two points on a surface
 
@@ -1143,7 +1143,7 @@ class Spline(Manifold):
         
         tolerance : scalar
             The maximum error in parameter space to which the geodesic should get computed.
-            Defaults to 1.0e-6.
+            Defaults to 1.0e-5.
 
         Returns
         -------

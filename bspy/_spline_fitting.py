@@ -519,7 +519,7 @@ def four_sided_patch(bottom, right, top, left, surfParam = 0.5):
     
     return (1.0 - surfParam) * coons + surfParam * laplace
 
-def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-6):
+def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-5):
     # Check validity of input
     if self.nInd != 2:  raise ValueError("Surface must have two independent variables")
     if len(uvStart) != 2:  raise ValueError("uvStart must have two components")
@@ -617,7 +617,7 @@ def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-6):
     initialGuess = line(uvStart, uvEnd).elevate([2])
 
     # Solve the ODE and return the geodesic
-    solution = initialGuess.solve_ode(1, 1, geodesicCallback, 1.0e-5, (self, uvDomain))
+    solution = initialGuess.solve_ode(1, 1, geodesicCallback, tolerance, (self, uvDomain))
     return solution
 
 def least_squares(uValues, dataPoints, order = None, knots = None, compression = 0.0,
@@ -771,6 +771,102 @@ def line(startPoint, endPoint):
     startPoint = bspy.Spline.point(startPoint)
     endPoint = bspy.Spline.point(endPoint)
     return bspy.Spline.ruled_surface(startPoint, endPoint)
+
+def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
+    if self.nInd != 2:  raise ValueError("Surface must have two independent variables")
+    if len(uvStart) != 2:  raise ValueError("uvStart must have two components")
+    uvDomain = self.domain()
+    if uvStart[0] < uvDomain[0, 0] or uvStart[0] > uvDomain[0, 1] or \
+       uvStart[1] < uvDomain[1, 0] or uvStart[1] > uvDomain[1, 1]:
+        raise ValueError("uvStart is outside domain of the surface")
+    is_max = bool(is_max) # Ensure is_max is a boolean for XNOR operation
+
+    # Generate the initial guess for the contour, reflecting the start point through the center of the domain.
+    uvEnd = uvDomain[:,0] + uvDomain[:,1] - uvStart
+    guessDirection = uvEnd - uvStart
+    guessDirectionLength =  np.linalg.norm(guessDirection)
+    if guessDirectionLength < 100 * tolerance:
+         # Set end point to the far corner if the start point is near the center of the domain.
+        uvEnd = uvDomain[:,1]
+        guessDirection = uvEnd - uvStart
+        guessDirectionLength =  np.linalg.norm(guessDirection)
+    guessDirection = guessDirection / guessDirectionLength
+    initialGuess = line(uvStart, uvEnd).elevate([2])
+    
+    # Define the callback function for the ODE solver
+    def curvatureLineCallback(t, u):
+        # Evaluate the surface information needed.
+        uv = np.maximum(uvDomain[:, 0], np.minimum(uvDomain[:, 1], u[:, 0]))
+        su = self.derivative((1, 0), uv)
+        sv = self.derivative((0, 1), uv)
+        suu = self.derivative((2, 0), uv)
+        suv = self.derivative((1, 1), uv)
+        svv = self.derivative((0, 2), uv)
+        suuu = self.derivative((3, 0), uv)
+        suuv = self.derivative((2, 1), uv)
+        suvv = self.derivative((1, 2), uv)
+        svvv = self.derivative((0, 3), uv)
+        normal = self.normal(uv)
+
+        # Calculate curvature matrix and its derivatives.
+        sU = np.concatenate((su, sv)).reshape(2, -1)
+        sUu = np.concatenate((suu, suv)).reshape(2, -1)
+        sUv = np.concatenate((suv, svv)).reshape(2, -1)
+        sUU = np.concatenate((suu, suv, suv, svv)).reshape(2, 2, -1)
+        sUUu = np.concatenate((suuu, suuv, suuv, suvv)).reshape(2, 2, -1)
+        sUUv = np.concatenate((suuv, suvv, suvv, svvv)).reshape(2, 2, -1)
+        fffI = np.linalg.inv(sU @ sU.T) # Inverse of first fundamental form
+        k = fffI @ (sUU @ normal) # Curvature matrix
+        ku = fffI @ ((sUUu @ normal) - (2 * (sUu @ sU.T) + (sU @ sUu.T)) @ k)
+        kv = fffI @ ((sUUv @ normal) - (2 * (sUv @ sU.T) + (sU @ sUv.T)) @ k)
+
+        # Determine principle curvatures and directions, and assign new direction.
+        curvatures, directions = np.linalg.eigh(k)
+        if curvatures[1] - curvatures[0] < tolerance:
+            direction = guessDirection
+        else:
+            if abs(curvatures[0]) > abs(curvatures[1]) == is_max:
+                curvature = curvatures[0]
+                direction = directions[0]
+            else:
+                curvature = curvatures[1]
+                direction = directions[1]
+            if np.dot(direction, guessDirection) < 0.0:
+                direction *= -1
+            guessDirection = direction
+
+        # Compute the jacobian for the direction (messy).
+        lhs = np.empty((3,3), self.coefs.dtype)
+        R = np.array([[suu_su, suv_su, svv_su], [suu_sv, suv_sv, svv_sv]])
+        R_u = np.array([[suuu_su + suu_suu, suuv_su + suu_suv, suvv_su + suu_svv],
+                        [suuu_sv + suu_suv, suuv_sv + suv_suv, suvv_sv + suv_svv]])
+        R_v = np.array([[suuv_su + suu_suv, suvv_su + suv_suv, svvv_su + suv_svv],
+                        [suuv_sv + suu_svv, suvv_sv + suv_svv, svvv_sv + svv_svv]])
+
+        # Solve for the Christoffel symbols
+        luAndPivot = sp.linalg.lu_factor(A)
+        Gamma = sp.linalg.lu_solve(luAndPivot, R)
+        Gamma_u = sp.linalg.lu_solve(luAndPivot, R_u - A_u @ Gamma)
+        Gamma_v = sp.linalg.lu_solve(luAndPivot, R_v - A_v @ Gamma)
+
+        # Compute the right hand side for the ODE
+        rhs = -np.array([Gamma[0, 0] * u[0, 1] ** 2 + 2.0 * Gamma[0, 1] * u[0, 1] * u[1, 1] + Gamma[0, 2] * u[1, 1] ** 2,
+                         Gamma[1, 0] * u[0, 1] ** 2 + 2.0 * Gamma[1, 1] * u[0, 1] * u[1, 1] + Gamma[1, 2] * u[1, 1] ** 2])
+
+        # Compute the Jacobian matrix of the right hand side of the ODE
+        jacobian = -np.array([[[Gamma_u[0, 0] * u[0, 1] ** 2 + 2.0 * Gamma_u[0, 1] * u[0, 1] * u[1, 1] + Gamma_u[0, 2] * u[1, 1] ** 2,
+                                2.0 * Gamma[0, 0] * u[0, 1] + 2.0 * Gamma[0, 1] * u[1, 1]],
+                               [Gamma_v[0, 0] * u[0, 1] ** 2 + 2.0 * Gamma_v[0, 1] * u[0, 1] * u[1, 1] + Gamma_v[0, 2] * u[1, 1] ** 2,
+                                2.0 * Gamma[0, 1] * u[0, 1] + 2.0 * Gamma[0, 2] * u[1, 1]]],
+                              [[Gamma_u[1, 0] * u[0, 1] ** 2 + 2.0 * Gamma_u[1, 1] * u[0, 1] * u[1, 1] + Gamma_u[1, 2] * u[1, 1] ** 2,
+                                2.0 * Gamma[1, 0] * u[0, 1] + 2.0 * Gamma[1, 1] * u[1, 1]],
+                               [Gamma_v[1, 0] * u[0, 1] ** 2 + 2.0 * Gamma_v[1, 1] * u[0, 1] * u[1, 1] + Gamma_v[1, 2] * u[1, 1] ** 2,
+                                2.0 * Gamma[1, 1] * u[1, 1] + 2.0 * Gamma[1, 2] * u[1, 1]]]])
+        return rhs, jacobian
+
+    # Solve the ODE and return the geodesic
+    solution = initialGuess.solve_ode(1, 0, curvatureLineCallback, tolerance)
+    return solution
 
 def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, subtract=False, removeCusps=False, tolerance = 1.0e-4):
     if self.nDep < 2 or self.nDep > 3 or self.nDep - self.nInd != 1: raise ValueError("The offset is only defined for 2D curves and 3D surfaces with well-defined normals.")
