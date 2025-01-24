@@ -1499,6 +1499,36 @@ class Spline(Manifold):
         """
         return bspy._spline_fitting.line(startPoint, endPoint)
     
+    def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
+        """
+        Determine a line of curvature along a surface
+
+        Parameters
+        ----------
+        uvStart : `array-like`
+            The parameter values for the surface at one end of the desired line of curvature.
+        
+        is_max : `bool`
+            Boolean value indicating that the line of curvature should be the maximal curvature line. 
+            If False, the minimal curvature line is returned.
+        
+        tolerance : scalar
+            The maximum error in parameter space to which the geodesic should get computed.
+            Defaults to 1.0e-3.
+
+        Returns
+        -------
+        spline : `Spline`
+            A spline curve whose range is in the domain of the given surface.  The range of the
+            curve is the locus of points whose image under the surface map form the line of curvature
+            starting at the given point.
+        
+        See Also
+        --------
+        `solve_ode` : Solve an ordinary differential equation using spline collocation.
+        """
+        return bspy._spline_fitting.line_of_curvature(self, uvStart, is_max, tolerance)
+    
     @staticmethod
     def load(fileName):
         """

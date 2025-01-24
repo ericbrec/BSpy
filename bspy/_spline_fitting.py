@@ -779,6 +779,7 @@ def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
     if uvStart[0] < uvDomain[0, 0] or uvStart[0] > uvDomain[0, 1] or \
        uvStart[1] < uvDomain[1, 0] or uvStart[1] > uvDomain[1, 1]:
         raise ValueError("uvStart is outside domain of the surface")
+    uvStart = np.atleast_1d(uvStart)
     is_max = bool(is_max) # Ensure is_max is a boolean for XNOR operation
 
     # Generate the initial guess for the contour, reflecting the start point through the center of the domain.
@@ -795,6 +796,8 @@ def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
     
     # Define the callback function for the ODE solver
     def curvatureLineCallback(t, u):
+        nonlocal guessDirection # Need to refer to previous direction for continuity
+
         # Evaluate the surface information needed.
         uv = np.maximum(uvDomain[:, 0], np.minimum(uvDomain[:, 1], u[:, 0]))
         su = self.derivative((1, 0), uv)
@@ -823,48 +826,38 @@ def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
         # Determine principle curvatures and directions, and assign new direction.
         curvatures, directions = np.linalg.eigh(k)
         if curvatures[1] - curvatures[0] < tolerance:
+            curvature = curvatures[0]
             direction = guessDirection
         else:
-            if abs(curvatures[0]) > abs(curvatures[1]) == is_max:
+            if bool(abs(curvatures[0]) > abs(curvatures[1])) == is_max:
                 curvature = curvatures[0]
-                direction = directions[0]
+                direction = directions[:, 0]
             else:
                 curvature = curvatures[1]
-                direction = directions[1]
+                direction = directions[:, 1]
             if np.dot(direction, guessDirection) < 0.0:
                 direction *= -1
             guessDirection = direction
 
         # Compute the jacobian for the direction (messy).
         lhs = np.empty((3,3), self.coefs.dtype)
-        R = np.array([[suu_su, suv_su, svv_su], [suu_sv, suv_sv, svv_sv]])
-        R_u = np.array([[suuu_su + suu_suu, suuv_su + suu_suv, suvv_su + suu_svv],
-                        [suuu_sv + suu_suv, suuv_sv + suv_suv, suvv_sv + suv_svv]])
-        R_v = np.array([[suuv_su + suu_suv, suvv_su + suv_suv, svvv_su + suv_svv],
-                        [suuv_sv + suu_svv, suvv_sv + suv_svv, svvv_sv + svv_svv]])
+        lhs[:2,:2] = k
+        lhs[0,0] -= curvature
+        lhs[1,1] -= curvature
+        lhs[:2,2] = -direction
+        lhs[2,:2] = direction
+        lhs[2,2] = 0.0
+        rhs = np.empty((3,), self.coefs.dtype)
+        rhs[:2] = ku @ (-direction)
+        rhs[2] = 0.0
+        jacobian = np.empty((2,2,1), self.coefs.dtype)
+        jacobian[:,0,0] = np.linalg.solve(lhs, rhs)[:2]
+        rhs[:2] = kv @ (-direction)
+        jacobian[:,1,0] = np.linalg.solve(lhs, rhs)[:2]
 
-        # Solve for the Christoffel symbols
-        luAndPivot = sp.linalg.lu_factor(A)
-        Gamma = sp.linalg.lu_solve(luAndPivot, R)
-        Gamma_u = sp.linalg.lu_solve(luAndPivot, R_u - A_u @ Gamma)
-        Gamma_v = sp.linalg.lu_solve(luAndPivot, R_v - A_v @ Gamma)
+        return direction, jacobian
 
-        # Compute the right hand side for the ODE
-        rhs = -np.array([Gamma[0, 0] * u[0, 1] ** 2 + 2.0 * Gamma[0, 1] * u[0, 1] * u[1, 1] + Gamma[0, 2] * u[1, 1] ** 2,
-                         Gamma[1, 0] * u[0, 1] ** 2 + 2.0 * Gamma[1, 1] * u[0, 1] * u[1, 1] + Gamma[1, 2] * u[1, 1] ** 2])
-
-        # Compute the Jacobian matrix of the right hand side of the ODE
-        jacobian = -np.array([[[Gamma_u[0, 0] * u[0, 1] ** 2 + 2.0 * Gamma_u[0, 1] * u[0, 1] * u[1, 1] + Gamma_u[0, 2] * u[1, 1] ** 2,
-                                2.0 * Gamma[0, 0] * u[0, 1] + 2.0 * Gamma[0, 1] * u[1, 1]],
-                               [Gamma_v[0, 0] * u[0, 1] ** 2 + 2.0 * Gamma_v[0, 1] * u[0, 1] * u[1, 1] + Gamma_v[0, 2] * u[1, 1] ** 2,
-                                2.0 * Gamma[0, 1] * u[0, 1] + 2.0 * Gamma[0, 2] * u[1, 1]]],
-                              [[Gamma_u[1, 0] * u[0, 1] ** 2 + 2.0 * Gamma_u[1, 1] * u[0, 1] * u[1, 1] + Gamma_u[1, 2] * u[1, 1] ** 2,
-                                2.0 * Gamma[1, 0] * u[0, 1] + 2.0 * Gamma[1, 1] * u[1, 1]],
-                               [Gamma_v[1, 0] * u[0, 1] ** 2 + 2.0 * Gamma_v[1, 1] * u[0, 1] * u[1, 1] + Gamma_v[1, 2] * u[1, 1] ** 2,
-                                2.0 * Gamma[1, 1] * u[1, 1] + 2.0 * Gamma[1, 2] * u[1, 1]]]])
-        return rhs, jacobian
-
-    # Solve the ODE and return the geodesic
+    # Solve the ODE and return the line of curvature.
     solution = initialGuess.solve_ode(1, 0, curvatureLineCallback, tolerance)
     return solution
 
