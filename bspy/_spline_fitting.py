@@ -859,7 +859,7 @@ def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
 
     # Solve the ODE and return the line of curvature.
     solution = initialGuess.solve_ode(1, 0, curvatureLineCallback, tolerance)
-    return solution
+    return solution.confine(uvDomain)
 
 def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, subtract=False, removeCusps=False, tolerance = 1.0e-4):
     if self.nDep < 2 or self.nDep > 3 or self.nDep - self.nInd != 1: raise ValueError("The offset is only defined for 2D curves and 3D surfaces with well-defined normals.")

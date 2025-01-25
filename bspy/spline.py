@@ -1141,7 +1141,7 @@ class Spline(Manifold):
         uvEnd : `array-like`
             The parameter values for the surface at the other end of the desired geodesic.
         
-        tolerance : scalar
+        tolerance : scalar, optional
             The maximum error in parameter space to which the geodesic should get computed.
             Defaults to 1.0e-5.
 
@@ -1499,7 +1499,7 @@ class Spline(Manifold):
         """
         return bspy._spline_fitting.line(startPoint, endPoint)
     
-    def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
+    def line_of_curvature(self, uvStart, is_max = True, tolerance = 1.0e-3):
         """
         Determine a line of curvature along a surface
 
@@ -1508,11 +1508,11 @@ class Spline(Manifold):
         uvStart : `array-like`
             The parameter values for the surface at one end of the desired line of curvature.
         
-        is_max : `bool`
+        is_max : `bool`, optional
             Boolean value indicating that the line of curvature should be the maximal curvature line. 
-            If False, the minimal curvature line is returned.
+            If False, the minimal curvature line is returned. Defaults to True.
         
-        tolerance : scalar
+        tolerance : scalar, optional
             The maximum error in parameter space to which the geodesic should get computed.
             Defaults to 1.0e-3.
 
