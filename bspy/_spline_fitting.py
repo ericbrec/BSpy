@@ -820,8 +820,8 @@ def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
         sUUv = np.concatenate((suuv, suvv, suvv, svvv)).reshape(2, 2, -1)
         fffI = np.linalg.inv(sU @ sU.T) # Inverse of first fundamental form
         k = fffI @ (sUU @ normal) # Curvature matrix
-        ku = fffI @ ((sUUu @ normal) - (2 * (sUu @ sU.T) + (sU @ sUu.T)) @ k)
-        kv = fffI @ ((sUUv @ normal) - (2 * (sUv @ sU.T) + (sU @ sUv.T)) @ k)
+        ku = fffI @ (sUUu @ normal - (sUu @ sU.T + sU @ sUu.T) @ k - sUU @ (sU.T @ k[:, 0]))
+        kv = fffI @ (sUUv @ normal - (sUv @ sU.T + sU @ sUv.T) @ k - sUU @ (sU.T @ k[:, 1]))
 
         # Determine principle curvatures and directions, and assign new direction.
         curvatures, directions = np.linalg.eigh(k)
