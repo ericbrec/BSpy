@@ -792,14 +792,18 @@ def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
         guessDirection = uvEnd - uvStart
         guessDirectionLength =  np.linalg.norm(guessDirection)
     guessDirection = guessDirection / guessDirectionLength
-    initialGuess = line(uvStart, uvEnd).elevate([2])
+    initialGuess = bspy.spline.Spline(1, 2, (2,), (3,), ((0.0, 0.0, 0.5, 1.0, 1.0),), ((uvStart[0], uvEnd[0], uvEnd[0]), (uvStart[1], uvStart[1], uvEnd[1]))).elevate([2])
+    initialGuess = bspy.spline.Spline.circular_arc(0.25, 180.0 / (np.pi * 0.25)).translate((0.5, 0.5))
+    guessDirection = initialGuess.derivative((1,), 0.0)
+    guessDirectionLength =  np.linalg.norm(guessDirection)
+    guessDirection = guessDirection / guessDirectionLength
     
     # Define the callback function for the ODE solver
-    def curvatureLineCallback(t, u):
-        nonlocal guessDirection # Need to refer to previous direction for continuity
+    def curvatureLineCallback(t, uv):
+        nonlocal guessDirection # Need to refer to previous direction and curvature for continuity
 
         # Evaluate the surface information needed.
-        uv = np.maximum(uvDomain[:, 0], np.minimum(uvDomain[:, 1], u[:, 0]))
+        #uv = np.maximum(uvDomain[:, 0], np.minimum(uvDomain[:, 1], u[:, 0]))
         su = self.derivative((1, 0), uv)
         sv = self.derivative((0, 1), uv)
         suu = self.derivative((2, 0), uv)
@@ -824,12 +828,15 @@ def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
         kv = fffI @ (sUUv @ normal - (sUv @ sU.T + sU @ sUv.T) @ k - sUU @ (sU.T @ k[:, 1]))
 
         # Determine principle curvatures and directions, and assign new direction.
-        curvatures, directions = np.linalg.eigh(k)
-        if curvatures[1] - curvatures[0] < tolerance:
+        curvatures, directions = np.linalg.eig(k)
+        if abs(curvatures[1] - curvatures[0]) < tolerance:
             curvature = curvatures[0]
             direction = guessDirection
+            jacobian = np.zeros((2,2,1), self.coefs.dtype)
+            dcu = np.array((0.0, 0.0, 0.0))
+            dcv = np.array((0.0, 0.0, 0.0))
         else:
-            if bool(abs(curvatures[0]) > abs(curvatures[1])) == is_max:
+            if bool(curvatures[0] > curvatures[1]) == is_max:
                 curvature = curvatures[0]
                 direction = directions[:, 0]
             else:
@@ -839,23 +846,48 @@ def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
                 direction *= -1
             guessDirection = direction
 
-        # Compute the jacobian for the direction (messy).
-        lhs = np.empty((3,3), self.coefs.dtype)
-        lhs[:2,:2] = k
-        lhs[0,0] -= curvature
-        lhs[1,1] -= curvature
-        lhs[:2,2] = -direction
-        lhs[2,:2] = direction
-        lhs[2,2] = 0.0
-        rhs = np.empty((3,), self.coefs.dtype)
-        rhs[:2] = ku @ (-direction)
-        rhs[2] = 0.0
-        jacobian = np.empty((2,2,1), self.coefs.dtype)
-        jacobian[:,0,0] = np.linalg.solve(lhs, rhs)[:2]
-        rhs[:2] = kv @ (-direction)
-        jacobian[:,1,0] = np.linalg.solve(lhs, rhs)[:2]
+            # Compute the jacobian for the direction (messy).
+            lhs = np.empty((3,3), self.coefs.dtype)
+            lhs[:2,:2] = k
+            lhs[0,0] -= curvature
+            lhs[1,1] -= curvature
+            lhs[:2,2] = -direction
+            lhs[2,:2] = direction
+            lhs[2,2] = 0.0
+            rhs = np.empty((3,), self.coefs.dtype)
+            rhs[:2] = ku @ (-direction)
+            rhs[2] = 0.0
+            jacobian = np.empty((2,2,1), self.coefs.dtype)
+            dcu = np.linalg.solve(lhs, rhs)
+            jacobian[:,0,0] = dcu[:2]
+            rhs[:2] = kv @ (-direction)
+            dcv = np.linalg.solve(lhs, rhs)
+            jacobian[:,1,0] = dcv[:2]
 
-        return direction, jacobian
+        #return direction, jacobian
+        return np.array((direction[0], direction[1], curvature)), dcu, dcv
+
+    def dcDerivative(uv, i):
+        epsilon = 1.0e-6
+        h = epsilon * (1.0 + abs(uv[i]))
+        uvShift = uv.copy()
+        uvShift[i] -= h
+        dcLeft, dcu, dcv = curvatureLineCallback(0.0, uvShift)
+        h2 = h * 2.0
+        uvShift[i] += h2
+        dcRight, dcu, dcv = curvatureLineCallback(0.0, uvShift)
+        return (dcRight - dcLeft) / h2
+
+    for u in np.linspace(0.1, 0.9, 5):
+        for v in np.linspace(0.1, 0.9, 5):
+            uv = np.array((u, v))
+            dc, dcu, dcv = curvatureLineCallback(0.0, uv)
+            dcuE = dcDerivative(uv, 0)
+            dcvE = dcDerivative(uv, 1)
+            if not np.allclose(dcu, dcuE) or not np.allclose(dcv, dcvE):
+                print(uv, dc)
+                print(dcu, dcv)
+                print(dcuE, dcvE)
 
     # Solve the ODE and return the line of curvature.
     solution = initialGuess.solve_ode(1, 0, curvatureLineCallback, tolerance)
