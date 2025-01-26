@@ -783,17 +783,19 @@ def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
     is_max = bool(is_max) # Ensure is_max is a boolean for XNOR operation
 
     # Generate the initial guess for the contour, reflecting the start point through the center of the domain.
-    uvEnd = uvDomain[:,0] + uvDomain[:,1] - uvStart
-    guessDirection = uvEnd - uvStart
-    guessDirectionLength =  np.linalg.norm(guessDirection)
-    if guessDirectionLength < 100 * tolerance:
+    uvCenter = 0.5 * (uvDomain[:,0] + uvDomain[:,1])
+    if np.linalg.norm(uvStart - uvCenter) < 100 * tolerance:
          # Set end point to the far corner if the start point is near the center of the domain.
         uvEnd = uvDomain[:,1]
-        guessDirection = uvEnd - uvStart
-        guessDirectionLength =  np.linalg.norm(guessDirection)
+        uvCenter = 0.5 * (uvStart + uvEnd)
+    else:
+        uvEnd = 2 * uvCenter - uvStart
+    uvMiddle = uvCenter + np.array((0.2 * (uvStart[1] - uvEnd[1]), 0.2 * (uvEnd[0] - uvStart[0])))
+    initialGuess = bspy.spline.Spline(1, 2, (2,), (3,), ((0.0, 0.0, 0.5, 1.0, 1.0),), 
+        ((uvStart[0], uvMiddle[0], uvEnd[0]), (uvStart[1], uvMiddle[1], uvEnd[1]))).elevate([2])
+    guessDirection = uvMiddle - uvStart
+    guessDirectionLength =  np.linalg.norm(guessDirection)
     guessDirection = guessDirection / guessDirectionLength
-    initialGuess = line(uvStart, uvEnd).elevate([2])
-    #initialGuess = bspy.spline.Spline(1, 2, (2,), (3,), ((0.0, 0.0, 0.5, 1.0, 1.0),), ((uvStart[0], uvEnd[0], uvEnd[0]), (uvStart[1], uvStart[1], uvEnd[1]))).elevate([2])
     
     # Define the callback function for the ODE solver
     def curvatureLineCallback(t, u):
