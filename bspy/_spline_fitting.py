@@ -836,79 +836,38 @@ def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
 
         return direction, jacobian
 
-    def dcDerivative(uv, i):
-        epsilon = 1.0e-6
-        h = epsilon * (1.0 + abs(uv[i, 0]))
-        uvShift = uv.copy()
-        uvShift[i,0] -= h
-        dLeft, jacobian = curvatureLineCallback(0.0, uvShift)
-        h2 = h * 2.0
-        uvShift[i,0] += h2
-        dRight, jacobian = curvatureLineCallback(0.0, uvShift)
-        return (dRight - dLeft) / h2
-
-    for u in np.linspace(0.1, 0.9, 5):
-        for v in np.linspace(0.1, 0.9, 5):
-            uv = np.array(((u, 1.0), (v, 1.0)))
-            d, jacobian = curvatureLineCallback(0.0, uv)
-            duE = dcDerivative(uv, 0)
-            dvE = dcDerivative(uv, 1)
-            if not np.allclose(jacobian[:,0,0], duE) or not np.allclose(jacobian[:,1,0], dvE):
-                print(uv[:, 0], d)
-                print(jacobian)
-                print(duE, dvE)
-
     # Generate the initial guess for the line of curvature.
     uvStart = np.atleast_1d(uvStart)
-    pointList = [uvStart]
-    knots= [0.0, 0.0]
-    point = uvStart
-    previousDirection = None
-    # Only add new points if the curve turns more than 10 degrees
-    cosineMinTurnAngle = np.cos(10 * np.pi / 180)
-    while True:
-        # Compute line of curvature direction at the current point.
-        direction, jacobian = curvatureLineCallback(0.0, point.reshape((2,1)))
+    direction = 0.5 * (uvDomain[:,0] + uvDomain[:,1]) - uvStart # Initial guess toward center
+    distanceFromCenter = np.linalg.norm(direction)
+    if distanceFromCenter < 10 * tolerance:
+        # If we're at the center, just point to the far corner.
+        direction = np.array((1.0, 1.0)) / np.sqrt(2)
+    else:
+        direction /= distanceFromCenter
 
-        # Calculate distance to the boundary in that direction from the current point.
-        if direction[0] < -tolerance:
-            uBoundaryDistance = (uvDomain[0, 0] - point[0]) / direction[0]
-        elif direction[0] > tolerance:
-            uBoundaryDistance = (uvDomain[0, 1] - point[0]) / direction[0]
-        else:
-            uBoundaryDistance = np.inf
-        if direction[1] < -tolerance:
-            vBoundaryDistance = (uvDomain[1, 0] - point[1]) / direction[1]
-        elif direction[1] > tolerance:
-            vBoundaryDistance = (uvDomain[1, 1] - point[1]) / direction[1]
-        else:
-            vBoundaryDistance = np.inf
-        boundaryDistance = min(uBoundaryDistance, vBoundaryDistance)
+    # Compute line of curvature direction at start.
+    direction, jacobian = curvatureLineCallback(0.0, np.array(((uvStart[0], direction[0]), (uvStart[1], direction[1]))))
 
-        # If this is the first point or the curve turns sufficiently, go halfway to the boundary and check next point.
-        if previousDirection is None or np.dot(direction, previousDirection) < cosineMinTurnAngle:
-            point = point + 0.5 * boundaryDistance * direction
-            pointList.append(point)
-            knots.append(knots[-1] + 0.5 * boundaryDistance)
-            previousDirection = direction
-        else:
-            # Otherwise go to the boundary and end the line.
-            point = point + boundaryDistance * direction
-            pointList.append(point)
-            knots.append(knots[-1] + boundaryDistance)
-            knots.append(knots[-1])
-            break
+    # Calculate distance to the boundary in that direction.
+    if direction[0] < -tolerance:
+        uBoundaryDistance = (uvDomain[0, 0] - uvStart[0]) / direction[0]
+    elif direction[0] > tolerance:
+        uBoundaryDistance = (uvDomain[0, 1] - uvStart[0]) / direction[0]
+    else:
+        uBoundaryDistance = np.inf
+    if direction[1] < -tolerance:
+        vBoundaryDistance = (uvDomain[1, 0] - uvStart[1]) / direction[1]
+    elif direction[1] > tolerance:
+        vBoundaryDistance = (uvDomain[1, 1] - uvStart[1]) / direction[1]
+    else:
+        vBoundaryDistance = np.inf
+    boundaryDistance = min(uBoundaryDistance, vBoundaryDistance)
 
-    # Construct the initial guess.
-    knots = np.array(knots, self.knots[0].dtype)
-    knots /= knots[-1]
-    nCoef = len(pointList)
-    coefs = np.empty((2, nCoef), self.coefs.dtype)
-    for i, point in enumerate(pointList):
-        coefs[:, i] = point
-    initialGuess = bspy.spline.Spline(1, 2, (2,), (nCoef,), (knots,), coefs).elevate([2])
+    # Construct the initial guess from start point to boundary.
+    initialGuess = line(uvStart, uvStart + boundaryDistance * direction).elevate([2])
 
-    # Solve the ODE and return the line of curvature.
+    # Solve the ODE and return the line of curvature confined to the surface's domain.
     solution = initialGuess.solve_ode(1, 0, curvatureLineCallback, tolerance, includeEstimate = True)
     return solution.confine(uvDomain)
 
