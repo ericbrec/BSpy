@@ -783,8 +783,6 @@ def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
     
     # Define the callback function for the ODE solver
     def curvatureLineCallback(t, u):
-        nonlocal guessDirection # Need to refer to previous direction and curvature for continuity
-
         # Evaluate the surface information needed.
         uv = np.maximum(uvDomain[:, 0], np.minimum(uvDomain[:, 1], u[:, 0]))
         su = self.derivative((1, 0), uv)
@@ -815,7 +813,7 @@ def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
         curvatureDelta = curvatures[1] - curvatures[0]
         if abs(curvatureDelta) < tolerance:
             # If we're at an umbilic, use the last direction (jacobian is zero at umbilic).
-            direction = guessDirection
+            direction = u[:, 1]
             jacobian = np.zeros((2,2,1), self.coefs.dtype)
         else:
             # Otherwise, compute the lhs inverse for the jacobian.
@@ -828,9 +826,8 @@ def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
             lhsInv =  directions @ B @ directionsInverse
 
             # Adjust the direction for consistency.
-            if np.dot(direction, guessDirection) < 0.0:
+            if np.dot(direction, u[:, 1]) < -tolerance:
                 direction *= -1
-            guessDirection = direction
 
             # Compute the jacobian for the direction.
             jacobian = np.empty((2,2,1), self.coefs.dtype)
@@ -841,7 +838,7 @@ def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
 
     def dcDerivative(uv, i):
         epsilon = 1.0e-6
-        h = epsilon * (1.0 + abs(uv[i]))
+        h = epsilon * (1.0 + abs(uv[i, 0]))
         uvShift = uv.copy()
         uvShift[i,0] -= h
         dLeft, jacobian = curvatureLineCallback(0.0, uvShift)
@@ -850,15 +847,14 @@ def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
         dRight, jacobian = curvatureLineCallback(0.0, uvShift)
         return (dRight - dLeft) / h2
 
-    guessDirection = np.array((1.0, 1.0)) / np.sqrt(2)
     for u in np.linspace(0.1, 0.9, 5):
         for v in np.linspace(0.1, 0.9, 5):
-            uv = np.array((u, v)).reshape(2,1)
+            uv = np.array(((u, 1.0), (v, 1.0)))
             d, jacobian = curvatureLineCallback(0.0, uv)
             duE = dcDerivative(uv, 0)
             dvE = dcDerivative(uv, 1)
             if not np.allclose(jacobian[:,0,0], duE) or not np.allclose(jacobian[:,1,0], dvE):
-                print(uv, d)
+                print(uv[:, 0], d)
                 print(jacobian)
                 print(duE, dvE)
 
@@ -911,11 +907,9 @@ def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
     for i, point in enumerate(pointList):
         coefs[:, i] = point
     initialGuess = bspy.spline.Spline(1, 2, (2,), (nCoef,), (knots,), coefs).elevate([2])
-    guessDirection = initialGuess.derivative((1,), 0.0)
-    guessDirection = guessDirection / np.linalg.norm(guessDirection)
 
     # Solve the ODE and return the line of curvature.
-    solution = initialGuess.solve_ode(1, 0, curvatureLineCallback, tolerance)
+    solution = initialGuess.solve_ode(1, 0, curvatureLineCallback, tolerance, includeEstimate = True)
     return solution.confine(uvDomain)
 
 def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, subtract=False, removeCusps=False, tolerance = 1.0e-4):
@@ -1120,7 +1114,7 @@ def section(xytk):
     # Join the pieces together and return
     return bspy.Spline.join(mySections)
 
-def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
+def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = (), includeEstimate = False):
     # Ensure that the ODE is properly formulated
 
     if nLeft < 0:  raise ValueError("Invalid number of left hand boundary conditions")
@@ -1212,7 +1206,7 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
                 residuals = np.append(residuals, np.zeros((nLeft * nDep,)))
                 collocationMatrix[bandWidth, 0 : nLeft * nDep] = 1.0
                 for iPoint, t in enumerate(collocationPoints[iFirstPoint : iNextPoint]):
-                    uData = np.array([workingSpline.derivative([i], t) for i in range(nOrder)]).T
+                    uData = np.array([workingSpline.derivative([i], t) for i in range(nOrder + 1 if includeEstimate else nOrder)]).T
                     F, F_u = FAndF_u(t, uData, *args)
                     residuals = np.append(residuals, workingSpline.derivative([nOrder], t) - continuation * F)
                     ix = None

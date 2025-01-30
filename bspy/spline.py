@@ -2050,7 +2050,7 @@ class Spline(Manifold):
         """
         return bspy._spline_fitting.section(xytk)
     
-    def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
+    def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = (), includeEstimate = False):
         """
         Numerically solve an ordinary differential equation with boundary conditions.
 
@@ -2073,26 +2073,31 @@ class Spline(Manifold):
         FAndF_u : Python function
             FAndF_u must have exactly this calling sequence:  FAndF_u(t, uData, *args).  t is a scalar set
             to the desired value of the independent variable of the ODE.  uData will be a numpy matrix of shape
-            (self.nDep, nOrder) whose columns are (u, ... , u^(nOrder - 1).  It must return a numpy
+            (self.nDep, nOrder) whose columns are u, ... , u^(nOrder - 1).  It must return a numpy
             vector of length self.nDep and a numpy array whose shape is (self.nDep, self.nDep, nOrder).
             The first output vector is the value of the forcing function F at (t, uData).  The numpy
             array is the array of partial derivatives with respect to all the numbers in uData.  Thus, if
             this array is called jacobian, then jacobian[:, i, j] is the gradient of the forcing function with
             respect to uData[i, j].
         
-        tolerance : scalar
-            The relative error to which the ODE should get solved.
+        tolerance : scalar, optional
+            The relative error to which the ODE should get solved. Default is 1.0e-6.
         
-        args : tuple
+        args : tuple, optional
             Additional arguments to pass to the user-defined function FAndF_u.  For example, if FAndF_u has the
-            FAndF_u(t, uData, a, b, c), then args must be a tuple of length 3.
+            FAndF_u(t, uData, a, b, c), then args must be a tuple of length 3. Default is ().
+        
+        includeEstimate : bool, optional
+            If `includeEstimate` is True, the uData passed to `FAndF_u` will be a numpy matrix of shape
+            (self.nDep, nOrder + 1) whose columns are u, ... , u^(nOrder). The last column will be the most
+            recent estimate of u^(nOrder)(t). Default is False.
 
         Notes
         =====
         This method uses B-splines as finite elements.  The ODE itself is discretized using
         collocation.
         """
-        return bspy._spline_fitting.solve_ode(self, nLeft, nRight, FAndF_u, tolerance, args)
+        return bspy._spline_fitting.solve_ode(self, nLeft, nRight, FAndF_u, tolerance, args, includeEstimate)
 
     @staticmethod
     def sphere(radius, tolerance = None):
