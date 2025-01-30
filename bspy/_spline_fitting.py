@@ -779,10 +779,6 @@ def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
     if uvStart[0] < uvDomain[0, 0] or uvStart[0] > uvDomain[0, 1] or \
        uvStart[1] < uvDomain[1, 0] or uvStart[1] > uvDomain[1, 1]:
         raise ValueError("uvStart is outside domain of the surface")
-    uvStart = np.atleast_1d(uvStart)
-    # Set initial preferred direction toward domain center.
-    guessDirection = 0.5 * (uvDomain[:,0] + uvDomain[:,1]) - uvStart
-    guessDirection = guessDirection / np.linalg.norm(guessDirection)
     is_max = bool(is_max) # Ensure is_max is a boolean for XNOR operation
     
     # Define the callback function for the ODE solver
@@ -816,40 +812,58 @@ def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
 
         # Determine principle curvatures and directions, and assign new direction.
         curvatures, directions = np.linalg.eig(k)
-        if abs(curvatures[1] - curvatures[0]) < tolerance:
-            curvature = curvatures[0]
+        curvatureDelta = curvatures[1] - curvatures[0]
+        if abs(curvatureDelta) < tolerance:
+            # If we're at an umbilic, use the last direction (jacobian is zero at umbilic).
             direction = guessDirection
             jacobian = np.zeros((2,2,1), self.coefs.dtype)
         else:
-            if bool(curvatures[0] > curvatures[1]) == is_max:
-                curvature = curvatures[0]
-                direction = directions[:, 0]
-            else:
-                curvature = curvatures[1]
-                direction = directions[:, 1]
+            # Otherwise, compute the lhs inverse for the jacobian.
+            directionsInverse = np.linalg.inv(directions)
+            eigenIndex = 0 if bool(curvatures[0] > curvatures[1]) == is_max else 1
+            direction = directions[:, eigenIndex]
+            B = np.zeros((2, 2), self.coefs.dtype)
+            B[0, 1 - eigenIndex] = np.dot(directions[:, 1], direction) / curvatureDelta
+            B[1, 1 - eigenIndex] = -np.dot(directions[:, 0], direction) / curvatureDelta
+            lhsInv =  directions @ B @ directionsInverse
+
+            # Adjust the direction for consistency.
             if np.dot(direction, guessDirection) < 0.0:
                 direction *= -1
             guessDirection = direction
 
-            # Compute the jacobian for the direction (messy).
-            lhs = np.empty((3,3), self.coefs.dtype)
-            lhs[:2,:2] = k
-            lhs[0,0] -= curvature
-            lhs[1,1] -= curvature
-            lhs[:2,2] = -direction
-            lhs[2,:2] = direction
-            lhs[2,2] = 0.0
-            rhs = np.empty((3,), self.coefs.dtype)
-            rhs[:2] = ku @ (-direction)
-            rhs[2] = 0.0
+            # Compute the jacobian for the direction.
             jacobian = np.empty((2,2,1), self.coefs.dtype)
-            jacobian[:,0,0] = np.linalg.solve(lhs, rhs)[:2]
-            rhs[:2] = kv @ (-direction)
-            jacobian[:,1,0] = np.linalg.solve(lhs, rhs)[:2]
+            jacobian[:,0,0] = lhsInv @ ku @ direction
+            jacobian[:,1,0] = lhsInv @ kv @ direction
 
         return direction, jacobian
 
+    def dcDerivative(uv, i):
+        epsilon = 1.0e-6
+        h = epsilon * (1.0 + abs(uv[i]))
+        uvShift = uv.copy()
+        uvShift[i,0] -= h
+        dLeft, jacobian = curvatureLineCallback(0.0, uvShift)
+        h2 = h * 2.0
+        uvShift[i,0] += h2
+        dRight, jacobian = curvatureLineCallback(0.0, uvShift)
+        return (dRight - dLeft) / h2
+
+    guessDirection = np.array((1.0, 1.0)) / np.sqrt(2)
+    for u in np.linspace(0.1, 0.9, 5):
+        for v in np.linspace(0.1, 0.9, 5):
+            uv = np.array((u, v)).reshape(2,1)
+            d, jacobian = curvatureLineCallback(0.0, uv)
+            duE = dcDerivative(uv, 0)
+            dvE = dcDerivative(uv, 1)
+            if not np.allclose(jacobian[:,0,0], duE) or not np.allclose(jacobian[:,1,0], dvE):
+                print(uv, d)
+                print(jacobian)
+                print(duE, dvE)
+
     # Generate the initial guess for the line of curvature.
+    uvStart = np.atleast_1d(uvStart)
     pointList = [uvStart]
     knots= [0.0, 0.0]
     point = uvStart
