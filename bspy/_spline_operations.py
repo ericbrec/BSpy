@@ -71,6 +71,8 @@ def confine(self, range_bounds):
     if self.nInd != 1: raise ValueError("Confine only works on curves (nInd == 1)")
     if len(range_bounds) != self.nDep: raise ValueError("len(range_bounds) must equal nDep")
     spline = self.clamp((0,), (0,))
+    if spline is self:
+        spline = self.copy()
     order = spline.order[0]
     degree = order - 1
     domain = spline.domain()
@@ -88,7 +90,7 @@ def confine(self, range_bounds):
             if boundaryPoint[i] > range_bounds[i][1]:
                 headedOutside = True if boundaryPoint[i] > range_bounds[i][1] + epsilon else headedOutside
                 boundaryPoint[i] = range_bounds[i][1]
-        intersections.append((u, boundaryPoint, headedOutside))
+        intersections.append([u, boundaryPoint, headedOutside])
 
     def intersectBoundary(i, j):
         zeros = type(spline)(1, 1, spline.order, spline.nCoef, spline.knots, (spline.coefs[i] - range_bounds[i][j],)).zeros()
@@ -114,8 +116,10 @@ def confine(self, range_bounds):
 
     # Remove repeat points at start and end.
     while intersections[1][0] - intersections[0][0] < epsilon:
+        intersections[0][2] = intersections[1][2] # Use rightmost headedOutside flag
         del intersections[1]
     while intersections[-1][0] - intersections[-2][0] < epsilon:
+        intersections[-1][2] = intersections[-2][2] # Use leftmost headedOutside flag
         del intersections[-2]
 
     # Insert order-1 knots at each intersection point.
