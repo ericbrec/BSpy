@@ -116,9 +116,10 @@ def confine(self, range_bounds):
 
     # Insert order-1 knots at each intersection point.
     previousKnot, previousBoundaryPoint, previousHeadedOutside = intersections[0]
+    previousIx = 0
     for i, (knot, boundaryPoint, headedOutside) in enumerate(intersections[1:]):
         if knot - previousKnot < epsilon:
-            intersections[i][2] = headedOutside # Keep last headed outside
+            intersections[previousIx][2] = headedOutside # Keep last headed outside
         else:
             ix = np.searchsorted(unique, knot)
             if unique[ix] == knot:
@@ -128,6 +129,7 @@ def confine(self, range_bounds):
             else:
                 spline = spline.insert_knots((((knot, order - 1),),))
             previousKnot = knot
+            previousIx = i
 
     # Go through the boundary points, assigning boundary coefficients, interpolating between boundary points, 
     # and removing knots and coefficients where the curve stalls.
