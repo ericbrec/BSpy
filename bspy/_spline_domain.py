@@ -499,7 +499,7 @@ def remove_knots(self, tolerance, nLeft = 0, nRight = 0):
         foldedIndices = list(filter(lambda x: x != id, indIndex))
         currentFold, foldedBasis = currentSpline.fold(foldedIndices)
         while True:
-            bestError = np.finfo(scaleDep[0].dtype).max
+            bestError = np.finfo(self.coefs.dtype).max
             bestSpline = currentFold
             ix = currentFold.order[0]
             while ix < currentFold.nCoef[0]:

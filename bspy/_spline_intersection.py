@@ -1135,14 +1135,14 @@ def complete_slice(self, slice, solid):
             newBoundary.touched = False
 
         # Define function for adding slice points to full domain boundaries.
-        def process_domain_point(boundary, domainPoint):
+        def process_domain_point(boundary, domainPoint, adjustment):
             point = boundary.manifold.evaluate(domainPoint)
             # See if and where point touches full domain.
             for newBoundary in fullDomain.boundaries:
                 vector = point - newBoundary.manifold._point
                 if abs(np.dot(newBoundary.manifold._normal, vector)) < Manifold.minSeparation:
-                    # Add the point onto the new boundary.
-                    normal = np.sign(newBoundary.manifold._tangentSpace.T @ boundary.manifold.normal(domainPoint))
+                    # Add the point onto the new boundary (adjust normal evaluation point to move away from boundary).
+                    normal = np.sign(newBoundary.manifold._tangentSpace.T @ boundary.manifold.normal(domainPoint + adjustment))
                     newBoundary.domain.add_boundary(Boundary(Hyperplane(normal, newBoundary.manifold._tangentSpace.T @ vector, 0.0), Solid(0, True)))
                     newBoundary.touched = True
                     break
@@ -1151,9 +1151,9 @@ def complete_slice(self, slice, solid):
         for boundary in slice.boundaries:
             domainBoundaries = boundary.domain.boundaries
             domainBoundaries.sort(key=lambda boundary: (boundary.manifold.evaluate(0.0), boundary.manifold.normal(0.0)))
-            process_domain_point(boundary, domainBoundaries[0].manifold._point)
+            process_domain_point(boundary, domainBoundaries[0].manifold._point, Manifold.minSeparation)
             if len(domainBoundaries) > 1:
-                process_domain_point(boundary, domainBoundaries[-1].manifold._point)
+                process_domain_point(boundary, domainBoundaries[-1].manifold._point, -Manifold.minSeparation)
         
         # For touched boundaries, remove domain bounds that aren't needed and then add boundary to slice.
         boundaryWasTouched = False
