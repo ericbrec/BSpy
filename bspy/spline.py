@@ -5,8 +5,9 @@ from bspy.manifold import Manifold
 import bspy.spline_block
 import bspy._spline_domain
 import bspy._spline_evaluation
-import bspy._spline_intersection
 import bspy._spline_fitting
+import bspy._spline_intersection
+import bspy._spline_milling
 import bspy._spline_operations
 
 @Manifold.register
@@ -1527,7 +1528,7 @@ class Spline(Manifold):
         --------
         `solve_ode` : Solve an ordinary differential equation using spline collocation.
         """
-        return bspy._spline_fitting.line_of_curvature(self, uvStart, is_max, tolerance)
+        return bspy._spline_milling.line_of_curvature(self, uvStart, is_max, tolerance)
     
     @staticmethod
     def load(fileName):
@@ -1731,7 +1732,7 @@ class Spline(Manifold):
         The offset is only defined for 2D curves and 3D surfaces with well-defined normals. 
         The bottom of the drill bit tangent to its lowest y value.
         """
-        return bspy._spline_fitting.offset(self, edgeRadius, bitRadius, angle, subtract, removeCusps, tolerance)
+        return bspy._spline_milling.offset(self, edgeRadius, bitRadius, angle, subtract, removeCusps, tolerance)
 
     @staticmethod
     def point(point):
