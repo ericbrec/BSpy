@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 import bspy.spline
 from collections import namedtuple
@@ -179,6 +180,9 @@ def contract(self, uvw):
     contracting = False
     for iv in range(self.nInd):
         if uvw[iv] is not None:
+            if uvw[iv] < domain[iv][0] or uvw[iv] > domain[iv][1]:
+                warnings.warn(f"Spline evaluation outside domain: {uvw}")
+
             # Grab all of the appropriate coefficients
             ix, indValues = bspy.Spline.bspline_values(None, self.knots[iv], self.order[iv], uvw[iv])
             bValues.append(indValues)
