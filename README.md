@@ -1,7 +1,7 @@
 # BSpy
 Library for manipulating and rendering B-spline curves, surfaces, and multidimensional manifolds with non-uniform knots in each dimension.
 
-The [Spline](https://ericbrec.github.io/BSpy/bspy/spline.html) class has a method to fit multidimensional data for scalar and vector functions of single and multiple variables. It also can fit splines to functions, to solutions for ordinary differential equations (ODEs), and to geodesics. 
+The [Spline](https://ericbrec.github.io/BSpy/bspy/spline.html) class has a method to fit multidimensional data for scalar and vector functions of single and multiple variables. It also can fit splines to functions, to solutions for ordinary differential equations (ODEs), geodesics, offsets, and lines of curvature. 
 Spline has methods to create points, lines, circular arcs, spheres, cones, cylinders, tori, ruled surfaces, surfaces of revolution, four-sided patches, and compositions of splines. 
 Other methods add, subtract, and multiply splines, as well as confine spline curves to a given range. 
 There are methods to evaluate spline values, derivatives, normals, integrals, continuity, curvature, and the Jacobian, as well as methods that return spline representations of derivatives, normals, integrals, graphs, and convolutions. 
