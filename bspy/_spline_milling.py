@@ -195,7 +195,7 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtr
         cusps = []
         previousKnot = None
         start = None
-        for knot in offset.knots[0][offset.order[0]:offset.nCoef[0]]:
+        for knot in np.unique(offset.knots[0][offset.order[0]:offset.nCoef[0]]):
             tangent = self.derivative((1,), knot)
             if path is not None:
                 tangent = surface.jacobian(path(knot)) @ tangent
