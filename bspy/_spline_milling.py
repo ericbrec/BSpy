@@ -101,7 +101,7 @@ def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
     solution = initialGuess.solve_ode(1, 0, curvatureLineCallback, tolerance, includeEstimate = True)
     return solution.confine(uvDomain)
 
-def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, subtract=False, removeCusps=False, tolerance = 1.0e-4):
+def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtract=False, removeCusps=False, tolerance = 1.0e-4):
     if self.nDep < 2 or self.nDep > 3 or self.nDep - self.nInd != 1: raise ValueError("The offset is only defined for 2D curves and 3D surfaces with well-defined normals.")
     if edgeRadius < 0:
         raise ValueError("edgeRadius must be >= 0")
@@ -112,6 +112,8 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, subtract=False, 
     elif bitRadius < edgeRadius:
         raise ValueError("bitRadius must be >= edgeRadius")
     if angle < 0 or angle >= np.pi / 2: raise ValueError("angle must in the range [0, pi/2)")
+    if path is not None and (path.nInd != 1 or path.nDep != 2 or self.nInd != 2):
+        raise ValueError("path must be a 2D curve and self must be a 3D surface")
 
     # Determine geometry of drill bit.
     if subtract:
@@ -123,10 +125,10 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, subtract=False, 
     bottomRadius = edgeRadius + h / bottom
 
     # Define drill bit function.
-    if abs(w) < tolerance:
+    if abs(w) < tolerance and path is None: # Simple offset curve or surface
         def drillBit(uv):
             return self(uv) + edgeRadius * self.normal(uv)
-    elif self.nDep == 2:
+    elif self.nDep == 2: # General offset curve
         def drillBit(u):
             xy = self(u)
             normal = self.normal(u)
@@ -138,7 +140,7 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, subtract=False, 
                 xy[0] += bottomRadius * normal[0]
                 xy[1] += bottomRadius * normal[1] - upward * h
             return xy
-    elif self.nDep == 3:
+    elif self.nDep == 3 and path is None: # General offset surface
         def drillBit(uv):
             xyz = self(uv)
             normal = self.normal(uv)
@@ -153,6 +155,26 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, subtract=False, 
                 xyz[1] += bottomRadius * normal[1] - upward * h
                 xyz[2] += bottomRadius * normal[2]
             return xyz
+    elif self.nDep == 3: # General offset of a given path along a surface
+        surface = self
+        self = path # Redefine self to be the path (used below for fitting)
+        def drillBit(u):
+            uv = self(u)
+            xyz = surface(uv)
+            normal = surface.normal(uv)
+            upward = np.sign(normal[1])
+            if upward * normal[1] <= bottom:
+                norm = np.sqrt(normal[0] * normal[0] + normal[2] * normal[2])
+                xyz[0] += edgeRadius * normal[0] + w * normal[0] / norm
+                xyz[1] += edgeRadius * normal[1]
+                xyz[2] += edgeRadius * normal[2] + w * normal[2] / norm
+            else:
+                xyz[0] += bottomRadius * normal[0]
+                xyz[1] += bottomRadius * normal[1] - upward * h
+                xyz[2] += bottomRadius * normal[2]
+            return xyz
+    else: # Should never get here (exception raised earlier)
+        raise ValueError("The offset is only defined for 2D curves and 3D surfaces with well-defined normals.")
 
     # Compute new order and knots for offset (ensure order is at least 4).
     newOrder = []
@@ -174,7 +196,10 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, subtract=False, 
         previousKnot = None
         start = None
         for knot in offset.knots[0][offset.order[0]:offset.nCoef[0]]:
-            flipped = np.dot(self.derivative((1,), knot), offset.derivative((1,), knot)) < 0
+            tangent = self.derivative((1,), knot)
+            if path is not None:
+                tangent = surface.jacobian(path(knot)) @ tangent
+            flipped = np.dot(tangent, offset.derivative((1,), knot)) < 0
             if flipped and start is None:
                 start = knot
             if not flipped and start is not None:
@@ -186,7 +211,18 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, subtract=False, 
         segmentList = []
         for cusp in cusps:
             domain = offset.domain()
-            block = bspy.spline_block.SplineBlock([[offset.trim(((domain[0][0], cusp[0]),)), -offset.trim(((cusp[1], domain[0][1]),))]])
+            before = offset.trim(((domain[0][0], cusp[0]),))
+            after = -offset.trim(((cusp[1], domain[0][1]),))
+            if path is not None:
+                # Project before and after onto a 2D plane defined by the offset tangent 
+                # and the surface normal at the start of the cusp.
+                # This is necessary to find the intersection point (2 equations, 2 unknowns).
+                tangent = offset.derivative((1,), cusp[0])
+                projection = np.concatenate((tangent / np.linalg.norm(tangent),
+                    surface.normal(path(cusp[0])))).reshape((2,3))
+                before = before.transform(projection)
+                after = after.transform(projection)
+            block = bspy.spline_block.SplineBlock([[before, after]])
             intersections = block.zeros()
             for intersection in intersections:
                 segmentList.append(offset.trim(((domain[0][0], intersection[0]),)))

@@ -1685,7 +1685,7 @@ class Spline(Manifold):
         """
         return bspy._spline_operations.normal_spline(bspy.spline_block.SplineBlock(self), indices)
     
-    def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, subtract=False, removeCusps=False, tolerance = 1.0e-4):
+    def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtract=False, removeCusps=False, tolerance = 1.0e-4):
         """
         Compute the offset of a spline to a given tolerance.
 
@@ -1706,13 +1706,19 @@ class Spline(Manifold):
             flatter bottom of the drill bit. The angle must be in the range [0, pi/2). 
             Defaults to pi / 2.2.
 
+        path : `Spline`, optional
+            The path along self that the drill bit should contact. 
+            If specified, the path must be a 2D curve in the domain of self, self must be a 3D surface,  
+            and the offset returned is a 3D curve providing the 3D position of the drill bit, 
+            rather than the full offset surface. Defaults to None.
+
         subtract : boolean, optional
             Flag indicating if the drill bit should be subtracted from the spline instead of added. 
             Subtracting the drill bit returns the tool path that cuts out the spline. Defaults to False.
 
         removeCusps : boolean, optional
             Flag indicating if cusps and their associated self-intersections should be removed from the 
-            offset. Only applicable to offset curves. Defaults to False.
+            offset. Only applicable to offset curves and paths along offset surfaces. Defaults to False.
     
         tolerance : `scalar`, optional
             The maximum 2-norm of the difference between the offset and the
@@ -1730,9 +1736,9 @@ class Spline(Manifold):
         Notes
         -----
         The offset is only defined for 2D curves and 3D surfaces with well-defined normals. 
-        The bottom of the drill bit tangent to its lowest y value.
+        The bottom of the drill bit is tangent to its lowest y value.
         """
-        return bspy._spline_milling.offset(self, edgeRadius, bitRadius, angle, subtract, removeCusps, tolerance)
+        return bspy._spline_milling.offset(self, edgeRadius, bitRadius, angle, path, subtract, removeCusps, tolerance)
 
     @staticmethod
     def point(point):
