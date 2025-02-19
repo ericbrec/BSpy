@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 import bspy.spline
 from collections import namedtuple
@@ -71,6 +72,8 @@ def confine(self, range_bounds):
     if self.nInd != 1: raise ValueError("Confine only works on curves (nInd == 1)")
     if len(range_bounds) != self.nDep: raise ValueError("len(range_bounds) must equal nDep")
     spline = self.clamp((0,), (0,))
+    if spline is self:
+        spline = self.copy()
     order = spline.order[0]
     degree = order - 1
     domain = spline.domain()
@@ -88,18 +91,18 @@ def confine(self, range_bounds):
             if boundaryPoint[i] > range_bounds[i][1]:
                 headedOutside = True if boundaryPoint[i] > range_bounds[i][1] + epsilon else headedOutside
                 boundaryPoint[i] = range_bounds[i][1]
-        intersections.append((u, boundaryPoint, headedOutside))
+        intersections.append([u, boundaryPoint, headedOutside])
 
     def intersectBoundary(i, j):
         zeros = type(spline)(1, 1, spline.order, spline.nCoef, spline.knots, (spline.coefs[i] - range_bounds[i][j],)).zeros()
         for zero in zeros:
             if isinstance(zero, tuple):
-                headedOutside = (-1 if j == 0 else 1) * spline.derivative((1,), np.atleast_1d(zero[0]))[i] > epsilon
+                headedOutside = (-1 if j == 0 else 1) * spline.derivative((1,), np.atleast_1d(zero[0]))[i] > 0
                 addIntersection(zero[0], headedOutside)
-                headedOutside = (-1 if j == 0 else 1) * spline.derivative((1,), np.atleast_1d(zero[1]))[i] > epsilon
+                headedOutside = (-1 if j == 0 else 1) * spline.derivative((1,), np.atleast_1d(zero[1]))[i] > 0
                 addIntersection(zero[1], headedOutside)
             else:
-                headedOutside = (-1 if j == 0 else 1) * spline.derivative((1,), np.atleast_1d(zero))[i] > epsilon
+                headedOutside = (-1 if j == 0 else 1) * spline.derivative((1,), np.atleast_1d(zero))[i] > 0
                 addIntersection(zero, headedOutside)
 
     addIntersection(domain[0][0]) # Confine starting point
@@ -112,21 +115,22 @@ def confine(self, range_bounds):
     # Put the intersection points in order.
     intersections.sort(key=lambda intersection: intersection[0])
 
-    # Remove repeat points at start and end.
-    while intersections[1][0] - intersections[0][0] < epsilon:
-        del intersections[1]
-    while intersections[-1][0] - intersections[-2][0] < epsilon:
-        del intersections[-2]
-
     # Insert order-1 knots at each intersection point.
-    for (knot, boundaryPoint, headedOutside) in intersections:
-        ix = np.searchsorted(unique, knot)
-        if unique[ix] == knot:
-            count = (order - 1) - counts[ix]
-            if count > 0:
-                spline = spline.insert_knots(((knot, count),))
+    previousKnot, previousBoundaryPoint, previousHeadedOutside = intersections[0]
+    previousIx = 0
+    for i, (knot, boundaryPoint, headedOutside) in enumerate(intersections[1:]):
+        if knot - previousKnot < epsilon:
+            intersections[previousIx][2] = headedOutside # Keep last headed outside
         else:
-            spline = spline.insert_knots(((knot, order - 1),))
+            ix = np.searchsorted(unique, knot)
+            if unique[ix] == knot:
+                count = (order - 1) - counts[ix]
+                if count > 0:
+                    spline = spline.insert_knots((((knot, count),),))
+            else:
+                spline = spline.insert_knots((((knot, order - 1),),))
+            previousKnot = knot
+            previousIx = i
 
     # Go through the boundary points, assigning boundary coefficients, interpolating between boundary points, 
     # and removing knots and coefficients where the curve stalls.
@@ -139,29 +143,30 @@ def confine(self, range_bounds):
     knotAdjustment = 0.0
     for knot, boundaryPoint, headedOutside in intersections[1:]:
         knot += knotAdjustment
-        ix = np.searchsorted(knots, knot, 'right') - order
-        ix = min(ix, nCoef - 1)
-        coefs[:, ix] = boundaryPoint # Assign boundary coefficients
-        if previousHeadedOutside and np.linalg.norm(boundaryPoint - previousBoundaryPoint) < epsilon:
-            # Curve has stalled, so remove intervening knots and coefficients, and adjust knot values.
-            nCoef -= ix - previousIx
-            knots = np.delete(knots, slice(previousIx + 1, ix + 1))
-            knots[previousIx + 1:] -= knot - previousKnot
-            knotAdjustment -= knot - previousKnot
-            coefs = np.delete(coefs, slice(previousIx, ix), axis=1)
-            previousHeadedOutside = headedOutside # The previous knot is unchanged, but inherits the new headedOutside value
-        else:
-            if previousHeadedOutside:
-                # If we were outside, linearly interpolate between the previous and current boundary points.
-                slope = (boundaryPoint - previousBoundaryPoint) / (knot - previousKnot)
-                for i in range(previousIx + 1, ix):
-                    coefs[:, i] = coefs[:, i - 1] + ((knots[i + degree] - knots[i]) / degree) * slope
+        if knot - previousKnot >= epsilon:
+            ix = np.searchsorted(knots, knot, 'right') - order
+            ix = min(ix, nCoef - 1)
+            coefs[:, ix] = boundaryPoint # Assign boundary coefficients
+            if previousHeadedOutside and np.linalg.norm(boundaryPoint - previousBoundaryPoint) < epsilon:
+                # Curve has stalled, so remove intervening knots and coefficients, and adjust knot values.
+                nCoef -= ix - previousIx
+                knots = np.delete(knots, slice(previousIx + 1, ix + 1))
+                knots[previousIx + 1:] -= knot - previousKnot
+                knotAdjustment -= knot - previousKnot
+                coefs = np.delete(coefs, slice(previousIx, ix), axis=1)
+                previousHeadedOutside = headedOutside # The previous knot is unchanged, but inherits the new headedOutside value
+            else:
+                if previousHeadedOutside:
+                    # If we were outside, linearly interpolate between the previous and current boundary points.
+                    slope = (boundaryPoint - previousBoundaryPoint) / (knot - previousKnot)
+                    for i in range(previousIx + 1, ix):
+                        coefs[:, i] = coefs[:, i - 1] + ((knots[i + degree] - knots[i]) / degree) * slope
 
-            # Update previous knot
-            previousKnot = knot
-            previousBoundaryPoint = boundaryPoint
-            previousHeadedOutside = headedOutside
-            previousIx = ix
+                # Update previous knot
+                previousKnot = knot
+                previousBoundaryPoint = boundaryPoint
+                previousHeadedOutside = headedOutside
+                previousIx = ix
     
     spline.nCoef = (nCoef,)
     spline.knots = (knots,)
@@ -176,7 +181,7 @@ def contract(self, uvw):
     for iv in range(self.nInd):
         if uvw[iv] is not None:
             if uvw[iv] < domain[iv][0] or uvw[iv] > domain[iv][1]:
-                raise ValueError(f"Spline evaluation outside domain: {uvw}")
+                warnings.warn(f"Spline evaluation outside domain: {uvw}")
 
             # Grab all of the appropriate coefficients
             ix, indValues = bspy.Spline.bspline_values(None, self.knots[iv], self.order[iv], uvw[iv])

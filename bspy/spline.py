@@ -5,8 +5,9 @@ from bspy.manifold import Manifold
 import bspy.spline_block
 import bspy._spline_domain
 import bspy._spline_evaluation
-import bspy._spline_intersection
 import bspy._spline_fitting
+import bspy._spline_intersection
+import bspy._spline_milling
 import bspy._spline_operations
 
 @Manifold.register
@@ -1129,7 +1130,7 @@ class Spline(Manifold):
         """
         return bspy._spline_intersection.full_domain(self)
     
-    def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-6):
+    def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-5):
         """
         Determine a geodesic between two points on a surface
 
@@ -1141,9 +1142,9 @@ class Spline(Manifold):
         uvEnd : `array-like`
             The parameter values for the surface at the other end of the desired geodesic.
         
-        tolerance : scalar
+        tolerance : scalar, optional
             The maximum error in parameter space to which the geodesic should get computed.
-            Defaults to 1.0e-6.
+            Defaults to 1.0e-5.
 
         Returns
         -------
@@ -1499,6 +1500,36 @@ class Spline(Manifold):
         """
         return bspy._spline_fitting.line(startPoint, endPoint)
     
+    def line_of_curvature(self, uvStart, is_max = True, tolerance = 1.0e-3):
+        """
+        Determine a line of curvature along a surface
+
+        Parameters
+        ----------
+        uvStart : `array-like`
+            The parameter values for the surface at one end of the desired line of curvature.
+        
+        is_max : `bool`, optional
+            Boolean value indicating that the line of curvature should be the maximal curvature line. 
+            If False, the minimal curvature line is returned. Defaults to True.
+        
+        tolerance : scalar, optional
+            The maximum error in parameter space to which the geodesic should get computed.
+            Defaults to 1.0e-3.
+
+        Returns
+        -------
+        spline : `Spline`
+            A spline curve whose range is in the domain of the given surface.  The range of the
+            curve is the locus of points whose image under the surface map form the line of curvature
+            starting at the given point.
+        
+        See Also
+        --------
+        `solve_ode` : Solve an ordinary differential equation using spline collocation.
+        """
+        return bspy._spline_milling.line_of_curvature(self, uvStart, is_max, tolerance)
+    
     @staticmethod
     def load(fileName):
         """
@@ -1654,7 +1685,7 @@ class Spline(Manifold):
         """
         return bspy._spline_operations.normal_spline(bspy.spline_block.SplineBlock(self), indices)
     
-    def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, subtract=False, removeCusps=False, tolerance = 1.0e-4):
+    def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtract=False, removeCusps=False, tolerance = 1.0e-4):
         """
         Compute the offset of a spline to a given tolerance.
 
@@ -1675,13 +1706,19 @@ class Spline(Manifold):
             flatter bottom of the drill bit. The angle must be in the range [0, pi/2). 
             Defaults to pi / 2.2.
 
+        path : `Spline`, optional
+            The path along self that the drill bit should contact. 
+            If specified, the path must be a 2D curve in the domain of self, self must be a 3D surface,  
+            and the offset returned is a 3D curve providing the 3D position of the drill bit, 
+            rather than the full offset surface. Defaults to None.
+
         subtract : boolean, optional
             Flag indicating if the drill bit should be subtracted from the spline instead of added. 
             Subtracting the drill bit returns the tool path that cuts out the spline. Defaults to False.
 
         removeCusps : boolean, optional
             Flag indicating if cusps and their associated self-intersections should be removed from the 
-            offset. Only applicable to offset curves. Defaults to False.
+            offset. Only applicable to offset curves and paths along offset surfaces. Defaults to False.
     
         tolerance : `scalar`, optional
             The maximum 2-norm of the difference between the offset and the
@@ -1699,9 +1736,9 @@ class Spline(Manifold):
         Notes
         -----
         The offset is only defined for 2D curves and 3D surfaces with well-defined normals. 
-        The bottom of the drill bit tangent to its lowest y value.
+        The bottom of the drill bit is tangent to its lowest y value.
         """
-        return bspy._spline_fitting.offset(self, edgeRadius, bitRadius, angle, subtract, removeCusps, tolerance)
+        return bspy._spline_milling.offset(self, edgeRadius, bitRadius, angle, path, subtract, removeCusps, tolerance)
 
     @staticmethod
     def point(point):
@@ -2020,7 +2057,7 @@ class Spline(Manifold):
         """
         return bspy._spline_fitting.section(xytk)
     
-    def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
+    def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = (), includeEstimate = False):
         """
         Numerically solve an ordinary differential equation with boundary conditions.
 
@@ -2043,26 +2080,31 @@ class Spline(Manifold):
         FAndF_u : Python function
             FAndF_u must have exactly this calling sequence:  FAndF_u(t, uData, *args).  t is a scalar set
             to the desired value of the independent variable of the ODE.  uData will be a numpy matrix of shape
-            (self.nDep, nOrder) whose columns are (u, ... , u^(nOrder - 1).  It must return a numpy
+            (self.nDep, nOrder) whose columns are u, ... , u^(nOrder - 1).  It must return a numpy
             vector of length self.nDep and a numpy array whose shape is (self.nDep, self.nDep, nOrder).
             The first output vector is the value of the forcing function F at (t, uData).  The numpy
             array is the array of partial derivatives with respect to all the numbers in uData.  Thus, if
             this array is called jacobian, then jacobian[:, i, j] is the gradient of the forcing function with
             respect to uData[i, j].
         
-        tolerance : scalar
-            The relative error to which the ODE should get solved.
+        tolerance : scalar, optional
+            The relative error to which the ODE should get solved. Default is 1.0e-6.
         
-        args : tuple
+        args : tuple, optional
             Additional arguments to pass to the user-defined function FAndF_u.  For example, if FAndF_u has the
-            FAndF_u(t, uData, a, b, c), then args must be a tuple of length 3.
+            FAndF_u(t, uData, a, b, c), then args must be a tuple of length 3. Default is ().
+        
+        includeEstimate : bool, optional
+            If `includeEstimate` is True, the uData passed to `FAndF_u` will be a numpy matrix of shape
+            (self.nDep, nOrder + 1) whose columns are u, ... , u^(nOrder). The last column will be the most
+            recent estimate of u^(nOrder)(t). Default is False.
 
         Notes
         =====
         This method uses B-splines as finite elements.  The ODE itself is discretized using
         collocation.
         """
-        return bspy._spline_fitting.solve_ode(self, nLeft, nRight, FAndF_u, tolerance, args)
+        return bspy._spline_fitting.solve_ode(self, nLeft, nRight, FAndF_u, tolerance, args, includeEstimate)
 
     @staticmethod
     def sphere(radius, tolerance = None):

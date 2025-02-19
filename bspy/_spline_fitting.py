@@ -519,7 +519,7 @@ def four_sided_patch(bottom, right, top, left, surfParam = 0.5):
     
     return (1.0 - surfParam) * coons + surfParam * laplace
 
-def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-6):
+def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-5):
     # Check validity of input
     if self.nInd != 2:  raise ValueError("Surface must have two independent variables")
     if len(uvStart) != 2:  raise ValueError("uvStart must have two components")
@@ -617,7 +617,7 @@ def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-6):
     initialGuess = line(uvStart, uvEnd).elevate([2])
 
     # Solve the ODE and return the geodesic
-    solution = initialGuess.solve_ode(1, 1, geodesicCallback, 1.0e-5, (self, uvDomain))
+    solution = initialGuess.solve_ode(1, 1, geodesicCallback, tolerance, (self, uvDomain))
     return solution
 
 def least_squares(uValues, dataPoints, order = None, knots = None, compression = 0.0,
@@ -772,101 +772,6 @@ def line(startPoint, endPoint):
     endPoint = bspy.Spline.point(endPoint)
     return bspy.Spline.ruled_surface(startPoint, endPoint)
 
-def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, subtract=False, removeCusps=False, tolerance = 1.0e-4):
-    if self.nDep < 2 or self.nDep > 3 or self.nDep - self.nInd != 1: raise ValueError("The offset is only defined for 2D curves and 3D surfaces with well-defined normals.")
-    if edgeRadius < 0:
-        raise ValueError("edgeRadius must be >= 0")
-    elif edgeRadius == 0:
-        return self
-    if bitRadius is None:
-        bitRadius = edgeRadius
-    elif bitRadius < edgeRadius:
-        raise ValueError("bitRadius must be >= edgeRadius")
-    if angle < 0 or angle >= np.pi / 2: raise ValueError("angle must in the range [0, pi/2)")
-
-    # Determine geometry of drill bit.
-    if subtract:
-        edgeRadius *= -1
-        bitRadius *= -1
-    w = bitRadius - edgeRadius
-    h = w * np.tan(angle)
-    bottom = np.sin(angle)
-    bottomRadius = edgeRadius + h / bottom
-
-    # Define drill bit function.
-    if abs(w) < tolerance:
-        def drillBit(uv):
-            return self(uv) + edgeRadius * self.normal(uv)
-    elif self.nDep == 2:
-        def drillBit(u):
-            xy = self(u)
-            normal = self.normal(u)
-            upward = np.sign(normal[1])
-            if upward * normal[1] <= bottom:
-                xy[0] += edgeRadius * normal[0] + w * np.sign(normal[0])
-                xy[1] += edgeRadius * normal[1]
-            else:
-                xy[0] += bottomRadius * normal[0]
-                xy[1] += bottomRadius * normal[1] - upward * h
-            return xy
-    elif self.nDep == 3:
-        def drillBit(uv):
-            xyz = self(uv)
-            normal = self.normal(uv)
-            upward = np.sign(normal[1])
-            if upward * normal[1] <= bottom:
-                norm = np.sqrt(normal[0] * normal[0] + normal[2] * normal[2])
-                xyz[0] += edgeRadius * normal[0] + w * normal[0] / norm
-                xyz[1] += edgeRadius * normal[1]
-                xyz[2] += edgeRadius * normal[2] + w * normal[2] / norm
-            else:
-                xyz[0] += bottomRadius * normal[0]
-                xyz[1] += bottomRadius * normal[1] - upward * h
-                xyz[2] += bottomRadius * normal[2]
-            return xyz
-
-    # Compute new order and knots for offset (ensure order is at least 4).
-    newOrder = []
-    newKnots = []
-    for order, knots in zip(self.order, self.knots):
-        min4Order = max(order, 4)
-        unique, count = np.unique(knots, return_counts=True)
-        count += min4Order - order
-        newOrder.append(min4Order)
-        newKnots.append(np.repeat(unique, count))
-
-    # Fit new spline to offset by drill bit.
-    offset = fit(self.domain(), drillBit, newOrder, newKnots, tolerance)
-
-    # Remove cusps as required (only applies to offset curves).
-    if removeCusps and self.nInd == 1:
-        # Find the cusps by checking for tangent direction reversal between the spline and offset.
-        cusps = []
-        previousKnot = None
-        start = None
-        for knot in offset.knots[0][offset.order[0]:offset.nCoef[0]]:
-            flipped = np.dot(self.derivative((1,), knot), offset.derivative((1,), knot)) < 0
-            if flipped and start is None:
-                start = knot
-            if not flipped and start is not None:
-                cusps.append((start, previousKnot))
-                start = None
-            previousKnot = knot
-
-        # Remove the cusps by intersecting the offset segments before and after each cusp.
-        segmentList = []
-        for cusp in cusps:
-            domain = offset.domain()
-            block = bspy.spline_block.SplineBlock([[offset.trim(((domain[0][0], cusp[0]),)), -offset.trim(((cusp[1], domain[0][1]),))]])
-            intersections = block.zeros()
-            for intersection in intersections:
-                segmentList.append(offset.trim(((domain[0][0], intersection[0]),)))
-                offset = offset.trim(((intersection[1], domain[0][1]),))
-        segmentList.append(offset)
-        offset = bspy.spline.Spline.join(segmentList)
-    
-    return offset
-
 def point(point):
     point = np.atleast_1d(point)
     return bspy.Spline(0, len(point), [], [], [], point)
@@ -974,7 +879,7 @@ def section(xytk):
     # Join the pieces together and return
     return bspy.Spline.join(mySections)
 
-def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
+def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = (), includeEstimate = False):
     # Ensure that the ODE is properly formulated
 
     if nLeft < 0:  raise ValueError("Invalid number of left hand boundary conditions")
@@ -1066,7 +971,7 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
                 residuals = np.append(residuals, np.zeros((nLeft * nDep,)))
                 collocationMatrix[bandWidth, 0 : nLeft * nDep] = 1.0
                 for iPoint, t in enumerate(collocationPoints[iFirstPoint : iNextPoint]):
-                    uData = np.array([workingSpline.derivative([i], t) for i in range(nOrder)]).T
+                    uData = np.array([workingSpline.derivative([i], t) for i in range(nOrder + 1 if includeEstimate else nOrder)]).T
                     F, F_u = FAndF_u(t, uData, *args)
                     residuals = np.append(residuals, workingSpline.derivative([nOrder], t) - continuation * F)
                     ix = None

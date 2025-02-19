@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 import scipy as sp
 
@@ -5,7 +6,7 @@ def bspline_values(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs
     basis = np.zeros(splineOrder, knots.dtype)
     if knot is None:
         knot = np.searchsorted(knots, u, side = 'right')
-        knot = min(knot, len(knots) - splineOrder)
+        knot = min(max(knot, splineOrder), len(knots) - splineOrder)
     if derivativeOrder >= splineOrder:
         return knot, basis
     basis[-1] = 1.0
@@ -118,7 +119,7 @@ def derivative(self, with_respect_to, uvw):
     dom = self.domain()
     for ix in range(self.nInd):
         if uvw[ix] < dom[ix][0] or uvw[ix] > dom[ix][1]:
-            raise ValueError(f"Spline evaluation outside domain: {uvw}")
+            warnings.warn(f"Spline evaluation outside domain: {uvw}")
 
     # Grab all of the appropriate coefficients
     mySection = [slice(0, self.nDep)]
@@ -149,7 +150,7 @@ def evaluate(self, uvw):
     dom = self.domain()
     for ix in range(self.nInd):
         if uvw[ix] < dom[ix][0] or uvw[ix] > dom[ix][1]:
-            raise ValueError(f"Spline evaluation outside domain: {uvw}")
+            warnings.warn(f"Spline evaluation outside domain: {uvw}")
 
     # Grab all of the appropriate coefficients
     mySection = [slice(0, self.nDep)]
@@ -186,9 +187,9 @@ def integral(self, with_respect_to, uvw1, uvw2, returnSpline = False):
     dom = self.domain()
     for ix in range(self.nInd):
         if uvw1[ix] < dom[ix][0] or uvw1[ix] > dom[ix][1]:
-            raise ValueError(f"Spline evaluation outside domain: {uvw1}")
+            warnings.warn(f"Spline evaluation outside domain: {uvw1}")
         if uvw2[ix] < dom[ix][0] or uvw2[ix] > dom[ix][1]:
-            raise ValueError(f"Spline evaluation outside domain: {uvw2}")
+            warnings.warn(f"Spline evaluation outside domain: {uvw2}")
 
     # Repeatedly integrate self
     spline = self
