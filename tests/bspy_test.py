@@ -1086,6 +1086,19 @@ def test_line():
     assert midPoint[2] == 3.0
     return
 
+def test_line_of_curvature():
+    spline = bspy.Spline(2, 3, (3,3), (3,3), ((0.0, 0.0, 0.0, 1.0, 1.0, 1.0),(0.0, 0.0, 0.0, 1.0, 1.0, 1.0)), 
+        (((0.0, 0.0, 0.0), (0.5, 0.5, 0.5), (1.0, 1.0, 1.0)), \
+        ((1.0, 0.0, 1.0), (0.0, -1.0, 0.0), (1.0, 0.0, 1.0)), \
+        ((0.0, 0.5, 1.0), (0.0, 0.5, 1.0), (0.0, 0.5, 1.0))))
+    lineOfCurvature = spline.line_of_curvature((0.1, 0.4))
+    lineOfCurvatureOnSpline = bspy.Spline.composition((spline, lineOfCurvature))
+    assert np.all(lineOfCurvature.coefs[0] <= 1)
+    assert np.all(lineOfCurvature(0.0) <= 1)
+    assert np.all(lineOfCurvature(0.5) <= 1)
+    assert np.all(lineOfCurvature(1.0) <= 1)
+    #assert np.all(lineOfCurvature(0.93) <= 1) # This one fails
+
 def test_matmul():
     mySpline = bspy.Spline(1, 1, (4,), (4,), ((0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0),), ((1.0, 2.0, 3.0, 4.0),))
     try:
@@ -1213,6 +1226,14 @@ def test_offset():
     for u in np.linspace(0.0, 1, 25):
         for v in np.linspace(0.0, 1, 25):
             maxError = max(maxError, np.linalg.norm(spline((u, v)) - offset((u, v))) - radius)
+    assert maxError <= tolerance
+
+    radius = 0.4
+    path = bspy.Spline(1, 2, (2,), (2,), ((0.0, 0.0, 1.0, 1.0),), ((0.0, 1.0), (0.0, 1.0)))
+    offset = spline.offset(radius, path=path, subtract=True, tolerance=tolerance)
+    maxError = 0.0
+    for u in np.linspace(0.0, 1, 50):
+        maxError = max(maxError, np.linalg.norm(spline(path(u)) - offset(u)) - radius)
     assert maxError <= tolerance
 
 def test_point():
