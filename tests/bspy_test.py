@@ -1092,12 +1092,12 @@ def test_line_of_curvature():
         ((1.0, 0.0, 1.0), (0.0, -1.0, 0.0), (1.0, 0.0, 1.0)), \
         ((0.0, 0.5, 1.0), (0.0, 0.5, 1.0), (0.0, 0.5, 1.0))))
     lineOfCurvature = spline.line_of_curvature((0.1, 0.4))
-    lineOfCurvatureOnSpline = bspy.Spline.composition((spline, lineOfCurvature))
     assert np.all(lineOfCurvature.coefs[0] <= 1)
     assert np.all(lineOfCurvature(0.0) <= 1)
     assert np.all(lineOfCurvature(0.5) <= 1)
     assert np.all(lineOfCurvature(1.0) <= 1)
     #assert np.all(lineOfCurvature(0.93) <= 1) # This one fails
+    lineOfCurvatureOnSpline = bspy.Spline.composition((spline, lineOfCurvature))
 
 def test_matmul():
     mySpline = bspy.Spline(1, 1, (4,), (4,), ((0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0),), ((1.0, 2.0, 3.0, 4.0),))
