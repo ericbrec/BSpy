@@ -1,4 +1,3 @@
-import warnings
 import numpy as np
 import scipy as sp
 
@@ -119,7 +118,7 @@ def derivative(self, with_respect_to, uvw):
     dom = self.domain()
     for ix in range(self.nInd):
         if uvw[ix] < dom[ix][0] or uvw[ix] > dom[ix][1]:
-            warnings.warn(f"Spline evaluation outside domain: {uvw}")
+            raise ValueError(f"Spline evaluation outside domain: {uvw}")
 
     # Grab all of the appropriate coefficients
     mySection = [slice(0, self.nDep)]
@@ -150,7 +149,7 @@ def evaluate(self, uvw):
     dom = self.domain()
     for ix in range(self.nInd):
         if uvw[ix] < dom[ix][0] or uvw[ix] > dom[ix][1]:
-            warnings.warn(f"Spline evaluation outside domain: {uvw}")
+            raise ValueError(f"Spline evaluation outside domain: {uvw}")
 
     # Grab all of the appropriate coefficients
     mySection = [slice(0, self.nDep)]
@@ -187,9 +186,9 @@ def integral(self, with_respect_to, uvw1, uvw2, returnSpline = False):
     dom = self.domain()
     for ix in range(self.nInd):
         if uvw1[ix] < dom[ix][0] or uvw1[ix] > dom[ix][1]:
-            warnings.warn(f"Spline evaluation outside domain: {uvw1}")
+            raise ValueError(f"Spline evaluation outside domain: {uvw1}")
         if uvw2[ix] < dom[ix][0] or uvw2[ix] > dom[ix][1]:
-            warnings.warn(f"Spline evaluation outside domain: {uvw2}")
+            raise ValueError(f"Spline evaluation outside domain: {uvw2}")
 
     # Repeatedly integrate self
     spline = self
