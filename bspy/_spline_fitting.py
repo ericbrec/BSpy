@@ -13,14 +13,33 @@ def circular_arc(radius, angle, tolerance = None):
     return bspy.Spline.section([(radius * np.cos(u * angle * np.pi / 180), radius * np.sin(u * angle * np.pi / 180), 90 + u * angle, 1.0 / radius) for u in np.linspace(0.0, 1.0, samples)])
 
 def composition(splines, tolerance):
+    # Collect domains and check range bounds
+    domains = [None]
+    domain = None
+    for i, spline in enumerate(splines):
+        if domain is not None:
+            if len(domain) != spline.nDep:
+                raise ValueError(f"Domain dimension of spline {i-1} does not match range dimension of spline {i}")
+            rangeBounds = spline.range_bounds()
+            for ix in range(spline.nDep):
+                if rangeBounds[ix][0] < domain[ix][0] or rangeBounds[ix][1] > domain[ix][1]:
+                    raise ValueError(f"Range of spline {i} exceeds domain of spline {i-1}")
+            domains.append(domain)
+        domain = spline.domain()
+
     # Define the callback function
     def composition_of_splines(u):
-        for f in splines[::-1]:
-            u = f(u)
+        for spline, domain in zip(splines[::-1], domains[::-1]):
+            u = spline(u)
+            if domain is not None:
+                # We've already checked that the range of spline is within the domain
+                # of its successor, but numerics may cause the spline value to slightly 
+                # exceed its range, so we clip the spline value accordingly.
+                u = np.clip(u, domain[:, 0], domain[:, 1])
         return u
     
     # Approximate this composition
-    return bspy.Spline.fit(splines[-1].domain(), composition_of_splines, tolerance = tolerance)
+    return bspy.Spline.fit(domain, composition_of_splines, tolerance = tolerance)
 
 def cone(radius1, radius2, height, tolerance = None):
     if tolerance is None:
