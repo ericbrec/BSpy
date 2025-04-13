@@ -386,9 +386,10 @@ def fit(domain, f, order = None, knots = None, tolerance = 1.0e-4):
         indices = nInd * [0]
         iLast = nInd
         while iLast >= 0:
+            # Create a tuple for the u value (must be a tuple to use it as a dictionary key)
             uValue = tuple([uvw[i][indices[i]] for i in range(nInd)])
             if not uValue in fDictionary:
-                fDictionary[uValue] = f(uValue)
+                fDictionary[uValue] = f(np.array(uValue))
             fValues.append(fDictionary[uValue])
             iLast = nInd - 1
             while iLast >= 0:
