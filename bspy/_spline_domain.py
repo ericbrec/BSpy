@@ -330,6 +330,7 @@ def insert_knots(self, newKnotList):
                     continue
 
             # Check if knot and its total multiplicity is valid.
+            knot = knots.dtype.type(knot) # Cast to correct type
             if knot < knots[degree] or knot > knots[-order]:
                 raise ValueError(f"Knot insertion outside domain: {knot}")
             position = np.searchsorted(knots, knot, 'right')

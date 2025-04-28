@@ -753,7 +753,7 @@ class Solid:
 
                 # Calculate Integral(f) * first cofactor. Note that quad returns a tuple: (integral, error bound).
                 returnValue = 0.0
-                firstCofactor = boundary.manifold.normal(evalPoint, False, (0,))
+                firstCofactor = boundary.manifold.normal(evalPoint, False, (0,))[0]
                 if abs(x0 - point[0]) > epsabs and abs(firstCofactor) > epsabs:
                     returnValue = integrate.quad(fHat, x0, point[0], epsabs=epsabs, epsrel=epsrel, *quadArgs)[0] * firstCofactor
                 return returnValue

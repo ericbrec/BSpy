@@ -60,8 +60,8 @@ class Spline(Manifold):
         self.knots = tuple(np.array(kk) for kk in knots)
         for knots, order, nCoef in zip(self.knots, self.order, self.nCoef):
             for i in range(nCoef):
-                if not(knots[i] <= knots[i + 1] and knots[i] < knots[i + order]):
-                       raise ValueError("Improperly ordered knot sequence")
+                if not(knots[i] <= knots[i + 1] and knots[i + order] - knots[i] > 0):
+                       raise ValueError("Improper knot order or multiplicity")
         totalCoefs = 1
         for nCoef in self.nCoef:
             totalCoefs *= nCoef

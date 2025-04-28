@@ -76,13 +76,15 @@ def confine(self, range_bounds):
     order = spline.order[0]
     degree = order - 1
     domain = spline.domain()
+    dtype = spline.knots[0].dtype
     unique, counts = np.unique(spline.knots[0], return_counts=True)
     machineEpsilon = np.finfo(self.coefs.dtype).eps
     epsilon = np.sqrt(machineEpsilon)
     intersections = [] # List of tuples (u, boundaryPoint, headingOutside)
 
     def addIntersection(u, headedOutside = False):
-        boundaryPoint = spline(np.atleast_1d(u))
+        u = dtype.type(u) # Cast to spline domain type
+        boundaryPoint = spline(u)
         for i in range(spline.nDep):
             if boundaryPoint[i] < range_bounds[i][0]:
                 headedOutside = True if boundaryPoint[i] < range_bounds[i][0] - epsilon else headedOutside
@@ -96,12 +98,12 @@ def confine(self, range_bounds):
         zeros = type(spline)(1, 1, spline.order, spline.nCoef, spline.knots, (spline.coefs[i] - range_bounds[i][j],)).zeros()
         for zero in zeros:
             if isinstance(zero, tuple):
-                headedOutside = (-1 if j == 0 else 1) * spline.derivative((1,), np.atleast_1d(zero[0]))[i] > 0
+                headedOutside = (-1 if j == 0 else 1) * spline.derivative((1,), zero[0])[i] > 0
                 addIntersection(zero[0], headedOutside)
-                headedOutside = (-1 if j == 0 else 1) * spline.derivative((1,), np.atleast_1d(zero[1]))[i] > 0
+                headedOutside = (-1 if j == 0 else 1) * spline.derivative((1,), zero[1])[i] > 0
                 addIntersection(zero[1], headedOutside)
             else:
-                headedOutside = (-1 if j == 0 else 1) * spline.derivative((1,), np.atleast_1d(zero))[i] > 0
+                headedOutside = (-1 if j == 0 else 1) * spline.derivative((1,), zero)[i] > 0
                 addIntersection(zero, headedOutside)
 
     addIntersection(domain[0][0]) # Confine starting point
@@ -114,7 +116,7 @@ def confine(self, range_bounds):
     # Put the intersection points in order.
     intersections.sort(key=lambda intersection: intersection[0])
 
-    # Insert order-1 knots at each intersection point.
+    # Insert order-1 (degree) knots at each intersection point.
     previousKnot, previousBoundaryPoint, previousHeadedOutside = intersections[0]
     previousIx = 0
     for i, (knot, boundaryPoint, headedOutside) in enumerate(intersections[1:]):
@@ -123,11 +125,11 @@ def confine(self, range_bounds):
         else:
             ix = np.searchsorted(unique, knot)
             if unique[ix] == knot:
-                count = (order - 1) - counts[ix]
+                count = degree - counts[ix]
                 if count > 0:
                     spline = spline.insert_knots((((knot, count),),))
             else:
-                spline = spline.insert_knots((((knot, order - 1),),))
+                spline = spline.insert_knots((((knot, degree),),))
             previousKnot = knot
             previousIx = i
 
@@ -166,6 +168,13 @@ def confine(self, range_bounds):
                 previousBoundaryPoint = boundaryPoint
                 previousHeadedOutside = headedOutside
                 previousIx = ix
+        elif previousKnot != knot and knot == domain[0][1] and np.linalg.norm(boundaryPoint - previousBoundaryPoint) < epsilon:
+            # Curve stalled at the end. Remove the last knot and its associated coefficients.
+            # Keep the last knot if the previous and last knot are the same.
+            nCoef -= degree
+            knots = knots[:-degree]
+            knots[-1] = previousKnot
+            coefs = coefs[:,:-degree]
     
     spline.nCoef = (nCoef,)
     spline.knots = (knots,)
