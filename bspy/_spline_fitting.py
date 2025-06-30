@@ -317,8 +317,9 @@ def fit(domain, f, order = None, knots = None, tolerance = 1.0e-4):
     # Determine number of independent variables
     domain = np.array(domain)
     nInd = len(domain)
-    midPoint = f(0.5 * (domain.T[0] + domain.T[1]))
+    midPoint = f(tuple(0.5 * (domain.T[0] + domain.T[1])))
     if not type(midPoint) is bspy.Spline:
+        midPoint = np.array(midPoint).flatten()
         nDep = len(midPoint)
 
     # Make sure order and knots conform to this
@@ -368,7 +369,10 @@ def fit(domain, f, order = None, knots = None, tolerance = 1.0e-4):
         while iLast >= 0:
             uValue = tuple([uvw[i][indices[i]] for i in range(nInd)])
             if not uValue in fDictionary:
-                fDictionary[uValue] = f(uValue)
+                newValue = f(uValue)
+                if not type(newValue) is bspy.Spline:
+                    newValue = np.array(newValue).flatten()
+                fDictionary[uValue] = newValue
             fValues.append(fDictionary[uValue])
             iLast = nInd - 1
             while iLast >= 0:
