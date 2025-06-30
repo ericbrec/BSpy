@@ -802,6 +802,9 @@ def test_fit():
     for u in np.linspace(0.0, 1.0, 101):
         for v in np.linspace(0.0, 1.0, 101):
             assert np.linalg.norm(myFit(u, v) - ffe([u, v])) < 1.0e-4
+    
+    fred = bspy.Spline.fit(domain=np.asarray([[0.0, 1.0]]), f = lambda x: [np.sin(x), np.cos(x)], tolerance=1e-4)
+    assert fred.nCoef[0] >= 4
 
 def test_fold_unfold():
     nInd = 3
