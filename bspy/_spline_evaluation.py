@@ -5,7 +5,7 @@ def bspline_values(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs
     basis = np.zeros(splineOrder, knots.dtype)
     if knot is None:
         knot = np.searchsorted(knots, u, side = 'right')
-        knot = min(knot, len(knots) - splineOrder)
+        knot = min(max(knot, splineOrder), len(knots) - splineOrder)
     if derivativeOrder >= splineOrder:
         return knot, basis
     basis[-1] = 1.0

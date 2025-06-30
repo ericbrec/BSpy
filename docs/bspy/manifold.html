@@ -34,6 +34,9 @@
                     <a class="class" href="#Manifold">Manifold</a>
                             <ul class="memberlist">
                         <li>
+                                <a class="function" href="#Manifold.__init__">Manifold</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Manifold.minSeparation">minSeparation</a>
                         </li>
                         <li>
@@ -44,6 +47,9 @@
                         </li>
                         <li>
                                 <a class="variable" href="#Manifold.factory">factory</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Manifold.metadata">metadata</a>
                         </li>
                         <li>
                                 <a class="function" href="#Manifold.cached_intersect">cached_intersect</a>
@@ -135,9 +141,28 @@
     
             <div class="docstring"><p>A manifold is an abstract base class for differentiable functions with
 normals and tangent spaces whose range is one dimension higher than their domain.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>metadata</strong> (<code>dict</code>, optional):
+A dictionary of ancillary data to store with the manifold. Default is {}.</li>
+</ul>
 </div>
 
 
+                            <div id="Manifold.__init__" class="classattr">
+                                <div class="attr function">
+            
+        <span class="name">Manifold</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">metadata</span><span class="o">=</span><span class="p">{}</span></span>)</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Manifold.__init__"></a>
+    
+    
+
+                            </div>
                             <div id="Manifold.minSeparation" class="classattr">
                                 <div class="attr variable">
             <span class="name">minSeparation</span>        =
@@ -164,6 +189,17 @@ normals and tangent spaces whose range is one dimension higher than their domain
             <div class="docstring"><p>Factory dictionary for creating manifolds.</p>
 </div>
 
+
+                            </div>
+                            <div id="Manifold.metadata" class="classattr">
+                                <div class="attr variable">
+            <span class="name">metadata</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Manifold.metadata"></a>
+    
+    
 
                             </div>
                             <div id="Manifold.cached_intersect" class="classattr">

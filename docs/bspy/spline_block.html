@@ -37,6 +37,9 @@
                                 <a class="function" href="#SplineBlock.__init__">SplineBlock</a>
                         </li>
                         <li>
+                                <a class="variable" href="#SplineBlock.block">block</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#SplineBlock.nInd">nInd</a>
                         </li>
                         <li>
@@ -82,6 +85,9 @@
                                 <a class="function" href="#SplineBlock.reparametrize">reparametrize</a>
                         </li>
                         <li>
+                                <a class="function" href="#SplineBlock.split">split</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#SplineBlock.trim">trim</a>
                         </li>
                         <li>
@@ -121,20 +127,27 @@
     </div>
     <a class="headerlink" href="#SplineBlock"></a>
     
-            <div class="docstring"><p>A class to represent and process an array-like collection of splines. 
-Spline blocks are useful for efficiently manipulating and solving systems of equations with splines.</p>
+            <div class="docstring"><p>A class to process an array-like collection of splines that represent a system of equations. </p>
 
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><p><strong>block</strong> (an array-like collection of splines (may be a list of lists)):
-Splines in the same row are treated as if they are added together. 
+<li><p><strong>block</strong> (an array-like collection of rows of splines (a list of lists)):
+The block of splines represents a system of equations. Splines in the same row are treated as if they are added together. 
 Each row need not have the same number of splines, but all splines in a row must have the same 
 number of dependent variables (same nDep). Corresponding independent variables must have the same domain.</p>
 
-<p>For example, if F is a spline with nInd = 3 and nDep = 2, G is a spline with nInd = 1 and nDep = 2, 
-and h is a spline with nInd = 2 and nDep = 1, then [[F, G], [h]] is a valid block (total nDep is 3 
-and max nInd is 4).</p></li>
+<p>For example, say you wanted to represent the system: 
+F(u, v, w) + G(u) = 0, h(u, v) = 0, where F and G are 2D vector functions and h is a scalar function. 
+After fitting F, G, and h with splines, you'd form the following spline block: [[F, G], [h]].</p>
+
+<p>You may optionally supply maps for independent variables to represent complex systems of equations. For example, 
+say you wanted to represent a similar systems as before, but with a more complicated relationship between the 
+independent variables: F(u, v, w) + G(v, s) = 0, h(u, t, w, s) = 0. 
+First, you'd assign consecutive indices for each variable starting at zero. For example, (s, t, u, v, w) could be indexed as (0, 1, 2, 3, 4, 5). 
+Then, you'd provide maps for each spline's independent variables to form the following spline block: 
+[[([3, 4, 5], F), ([4, 0], G)], [([3, 1, 5, 0], h)]]. 
+Notice how each spline from the first example is replaced by a (map, spline) tuple in the complex second example.</p></li>
 </ul>
 </div>
 
@@ -147,6 +160,17 @@ and max nInd is 4).</p></li>
         
     </div>
     <a class="headerlink" href="#SplineBlock.__init__"></a>
+    
+    
+
+                            </div>
+                            <div id="SplineBlock.block" class="classattr">
+                                <div class="attr variable">
+            <span class="name">block</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SplineBlock.block"></a>
     
     
 
@@ -517,6 +541,39 @@ Reparametrized spline block.</li>
 <h6 id="see-also">See Also</h6>
 
 <p><code><a href="#SplineBlock.domain">domain</a></code>:  Return the domain of a spline block.  </p>
+</div>
+
+
+                            </div>
+                            <div id="SplineBlock.split" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">split</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">minContinuity</span><span class="o">=</span><span class="mi">0</span>, </span><span class="param"><span class="n">breaks</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SplineBlock.split"></a>
+    
+            <div class="docstring"><p>Split a spline block into separate pieces.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>minContinuity</strong> (<code>int</code>, optional):
+The minimum expected continuity of each spline block piece. The default is zero, for C0 continuity.</li>
+<li><strong>breaks</strong> (<code>iterable</code> of length <code><a href="#SplineBlock.nInd">nInd</a></code> or <code>None</code>, optional):
+An iterable that specifies the breaks at which to separate the spline block. 
+len(breaks[ind]) == 0 if there the spline block isn't separated for the <code>ind</code> independent variable. 
+If breaks is <code>None</code> (the default), the spline block will only be separated at discontinuities.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>splineBlockArray</strong> (array of <code><a href="#SplineBlock">SplineBlock</a></code>):
+A array of spline blocks with nInd dimensions containing the spline block pieces.</li>
+</ul>
 </div>
 
 

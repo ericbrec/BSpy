@@ -330,6 +330,7 @@ def insert_knots(self, newKnotList):
                     continue
 
             # Check if knot and its total multiplicity is valid.
+            knot = knots.dtype.type(knot) # Cast to correct type
             if knot < knots[degree] or knot > knots[-order]:
                 raise ValueError(f"Knot insertion outside domain: {knot}")
             position = np.searchsorted(knots, knot, 'right')
@@ -499,7 +500,7 @@ def remove_knots(self, tolerance, nLeft = 0, nRight = 0):
         foldedIndices = list(filter(lambda x: x != id, indIndex))
         currentFold, foldedBasis = currentSpline.fold(foldedIndices)
         while True:
-            bestError = np.finfo(scaleDep[0].dtype).max
+            bestError = np.finfo(self.coefs.dtype).max
             bestSpline = currentFold
             ix = currentFold.order[0]
             while ix < currentFold.nCoef[0]:

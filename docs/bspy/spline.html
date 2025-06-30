@@ -190,6 +190,9 @@
                                 <a class="function" href="#Spline.line">line</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.line_of_curvature">line_of_curvature</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.load">load</a>
                         </li>
                         <li>
@@ -200,6 +203,9 @@
                         </li>
                         <li>
                                 <a class="function" href="#Spline.normal_spline">normal_spline</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.offset">offset</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.point">point</a>
@@ -1539,14 +1545,17 @@ over which the function f is defined.  The approximating spline which is the
 output will be defined over the same rectangular domain</li>
 <li><strong>f</strong> (Python function):
 The function to approximate.  It is a vector-valued function of nDep
-components in nInd variables.</li>
-<li><strong>order</strong> (<code>array-like</code>):
+components in nInd variables.  Alternatively, it can return a spline of any
+number independent variables and nDep dependent variables.  In this case, the
+resulting spline function will have nInd + number of independent variables
+in the splines returned independent variables and nDep dependent variables.</li>
+<li><strong>order</strong> (<code>array-like</code>, optional):
 An optional integer array of length nInd which specifies the polynomial
 order to use in each of the independent variables.  It will default to order
 4 (degree 3) if None is specified (the default)</li>
-<li><strong>knots</strong> (<code>array-like</code>):
+<li><strong>knots</strong> (<code>array-like</code>, optional):
 The initial knot sequence to use, if given</li>
-<li><strong>tolerance</strong> (<code>scalar</code>):
+<li><strong>tolerance</strong> (<code>scalar</code>, optional):
 The maximum 2-norm of the difference between the given function and the
 spline fit.  Defaults to 1.0e-4.</li>
 </ul>
@@ -1755,7 +1764,7 @@ The full (untrimmed) domain of the spline.</li>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">geodesic</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">uvStart</span>, </span><span class="param"><span class="n">uvEnd</span>, </span><span class="param"><span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-06</span></span><span class="return-annotation">):</span></span>
+        <span class="name">geodesic</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">uvStart</span>, </span><span class="param"><span class="n">uvEnd</span>, </span><span class="param"><span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-05</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -1770,9 +1779,9 @@ The full (untrimmed) domain of the spline.</li>
 The parameter values for the surface at one end of the desired geodesic.</li>
 <li><strong>uvEnd</strong> (<code>array-like</code>):
 The parameter values for the surface at the other end of the desired geodesic.</li>
-<li><strong>tolerance</strong> (scalar):
+<li><strong>tolerance</strong> (scalar, optional):
 The maximum error in parameter space to which the geodesic should get computed.
-Defaults to 1.0e-6.</li>
+Defaults to 1.0e-5.</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -1878,9 +1887,14 @@ valid collocation points, interpolation points, or quadrature points.</p>
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>newKnots</strong> (<code>iterable</code> of length <code><a href="#Spline.nInd">nInd</a></code>):
+<li><p><strong>newKnots</strong> (<code>iterable</code> of length <code><a href="#Spline.nInd">nInd</a></code>):
 An iterable that specifies the knots to be added to each independent variable's knots. 
-len(newKnots[ind]) == 0 if no knots are to be added for the <code>ind</code> independent variable.</li>
+len(newKnots[ind]) == 0 if no knots are to be added for the <code>ind</code> independent variable. </p>
+
+<p>Each knot may be specified as its knot value or a tuple indicating the knot value and its multiplicity. 
+For example, spline.insert_knots([[0.1, (0.3, 2)], [(.5, 3), .2, .5]]) will insert 0.1 once and 0.3 twice into 
+the knots of the first independent variable, and will insert 0.2 once and 0.5 four times into the knots of the 
+second independent variable. Knots do not need to be sorted.</p></li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -2249,6 +2263,47 @@ The spline that interpolates the two inputs.</li>
 
 
                             </div>
+                            <div id="Spline.line_of_curvature" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">line_of_curvature</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">uvStart</span>, </span><span class="param"><span class="n">is_max</span><span class="o">=</span><span class="kc">True</span>, </span><span class="param"><span class="n">tolerance</span><span class="o">=</span><span class="mf">0.001</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.line_of_curvature"></a>
+    
+            <div class="docstring"><p>Determine a line of curvature along a surface</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>uvStart</strong> (<code>array-like</code>):
+The parameter values for the surface at one end of the desired line of curvature.</li>
+<li><strong>is_max</strong> (<code>bool</code>, optional):
+Boolean value indicating that the line of curvature should be the maximal curvature line. 
+If False, the minimal curvature line is returned. Defaults to True.</li>
+<li><strong>tolerance</strong> (scalar, optional):
+The maximum error in parameter space to which the geodesic should get computed.
+Defaults to 1.0e-3.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+A spline curve whose range is in the domain of the given surface.  The range of the
+curve is the locus of points whose image under the surface map form the line of curvature
+starting at the given point.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.solve_ode">solve_ode</a></code>:  Solve an ordinary differential equation using spline collocation.  </p>
+</div>
+
+
+                            </div>
                             <div id="Spline.load" class="classattr">
                                 <div class="attr function">
                     <div class="decorator">@staticmethod</div>
@@ -2424,6 +2479,68 @@ The spline that evaluates to the normal of the given spline.</li>
 <p>Attentive readers will notice that the number of independent variables could be one more than the number of 
 dependent variables (instead of one less, as is typical). In that case, the normal represents the null space of 
 the matrix formed by the tangents of the spline. If the null space is greater than one dimension, the normal will be zero.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.offset" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">offset</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">edgeRadius</span>,</span><span class="param">	<span class="n">bitRadius</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">angle</span><span class="o">=</span><span class="mf">1.427996660722633</span>,</span><span class="param">	<span class="n">path</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">subtract</span><span class="o">=</span><span class="kc">False</span>,</span><span class="param">	<span class="n">removeCusps</span><span class="o">=</span><span class="kc">False</span>,</span><span class="param">	<span class="n">tolerance</span><span class="o">=</span><span class="mf">0.0001</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.offset"></a>
+    
+            <div class="docstring"><p>Compute the offset of a spline to a given tolerance.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>edgeRadius</strong> (scalar):
+The radius of offset. If a bit radius is specified, the edge radius is the
+smaller radius of the cutting edge of the drill bit, whereas bit radius specifies 
+half of the full width of the drill bit.</li>
+<li><strong>bitRadius</strong> (scalar, optional):
+The radius of the drill bit (half its full width). For a ball nose cutter (the default), 
+the bit radius is the same as the edge radius. For an end mill,
+the bit radius is larger (typically much larger) than the edge radius.</li>
+<li><strong>angle</strong> (scalar, optional):
+The angle at which the drill bit transitions from the edge radius to the 
+flatter bottom of the drill bit. The angle must be in the range [0, pi/2). 
+Defaults to pi / 2.2.</li>
+<li><strong>path</strong> (<code><a href="#Spline">Spline</a></code>, optional):
+The path along self that the drill bit should contact. 
+If specified, the path must be a 2D curve in the domain of self, self must be a 3D surface, <br />
+and the offset returned is a 3D curve providing the 3D position of the drill bit, 
+rather than the full offset surface. Defaults to None.</li>
+<li><strong>subtract</strong> (boolean, optional):
+Flag indicating if the drill bit should be subtracted from the spline instead of added. 
+Subtracting the drill bit returns the tool path that cuts out the spline. Defaults to False.</li>
+<li><strong>removeCusps</strong> (boolean, optional):
+Flag indicating if cusps and their associated self-intersections should be removed from the 
+offset. Only applicable to offset curves and paths along offset surfaces. Defaults to False.</li>
+<li><strong>tolerance</strong> (<code>scalar</code>, optional):
+The maximum 2-norm of the difference between the offset and the
+spline fit. Defaults to 1.0e-4.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>offset</strong> (<code><a href="#Spline">Spline</a></code>):
+The spline that represents the offset.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Spline.fit">fit</a></code>:  Fit the function f with a spline to a given tolerance.  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>The offset is only defined for 2D curves and 3D surfaces with well-defined normals. 
+The bottom of the drill bit is tangent to its lowest y value.</p>
 </div>
 
 
@@ -2890,7 +3007,7 @@ with an error.</p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">solve_ode</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nLeft</span>, </span><span class="param"><span class="n">nRight</span>, </span><span class="param"><span class="n">FAndF_u</span>, </span><span class="param"><span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-06</span>, </span><span class="param"><span class="n">args</span><span class="o">=</span><span class="p">()</span></span><span class="return-annotation">):</span></span>
+        <span class="name">solve_ode</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">nLeft</span>,</span><span class="param">	<span class="n">nRight</span>,</span><span class="param">	<span class="n">FAndF_u</span>,</span><span class="param">	<span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-06</span>,</span><span class="param">	<span class="n">args</span><span class="o">=</span><span class="p">()</span>,</span><span class="param">	<span class="n">includeEstimate</span><span class="o">=</span><span class="kc">False</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -2917,19 +3034,24 @@ with an error.</p>
 <p>FAndF_u : Python function
     FAndF_u must have exactly this calling sequence:  FAndF_u(t, uData, *args).  t is a scalar set
     to the desired value of the independent variable of the ODE.  uData will be a numpy matrix of shape
-    (self.nDep, nOrder) whose columns are (u, ... , u^(nOrder - 1).  It must return a numpy
+    (self.nDep, nOrder) whose columns are u, ... , u^(nOrder - 1).  It must return a numpy
     vector of length self.nDep and a numpy array whose shape is (self.nDep, self.nDep, nOrder).
     The first output vector is the value of the forcing function F at (t, uData).  The numpy
     array is the array of partial derivatives with respect to all the numbers in uData.  Thus, if
     this array is called jacobian, then jacobian[:, i, j] is the gradient of the forcing function with
     respect to uData[i, j].</p>
 
-<p>tolerance : scalar
-    The relative error to which the ODE should get solved.</p>
+<p>tolerance : scalar, optional
+    The relative error to which the ODE should get solved. Default is 1.0e-6.</p>
 
-<p>args : tuple
+<p>args : tuple, optional
     Additional arguments to pass to the user-defined function FAndF_u.  For example, if FAndF_u has the
-    FAndF_u(t, uData, a, b, c), then args must be a tuple of length 3.</p>
+    FAndF_u(t, uData, a, b, c), then args must be a tuple of length 3. Default is ().</p>
+
+<p>includeEstimate : bool, optional
+    If <code>includeEstimate</code> is True, the uData passed to <code>FAndF_u</code> will be a numpy matrix of shape
+    (self.nDep, nOrder + 1) whose columns are u, ... , u^(nOrder). The last column will be the most
+    recent estimate of u^(nOrder)(t). Default is False.</p>
 
 <h1 id="notes">Notes</h1>
 

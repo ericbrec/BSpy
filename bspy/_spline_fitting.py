@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 import bspy.spline
+import bspy.spline_block
 import math
 
 def circular_arc(radius, angle, tolerance = None):
@@ -12,14 +13,33 @@ def circular_arc(radius, angle, tolerance = None):
     return bspy.Spline.section([(radius * np.cos(u * angle * np.pi / 180), radius * np.sin(u * angle * np.pi / 180), 90 + u * angle, 1.0 / radius) for u in np.linspace(0.0, 1.0, samples)])
 
 def composition(splines, tolerance):
+    # Collect domains and check range bounds
+    domains = [None]
+    domain = None
+    for i, spline in enumerate(splines):
+        if domain is not None:
+            if len(domain) != spline.nDep:
+                raise ValueError(f"Domain dimension of spline {i-1} does not match range dimension of spline {i}")
+            rangeBounds = spline.range_bounds()
+            for ix in range(spline.nDep):
+                if rangeBounds[ix][0] < domain[ix][0] or rangeBounds[ix][1] > domain[ix][1]:
+                    raise ValueError(f"Range of spline {i} exceeds domain of spline {i-1}")
+            domains.append(domain)
+        domain = spline.domain()
+
     # Define the callback function
     def composition_of_splines(u):
-        for f in splines[::-1]:
-            u = f(u)
+        for spline, domain in zip(splines[::-1], domains[::-1]):
+            u = spline(u)
+            if domain is not None:
+                # We've already checked that the range of spline is within the domain
+                # of its successor, but numerics may cause the spline value to slightly 
+                # exceed its range, so we clip the spline value accordingly.
+                u = np.clip(u, domain[:, 0], domain[:, 1])
         return u
     
     # Approximate this composition
-    return bspy.Spline.fit(splines[-1].domain(), composition_of_splines, tolerance = tolerance)
+    return bspy.Spline.fit(domain, composition_of_splines, tolerance = tolerance)
 
 def cone(radius1, radius2, height, tolerance = None):
     if tolerance is None:
@@ -367,6 +387,7 @@ def fit(domain, f, order = None, knots = None, tolerance = 1.0e-4):
         indices = nInd * [0]
         iLast = nInd
         while iLast >= 0:
+            # Create a tuple for the u value (must be a tuple to use it as a dictionary key)
             uValue = tuple([uvw[i][indices[i]] for i in range(nInd)])
             if not uValue in fDictionary:
                 newValue = f(uValue)
@@ -522,7 +543,7 @@ def four_sided_patch(bottom, right, top, left, surfParam = 0.5):
     
     return (1.0 - surfParam) * coons + surfParam * laplace
 
-def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-6):
+def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-5):
     # Check validity of input
     if self.nInd != 2:  raise ValueError("Surface must have two independent variables")
     if len(uvStart) != 2:  raise ValueError("uvStart must have two components")
@@ -620,7 +641,7 @@ def geodesic(self, uvStart, uvEnd, tolerance = 1.0e-6):
     initialGuess = line(uvStart, uvEnd).elevate([2])
 
     # Solve the ODE and return the geodesic
-    solution = initialGuess.solve_ode(1, 1, geodesicCallback, 1.0e-5, (self, uvDomain))
+    solution = initialGuess.solve_ode(1, 1, geodesicCallback, tolerance, (self, uvDomain))
     return solution
 
 def least_squares(uValues, dataPoints, order = None, knots = None, compression = 0.0,
@@ -882,7 +903,7 @@ def section(xytk):
     # Join the pieces together and return
     return bspy.Spline.join(mySections)
 
-def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
+def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = (), includeEstimate = False):
     # Ensure that the ODE is properly formulated
 
     if nLeft < 0:  raise ValueError("Invalid number of left hand boundary conditions")
@@ -974,7 +995,7 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = ()):
                 residuals = np.append(residuals, np.zeros((nLeft * nDep,)))
                 collocationMatrix[bandWidth, 0 : nLeft * nDep] = 1.0
                 for iPoint, t in enumerate(collocationPoints[iFirstPoint : iNextPoint]):
-                    uData = np.array([workingSpline.derivative([i], t) for i in range(nOrder)]).T
+                    uData = np.array([workingSpline.derivative([i], t) for i in range(nOrder + 1 if includeEstimate else nOrder)]).T
                     F, F_u = FAndF_u(t, uData, *args)
                     residuals = np.append(residuals, workingSpline.derivative([nOrder], t) - continuation * F)
                     ix = None
