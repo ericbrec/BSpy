@@ -965,6 +965,12 @@ def test_integrate():
         maxError = max(maxError, (xTest - x) ** 2)
     assert maxError <= np.finfo(float).eps
 
+def test_join():
+    rex = bspy.Spline.load('tests/reverse-thing.json')[0]
+    xer = rex.reverse(0)
+    rexXer = bspy.Spline.join([rex, xer])
+    assert np.linalg.norm(rexXer(0.0) - np.array([200.0, 0.0])) < 1.0e-14
+
 def test_least_squares():
     # Replicate 1D spline using its knots. Should be precise to nearly machine epsilon.
     spline = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0, 0.3, 0.7, 1, 1, 1, 1], float)], 

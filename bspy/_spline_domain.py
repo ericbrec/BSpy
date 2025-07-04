@@ -404,12 +404,11 @@ def join(splineList):
         splDomain = spl.domain()[0]
         start2 = spl(splDomain[0])
         end2 = spl(splDomain[1])
-        gaps = [np.linalg.norm(vecDiff) for vecDiff in [start1 - start2, start1 - end2, end1 - start2, end1 - end2]]
-        minDist = min(*gaps)
-        if minDist == gaps[0] or minDist == gaps[1]:
-            workingSpline = workingSpline.reverse()
-        if minDist == gaps[1] or minDist == gaps[3]:
+        ixMin = np.argmin([np.linalg.norm(vecDiff) for vecDiff in [end1 - start2, end1 - end2, start1 - start2, start1 - end2]])
+        if ixMin == 1 or ixMin == 3:
             spl = spl.reverse()
+        if ixMin == 2 or ixMin == 3:
+            workingSpline = workingSpline.reverse()
         maxOrder = max(workingSpline.order[0], spl.order[0])
         workingSpline = workingSpline.elevate([maxOrder - workingSpline.order[0]])
         spl = spl.elevate([maxOrder - spl.order[0]])
