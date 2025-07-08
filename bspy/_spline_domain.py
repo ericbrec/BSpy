@@ -609,6 +609,8 @@ def trim(self, newDomain):
             if multiplicity > 0:
                 newKnots.append((bounds[0], multiplicity))
                 noChange = False
+            if bounds[0] != knots[order - 1]:
+                noChange = False
 
         if not np.isnan(bounds[1]):
             if not(knots[order - 1] <= bounds[1] <= knots[-order]): raise ValueError("Invalid newDomain")
@@ -626,10 +628,12 @@ def trim(self, newDomain):
             if multiplicity > 0:
                 newKnots.append((bounds[1], multiplicity))
                 noChange = False
+            if bounds[1] != knots[-order]:
+                noChange = False
 
         newKnotsList.append(newKnots)
     
-    if noChange and bounds[0] == knots[order - 1] and bounds[1] == knots[-order]:
+    if noChange:
         return self
     
     # Step 2: Insert the knots.
