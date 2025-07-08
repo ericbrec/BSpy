@@ -1567,6 +1567,10 @@ def test_trim():
         maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
     assert maxError <= np.finfo(float).eps
 
+    x = bspy.Spline.load('tests/trim-issue.json')[0]
+    xTrim = x.trim([[0.0, 0.5]])
+    assert xTrim.domain()[0][1] == 0.5
+
 def test_zeros():
     def check_1D_roots(expectedRoots, roots, tolerance):
         assert len(expectedRoots) == len(roots)

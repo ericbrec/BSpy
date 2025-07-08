@@ -651,6 +651,8 @@ def test_geodesic():
     assert np.linalg.norm(template(0.5, 0.5) - [0.5086638362955938, 0.02758673451648419]) < 1.0e-4
 
 def test_intersect():
+    stuff = bspy.Spline.load('tests/patterson001.json')
+    error = stuff[0].intersect(stuff[1])
     surf1 = bspy.Spline(2, 3, (4, 4), (4, 4), [[0., 0., 0., 0., 1., 1., 1., 1.],
                                                [0., 0., 0., 0., 1., 1., 1., 1.]],
                         [[[-2.,   -2.,   -1.12,   0.   ], [-2.,    -2.,    -1.12,   0.   ],

@@ -629,7 +629,7 @@ def trim(self, newDomain):
 
         newKnotsList.append(newKnots)
     
-    if noChange:
+    if noChange and bounds[0] == knots[order - 1] and bounds[1] == knots[-order]:
         return self
     
     # Step 2: Insert the knots.
