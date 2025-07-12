@@ -174,7 +174,6 @@ def _intersect_convex_hull_with_x_interval(lowerHull, upperHull, epsilon, xInter
         for p1 in hull[1:]:
             yDelta = p0[1] - p1[1]
             if p0[1] * p1[1] <= 0.0 and yDelta != 0.0:
-                yDelta = p0[1] - p1[1]
                 alpha = p0[1] / yDelta
                 xNew = p0[0] * (1.0 - alpha) + p1[0] * alpha
                 if sign * yDelta > 0.0:
@@ -257,12 +256,9 @@ def _refine_projected_polyhedron(interval):
         xData = spline.greville(ind)
         
         # Loop through each dependent variable in this row to refine the interval containing the root for this independent variable.
-        for yData, ySplineBounds, yBounds in zip(coefs, spline.range_bounds(),
-                                                 interval.bounds[nDep:nDep + spline.nDep]):
+        for yData, ySplineBounds, yBounds in zip(coefs, spline.range_bounds(), interval.bounds[nDep:nDep + spline.nDep]):
             # Compute the 2D convex hull of the knot coefficients and the spline's coefficients
             lowerHull, upperHull = _convex_hull_2D(xData, yData.ravel(), yBounds, yBounds - ySplineBounds)
-            if lowerHull is None or upperHull is None:
-                return roots, intervals
             
             # Intersect the convex hull with the xInterval along the x axis (the knot coefficients axis).
             xInterval = _intersect_convex_hull_with_x_interval(lowerHull, upperHull, epsilon, xInterval)
