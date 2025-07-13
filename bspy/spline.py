@@ -547,13 +547,13 @@ class Spline(Manifold):
 
     def contract(self, uvw):
         """
-        Contract a spline by assigning a fixed value to one or more of its independent variables.
+        Contract a spline, reducing its number of independent variables, by assigning a fixed value to one or more of its independent variables.
 
         Parameters
         ----------
         uvw : `iterable`
             An iterable of length `nInd` that specifies the values of each independent variable to contract.
-            A value of `None` for an independent variable indicates that variable should remain unchanged.
+            A value of `None` for an independent variable retains that independent variable in the contacted spline.
 
         Returns
         -------

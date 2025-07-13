@@ -1,6 +1,7 @@
 import numpy as np
 import bspy.spline
 import bspy.spline_block
+from collections import namedtuple
 
 def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
     if self.nInd != 2:  raise ValueError("Surface must have two independent variables")
@@ -115,6 +116,47 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtr
     if path is not None and (path.nInd != 1 or path.nDep != 2 or self.nInd != 2):
         raise ValueError("path must be a 2D curve and self must be a 3D surface")
 
+    # Compute new order, knots, and fillets for offset (ensure order is at least 4).
+    Fillet = namedtuple('Fillet', ('adjustment', 'isFillet', 'point', 'n0', 'n1'))
+    newOrder = []
+    newKnotList = []
+    newUniqueList = []
+    filletList = []
+    for order, knots in zip(self.order, self.knots):
+        min4Order = max(order, 4)
+        unique, counts = np.unique(knots, return_counts=True)
+        counts += min4Order - order # Ensure order is at least 4
+        newOrder.append(min4Order)
+        adjustment = 0
+        epsilon = np.finfo(knots.dtype).eps
+
+        # Add first knot.
+        fillets = [Fillet(adjustment, False, None, None, None)]
+        newKnots = [unique[0]] * counts[0]
+        newUnique = [unique[0]]
+
+        # Add internal knots, checking for C1 discontinuities needing fillets.
+        for knot, count in zip(unique[1:-1], counts[1:-1]):
+            fillets.append(Fillet(adjustment, False, None, None, None))
+            newKnots += [knot + adjustment] * count
+            newUnique.append(knot + adjustment)
+            # Check for lack of C1 continuity (need for a fillet)
+            if count >= min4Order - 1:
+                fillets.append(Fillet(adjustment, True, self(knot), self.normal(knot - epsilon), self.normal(knot + epsilon)))
+                adjustment += 1
+                newKnots += [knot + adjustment] * (min4Order - 1)
+                newUnique.append(knot + adjustment)
+
+        # Add last knot.
+        fillets.append(Fillet(adjustment, False, None, None, None))
+        newKnots += [unique[-1] + adjustment] * counts[-1]
+        newUnique.append(unique[-1] + adjustment)
+
+        # Build fillet and knot lists.
+        filletList.append(fillets)
+        newKnotList.append(np.array(newKnots, knots.dtype))
+        newUniqueList.append(np.array(newUnique, knots.dtype))
+
     # Determine geometry of drill bit.
     if subtract:
         edgeRadius *= -1
@@ -175,16 +217,6 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtr
             return xyz
     else: # Should never get here (exception raised earlier)
         raise ValueError("The offset is only defined for 2D curves and 3D surfaces with well-defined normals.")
-
-    # Compute new order and knots for offset (ensure order is at least 4).
-    newOrder = []
-    newKnots = []
-    for order, knots in zip(self.order, self.knots):
-        min4Order = max(order, 4)
-        unique, count = np.unique(knots, return_counts=True)
-        count += min4Order - order
-        newOrder.append(min4Order)
-        newKnots.append(np.repeat(unique, count))
 
     # Fit new spline to offset by drill bit.
     offset = bspy.spline.Spline.fit(self.domain(), drillBit, newOrder, newKnots, tolerance)
