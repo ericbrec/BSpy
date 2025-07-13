@@ -254,7 +254,9 @@ def _refine_projected_polyhedron(interval):
 
         # Compute the coefficients for f(x) = x for the independent variable and its knots.
         xData = spline.greville(ind)
-        
+        if len(xData) == 1:
+            xData = spline.domain()[ind]
+
         # Loop through each dependent variable in this row to refine the interval containing the root for this independent variable.
         for yData, ySplineBounds, yBounds in zip(coefs, spline.range_bounds(), interval.bounds[nDep:nDep + spline.nDep]):
             # Compute the 2D convex hull of the knot coefficients and the spline's coefficients
@@ -939,7 +941,8 @@ def contours(self):
 
 def intersect(self, other):
     intersections = []
-    nDep = self.nInd # The dimension of the intersection's range
+    # Compute the number of degrees of freedom of the intersection.
+    dof = self.nInd + other.domain_dimension() - self.nDep
 
     # Spline-Hyperplane intersection.
     if isinstance(other, Hyperplane):
@@ -949,7 +952,7 @@ def intersect(self, other):
         spline = self.dot(other._normal) - np.atleast_1d(np.dot(other._normal, other._point))
 
         # Curve-Line intersection.
-        if nDep == 1:
+        if dof == 0:
             # Find the intersection points and intervals.
             zeros = spline.zeros()
             # Convert each intersection point into a Manifold.Crossing and each intersection interval into a Manifold.Coincidence.
@@ -970,10 +973,10 @@ def intersect(self, other):
                         intersections.append(Manifold.Crossing(Hyperplane(1.0, zero[1] + epsilon, 0.0), Hyperplane(1.0, planeBounds[1], 0.0)))
 
                     # Now, create the coincidence.
-                    left = Solid(nDep, False)
+                    left = Solid(1, False)
                     left.add_boundary(Boundary(Hyperplane(-1.0, zero[0], 0.0), Solid(0, True)))
                     left.add_boundary(Boundary(Hyperplane(1.0, zero[1], 0.0), Solid(0, True)))
-                    right = Solid(nDep, False)
+                    right = Solid(1, False)
                     if planeBounds[0] > planeBounds[1]:
                         planeBounds = (planeBounds[1], planeBounds[0])
                     right.add_boundary(Boundary(Hyperplane(-1.0, planeBounds[0], 0.0), Solid(0, True)))
@@ -988,7 +991,7 @@ def intersect(self, other):
                     intersections.append(Manifold.Crossing(Hyperplane(1.0, zero, 0.0), Hyperplane(1.0, projection @ (self((zero,)) - other._point), 0.0)))
 
         # Surface-Plane intersection.
-        elif nDep == 2:
+        elif dof == 1:
             # Find the intersection contours, which are returned as splines.
             contours = spline.contours()
             # Convert each contour into a Manifold.Crossing.
@@ -1011,8 +1014,8 @@ def intersect(self, other):
         # Construct a spline block that represents the intersection.
         block = bspy.spline_block.SplineBlock([[self, -other]])
 
-        # Curve-Curve intersection.
-        if nDep == 1:
+        # Zero degrees of freedom, typically a Curve-Curve intersection.
+        if dof == 0:
             # Find the intersection points and intervals.
             zeros = block.zeros()
             # Convert each intersection point into a Manifold.Crossing and each intersection interval into a Manifold.Coincidence.
@@ -1037,10 +1040,10 @@ def intersect(self, other):
                         intersections.append(Manifold.Crossing(Hyperplane(1.0, zero[1][0], 0.0), Hyperplane(1.0, zero[1][1] + epsilon, 0.0)))
 
                     # Now, create the coincidence.
-                    left = Solid(nDep, False)
+                    left = Solid(self.nInd, False)
                     left.add_boundary(Boundary(Hyperplane(-1.0, zero[0][0], 0.0), Solid(0, True)))
                     left.add_boundary(Boundary(Hyperplane(1.0, zero[1][0], 0.0), Solid(0, True)))
-                    right = Solid(nDep, False)
+                    right = Solid(other.nInd, False)
                     right.add_boundary(Boundary(Hyperplane(-1.0, zero[0][1], 0.0), Solid(0, True)))
                     right.add_boundary(Boundary(Hyperplane(1.0, zero[1][1], 0.0), Solid(0, True)))
                     alignment = np.dot(self.normal(zero[0][0]), other.normal(zero[0][1])) # Use the first zeros, since B-splines are closed on the left
@@ -1050,10 +1053,10 @@ def intersect(self, other):
                     intersections.append(Manifold.Coincidence(left, right, alignment, np.atleast_2d(transform), np.atleast_2d(1.0 / transform), np.atleast_1d(translation)))
                 else:
                     # Intersection is a point, so create a Manifold.Crossing.
-                    intersections.append(Manifold.Crossing(Hyperplane(1.0, zero[:nDep], 0.0), Hyperplane(1.0, zero[nDep:], 0.0)))
+                    intersections.append(Manifold.Crossing(Hyperplane(1.0, zero[:self.nInd], 0.0), Hyperplane(1.0, zero[self.nInd:], 0.0)))
         
-        # Surface-Surface intersection.
-        elif nDep == 2:
+        # One degree of freedom, typically a Surface-Surface intersection.
+        elif dof == 1:
             if "Name" in self.metadata and "Name" in other.metadata:
                 logging.info(f"intersect:{self.metadata['Name']}:{other.metadata['Name']}")
             # Find the intersection contours, which are returned as splines.
@@ -1071,32 +1074,34 @@ def intersect(self, other):
                 # Convert each contour into a Manifold.Crossing, swapping the manifolds back.
                 for contour in contours:
                     # Swap left and right, compared to not swapped.
-                    left = bspy.Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[nDep:], contour.metadata)
-                    right = bspy.Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[:nDep], contour.metadata)
+                    left = bspy.Spline(contour.nInd, self.nInd, contour.order, contour.nCoef, contour.knots, contour.coefs[other.nInd:], contour.metadata)
+                    right = bspy.Spline(contour.nInd, other.nInd, contour.order, contour.nCoef, contour.knots, contour.coefs[:other.nInd], contour.metadata)
                     intersections.append(Manifold.Crossing(left, right))
             else:
                 # Convert each contour into a Manifold.Crossing.
                 for contour in contours:
-                    left = bspy.Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[:nDep], contour.metadata)
-                    right = bspy.Spline(contour.nInd, nDep, contour.order, contour.nCoef, contour.knots, contour.coefs[nDep:], contour.metadata)
+                    left = bspy.Spline(contour.nInd, self.nInd, contour.order, contour.nCoef, contour.knots, contour.coefs[:self.nInd], contour.metadata)
+                    right = bspy.Spline(contour.nInd, other.nInd, contour.order, contour.nCoef, contour.knots, contour.coefs[self.nInd:], contour.metadata)
                     intersections.append(Manifold.Crossing(left, right))
         else:
             return NotImplemented
     else:
         return NotImplemented
 
-    # Ensure the normals point outwards for both Manifolds in each crossing intersection.
-    # Note that evaluating left and right at 0.5 is always valid because either they are points or curves with [0.0, 1.0] domains.
-    domainPoint = np.atleast_1d(0.5)
-    for i, intersection in enumerate(intersections):
-        if isinstance(intersection, Manifold.Crossing):
-            left = intersection.left
-            right = intersection.right
-            if np.dot(self.tangent_space(left.evaluate(domainPoint)) @ left.normal(domainPoint), other.normal(right.evaluate(domainPoint))) < 0.0:
-                left = left.flip_normal()
-            if np.dot(other.tangent_space(right.evaluate(domainPoint)) @ right.normal(domainPoint), self.normal(left.evaluate(domainPoint))) < 0.0:
-                right = right.flip_normal()
-            intersections[i] = Manifold.Crossing(left, right)
+    # If self and other have normals, ensure they are pointing in the correct direction.
+    if self.nInd + 1 == self.nDep and other.domain_dimension() + 1 == self.nDep:
+        # Ensure the normals point outwards for both Manifolds in each crossing intersection.
+        # Note that evaluating left and right at 0.5 is always valid because either they are points or curves with [0.0, 1.0] domains.
+        domainPoint = np.atleast_1d(0.5)
+        for i, intersection in enumerate(intersections):
+            if isinstance(intersection, Manifold.Crossing):
+                left = intersection.left
+                right = intersection.right
+                if np.dot(self.tangent_space(left.evaluate(domainPoint)) @ left.normal(domainPoint), other.normal(right.evaluate(domainPoint))) < 0.0:
+                    left = left.flip_normal()
+                if np.dot(other.tangent_space(right.evaluate(domainPoint)) @ right.normal(domainPoint), self.normal(left.evaluate(domainPoint))) < 0.0:
+                    right = right.flip_normal()
+                intersections[i] = Manifold.Crossing(left, right)
 
     return intersections
 
