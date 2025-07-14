@@ -163,6 +163,9 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtr
         unique, counts = np.unique(path.knots[0], return_counts=True)
         counts += min4Order - path.order[0] # Ensure order is at least 4
         newKnotList = [np.repeat(unique, counts)]
+        domain = path.domain()
+    else:
+        domain = self.domain()
 
     # Determine geometry of drill bit.
     if subtract:
@@ -175,58 +178,34 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtr
 
     # Define drill bit function.
     if abs(w) < tolerance and path is None: # Simple offset curve or surface
-        def drillBit(uv):
-            return self(uv) + edgeRadius * self.normal(uv)
+        def drillBit(normal):
+            return edgeRadius * normal
     elif self.nDep == 2: # General offset curve
-        def drillBit(uv):
-            xy = self(uv)
-            normal = self.normal(uv)
+        def drillBit(normal):
             upward = np.sign(normal[1])
             if upward * normal[1] <= bottom:
-                xy[0] += edgeRadius * normal[0] + w * np.sign(normal[0])
-                xy[1] += edgeRadius * normal[1]
+                return np.array((edgeRadius * normal[0] + w * np.sign(normal[0]), edgeRadius * normal[1]))
             else:
-                xy[0] += bottomRadius * normal[0]
-                xy[1] += bottomRadius * normal[1] - upward * h
-            return xy
-    elif self.nDep == 3 and path is None: # General offset surface
-        def drillBit(uv):
-            xyz = self(uv)
-            normal = self.normal(uv)
+                return np.array((bottomRadius * normal[0], bottomRadius * normal[1] - upward * h))
+    elif self.nDep == 3: # General offset surface
+        def drillBit(normal):
             upward = np.sign(normal[1])
             if upward * normal[1] <= bottom:
                 norm = np.sqrt(normal[0] * normal[0] + normal[2] * normal[2])
-                xyz[0] += edgeRadius * normal[0] + w * normal[0] / norm
-                xyz[1] += edgeRadius * normal[1]
-                xyz[2] += edgeRadius * normal[2] + w * normal[2] / norm
+                return np.array((edgeRadius * normal[0] + w * normal[0] / norm, edgeRadius * normal[1], edgeRadius * normal[2] + w * normal[2] / norm))
             else:
-                xyz[0] += bottomRadius * normal[0]
-                xyz[1] += bottomRadius * normal[1] - upward * h
-                xyz[2] += bottomRadius * normal[2]
-            return xyz
-    elif self.nDep == 3: # General offset of a given path along a surface
-        surface = self
-        self = path # Redefine self to be the path (used below for fitting)
-        def drillBit(u):
-            uv = self(u)
-            xyz = surface(uv)
-            normal = surface.normal(uv)
-            upward = np.sign(normal[1])
-            if upward * normal[1] <= bottom:
-                norm = np.sqrt(normal[0] * normal[0] + normal[2] * normal[2])
-                xyz[0] += edgeRadius * normal[0] + w * normal[0] / norm
-                xyz[1] += edgeRadius * normal[1]
-                xyz[2] += edgeRadius * normal[2] + w * normal[2] / norm
-            else:
-                xyz[0] += bottomRadius * normal[0]
-                xyz[1] += bottomRadius * normal[1] - upward * h
-                xyz[2] += bottomRadius * normal[2]
-            return xyz
+                return np.array((bottomRadius * normal[0], bottomRadius * normal[1] - upward * h, bottomRadius * normal[2]))
     else: # Should never get here (exception raised earlier)
         raise ValueError("The offset is only defined for 2D curves and 3D surfaces with well-defined normals.")
 
+    # Define function to pass to fit.
+    def fitFunction(uv):
+        if path is not None:
+            uv = path(uv)
+        return self(uv) + drillBit(self.normal(uv))
+
     # Fit new spline to offset by drill bit.
-    offset = bspy.spline.Spline.fit(self.domain(), drillBit, newOrder, newKnotList, tolerance)
+    offset = bspy.spline.Spline.fit(domain, fitFunction, newOrder, newKnotList, tolerance)
 
     # Remove cusps as required (only applies to offset curves).
     if removeCusps and self.nInd == 1:
