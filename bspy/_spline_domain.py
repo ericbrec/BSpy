@@ -1,5 +1,33 @@
 import numpy as np
+import bspy
 from bspy.manifold import Manifold
+
+def arc_length_map(self, tolerance):
+    if self.nInd != 1:  raise ValueError("Spline doesn't have exactly one independent variable")
+
+    # Compute the length of the spline
+    curveLength = self.integral()
+    domain = self.domain()[0]
+    guess = bspy.Spline.line([0.0], [1.0])
+    guess = guess.elevate([4])
+
+    # Solve the ODE
+    def arcLengthF(t, uData):
+        uValue = (1.0 - uData[0][0]) * domain[0] + uData[0][0] * domain[1]
+        uValue = np.clip(uValue, domain[0], domain[1])
+        d1 = self.derivative([1], [uValue])
+        d2 = self.derivative([2], [uValue])
+        speed = np.sqrt(d1 @ d1)
+        d1d2 = d1 @ d2
+        return np.array([curveLength / speed]), np.array([-curveLength * d1d2 / speed ** 3]).reshape((1, 1, 1))
+    arcLengthMap = guess.solve_ode(1, 0, arcLengthF, tolerance)
+
+    # Adjust range to match domain
+
+    arcLengthMap *= (domain[1] - domain[0]) / arcLengthMap(1.0)[0]
+    arcLengthMap += domain[0]
+    arcLengthMap.coefs[0][-1] = domain[1]
+    return arcLengthMap
 
 def clamp(self, left, right):
     bounds = [[None, None] for i in range(self.nInd)]

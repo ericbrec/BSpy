@@ -589,6 +589,11 @@ def test_add():
             maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
     assert maxError <= np.finfo(float).eps
 
+def test_arc_length_map():
+    accuracy = 0.001
+    arcLengthMap = myCurve.arc_length_map(accuracy)
+    assert abs(arcLengthMap(0.5)[0] - 0.44255201) < accuracy
+
 def test_circular_arc():
     maxError = 0.0
     radius = 3.0
