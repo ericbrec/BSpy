@@ -254,6 +254,8 @@ def _refine_projected_polyhedron(interval):
 
         # Compute the coefficients for f(x) = x for the independent variable and its knots.
         xData = spline.greville(ind)
+        if len(xData) == 1:
+            xData = spline.domain()[ind]
         
         # Loop through each dependent variable in this row to refine the interval containing the root for this independent variable.
         for yData, ySplineBounds, yBounds in zip(coefs, spline.range_bounds(), interval.bounds[nDep:nDep + spline.nDep]):
