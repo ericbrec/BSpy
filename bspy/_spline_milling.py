@@ -182,7 +182,8 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtr
     for order, knots in zip(self.order, self.knots):
         min4Order = max(order, 4)
         unique, count = np.unique(knots, return_counts=True)
-        count += min4Order - order
+        count += min4Order - order + 1
+        count = np.minimum(count, min4Order)
         newOrder.append(min4Order)
         newKnots.append(np.repeat(unique, count))
 
