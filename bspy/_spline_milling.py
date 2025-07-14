@@ -156,6 +156,13 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtr
         filletList.append(fillets)
         newKnotList.append(np.array(newKnots, knots.dtype))
         newUniqueList.append(np.array(newUnique, knots.dtype))
+    
+    if path is not None:
+        min4Order = max(path.order[0], 4)
+        newOrder = [min4Order]
+        unique, counts = np.unique(path.knots[0], return_counts=True)
+        counts += min4Order - path.order[0] # Ensure order is at least 4
+        newKnotList = [np.repeat(unique, counts)]
 
     # Determine geometry of drill bit.
     if subtract:
@@ -171,9 +178,9 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtr
         def drillBit(uv):
             return self(uv) + edgeRadius * self.normal(uv)
     elif self.nDep == 2: # General offset curve
-        def drillBit(u):
-            xy = self(u)
-            normal = self.normal(u)
+        def drillBit(uv):
+            xy = self(uv)
+            normal = self.normal(uv)
             upward = np.sign(normal[1])
             if upward * normal[1] <= bottom:
                 xy[0] += edgeRadius * normal[0] + w * np.sign(normal[0])
@@ -219,7 +226,7 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtr
         raise ValueError("The offset is only defined for 2D curves and 3D surfaces with well-defined normals.")
 
     # Fit new spline to offset by drill bit.
-    offset = bspy.spline.Spline.fit(self.domain(), drillBit, newOrder, newKnots, tolerance)
+    offset = bspy.spline.Spline.fit(self.domain(), drillBit, newOrder, newKnotList, tolerance)
 
     # Remove cusps as required (only applies to offset curves).
     if removeCusps and self.nInd == 1:
