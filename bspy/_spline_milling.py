@@ -117,7 +117,7 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtr
         raise ValueError("path must be a 2D curve and self must be a 3D surface")
 
     # Compute new order, knots, and fillets for offset (ensure order is at least 4).
-    Fillet = namedtuple('Fillet', ('adjustment', 'isFillet', 'point', 'n0', 'n1'))
+    Fillet = namedtuple('Fillet', ('adjustment', 'isFillet'))
     newOrder = []
     newKnotList = []
     newUniqueList = []
@@ -128,34 +128,33 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtr
         counts += min4Order - order # Ensure order is at least 4
         newOrder.append(min4Order)
         adjustment = 0
-        epsilon = np.finfo(knots.dtype).eps
 
         # Add first knot.
-        fillets = [Fillet(adjustment, False, None, None, None)]
         newKnots = [unique[0]] * counts[0]
         newUnique = [unique[0]]
+        fillets = [Fillet(adjustment, False)]
 
         # Add internal knots, checking for C1 discontinuities needing fillets.
         for knot, count in zip(unique[1:-1], counts[1:-1]):
-            fillets.append(Fillet(adjustment, False, None, None, None))
             newKnots += [knot + adjustment] * count
             newUnique.append(knot + adjustment)
             # Check for lack of C1 continuity (need for a fillet)
             if count >= min4Order - 1:
-                fillets.append(Fillet(adjustment, True, self(knot), self.normal(knot - epsilon), self.normal(knot + epsilon)))
+                fillets.append(Fillet(adjustment, True))
                 adjustment += 1
                 newKnots += [knot + adjustment] * (min4Order - 1)
                 newUnique.append(knot + adjustment)
+            fillets.append(Fillet(adjustment, False))
 
         # Add last knot.
-        fillets.append(Fillet(adjustment, False, None, None, None))
         newKnots += [unique[-1] + adjustment] * counts[-1]
         newUnique.append(unique[-1] + adjustment)
+        fillets.append(Fillet(adjustment, False))
 
         # Build fillet and knot lists.
-        filletList.append(fillets)
         newKnotList.append(np.array(newKnots, knots.dtype))
         newUniqueList.append(np.array(newUnique, knots.dtype))
+        filletList.append(fillets)
     
     if path is not None:
         min4Order = max(path.order[0], 4)
@@ -165,7 +164,7 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtr
         newKnotList = [np.repeat(unique, counts)]
         domain = path.domain()
     else:
-        domain = self.domain()
+        domain = [(unique[0], unique[-1]) for unique in newUniqueList]
 
     # Determine geometry of drill bit.
     if subtract:
@@ -202,21 +201,55 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtr
     def fitFunction(uv):
         if path is not None:
             uv = path(uv)
-        return self(uv) + drillBit(self.normal(uv))
+        
+        # Compute adjusted spline uv values, accounting for fillets.
+        hasFillet = False
+        adjustedUV = uv.copy()
+        for (i, u), unique, fillets in zip(enumerate(uv), newUniqueList, filletList):
+            ix = np.searchsorted(unique, u, 'right') - 1
+            fillet = fillets[ix]
+            if fillet.isFillet:
+                hasFillet = True
+                adjustedUV[i] = unique[ix] - fillet.adjustment
+            else:
+                adjustedUV[i] -= fillet.adjustment
+        
+        # If we have fillets, compute the normal from their normal fan.
+        if hasFillet:
+            normal = np.zeros(self.nDep, self.coefs.dtype)
+            nudged = adjustedUV.copy()
+            for (i, u), unique, fillets in zip(enumerate(uv), newUniqueList, filletList):
+                ix = np.searchsorted(unique, u, 'right') - 1
+                fillet = fillets[ix]
+                if fillet.isFillet:
+                    epsilon = np.finfo(unique.dtype).eps
+                    alpha = u - unique[ix]
+                    np.copyto(nudged, adjustedUV)
+                    nudged[i] -= epsilon
+                    normal += (1 - alpha) * self.normal(nudged)
+                    nudged[i] += 2 * epsilon
+                    normal += alpha * self.normal(nudged)
+            normal = normal / np.linalg.norm(normal)
+        else:
+            normal = self.normal(adjustedUV)
+        
+        # Return the offset based on the normal.
+        return self(adjustedUV) + drillBit(normal)
 
     # Fit new spline to offset by drill bit.
     offset = bspy.spline.Spline.fit(domain, fitFunction, newOrder, newKnotList, tolerance)
 
     # Remove cusps as required (only applies to offset curves).
-    if removeCusps and self.nInd == 1:
+    if removeCusps and (self.nInd == 1 or path is not None):
         # Find the cusps by checking for tangent direction reversal between the spline and offset.
         cusps = []
         previousKnot = None
         start = None
         for knot in np.unique(offset.knots[0][offset.order[0]:offset.nCoef[0]]):
-            tangent = self.derivative((1,), knot)
             if path is not None:
-                tangent = surface.jacobian(path(knot)) @ tangent
+                tangent = self.jacobian(path(knot)) @ path.derivative((1,), knot)
+            else:
+                tangent = self.derivative((1,), knot)
             flipped = np.dot(tangent, offset.derivative((1,), knot)) < 0
             if flipped and start is None:
                 start = knot
@@ -237,7 +270,7 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtr
                 # This is necessary to find the intersection point (2 equations, 2 unknowns).
                 tangent = offset.derivative((1,), cusp[0])
                 projection = np.concatenate((tangent / np.linalg.norm(tangent),
-                    surface.normal(path(cusp[0])))).reshape((2,3))
+                    self.normal(path(cusp[0])))).reshape((2,3))
                 before = before.transform(projection)
                 after = after.transform(projection)
             block = bspy.spline_block.SplineBlock([[before, after]])

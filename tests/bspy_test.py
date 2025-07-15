@@ -1215,6 +1215,27 @@ def test_normal():
         assert np.isclose(np.dot(du((u,)), normal((u,))), 0.0)
 
 def test_offset():
+    spline = bspy.Spline(1, 2, (2,), (4,), ((0.0, 0.0, 1.0, 2.0, 3.0, 3.0),), ((0.0, 0.0, 1.0, 1.0), (0.0, 1.0, 1.0, 0.0)))
+    radius = 0.1
+    offset1 = spline.offset(radius)
+    offset2 = spline.offset(radius, subtract=True)
+    tolerance = 0.0001
+    maxError = 0.0
+    for u in np.linspace(0.0, 1.0, 50):
+        maxError = max(maxError, np.linalg.norm(spline(u) - offset1(u)) - radius)
+    for u in np.linspace(1.0, 2.0, 50):
+        maxError = max(maxError, np.linalg.norm(spline(1.0) - offset1(u)) - radius)
+    for u in np.linspace(2.0, 3.0, 50):
+        maxError = max(maxError, np.linalg.norm(spline(u - 1.0) - offset1(u)) - radius)
+    for u in np.linspace(3.0, 4.0, 50):
+        maxError = max(maxError, np.linalg.norm(spline(2.0) - offset1(u)) - radius)
+    for u in np.linspace(4.0, 5.0, 50):
+        maxError = max(maxError, np.linalg.norm(spline(u - 2.0) - offset1(u)) - radius)
+    assert maxError <= tolerance
+
+    [p] = bspy.Spline.load(r"tests\offset-issue.json")
+    offset = p.offset(0.1)
+
     spline = bspy.Spline(1, 2, (3,), (3,), ((0.0, 0.0, 0.0, 1.0, 1.0, 1.0),), ((0.0, 0.5, 1.0), (1.0, -1.0, 1.0)))
     radius = 0.3
     tolerance = 0.0001
