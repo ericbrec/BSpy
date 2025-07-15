@@ -185,6 +185,25 @@ class Spline(Manifold):
             indMap = [(mapping, mapping) if np.isscalar(mapping) else mapping for mapping in indMap]
         return bspy._spline_operations.add(self, other, indMap)
 
+    def arc_length_map(self, tolerance = 1.0e-6):
+        """
+        Determine a mapping s -> u such that any curve parametrized arbitrarily can be composed with the
+        computed mapping to get the curve parametrized by arc length.  Specifically, given a curve x with
+        points on the curve given by x(u), determine a mapping u such that the composite curve x o u is
+        parametrized by arc length, i.e. x can be thought of as x(u(s)) for an arc length parameter s.
+
+        Parameters
+        ----------
+        tolerance : the accuracy to which the arc length map should be computed
+
+        Returns
+        -------
+        spline : Spline
+            The spline mapping from R1 -> R1 which approximates the arc length map to within the specified
+            tolerance.
+        """
+        return bspy._spline_domain.arc_length_map(self, tolerance)
+    
     @staticmethod
     def bspline_values(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs = False):
         """

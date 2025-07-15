@@ -1071,7 +1071,7 @@ def solve_ode(self, nLeft, nRight, FAndF_u, tolerance = 1.0e-6, args = (), inclu
 
     # Is it time to give up?
 
-        if (not done or continuation < 1.0) and n > 1000:
+        if (not done or continuation < 1.0) and n > 10000:
             raise RuntimeError("Can't find solution with given initial guess")
 
     # Estimate the error
