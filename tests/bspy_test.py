@@ -1238,8 +1238,9 @@ def test_offset():
         maxError = max(maxError, np.linalg.norm(spline(u - 2.0) - offset1(u)) - radius)
     assert maxError <= tolerance
 
-    [p] = bspy.Spline.load(r"tests\offset-issue.json")
-    offset = p.offset(0.1)
+    splines = bspy.Spline.load(r"tests\offset-issue.json")
+    for i, spline in enumerate(splines):
+        pOffset = spline.offset(3.556)
 
     spline = bspy.Spline(1, 2, (3,), (3,), ((0.0, 0.0, 0.0, 1.0, 1.0, 1.0),), ((0.0, 0.5, 1.0), (1.0, -1.0, 1.0)))
     radius = 0.3
