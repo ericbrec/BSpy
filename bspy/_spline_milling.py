@@ -128,6 +128,7 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtr
         counts += min4Order - order # Ensure order is at least 4
         newOrder.append(min4Order)
         adjustment = 0
+        epsilon = np.finfo(unique.dtype).eps
 
         # Add first knot.
         newKnots = [unique[0]] * counts[0]
@@ -136,14 +137,17 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtr
 
         # Add internal knots, checking for C1 discontinuities needing fillets.
         for knot, count in zip(unique[1:-1], counts[1:-1]):
-            newKnots += [knot + adjustment] * count
-            newUnique.append(knot + adjustment)
+            knot += adjustment
+            newKnots += [knot] * count
+            newUnique.append(knot)
             # Check for lack of C1 continuity (need for a fillet)
             if count >= min4Order - 1:
                 fillets.append(Fillet(adjustment, True))
+                # Create parametric space for fillet.
                 adjustment += 1
-                newKnots += [knot + adjustment] * (min4Order - 1)
-                newUnique.append(knot + adjustment)
+                knot += 1 + epsilon # Add additional adjustment and step slightly past discontinuity
+                newKnots += [knot] * (min4Order - 1)
+                newUnique.append(knot)
             fillets.append(Fillet(adjustment, False))
 
         # Add last knot.
