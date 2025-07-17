@@ -61,6 +61,9 @@
                                 <a class="function" href="#Spline.add">add</a>
                         </li>
                         <li>
+                                <a class="function" href="#Spline.arc_length_map">arc_length_map</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Spline.bspline_values">bspline_values</a>
                         </li>
                         <li>
@@ -484,6 +487,38 @@ The result of adding self and other.</li>
 <p>Equivalent to spline1 + spline2 with indMap = range(min(spline1.nInd, spline2.nInd)).</p>
 
 <p>Uses <code><a href="#Spline.common_basis">common_basis</a></code> to ensure mapped variables share the same order and knots.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.arc_length_map" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">arc_length_map</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-06</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.arc_length_map"></a>
+    
+            <div class="docstring"><p>Determine a mapping s -> u such that any curve parametrized arbitrarily can be composed with the
+computed mapping to get the curve parametrized by arc length.  Specifically, given a curve x with
+points on the curve given by x(u), determine a mapping u such that the composite curve x o u is
+parametrized by arc length, i.e. x can be thought of as x(u(s)) for an arc length parameter s.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>tolerance</strong> (the accuracy to which the arc length map should be computed):</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (Spline):
+The spline mapping from R1 -> R1 which approximates the arc length map to within the specified
+tolerance.</li>
+</ul>
 </div>
 
 
@@ -973,14 +1008,14 @@ The algorithm used to to find all intersection curves is from Grandine, Thomas A
     </div>
     <a class="headerlink" href="#Spline.contract"></a>
     
-            <div class="docstring"><p>Contract a spline by assigning a fixed value to one or more of its independent variables.</p>
+            <div class="docstring"><p>Contract a spline, reducing its number of independent variables, by assigning a fixed value to one or more of its independent variables.</p>
 
 <h6 id="parameters">Parameters</h6>
 
 <ul>
 <li><strong>uvw</strong> (<code>iterable</code>):
 An iterable of length <code><a href="#Spline.nInd">nInd</a></code> that specifies the values of each independent variable to contract.
-A value of <code>None</code> for an independent variable indicates that variable should remain unchanged.</li>
+A value of <code>None</code> for an independent variable retains that independent variable in the contacted spline.</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
