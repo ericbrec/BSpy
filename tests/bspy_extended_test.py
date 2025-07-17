@@ -651,6 +651,16 @@ def test_geodesic():
     assert np.linalg.norm(template(0.5, 0.5) - [0.5086638362955938, 0.02758673451648419]) < 1.0e-4
 
 def test_intersect():
+    stuff = bspy.Spline.load('tests/patterson001.json')
+    intersections = stuff[0].intersect(stuff[1])
+    maxError = 0.0
+    for intersection in intersections:
+        for t in np.linspace(0.0, 1.0, 21):
+            maxError = max(maxError, np.linalg.norm(stuff[0](intersection.left(t)) - stuff[1](intersection.right(t))))
+    range = stuff[1].range_bounds()
+    rangeSize = np.sqrt((range[0][1] - range[0][0]) ** 2 + (range[1][1] -  range[1][0]) ** 2)
+    assert maxError <= rangeSize * np.finfo(float).eps ** 0.2
+
     surf1 = bspy.Spline(2, 3, (4, 4), (4, 4), [[0., 0., 0., 0., 1., 1., 1., 1.],
                                                [0., 0., 0., 0., 1., 1., 1., 1.]],
                         [[[-2.,   -2.,   -1.12,   0.   ], [-2.,    -2.,    -1.12,   0.   ],

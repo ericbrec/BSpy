@@ -1,5 +1,33 @@
 import numpy as np
+import bspy
 from bspy.manifold import Manifold
+
+def arc_length_map(self, tolerance):
+    if self.nInd != 1:  raise ValueError("Spline doesn't have exactly one independent variable")
+
+    # Compute the length of the spline
+    curveLength = self.integral()
+    domain = self.domain()[0]
+    guess = bspy.Spline.line([0.0], [1.0])
+    guess = guess.elevate([4])
+
+    # Solve the ODE
+    def arcLengthF(t, uData):
+        uValue = (1.0 - uData[0][0]) * domain[0] + uData[0][0] * domain[1]
+        uValue = np.clip(uValue, domain[0], domain[1])
+        d1 = self.derivative([1], [uValue])
+        d2 = self.derivative([2], [uValue])
+        speed = np.sqrt(d1 @ d1)
+        d1d2 = d1 @ d2
+        return np.array([curveLength / speed]), np.array([-curveLength * d1d2 / speed ** 3]).reshape((1, 1, 1))
+    arcLengthMap = guess.solve_ode(1, 0, arcLengthF, tolerance)
+
+    # Adjust range to match domain
+
+    arcLengthMap *= (domain[1] - domain[0]) / arcLengthMap(1.0)[0]
+    arcLengthMap += domain[0]
+    arcLengthMap.coefs[0][-1] = domain[1]
+    return arcLengthMap
 
 def clamp(self, left, right):
     bounds = [[None, None] for i in range(self.nInd)]
@@ -404,12 +432,11 @@ def join(splineList):
         splDomain = spl.domain()[0]
         start2 = spl(splDomain[0])
         end2 = spl(splDomain[1])
-        gaps = [np.linalg.norm(vecDiff) for vecDiff in [start1 - start2, start1 - end2, end1 - start2, end1 - end2]]
-        minDist = min(*gaps)
-        if minDist == gaps[0] or minDist == gaps[1]:
-            workingSpline = workingSpline.reverse()
-        if minDist == gaps[1] or minDist == gaps[3]:
+        ixMin = np.argmin([np.linalg.norm(vecDiff) for vecDiff in [end1 - start2, end1 - end2, start1 - start2, start1 - end2]])
+        if ixMin == 1 or ixMin == 3:
             spl = spl.reverse()
+        if ixMin == 2 or ixMin == 3:
+            workingSpline = workingSpline.reverse()
         maxOrder = max(workingSpline.order[0], spl.order[0])
         workingSpline = workingSpline.elevate([maxOrder - workingSpline.order[0]])
         spl = spl.elevate([maxOrder - spl.order[0]])
@@ -610,6 +637,8 @@ def trim(self, newDomain):
             if multiplicity > 0:
                 newKnots.append((bounds[0], multiplicity))
                 noChange = False
+            if bounds[0] != knots[order - 1]:
+                noChange = False
 
         if not np.isnan(bounds[1]):
             if not(knots[order - 1] <= bounds[1] <= knots[-order]): raise ValueError("Invalid newDomain")
@@ -626,6 +655,8 @@ def trim(self, newDomain):
                 multiplicity = order
             if multiplicity > 0:
                 newKnots.append((bounds[1], multiplicity))
+                noChange = False
+            if bounds[1] != knots[-order]:
                 noChange = False
 
         newKnotsList.append(newKnots)

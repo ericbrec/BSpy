@@ -185,6 +185,25 @@ class Spline(Manifold):
             indMap = [(mapping, mapping) if np.isscalar(mapping) else mapping for mapping in indMap]
         return bspy._spline_operations.add(self, other, indMap)
 
+    def arc_length_map(self, tolerance = 1.0e-6):
+        """
+        Determine a mapping s -> u such that any curve parametrized arbitrarily can be composed with the
+        computed mapping to get the curve parametrized by arc length.  Specifically, given a curve x with
+        points on the curve given by x(u), determine a mapping u such that the composite curve x o u is
+        parametrized by arc length, i.e. x can be thought of as x(u(s)) for an arc length parameter s.
+
+        Parameters
+        ----------
+        tolerance : the accuracy to which the arc length map should be computed
+
+        Returns
+        -------
+        spline : Spline
+            The spline mapping from R1 -> R1 which approximates the arc length map to within the specified
+            tolerance.
+        """
+        return bspy._spline_domain.arc_length_map(self, tolerance)
+    
     @staticmethod
     def bspline_values(knot, knots, splineOrder, u, derivativeOrder = 0, taylorCoefs = False):
         """
@@ -547,13 +566,13 @@ class Spline(Manifold):
 
     def contract(self, uvw):
         """
-        Contract a spline by assigning a fixed value to one or more of its independent variables.
+        Contract a spline, reducing its number of independent variables, by assigning a fixed value to one or more of its independent variables.
 
         Parameters
         ----------
         uvw : `iterable`
             An iterable of length `nInd` that specifies the values of each independent variable to contract.
-            A value of `None` for an independent variable indicates that variable should remain unchanged.
+            A value of `None` for an independent variable retains that independent variable in the contacted spline.
 
         Returns
         -------

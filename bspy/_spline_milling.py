@@ -1,6 +1,7 @@
 import numpy as np
 import bspy.spline
 import bspy.spline_block
+from collections import namedtuple
 
 def line_of_curvature(self, uvStart, is_max, tolerance = 1.0e-3):
     if self.nInd != 2:  raise ValueError("Surface must have two independent variables")
@@ -115,6 +116,60 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtr
     if path is not None and (path.nInd != 1 or path.nDep != 2 or self.nInd != 2):
         raise ValueError("path must be a 2D curve and self must be a 3D surface")
 
+    # Compute new order, knots, and fillets for offset (ensure order is at least 4).
+    Fillet = namedtuple('Fillet', ('adjustment', 'isFillet'))
+    newOrder = []
+    newKnotList = []
+    newUniqueList = []
+    filletList = []
+    for order, knots in zip(self.order, self.knots):
+        min4Order = max(order, 4)
+        unique, counts = np.unique(knots, return_counts=True)
+        counts += min4Order - order # Ensure order is at least 4
+        newOrder.append(min4Order)
+        adjustment = 0
+        epsilon = np.finfo(unique.dtype).eps
+
+        # Add first knot.
+        newKnots = [unique[0]] * counts[0]
+        newUnique = [unique[0]]
+        fillets = [Fillet(adjustment, False)]
+
+        # Add internal knots, checking for C1 discontinuities needing fillets.
+        for knot, count in zip(unique[1:-1], counts[1:-1]):
+            knot += adjustment
+            newKnots += [knot] * count
+            newUnique.append(knot)
+            # Check for lack of C1 continuity (need for a fillet)
+            if count >= min4Order - 1:
+                fillets.append(Fillet(adjustment, True))
+                # Create parametric space for fillet.
+                adjustment += 1
+                knot += 1 + epsilon # Add additional adjustment and step slightly past discontinuity
+                newKnots += [knot] * (min4Order - 1)
+                newUnique.append(knot)
+            fillets.append(Fillet(adjustment, False))
+
+        # Add last knot.
+        newKnots += [unique[-1] + adjustment] * counts[-1]
+        newUnique.append(unique[-1] + adjustment)
+        fillets.append(Fillet(adjustment, False))
+
+        # Build fillet and knot lists.
+        newKnotList.append(np.array(newKnots, knots.dtype))
+        newUniqueList.append(np.array(newUnique, knots.dtype))
+        filletList.append(fillets)
+    
+    if path is not None:
+        min4Order = max(path.order[0], 4)
+        newOrder = [min4Order]
+        unique, counts = np.unique(path.knots[0], return_counts=True)
+        counts += min4Order - path.order[0] # Ensure order is at least 4
+        newKnotList = [np.repeat(unique, counts)]
+        domain = path.domain()
+    else:
+        domain = [(unique[0], unique[-1]) for unique in newUniqueList]
+
     # Determine geometry of drill bit.
     if subtract:
         edgeRadius *= -1
@@ -126,79 +181,79 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtr
 
     # Define drill bit function.
     if abs(w) < tolerance and path is None: # Simple offset curve or surface
-        def drillBit(uv):
-            return self(uv) + edgeRadius * self.normal(uv)
+        def drillBit(normal):
+            return edgeRadius * normal
     elif self.nDep == 2: # General offset curve
-        def drillBit(u):
-            xy = self(u)
-            normal = self.normal(u)
+        def drillBit(normal):
             upward = np.sign(normal[1])
             if upward * normal[1] <= bottom:
-                xy[0] += edgeRadius * normal[0] + w * np.sign(normal[0])
-                xy[1] += edgeRadius * normal[1]
+                return np.array((edgeRadius * normal[0] + w * np.sign(normal[0]), edgeRadius * normal[1]))
             else:
-                xy[0] += bottomRadius * normal[0]
-                xy[1] += bottomRadius * normal[1] - upward * h
-            return xy
-    elif self.nDep == 3 and path is None: # General offset surface
-        def drillBit(uv):
-            xyz = self(uv)
-            normal = self.normal(uv)
+                return np.array((bottomRadius * normal[0], bottomRadius * normal[1] - upward * h))
+    elif self.nDep == 3: # General offset surface
+        def drillBit(normal):
             upward = np.sign(normal[1])
             if upward * normal[1] <= bottom:
                 norm = np.sqrt(normal[0] * normal[0] + normal[2] * normal[2])
-                xyz[0] += edgeRadius * normal[0] + w * normal[0] / norm
-                xyz[1] += edgeRadius * normal[1]
-                xyz[2] += edgeRadius * normal[2] + w * normal[2] / norm
+                return np.array((edgeRadius * normal[0] + w * normal[0] / norm, edgeRadius * normal[1], edgeRadius * normal[2] + w * normal[2] / norm))
             else:
-                xyz[0] += bottomRadius * normal[0]
-                xyz[1] += bottomRadius * normal[1] - upward * h
-                xyz[2] += bottomRadius * normal[2]
-            return xyz
-    elif self.nDep == 3: # General offset of a given path along a surface
-        surface = self
-        self = path # Redefine self to be the path (used below for fitting)
-        def drillBit(u):
-            uv = self(u)
-            xyz = surface(uv)
-            normal = surface.normal(uv)
-            upward = np.sign(normal[1])
-            if upward * normal[1] <= bottom:
-                norm = np.sqrt(normal[0] * normal[0] + normal[2] * normal[2])
-                xyz[0] += edgeRadius * normal[0] + w * normal[0] / norm
-                xyz[1] += edgeRadius * normal[1]
-                xyz[2] += edgeRadius * normal[2] + w * normal[2] / norm
-            else:
-                xyz[0] += bottomRadius * normal[0]
-                xyz[1] += bottomRadius * normal[1] - upward * h
-                xyz[2] += bottomRadius * normal[2]
-            return xyz
+                return np.array((bottomRadius * normal[0], bottomRadius * normal[1] - upward * h, bottomRadius * normal[2]))
     else: # Should never get here (exception raised earlier)
         raise ValueError("The offset is only defined for 2D curves and 3D surfaces with well-defined normals.")
 
-    # Compute new order and knots for offset (ensure order is at least 4).
-    newOrder = []
-    newKnots = []
-    for order, knots in zip(self.order, self.knots):
-        min4Order = max(order, 4)
-        unique, count = np.unique(knots, return_counts=True)
-        count += min4Order - order
-        newOrder.append(min4Order)
-        newKnots.append(np.repeat(unique, count))
+    # Define function to pass to fit.
+    def fitFunction(uv):
+        if path is not None:
+            uv = path(uv)
+        
+        # Compute adjusted spline uv values, accounting for fillets.
+        hasFillet = False
+        adjustedUV = uv.copy()
+        for (i, u), unique, fillets in zip(enumerate(uv), newUniqueList, filletList):
+            ix = np.searchsorted(unique, u, 'right') - 1
+            fillet = fillets[ix]
+            if fillet.isFillet:
+                hasFillet = True
+                adjustedUV[i] = unique[ix] - fillet.adjustment
+            else:
+                adjustedUV[i] -= fillet.adjustment
+        
+        # If we have fillets, compute the normal from their normal fan.
+        if hasFillet:
+            normal = np.zeros(self.nDep, self.coefs.dtype)
+            nudged = adjustedUV.copy()
+            for (i, u), unique, fillets in zip(enumerate(uv), newUniqueList, filletList):
+                ix = np.searchsorted(unique, u, 'right') - 1
+                fillet = fillets[ix]
+                if fillet.isFillet:
+                    epsilon = np.finfo(unique.dtype).eps
+                    alpha = u - unique[ix]
+                    np.copyto(nudged, adjustedUV)
+                    nudged[i] -= epsilon
+                    normal += (1 - alpha) * self.normal(nudged)
+                    nudged[i] += 2 * epsilon
+                    normal += alpha * self.normal(nudged)
+            normal = normal / np.linalg.norm(normal)
+        else:
+            normal = self.normal(adjustedUV)
+        
+        # Return the offset based on the normal.
+        return self(adjustedUV) + drillBit(normal)
 
     # Fit new spline to offset by drill bit.
-    offset = bspy.spline.Spline.fit(self.domain(), drillBit, newOrder, newKnots, tolerance)
+    offset = bspy.spline.Spline.fit(domain, fitFunction, newOrder, newKnotList, tolerance)
 
     # Remove cusps as required (only applies to offset curves).
-    if removeCusps and self.nInd == 1:
+    if removeCusps and (self.nInd == 1 or path is not None):
         # Find the cusps by checking for tangent direction reversal between the spline and offset.
         cusps = []
         previousKnot = None
         start = None
         for knot in np.unique(offset.knots[0][offset.order[0]:offset.nCoef[0]]):
-            tangent = self.derivative((1,), knot)
             if path is not None:
-                tangent = surface.jacobian(path(knot)) @ tangent
+                tangent = self.jacobian(path(knot)) @ path.derivative((1,), knot)
+            else:
+                tangent = self.derivative((1,), knot)
             flipped = np.dot(tangent, offset.derivative((1,), knot)) < 0
             if flipped and start is None:
                 start = knot
@@ -219,7 +274,7 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtr
                 # This is necessary to find the intersection point (2 equations, 2 unknowns).
                 tangent = offset.derivative((1,), cusp[0])
                 projection = np.concatenate((tangent / np.linalg.norm(tangent),
-                    surface.normal(path(cusp[0])))).reshape((2,3))
+                    self.normal(path(cusp[0])))).reshape((2,3))
                 before = before.transform(projection)
                 after = after.transform(projection)
             block = bspy.spline_block.SplineBlock([[before, after]])

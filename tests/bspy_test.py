@@ -589,6 +589,11 @@ def test_add():
             maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
     assert maxError <= np.finfo(float).eps
 
+def test_arc_length_map():
+    accuracy = 0.001
+    arcLengthMap = myCurve.arc_length_map(accuracy)
+    assert abs(arcLengthMap(0.5)[0] - 0.44255201) < accuracy
+
 def test_circular_arc():
     maxError = 0.0
     radius = 3.0
@@ -965,6 +970,12 @@ def test_integrate():
         maxError = max(maxError, (xTest - x) ** 2)
     assert maxError <= np.finfo(float).eps
 
+def test_join():
+    rex = bspy.Spline.load('tests/reverse-thing.json')[0]
+    xer = rex.reverse(0)
+    rexXer = bspy.Spline.join([rex, xer])
+    assert np.linalg.norm(rexXer(0.0) - np.array([200.0, 0.0])) < 1.0e-14
+
 def test_least_squares():
     # Replicate 1D spline using its knots. Should be precise to nearly machine epsilon.
     spline = bspy.Spline(1, 2, (4,), (6,), [np.array([0, 0, 0, 0, 0.3, 0.7, 1, 1, 1, 1], float)], 
@@ -1209,6 +1220,28 @@ def test_normal():
         assert np.isclose(np.dot(du((u,)), normal((u,))), 0.0)
 
 def test_offset():
+    spline = bspy.Spline(1, 2, (2,), (4,), ((0.0, 0.0, 1.0, 2.0, 3.0, 3.0),), ((0.0, 0.0, 1.0, 1.0), (0.0, 1.0, 1.0, 0.0)))
+    radius = 0.1
+    offset1 = spline.offset(radius)
+    offset2 = spline.offset(radius, subtract=True)
+    tolerance = 0.0001
+    maxError = 0.0
+    for u in np.linspace(0.0, 1.0, 50):
+        maxError = max(maxError, np.linalg.norm(spline(u) - offset1(u)) - radius)
+    for u in np.linspace(1.0, 2.0, 50):
+        maxError = max(maxError, np.linalg.norm(spline(1.0) - offset1(u)) - radius)
+    for u in np.linspace(2.0, 3.0, 50):
+        maxError = max(maxError, np.linalg.norm(spline(u - 1.0) - offset1(u)) - radius)
+    for u in np.linspace(3.0, 4.0, 50):
+        maxError = max(maxError, np.linalg.norm(spline(2.0) - offset1(u)) - radius)
+    for u in np.linspace(4.0, 5.0, 50):
+        maxError = max(maxError, np.linalg.norm(spline(u - 2.0) - offset1(u)) - radius)
+    assert maxError <= tolerance
+
+    splines = bspy.Spline.load(r"tests\offset-issue.json")
+    for i, spline in enumerate(splines):
+        pOffset = spline.offset(3.556)
+
     spline = bspy.Spline(1, 2, (3,), (3,), ((0.0, 0.0, 0.0, 1.0, 1.0, 1.0),), ((0.0, 0.5, 1.0), (1.0, -1.0, 1.0)))
     radius = 0.3
     tolerance = 0.0001
@@ -1560,6 +1593,10 @@ def test_trim():
         [xTest, yTest] = trimmed.evaluate([u])
         maxError = max(maxError, (xTest - x) ** 2 + (yTest - y) ** 2)
     assert maxError <= np.finfo(float).eps
+
+    x = bspy.Spline.load('tests/trim-issue.json')[0]
+    xTrim = x.trim([[0.0, 0.5]])
+    assert xTrim.domain()[0][1] == 0.5
 
 def test_zeros():
     def check_1D_roots(expectedRoots, roots, tolerance):
