@@ -41,19 +41,19 @@ class Hyperplane(Manifold):
     def __repr__(self):
         return "Hyperplane({0}, {1}, {2})".format(self._normal, self._point, self._tangentSpace)
 
-    def complete_slice(self, slice, solid):
+    def complete_cutout(self, cutout, solid):
         """
-        Add any missing inherent (implicit) boundaries of this manifold's domain to the given slice of the 
-        given solid that are needed to make the slice valid and complete.
+        Add any missing inherent (implicit) boundaries of this manifold's domain to the given cutout of the 
+        given solid that are needed to make the cutout valid and complete.
 
         Parameters
         ----------
-        slice : `Solid`
-            The slice of the given solid formed by the manifold. The slice may be incomplete, missing some of the 
+        cutout : `Solid`
+            The cutout of the given solid formed by the manifold. The cutout may be incomplete, missing some of the 
             manifold's inherent domain boundaries. Its dimension must match `self.domain_dimension()`.
 
         solid : `Solid`
-            The solid being sliced by the manifold. Its dimension must match `self.range_dimension()`.
+            The solid determining the cutout of the manifold. Its dimension must match `self.range_dimension()`.
 
         Parameters
         ----------
@@ -63,17 +63,17 @@ class Hyperplane(Manifold):
 
         See Also
         --------
-        `Solid.slice` : Slice the solid by a manifold.
+        `Solid.compute_cutout` : Compute the cutout portion of the manifold within the solid.
 
         Notes
         -----
         Since hyperplanes have no inherent domain boundaries, this operation only tests for 
         point containment for zero-dimension hyperplanes (points).
         """
-        assert self.domain_dimension() == slice.dimension
+        assert self.domain_dimension() == cutout.dimension
         assert self.range_dimension() == solid.dimension
-        if slice.dimension == 0:
-            slice.containsInfinity = solid.contains_point(self._point)
+        if cutout.dimension == 0:
+            cutout.containsInfinity = solid.contains_point(self._point)
 
     def copy(self):
         """
@@ -260,7 +260,7 @@ class Hyperplane(Manifold):
 
         See Also
         --------
-        `Solid.slice` : slice the solid by a manifold.
+        `Solid.compute_cutout` : Compute the cutout portion of the manifold within the solid.
         `numpy.linalg.svd` : Compute the singular value decomposition of a matrix array.
 
         Notes

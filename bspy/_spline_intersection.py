@@ -1105,41 +1105,41 @@ def intersect(self, other):
 
     return intersections
 
-def complete_slice(self, slice, solid):
+def complete_cutout(self, cutout, solid):
     # Spline manifold domains have finite bounds.
-    slice.containsInfinity = False
+    cutout.containsInfinity = False
     bounds = self.domain()
 
     # If manifold (self) has no intersections with solid, just check containment.
-    if not slice.boundaries:
-        if slice.dimension == 2:
+    if not cutout.boundaries:
+        if cutout.dimension == 2:
             if "Name" in self.metadata:
                 logging.info(f"check containment:{self.metadata['Name']}")
         domain = bounds.T
         if solid.contains_point(self(0.5 * (domain[0] + domain[1]))):
             for boundary in Hyperplane.create_hypercube(bounds).boundaries:
-                slice.add_boundary(boundary)
+                cutout.add_boundary(boundary)
         return
 
     # For curves, add domain bounds as needed.
-    if slice.dimension == 1:
-        slice.boundaries.sort(key=lambda b: (b.manifold.evaluate(0.0), b.manifold.normal(0.0)))
+    if cutout.dimension == 1:
+        cutout.boundaries.sort(key=lambda b: (b.manifold.evaluate(0.0), b.manifold.normal(0.0)))
         # First, check right end since we add new boundary to the end.
-        if abs(slice.boundaries[-1].manifold._point - bounds[0][1]) >= Manifold.minSeparation and \
-            slice.boundaries[-1].manifold._normal < 0.0:
-            slice.add_boundary(Boundary(Hyperplane(-slice.boundaries[-1].manifold._normal, bounds[0][1], 0.0), Solid(0, True)))
+        if abs(cutout.boundaries[-1].manifold._point - bounds[0][1]) >= Manifold.minSeparation and \
+            cutout.boundaries[-1].manifold._normal < 0.0:
+            cutout.add_boundary(Boundary(Hyperplane(-cutout.boundaries[-1].manifold._normal, bounds[0][1], 0.0), Solid(0, True)))
         # Next, check left end since it's still untouched.
-        if abs(slice.boundaries[0].manifold._point - bounds[0][0]) >= Manifold.minSeparation and \
-            slice.boundaries[0].manifold._normal > 0.0:
-            slice.add_boundary(Boundary(Hyperplane(-slice.boundaries[0].manifold._normal, bounds[0][0], 0.0), Solid(0, True)))
+        if abs(cutout.boundaries[0].manifold._point - bounds[0][0]) >= Manifold.minSeparation and \
+            cutout.boundaries[0].manifold._normal > 0.0:
+            cutout.add_boundary(Boundary(Hyperplane(-cutout.boundaries[0].manifold._normal, bounds[0][0], 0.0), Solid(0, True)))
 
-    # For surfaces, intersect full spline domain with existing slice boundaries.
-    if slice.dimension == 2:
+    # For surfaces, intersect full spline domain with existing cutout boundaries.
+    if cutout.dimension == 2:
         fullDomain = Hyperplane.create_hypercube(bounds)
         for newBoundary in fullDomain.boundaries: # Mark full domain boundaries as untouched
             newBoundary.touched = False
 
-        # Define function for adding slice points to full domain boundaries.
+        # Define function for adding cutout points to full domain boundaries.
         def process_domain_point(boundary, domainPoint, adjustment):
             point = boundary.manifold.evaluate(domainPoint)
             # See if and where point touches full domain.
@@ -1153,14 +1153,14 @@ def complete_slice(self, slice, solid):
                     break
 
         # Go through existing boundaries and check if either of their endpoints lies on the spline's bounds.
-        for boundary in slice.boundaries:
+        for boundary in cutout.boundaries:
             domainBoundaries = boundary.domain.boundaries
             domainBoundaries.sort(key=lambda boundary: (boundary.manifold.evaluate(0.0), boundary.manifold.normal(0.0)))
             process_domain_point(boundary, domainBoundaries[0].manifold._point, Manifold.minSeparation)
             if len(domainBoundaries) > 1:
                 process_domain_point(boundary, domainBoundaries[-1].manifold._point, -Manifold.minSeparation)
         
-        # For touched boundaries, remove domain bounds that aren't needed and then add boundary to slice.
+        # For touched boundaries, remove domain bounds that aren't needed and then add boundary to cutout.
         boundaryWasTouched = False
         for newBoundary in fullDomain.boundaries:
             if newBoundary.touched:
@@ -1174,10 +1174,10 @@ def complete_slice(self, slice, solid):
                 if abs(domainBoundaries[-1].manifold._point - domainBoundaries[-2].manifold._point) < Manifold.minSeparation or \
                     domainBoundaries[-2].manifold._normal > 0.0:
                     del domainBoundaries[-1]
-                slice.add_boundary(newBoundary)
+                cutout.add_boundary(newBoundary)
         
         if boundaryWasTouched:
-            # Touch untouched boundaries that are connected to touched boundary endpoints and add them to slice.
+            # Touch untouched boundaries that are connected to touched boundary endpoints and add them to cutout.
             boundaryMap = ((2, 3, 0), (2, 3, -1), (0, 1, 0), (0, 1, -1)) # Map of which full domain boundaries touch each other
             while True:
                 noTouches = True
@@ -1187,19 +1187,19 @@ def complete_slice(self, slice, solid):
                         rightBoundary = fullDomain.boundaries[map[1]]
                         if leftBoundary.touched and abs(leftBoundary.domain.boundaries[map[2]].manifold._point - bound) < Manifold.minSeparation:
                             newBoundary.touched = True
-                            slice.add_boundary(newBoundary)
+                            cutout.add_boundary(newBoundary)
                             noTouches = False
                         elif rightBoundary.touched and abs(rightBoundary.domain.boundaries[map[2]].manifold._point - bound) < Manifold.minSeparation:
                             newBoundary.touched = True
-                            slice.add_boundary(newBoundary)
+                            cutout.add_boundary(newBoundary)
                             noTouches = False
                 if noTouches:
                     break
         else:
-            # No slice boundaries touched the full domain (a hole), so only add full domain if it is contained in the solid.
+            # No cutout boundaries touched the full domain (a hole), so only add full domain if it is contained in the solid.
             if solid.contains_point(self.evaluate(bounds[:,0])):
                 for newBoundary in fullDomain.boundaries:
-                    slice.add_boundary(newBoundary)
+                    cutout.add_boundary(newBoundary)
 
 def full_domain(self):
     return Hyperplane.create_hypercube(self.domain())

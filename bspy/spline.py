@@ -338,23 +338,23 @@ class Spline(Manifold):
         """
         return bspy._spline_domain.common_basis(splines, indMap)
 
-    def complete_slice(self, slice, solid):
+    def complete_cutout(self, cutout, solid):
         """
-        Add any missing inherent (implicit) boundaries of this spline's domain to the given slice of the 
-        given solid that are needed to make the slice valid and complete.
+        Add any missing inherent (implicit) boundaries of this spline's domain to the given cutout of the 
+        given solid that are needed to make the cutout valid and complete.
 
         Parameters
         ----------
-        slice : `solid.Solid`
-            The slice of the given solid formed by the spline. The slice may be incomplete, missing some of the 
+        cutout : `solid.Solid`
+            The cutout of the given solid formed by the spline. The cutout may be incomplete, missing some of the 
             spline's inherent domain boundaries. Its dimension must match `self.domain_dimension()`.
 
         solid : `solid.Solid`
-            The solid being sliced by the manifold. Its dimension must match `self.range_dimension()`.
+            The solid determining the cutout of the manifold. Its dimension must match `self.range_dimension()`.
 
         See Also
         --------
-        `solid.Solid.slice` : slice the solid by a manifold.
+        `solid.Solid.compute_cutout` : Compute the cutout portion of the manifold within the solid.
         `domain` : Return the domain of a spline.
 
         Notes
@@ -362,10 +362,10 @@ class Spline(Manifold):
         A spline's inherent domain is determined by its knot array for each dimension. This method only works for 
         nInd of 1 or 2.
         """
-        if self.domain_dimension() != slice.dimension: raise ValueError("Spline domain dimension must match slice dimension")
+        if self.domain_dimension() != cutout.dimension: raise ValueError("Spline domain dimension must match cutout dimension")
         if self.range_dimension() != solid.dimension: raise ValueError("Spline range dimension must match solid dimension")
-        if slice.dimension != 1 and slice.dimension != 2: raise ValueError("Only works for nInd = 1 or 2")
-        return bspy._spline_intersection.complete_slice(self, slice, solid)
+        if cutout.dimension != 1 and cutout.dimension != 2: raise ValueError("Only works for nInd = 1 or 2")
+        return bspy._spline_intersection.complete_cutout(self, cutout, solid)
 
     @staticmethod
     def composition(splines, tolerance = 1.0e-6):
@@ -1352,7 +1352,7 @@ class Spline(Manifold):
         --------
         `zeros` : Find the roots of a spline (nInd must match nDep).
         `contours` : Find all the contour curves of a spline.
-        `solid.Solid.slice` : slice the solid by a manifold.
+        `solid.Solid.compute_cutout` : Compute the cutout portion of the manifold within the solid.
 
         Notes
         -----
