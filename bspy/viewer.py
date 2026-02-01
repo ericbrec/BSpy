@@ -160,8 +160,8 @@ class Viewer(tk.Tk):
         elif isinstance(spline, Boundary):
             boundary = spline
             if isinstance(boundary.manifold, Hyperplane):
-                uvMin = boundary.domain.bounds[:,0]
-                uvMax = boundary.domain.bounds[:,1]
+                uvMin = boundary.trim.bounds[:,0]
+                uvMax = boundary.trim.bounds[:,1]
                 if (uvMax - uvMin).min() < 1.0e-8:
                     return
                 xyzMinMin = boundary.manifold.evaluate(uvMin)

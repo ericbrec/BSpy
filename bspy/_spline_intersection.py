@@ -1148,13 +1148,13 @@ def complete_cutout(self, cutout, solid):
                 if abs(np.dot(newBoundary.manifold._normal, vector)) < Manifold.minSeparation:
                     # Add the point onto the new boundary (adjust normal evaluation point to move away from boundary).
                     normal = np.sign(newBoundary.manifold._tangentSpace.T @ boundary.manifold.normal(domainPoint + adjustment))
-                    newBoundary.domain.add_boundary(Boundary(Hyperplane(normal, newBoundary.manifold._tangentSpace.T @ vector, 0.0), Solid(0, True)))
+                    newBoundary.trim.add_boundary(Boundary(Hyperplane(normal, newBoundary.manifold._tangentSpace.T @ vector, 0.0), Solid(0, True)))
                     newBoundary.touched = True
                     break
 
         # Go through existing boundaries and check if either of their endpoints lies on the spline's bounds.
         for boundary in cutout.boundaries:
-            domainBoundaries = boundary.domain.boundaries
+            domainBoundaries = boundary.trim.boundaries
             domainBoundaries.sort(key=lambda boundary: (boundary.manifold.evaluate(0.0), boundary.manifold.normal(0.0)))
             process_domain_point(boundary, domainBoundaries[0].manifold._point, Manifold.minSeparation)
             if len(domainBoundaries) > 1:
@@ -1165,7 +1165,7 @@ def complete_cutout(self, cutout, solid):
         for newBoundary in fullDomain.boundaries:
             if newBoundary.touched:
                 boundaryWasTouched = True
-                domainBoundaries = newBoundary.domain.boundaries
+                domainBoundaries = newBoundary.trim.boundaries
                 domainBoundaries.sort(key=lambda boundary: (boundary.manifold.evaluate(0.0), boundary.manifold.normal(0.0)))
                 # Ensure domain endpoints don't overlap and their normals are consistent.
                 if abs(domainBoundaries[0].manifold._point - domainBoundaries[1].manifold._point) < Manifold.minSeparation or \
@@ -1185,11 +1185,11 @@ def complete_cutout(self, cutout, solid):
                     if not newBoundary.touched:
                         leftBoundary = fullDomain.boundaries[map[0]]
                         rightBoundary = fullDomain.boundaries[map[1]]
-                        if leftBoundary.touched and abs(leftBoundary.domain.boundaries[map[2]].manifold._point - bound) < Manifold.minSeparation:
+                        if leftBoundary.touched and abs(leftBoundary.trim.boundaries[map[2]].manifold._point - bound) < Manifold.minSeparation:
                             newBoundary.touched = True
                             cutout.add_boundary(newBoundary)
                             noTouches = False
-                        elif rightBoundary.touched and abs(rightBoundary.domain.boundaries[map[2]].manifold._point - bound) < Manifold.minSeparation:
+                        elif rightBoundary.touched and abs(rightBoundary.trim.boundaries[map[2]].manifold._point - bound) < Manifold.minSeparation:
                             newBoundary.touched = True
                             cutout.add_boundary(newBoundary)
                             noTouches = False

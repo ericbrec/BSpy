@@ -19,7 +19,7 @@ def solid_edges(solid, subdivide = False):
     """
     if solid.dimension > 1:
         for boundary in solid.boundaries:
-            for domainEdge in solid_edges(boundary.domain, subdivide or not isinstance(boundary.manifold, Hyperplane)):
+            for domainEdge in solid_edges(boundary.trim, subdivide or not isinstance(boundary.manifold, Hyperplane)):
                 yield (boundary.manifold.evaluate(domainEdge[0]), boundary.manifold.evaluate(domainEdge[1]), boundary.manifold.normal(domainEdge[0]))
     else:
         solid.boundaries.sort(key=lambda boundary: (boundary.manifold.evaluate(0.0), -boundary.manifold.normal(0.0)))
@@ -167,10 +167,10 @@ def create_star(radius, center, angle, smooth = False):
         nt = (vertices[1][0]-vertices[0][0])*(vertices[4][1]-vertices[3][1]) + (vertices[1][1]-vertices[0][1])*(vertices[3][0]-vertices[4][0])
         u = ((vertices[3][0]-vertices[0][0])*(vertices[4][1]-vertices[3][1]) + (vertices[3][1]-vertices[0][1])*(vertices[3][0]-vertices[4][0]))/nt
         for boundary in star.boundaries:
-            u0 = boundary.domain.boundaries[0].manifold._point[0]
-            u1 = boundary.domain.boundaries[1].manifold._point[0]
-            boundary.domain.add_boundary(Boundary(hyperplane_1D(1.0, u0 + (1.0 - u)*(u1 - u0)), Solid(0, True)))
-            boundary.domain.add_boundary(Boundary(hyperplane_1D(-1.0, -(u0 + u*(u1 - u0))), Solid(0, True)))
+            u0 = boundary.trim.boundaries[0].manifold._point[0]
+            u1 = boundary.trim.boundaries[1].manifold._point[0]
+            boundary.trim.add_boundary(Boundary(hyperplane_1D(1.0, u0 + (1.0 - u)*(u1 - u0)), Solid(0, True)))
+            boundary.trim.add_boundary(Boundary(hyperplane_1D(-1.0, -(u0 + u*(u1 - u0))), Solid(0, True)))
 
     return star
 
@@ -208,7 +208,7 @@ def extrude_solid(solid, path):
             extruded_tangentSpace[:, solid.dimension-1] = tangent[:]
             extrudedHyperplane = Hyperplane(extruded_normal, extruded_point, extruded_tangentSpace)
             # Construct a domain for the extruded boundary
-            if boundary.domain.dimension > 0:
+            if boundary.trim.dimension > 0:
                 # Extrude the boundary's domain to include path domain
                 domainPath = []
                 domainPoint = np.full((solid.dimension), 0.0)
@@ -216,7 +216,7 @@ def extrude_solid(solid, path):
                 domainPoint = np.full((solid.dimension), 0.0)
                 domainPoint[solid.dimension-1] = extent
                 domainPath.append(domainPoint)
-                extrudedDomain = extrude_solid(boundary.domain, domainPath)
+                extrudedDomain = extrude_solid(boundary.trim, domainPath)
             else:
                 extrudedDomain = Solid(solid.dimension, False)
                 extrudedDomain.add_boundary(Boundary(hyperplane_1D(-1.0, 0.0), Solid(0, True)))

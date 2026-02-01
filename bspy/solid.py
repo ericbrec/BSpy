@@ -12,7 +12,7 @@ class Boundary:
     manifold : `Manifold`
         The differentiable function whose range is one dimension higher than its domain that defines the range of the boundary.
     
-    domain : `Solid`, optional
+    trim : `Solid`, optional
         The region of the domain of the manifold that's within the boundary. The default is the full domain of the manifold.
     
     See also
@@ -21,13 +21,13 @@ class Boundary:
     `Manifold.full_domain` : Return a solid that represents the full domain of the manifold.
     """
     def __init__(self, manifold, domain = None):
-        self.domain = manifold.full_domain() if domain is None else domain 
-        if manifold.domain_dimension() != self.domain.dimension: raise ValueError("Domain dimensions don't match")
+        self.trim = manifold.full_domain() if domain is None else domain 
+        if manifold.domain_dimension() != self.trim.dimension: raise ValueError("Domain dimensions don't match")
         if manifold.domain_dimension() + 1 != manifold.range_dimension(): raise ValueError("Manifold range is not one dimension higher than domain")
-        self.manifold, self.bounds = manifold.trimmed_range_bounds(self.domain.bounds)
+        self.manifold, self.bounds = manifold.trimmed_range_bounds(self.trim.bounds)
 
     def __repr__(self):
-        return "Boundary({0}, {1})".format(self.manifold.__repr__(), self.domain.__repr__())
+        return "Boundary({0}, {1})".format(self.manifold.__repr__(), self.trim.__repr__())
 
     def any_point(self):
         """
@@ -44,9 +44,9 @@ class Boundary:
 
         Notes
         -----
-        The point is computed by evaluating the boundary manifold by an arbitrary point in the domain of the boundary.
+        The point is computed by evaluating the boundary manifold by an arbitrary point in the trim of the boundary.
         """
-        return self.manifold.evaluate(self.domain.any_point())
+        return self.manifold.evaluate(self.trim.any_point())
 
 class Solid:
     """
@@ -71,7 +71,7 @@ class Solid:
     -----
     Solids also contain a `list` of `boundaries`. That list may be empty.
 
-    Solids can be of zero dimension, typically acting as the domain of boundary endpoints. Zero-dimension solids have no boundaries, they only contain infinity or not.
+    Solids can be of zero dimension, typically acting as the trim of boundary endpoints. Zero-dimension solids have no boundaries, they only contain infinity or not.
     """
     def __init__(self, dimension, containsInfinity, metadata = {}):
         assert dimension >= 0
@@ -171,7 +171,7 @@ class Solid:
         """
         solid = Solid(self.dimension, not self.containsInfinity)
         for boundary in self.boundaries:
-            solid.add_boundary(Boundary(boundary.manifold.flip_normal(), boundary.domain))
+            solid.add_boundary(Boundary(boundary.manifold.flip_normal(), boundary.trim))
         return solid
 
     def compute_cutout(self, manifold, cache = None, trimTwin = False):
@@ -214,7 +214,7 @@ class Solid:
         but we must determine the intersection's trim. For that, we compute the cutout of the boundary's intersection manifold with the boundary's trim. This recursion continues 
         until the cutout is just a point with no trim.
 
-        Coincident regions appear in the domains of the manifold and the boundary. We intersect the boundary's coincident region with the domain of the boundary and then map
+        Coincident regions appear in the trims of the manifold and the boundary. We intersect the boundary's coincident region with the trim of the boundary and then map
         it to the domain of the manifold. If the coincident regions have normals in opposite directions, they cancel each other out, so we subtract them from the cutout by
         inverting the region and intersecting it with the cutout. We use this same technique for removing overlapping coincident regions. If the coincident regions have normals
         in the same direction, we union them with the cutout.
@@ -244,13 +244,13 @@ class Solid:
                 (left, right) = (intersection.right, intersection.left) if isTwin else (intersection.left, intersection.right)
 
                 if isinstance(intersection, Manifold.Crossing):
-                    domainCutout = boundary.domain.compute_cutout(left, cache)
-                    if domainCutout:
-                        cutout.add_boundary(Boundary(right, domainCutout))
+                    trimCutout = boundary.trim.compute_cutout(left, cache)
+                    if trimCutout:
+                        cutout.add_boundary(Boundary(right, trimCutout))
 
                 elif isinstance(intersection, Manifold.Coincidence):
                     # Intersect domain coincidence with the boundary's domain.
-                    left = left.intersection(boundary.domain)
+                    left = left.intersection(boundary.trim)
                     # Invert the domain coincidence (which will remove it) if this is a twin or if the normals point in opposite directions.
                     #invertCoincidence = trimTwin and (isTwin or intersection.alignment < 0.0)
                     invertCoincidence = (trimTwin and isTwin) or intersection.alignment < 0.0
@@ -270,14 +270,14 @@ class Solid:
                         else:
                             coincidenceManifold = coincidenceManifold.transform(intersection.transform, intersection.inverse.T)
                             coincidenceManifold = coincidenceManifold.translate(intersection.translation)
-                        coincidence.add_boundary(Boundary(coincidenceManifold, coincidenceBoundary.domain))
+                        coincidence.add_boundary(Boundary(coincidenceManifold, coincidenceBoundary.trim))
                     # Finally, add the domain coincidence to the list of coincidences.
                     coincidences.append((invertCoincidence, coincidence))
 
         # Ensure the cutout includes the manifold's inherent (implicit) boundaries, making it valid and complete.
         manifold.complete_cutout(cutout, self)
 
-        # Now that we have a complete manifold domain, join it with each domain coincidence.
+        # Now that we have a complete cutout, join it with each domain coincidence.
         for coincidence in coincidences:
             if coincidence[0]:
                 # If the domain coincidence is inverted (coincidence[0]), intersect it with the cutout, thus removing it.
@@ -392,7 +392,7 @@ class Solid:
         -----
         To intersect two solids, we compute the cutout portions of each solid's untrimmed boundaries (their manifolds) that lie within the other solid.
         We then intersect the trim of each boundary (the trim of its manifold) with its cutout. Thus,
-        the intersection of two solids becomes a set of intersections within the domains of their boundaries. This recursion continues
+        the intersection of two solids becomes a set of intersections within the trims of their boundaries. This recursion continues
         until we are intersecting points whose trims have no boundaries.
 
         The only subtlety is when two boundaries are coincident. To avoid overlapping the coincident region, we keep that region
@@ -422,20 +422,20 @@ class Solid:
         for boundary in self.boundaries:
             # Compute the cutout portion of self's boundary manifold that lies within other.
             cutout = other.compute_cutout(boundary.manifold, cache, True)
-            # Intersect cutout with the boundary's domain.
-            newDomain = boundary.domain.intersection(cutout, cache)
-            if newDomain:
-                # Self boundary intersects other, so create a new boundary with the intersected domain.
-                combinedSolid.add_boundary(Boundary(boundary.manifold, newDomain))
+            # Intersect cutout with the boundary's trim.
+            newTrim = boundary.trim.intersection(cutout, cache)
+            if newTrim:
+                # Self boundary intersects other, so create a new boundary with the intersected trim.
+                combinedSolid.add_boundary(Boundary(boundary.manifold, newTrim))
 
         for boundary in other.boundaries:
             # Compute the cutout portion of other's boundary manifold that lies within self.
             cutout = self.compute_cutout(boundary.manifold, cache, True)
-            # Intersect cutout with the boundary's domain.
-            newDomain = boundary.domain.intersection(cutout, cache)
-            if newDomain:
-                # Other boundary intersects self, so create a new boundary with the intersected domain.
-                combinedSolid.add_boundary(Boundary(boundary.manifold, newDomain))
+            # Intersect cutout with the boundary's trim.
+            newTrim = boundary.trim.intersection(cutout, cache)
+            if newTrim:
+                # Other boundary intersects self, so create a new boundary with the intersected trim.
+                combinedSolid.add_boundary(Boundary(boundary.manifold, newTrim))
 
         return combinedSolid
 
@@ -477,7 +477,7 @@ class Solid:
             solid = Solid(dictionary["dimension"], dictionary["containsInfinity"], dictionary.get("metadata", {}))
             for boundary in dictionary["boundaries"]:
                 manifold = boundary["manifold"]
-                solid.add_boundary(Boundary(Manifold.factory[manifold.get("type", "Spline")].from_dict(manifold), from_dict(boundary["domain"])))
+                solid.add_boundary(Boundary(Manifold.factory[manifold.get("type", "Spline")].from_dict(manifold), from_dict(boundary["trim"])))
             return solid
 
         # Load json file.
@@ -544,7 +544,7 @@ class Solid:
                 if isinstance(obj, Manifold):
                     return obj.to_dict()
                 if isinstance(obj, Boundary):
-                    return {"type" : "Boundary", "manifold" : obj.manifold, "domain" : obj.domain}
+                    return {"type" : "Boundary", "manifold" : obj.manifold, "trim" : obj.trim}
                 if isinstance(obj, Solid):
                     return {"type" : "Solid", "dimension" : obj.dimension, "containsInfinity" : obj.containsInfinity, "boundaries" : obj.boundaries, "metadata" : obj.metadata}
                 return super().default(obj)
@@ -581,7 +581,7 @@ class Solid:
         -----
         To compute the surface integral of a scalar function on the boundary, have `f` return the product of the `normal` times the scalar function for the `point`.
 
-        `surface_integral` sums the `volume_integral` over the domain of the solid's boundaries, using the integrand: `numpy.dot(f(point, normal), normal)`, 
+        `surface_integral` sums the `volume_integral` over the trim of the solid's boundaries, using the integrand: `numpy.dot(f(point, normal), normal)`, 
         where `normal` is the cross-product of the boundary tangents (the normal before normalization).
         """
         if not isinstance(args, tuple):
@@ -595,17 +595,17 @@ class Solid:
         sum = 0.0
 
         for boundary in self.boundaries:
-            def integrand(domainPoint):
-                evalPoint = np.atleast_1d(domainPoint)
+            def integrand(trimPoint):
+                evalPoint = np.atleast_1d(trimPoint)
                 point = boundary.manifold.evaluate(evalPoint)
                 cofactorNormal = boundary.manifold.normal(evalPoint, False)
                 normal = cofactorNormal / np.linalg.norm(cofactorNormal)
                 fValue = f(point, normal, *args)
                 return np.dot(fValue, cofactorNormal)
 
-            if boundary.domain.dimension > 0:
+            if boundary.trim.dimension > 0:
                 # Add the contribution to the Volume integral from this boundary.
-                sum += boundary.domain.volume_integral(integrand)
+                sum += boundary.trim.volume_integral(integrand)
             else:
                 # This is a 1-D boundary (line interval, no domain), so just add the integrand.
                 sum += integrand(0.0)
@@ -636,7 +636,7 @@ class Solid:
 
         solid = Solid(self.dimension, self.containsInfinity)
         for boundary in self.boundaries:
-            solid.add_boundary(Boundary(boundary.manifold.transform(matrix, matrixInverseTranspose), boundary.domain))
+            solid.add_boundary(Boundary(boundary.manifold.transform(matrix, matrixInverseTranspose), boundary.trim))
         return solid
 
     def translate(self, delta):
@@ -657,7 +657,7 @@ class Solid:
 
         solid = Solid(self.dimension, self.containsInfinity)
         for boundary in self.boundaries:
-            solid.add_boundary(Boundary(boundary.manifold.translate(delta), boundary.domain))
+            solid.add_boundary(Boundary(boundary.manifold.translate(delta), boundary.trim))
         return solid
 
     def union(self, other):
@@ -723,7 +723,7 @@ class Solid:
         And so, `surface_integral(Integral(f) * n[0]) = volume_integral(Integral(f) * first cofactor)` over each boundary manifold's domain.
 
         So, we have `volume_integral(f) = volume_integral(Integral(f) * first cofactor)` over each boundary manifold's domain.
-        To compute the volume integral we sum `volume_integral` over the domain of the solid's boundaries, using the integrand:
+        To compute the volume integral we sum `volume_integral` over the trim of the solid's boundaries, using the integrand:
         `scipy.integrate.quad(f, x0, x [other coordinates fixed]) * first cofactor`.
         This recursion continues until the boundaries are only points, where we can just sum the integrand.
         """
@@ -741,8 +741,8 @@ class Solid:
         x0 = self.any_point()[0]
 
         for boundary in self.boundaries:
-            def domainF(domainPoint):
-                evalPoint = np.atleast_1d(domainPoint)
+            def trimF(trimPoint):
+                evalPoint = np.atleast_1d(trimPoint)
                 point = boundary.manifold.evaluate(evalPoint)
 
                 # fHat passes the scalar given by integrate.quad into the first coordinate of the vector for f.
@@ -758,12 +758,12 @@ class Solid:
                     returnValue = integrate.quad(fHat, x0, point[0], epsabs=epsabs, epsrel=epsrel, *quadArgs)[0] * firstCofactor
                 return returnValue
 
-            if boundary.domain.dimension > 0:
+            if boundary.trim.dimension > 0:
                 # Add the contribution to the Volume integral from this boundary.
-                sum += boundary.domain.volume_integral(domainF)
+                sum += boundary.trim.volume_integral(trimF)
             else:
                 # This is a 1-D boundary (line interval, no domain), so just add the integrand.
-                sum += domainF(0.0)
+                sum += trimF(0.0)
 
         return sum
 
