@@ -171,7 +171,7 @@ class Solid:
         """
         solid = Solid(self.dimension, not self.containsInfinity)
         for boundary in self.boundaries:
-            solid.add_boundary(Boundary(boundary.manifold.flip_normal(), boundary.trim))
+            solid.add_boundary(Boundary(boundary.manifold.negate_normal(), boundary.trim))
         return solid
 
     def compute_cutout(self, manifold, cache = None, trimTwin = False):
@@ -263,7 +263,7 @@ class Solid:
                     for coincidenceBoundary in left.boundaries:
                         coincidenceManifold = coincidenceBoundary.manifold
                         if invertCoincidence:
-                            coincidenceManifold = coincidenceManifold.flip_normal()
+                            coincidenceManifold = coincidenceManifold.negate_normal()
                         if isTwin:
                             coincidenceManifold = coincidenceManifold.translate(-intersection.translation)
                             coincidenceManifold = coincidenceManifold.transform(intersection.inverse, intersection.transform.T)

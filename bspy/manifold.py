@@ -157,14 +157,14 @@ class Manifold:
         """
         return None
 
-    def flip_normal(self):
+    def negate_normal(self):
         """
-        Flip the direction of the normal.
+        Negate the direction of the normal.
 
         Returns
         -------
         manifold : `Manifold`
-            The manifold with flipped normal. The manifold retains the same tangent space.
+            The manifold with negated normal. The manifold retains the same tangent space.
 
         See Also
         --------

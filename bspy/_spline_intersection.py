@@ -435,7 +435,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None, initialScale=None):
     return roots
 
 def _turning_point_determinant(self, uvw, cosTheta, sinTheta):
-    sign = -1 if hasattr(self, "metadata") and self.metadata.get("flipNormal", False) else 1
+    sign = -1 if hasattr(self, "metadata") and self.metadata.get("negateNormal", False) else 1
     tangentSpace = self.jacobian(uvw).T
     return cosTheta * sign * np.linalg.det(tangentSpace[[j for j in range(self.nInd) if j != 0]]) - \
         sinTheta * sign * np.linalg.det(tangentSpace[[j for j in range(self.nInd) if j != 1]])
@@ -444,7 +444,7 @@ def _turning_point_determinant_gradient(self, uvw, cosTheta, sinTheta):
     dtype = self.coefs.dtype if hasattr(self, "coefs") else self.coefsDtype
     gradient = np.zeros(self.nInd, dtype)
 
-    sign = -1 if hasattr(self, "metadata") and self.metadata.get("flipNormal", False) else 1
+    sign = -1 if hasattr(self, "metadata") and self.metadata.get("negateNormal", False) else 1
     tangentSpace = self.jacobian(uvw).T
     dTangentSpace = tangentSpace.copy()
 
@@ -698,7 +698,7 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
 
     # Extra step not in paper.
     # Run a checksum on the points, ensuring starting and ending points balance.
-    # Start by flipping endpoints as needed, since we can miss turning points near endpoints.
+    # Start by negating endpoints as needed, since we can miss turning points near endpoints.
     if points[0].det < 0.0:
         point = points[0]
         points[0] = Point(point.d, -point.det, point.onUVBoundary, point.turningPoint, point.uvw)
@@ -1098,9 +1098,9 @@ def intersect(self, other):
                 left = intersection.left
                 right = intersection.right
                 if np.dot(self.tangent_space(left.evaluate(domainPoint)) @ left.normal(domainPoint), other.normal(right.evaluate(domainPoint))) < 0.0:
-                    left = left.flip_normal()
+                    left = left.negate_normal()
                 if np.dot(other.tangent_space(right.evaluate(domainPoint)) @ right.normal(domainPoint), self.normal(left.evaluate(domainPoint))) < 0.0:
-                    right = right.flip_normal()
+                    right = right.negate_normal()
                 intersections[i] = Manifold.Crossing(left, right)
 
     return intersections

@@ -229,7 +229,7 @@ def normal(self, uvw, normalize=True, indices=None):
         nDep = self.nDep
     
     # Compute the normal using cofactors (determinants of subsets of the tangent space).
-    sign = -1 if hasattr(self, "metadata") and self.metadata.get("flipNormal", False) else 1
+    sign = -1 if hasattr(self, "metadata") and self.metadata.get("negateNormal", False) else 1
     dtype = self.coefs.dtype if hasattr(self, "coefs") else self.coefsDtype
     if indices is None:
         indices = range(nDep)

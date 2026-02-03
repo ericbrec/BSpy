@@ -1018,21 +1018,21 @@ class Spline(Manifold):
         """
         return bspy._spline_fitting.fit(domain, f, order, knots, tolerance)
     
-    def flip_normal(self):
+    def negate_normal(self):
         """
-        Flip the direction of the normal.
+        Negate the direction of the normal.
 
         Returns
         -------
         spline : `Spline`
-            The spline with flipped normal. The spline retains the same tangent space.
+            The spline with negated normal. The spline retains the same tangent space.
 
         See Also
         --------
         `solid.Solid.complement` : Return the complement of the solid: whatever was inside is outside and vice-versa.
         """
         spline = self.copy()
-        spline.metadata["flipNormal"] = not self.metadata.get("flipNormal", False)
+        spline.metadata["negateNormal"] = not self.metadata.get("negateNormal", False)
         return spline
 
     def fold(self, foldedInd):
