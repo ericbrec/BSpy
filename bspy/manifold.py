@@ -122,6 +122,8 @@ class Manifold:
         assert self.domain_dimension() == cutout.dimension
         assert self.range_dimension() == solid.dimension
 
+    complete_slice = complete_cutout # backward compatibility
+    
     def copy(self):
         """
         Copy the manifold.
@@ -154,21 +156,6 @@ class Manifold:
         Returns
         -------
         point : `numpy.array`
-        """
-        return None
-
-    def negate_normal(self):
-        """
-        Negate the direction of the normal.
-
-        Returns
-        -------
-        manifold : `Manifold`
-            The manifold with negated normal. The manifold retains the same tangent space.
-
-        See Also
-        --------
-        `Solid.complement` : Return the complement of the solid: whatever was inside is outside and vice-versa.
         """
         return None
 
@@ -246,6 +233,23 @@ class Manifold:
         To invert the mapping to go from the other's domain to the manifold's domain, you first subtract the translation and then multiply by the inverse of the transform.
         """
         return NotImplemented
+
+    def negate_normal(self):
+        """
+        Negate the direction of the normal.
+
+        Returns
+        -------
+        manifold : `Manifold`
+            The manifold with negated normal. The manifold retains the same tangent space.
+
+        See Also
+        --------
+        `Solid.complement` : Return the complement of the solid: whatever was inside is outside and vice-versa.
+        """
+        return None
+
+    flip_normal = negate_normal # backward compatibility
 
     def normal(self, domainPoint, normalize=True, indices=None):
         """

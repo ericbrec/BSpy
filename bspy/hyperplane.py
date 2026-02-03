@@ -75,6 +75,8 @@ class Hyperplane(Manifold):
         if cutout.dimension == 0:
             cutout.containsInfinity = solid.contains_point(self._point)
 
+    complete_slice = complete_cutout # backward compatibility
+
     def copy(self):
         """
         Copy the hyperplane.
@@ -177,21 +179,6 @@ class Hyperplane(Manifold):
         point : `numpy.array`
         """
         return np.dot(self._tangentSpace, np.atleast_1d(domainPoint)) + self._point
-
-    def negate_normal(self):
-        """
-        Negate the direction of the normal.
-
-        Returns
-        -------
-        hyperplane : `Hyperplane`
-            The hyperplane with negated normal. The hyperplane retains the same tangent space.
-
-        See Also
-        --------
-        `Solid.complement` : Return the complement of the solid: whatever was inside is outside and vice-versa.
-        """
-        return Hyperplane(-self._normal, self._point, self._tangentSpace)
 
     @staticmethod
     def from_dict(dictionary):
@@ -360,6 +347,23 @@ class Hyperplane(Manifold):
                     intersections.append(Manifold.Coincidence(domainCoincidence, domainCoincidence, alignment, None, None, None))
 
         return intersections
+
+    def negate_normal(self):
+        """
+        Negate the direction of the normal.
+
+        Returns
+        -------
+        hyperplane : `Hyperplane`
+            The hyperplane with negated normal. The hyperplane retains the same tangent space.
+
+        See Also
+        --------
+        `Solid.complement` : Return the complement of the solid: whatever was inside is outside and vice-versa.
+        """
+        return Hyperplane(-self._normal, self._point, self._tangentSpace)
+
+    flip_normal = negate_normal # backward compatibility
 
     def normal(self, domainPoint, normalize=True, indices=None):
         """
