@@ -435,7 +435,7 @@ def zeros_using_projected_polyhedron(self, epsilon=None, initialScale=None):
     return roots
 
 def _turning_point_determinant(self, uvw, cosTheta, sinTheta):
-    sign = -1 if hasattr(self, "metadata") and self.metadata.get("flipNormal", False) else 1
+    sign = -1 if hasattr(self, "metadata") and self.metadata.get("negateNormal", False) else 1
     tangentSpace = self.jacobian(uvw).T
     return cosTheta * sign * np.linalg.det(tangentSpace[[j for j in range(self.nInd) if j != 0]]) - \
         sinTheta * sign * np.linalg.det(tangentSpace[[j for j in range(self.nInd) if j != 1]])
@@ -444,7 +444,7 @@ def _turning_point_determinant_gradient(self, uvw, cosTheta, sinTheta):
     dtype = self.coefs.dtype if hasattr(self, "coefs") else self.coefsDtype
     gradient = np.zeros(self.nInd, dtype)
 
-    sign = -1 if hasattr(self, "metadata") and self.metadata.get("flipNormal", False) else 1
+    sign = -1 if hasattr(self, "metadata") and self.metadata.get("negateNormal", False) else 1
     tangentSpace = self.jacobian(uvw).T
     dTangentSpace = tangentSpace.copy()
 
@@ -698,7 +698,7 @@ def _contours_of_C1_spline_block(self, epsilon, evaluationEpsilon):
 
     # Extra step not in paper.
     # Run a checksum on the points, ensuring starting and ending points balance.
-    # Start by flipping endpoints as needed, since we can miss turning points near endpoints.
+    # Start by negating endpoints as needed, since we can miss turning points near endpoints.
     if points[0].det < 0.0:
         point = points[0]
         points[0] = Point(point.d, -point.det, point.onUVBoundary, point.turningPoint, point.uvw)
@@ -973,19 +973,19 @@ def intersect(self, other):
                         intersections.append(Manifold.Crossing(Hyperplane(1.0, zero[1] + epsilon, 0.0), Hyperplane(1.0, planeBounds[1], 0.0)))
 
                     # Now, create the coincidence.
-                    left = Solid(1, False)
-                    left.add_boundary(Boundary(Hyperplane(-1.0, zero[0], 0.0), Solid(0, True)))
-                    left.add_boundary(Boundary(Hyperplane(1.0, zero[1], 0.0), Solid(0, True)))
-                    right = Solid(1, False)
+                    firstPart = Solid(1, False)
+                    firstPart.add_boundary(Boundary(Hyperplane(-1.0, zero[0], 0.0), Solid(0, True)))
+                    firstPart.add_boundary(Boundary(Hyperplane(1.0, zero[1], 0.0), Solid(0, True)))
+                    secondPart = Solid(1, False)
                     if planeBounds[0] > planeBounds[1]:
                         planeBounds = (planeBounds[1], planeBounds[0])
-                    right.add_boundary(Boundary(Hyperplane(-1.0, planeBounds[0], 0.0), Solid(0, True)))
-                    right.add_boundary(Boundary(Hyperplane(1.0, planeBounds[1], 0.0), Solid(0, True)))
+                    secondPart.add_boundary(Boundary(Hyperplane(-1.0, planeBounds[0], 0.0), Solid(0, True)))
+                    secondPart.add_boundary(Boundary(Hyperplane(1.0, planeBounds[1], 0.0), Solid(0, True)))
                     alignment = np.dot(self.normal((zero[0],)), other._normal) # Use the first zero, since B-splines are closed on the left
                     width = zero[1] - zero[0]
                     transform = (planeBounds[1] - planeBounds[0]) / width
                     translation = (planeBounds[0] * zero[1] - planeBounds[1] * zero[0]) / width
-                    intersections.append(Manifold.Coincidence(left, right, alignment, np.atleast_2d(transform), np.atleast_2d(1.0 / transform), np.atleast_1d(translation)))
+                    intersections.append(Manifold.Coincidence(firstPart, secondPart, alignment, np.atleast_2d(transform), np.atleast_2d(1.0 / transform), np.atleast_1d(translation)))
                 else:
                     # Intersection is a point, so create a Manifold.Crossing.
                     intersections.append(Manifold.Crossing(Hyperplane(1.0, zero, 0.0), Hyperplane(1.0, projection @ (self((zero,)) - other._point), 0.0)))
@@ -996,16 +996,16 @@ def intersect(self, other):
             contours = spline.contours()
             # Convert each contour into a Manifold.Crossing.
             for contour in contours:
-                # The left portion is the contour returned for the spline-plane intersection. 
-                left = contour
-                # The right portion is the contour projected onto the plane's domain, which we compute with samples and a least squares fit.
+                # The firstPart portion is the contour returned for the spline-plane intersection. 
+                firstPart = contour
+                # The secondPart portion is the contour projected onto the plane's domain, which we compute with samples and a least squares fit.
                 tValues = np.linspace(0.0, 1.0, contour.nCoef[0] + 5) # Over-sample a bit to reduce the condition number and avoid singular matrix
                 points = []
                 for t in tValues:
                     zero = contour((t,))
                     points.append(projection @ (self(zero) - other._point))
-                right = bspy.Spline.least_squares(tValues, np.array(points).T, contour.order, contour.knots)
-                intersections.append(Manifold.Crossing(left, right))
+                secondPart = bspy.Spline.least_squares(tValues, np.array(points).T, contour.order, contour.knots)
+                intersections.append(Manifold.Crossing(firstPart, secondPart))
         else:
             return NotImplemented
     
@@ -1040,17 +1040,17 @@ def intersect(self, other):
                         intersections.append(Manifold.Crossing(Hyperplane(1.0, zero[1][0], 0.0), Hyperplane(1.0, zero[1][1] + epsilon, 0.0)))
 
                     # Now, create the coincidence.
-                    left = Solid(self.nInd, False)
-                    left.add_boundary(Boundary(Hyperplane(-1.0, zero[0][0], 0.0), Solid(0, True)))
-                    left.add_boundary(Boundary(Hyperplane(1.0, zero[1][0], 0.0), Solid(0, True)))
-                    right = Solid(other.nInd, False)
-                    right.add_boundary(Boundary(Hyperplane(-1.0, zero[0][1], 0.0), Solid(0, True)))
-                    right.add_boundary(Boundary(Hyperplane(1.0, zero[1][1], 0.0), Solid(0, True)))
+                    firstPart = Solid(self.nInd, False)
+                    firstPart.add_boundary(Boundary(Hyperplane(-1.0, zero[0][0], 0.0), Solid(0, True)))
+                    firstPart.add_boundary(Boundary(Hyperplane(1.0, zero[1][0], 0.0), Solid(0, True)))
+                    secondPart = Solid(other.nInd, False)
+                    secondPart.add_boundary(Boundary(Hyperplane(-1.0, zero[0][1], 0.0), Solid(0, True)))
+                    secondPart.add_boundary(Boundary(Hyperplane(1.0, zero[1][1], 0.0), Solid(0, True)))
                     alignment = np.dot(self.normal(zero[0][0]), other.normal(zero[0][1])) # Use the first zeros, since B-splines are closed on the left
                     width = zero[1][0] - zero[0][0]
                     transform = (zero[1][1] - zero[0][1]) / width
                     translation = (zero[0][1] * zero[1][0] - zero[1][1] * zero[0][0]) / width
-                    intersections.append(Manifold.Coincidence(left, right, alignment, np.atleast_2d(transform), np.atleast_2d(1.0 / transform), np.atleast_1d(translation)))
+                    intersections.append(Manifold.Coincidence(firstPart, secondPart, alignment, np.atleast_2d(transform), np.atleast_2d(1.0 / transform), np.atleast_1d(translation)))
                 else:
                     # Intersection is a point, so create a Manifold.Crossing.
                     intersections.append(Manifold.Crossing(Hyperplane(1.0, zero[:self.nInd], 0.0), Hyperplane(1.0, zero[self.nInd:], 0.0)))
@@ -1073,16 +1073,16 @@ def intersect(self, other):
                 contours = block.contours()
                 # Convert each contour into a Manifold.Crossing, swapping the manifolds back.
                 for contour in contours:
-                    # Swap left and right, compared to not swapped.
-                    left = bspy.Spline(contour.nInd, self.nInd, contour.order, contour.nCoef, contour.knots, contour.coefs[other.nInd:], contour.metadata)
-                    right = bspy.Spline(contour.nInd, other.nInd, contour.order, contour.nCoef, contour.knots, contour.coefs[:other.nInd], contour.metadata)
-                    intersections.append(Manifold.Crossing(left, right))
+                    # Swap firstPart and secondPart, compared to not swapped.
+                    firstPart = bspy.Spline(contour.nInd, self.nInd, contour.order, contour.nCoef, contour.knots, contour.coefs[other.nInd:], contour.metadata)
+                    secondPart = bspy.Spline(contour.nInd, other.nInd, contour.order, contour.nCoef, contour.knots, contour.coefs[:other.nInd], contour.metadata)
+                    intersections.append(Manifold.Crossing(firstPart, secondPart))
             else:
                 # Convert each contour into a Manifold.Crossing.
                 for contour in contours:
-                    left = bspy.Spline(contour.nInd, self.nInd, contour.order, contour.nCoef, contour.knots, contour.coefs[:self.nInd], contour.metadata)
-                    right = bspy.Spline(contour.nInd, other.nInd, contour.order, contour.nCoef, contour.knots, contour.coefs[self.nInd:], contour.metadata)
-                    intersections.append(Manifold.Crossing(left, right))
+                    firstPart = bspy.Spline(contour.nInd, self.nInd, contour.order, contour.nCoef, contour.knots, contour.coefs[:self.nInd], contour.metadata)
+                    secondPart = bspy.Spline(contour.nInd, other.nInd, contour.order, contour.nCoef, contour.knots, contour.coefs[self.nInd:], contour.metadata)
+                    intersections.append(Manifold.Crossing(firstPart, secondPart))
         else:
             return NotImplemented
     else:
@@ -1091,55 +1091,55 @@ def intersect(self, other):
     # If self and other have normals, ensure they are pointing in the correct direction.
     if self.nInd + 1 == self.nDep and other.domain_dimension() + 1 == self.nDep:
         # Ensure the normals point outwards for both Manifolds in each crossing intersection.
-        # Note that evaluating left and right at 0.5 is always valid because either they are points or curves with [0.0, 1.0] domains.
+        # Note that evaluating firstPart and secondPart at 0.5 is always valid because either they are points or curves with [0.0, 1.0] domains.
         domainPoint = np.atleast_1d(0.5)
         for i, intersection in enumerate(intersections):
             if isinstance(intersection, Manifold.Crossing):
-                left = intersection.left
-                right = intersection.right
-                if np.dot(self.tangent_space(left.evaluate(domainPoint)) @ left.normal(domainPoint), other.normal(right.evaluate(domainPoint))) < 0.0:
-                    left = left.flip_normal()
-                if np.dot(other.tangent_space(right.evaluate(domainPoint)) @ right.normal(domainPoint), self.normal(left.evaluate(domainPoint))) < 0.0:
-                    right = right.flip_normal()
-                intersections[i] = Manifold.Crossing(left, right)
+                firstPart = intersection.firstPart
+                secondPart = intersection.secondPart
+                if np.dot(self.tangent_space(firstPart.evaluate(domainPoint)) @ firstPart.normal(domainPoint), other.normal(secondPart.evaluate(domainPoint))) < 0.0:
+                    firstPart = firstPart.negate_normal()
+                if np.dot(other.tangent_space(secondPart.evaluate(domainPoint)) @ secondPart.normal(domainPoint), self.normal(firstPart.evaluate(domainPoint))) < 0.0:
+                    secondPart = secondPart.negate_normal()
+                intersections[i] = Manifold.Crossing(firstPart, secondPart)
 
     return intersections
 
-def complete_slice(self, slice, solid):
+def complete_cutout(self, cutout, solid):
     # Spline manifold domains have finite bounds.
-    slice.containsInfinity = False
+    cutout.containsInfinity = False
     bounds = self.domain()
 
     # If manifold (self) has no intersections with solid, just check containment.
-    if not slice.boundaries:
-        if slice.dimension == 2:
+    if not cutout.boundaries:
+        if cutout.dimension == 2:
             if "Name" in self.metadata:
                 logging.info(f"check containment:{self.metadata['Name']}")
         domain = bounds.T
         if solid.contains_point(self(0.5 * (domain[0] + domain[1]))):
             for boundary in Hyperplane.create_hypercube(bounds).boundaries:
-                slice.add_boundary(boundary)
+                cutout.add_boundary(boundary)
         return
 
     # For curves, add domain bounds as needed.
-    if slice.dimension == 1:
-        slice.boundaries.sort(key=lambda b: (b.manifold.evaluate(0.0), b.manifold.normal(0.0)))
+    if cutout.dimension == 1:
+        cutout.boundaries.sort(key=lambda b: (b.manifold.evaluate(0.0), b.manifold.normal(0.0)))
         # First, check right end since we add new boundary to the end.
-        if abs(slice.boundaries[-1].manifold._point - bounds[0][1]) >= Manifold.minSeparation and \
-            slice.boundaries[-1].manifold._normal < 0.0:
-            slice.add_boundary(Boundary(Hyperplane(-slice.boundaries[-1].manifold._normal, bounds[0][1], 0.0), Solid(0, True)))
+        if abs(cutout.boundaries[-1].manifold._point - bounds[0][1]) >= Manifold.minSeparation and \
+            cutout.boundaries[-1].manifold._normal < 0.0:
+            cutout.add_boundary(Boundary(Hyperplane(-cutout.boundaries[-1].manifold._normal, bounds[0][1], 0.0), Solid(0, True)))
         # Next, check left end since it's still untouched.
-        if abs(slice.boundaries[0].manifold._point - bounds[0][0]) >= Manifold.minSeparation and \
-            slice.boundaries[0].manifold._normal > 0.0:
-            slice.add_boundary(Boundary(Hyperplane(-slice.boundaries[0].manifold._normal, bounds[0][0], 0.0), Solid(0, True)))
+        if abs(cutout.boundaries[0].manifold._point - bounds[0][0]) >= Manifold.minSeparation and \
+            cutout.boundaries[0].manifold._normal > 0.0:
+            cutout.add_boundary(Boundary(Hyperplane(-cutout.boundaries[0].manifold._normal, bounds[0][0], 0.0), Solid(0, True)))
 
-    # For surfaces, intersect full spline domain with existing slice boundaries.
-    if slice.dimension == 2:
+    # For surfaces, intersect full spline domain with existing cutout boundaries.
+    if cutout.dimension == 2:
         fullDomain = Hyperplane.create_hypercube(bounds)
         for newBoundary in fullDomain.boundaries: # Mark full domain boundaries as untouched
             newBoundary.touched = False
 
-        # Define function for adding slice points to full domain boundaries.
+        # Define function for adding cutout points to full domain boundaries.
         def process_domain_point(boundary, domainPoint, adjustment):
             point = boundary.manifold.evaluate(domainPoint)
             # See if and where point touches full domain.
@@ -1148,24 +1148,24 @@ def complete_slice(self, slice, solid):
                 if abs(np.dot(newBoundary.manifold._normal, vector)) < Manifold.minSeparation:
                     # Add the point onto the new boundary (adjust normal evaluation point to move away from boundary).
                     normal = np.sign(newBoundary.manifold._tangentSpace.T @ boundary.manifold.normal(domainPoint + adjustment))
-                    newBoundary.domain.add_boundary(Boundary(Hyperplane(normal, newBoundary.manifold._tangentSpace.T @ vector, 0.0), Solid(0, True)))
+                    newBoundary.trim.add_boundary(Boundary(Hyperplane(normal, newBoundary.manifold._tangentSpace.T @ vector, 0.0), Solid(0, True)))
                     newBoundary.touched = True
                     break
 
         # Go through existing boundaries and check if either of their endpoints lies on the spline's bounds.
-        for boundary in slice.boundaries:
-            domainBoundaries = boundary.domain.boundaries
+        for boundary in cutout.boundaries:
+            domainBoundaries = boundary.trim.boundaries
             domainBoundaries.sort(key=lambda boundary: (boundary.manifold.evaluate(0.0), boundary.manifold.normal(0.0)))
             process_domain_point(boundary, domainBoundaries[0].manifold._point, Manifold.minSeparation)
             if len(domainBoundaries) > 1:
                 process_domain_point(boundary, domainBoundaries[-1].manifold._point, -Manifold.minSeparation)
         
-        # For touched boundaries, remove domain bounds that aren't needed and then add boundary to slice.
+        # For touched boundaries, remove domain bounds that aren't needed and then add boundary to cutout.
         boundaryWasTouched = False
         for newBoundary in fullDomain.boundaries:
             if newBoundary.touched:
                 boundaryWasTouched = True
-                domainBoundaries = newBoundary.domain.boundaries
+                domainBoundaries = newBoundary.trim.boundaries
                 domainBoundaries.sort(key=lambda boundary: (boundary.manifold.evaluate(0.0), boundary.manifold.normal(0.0)))
                 # Ensure domain endpoints don't overlap and their normals are consistent.
                 if abs(domainBoundaries[0].manifold._point - domainBoundaries[1].manifold._point) < Manifold.minSeparation or \
@@ -1174,10 +1174,10 @@ def complete_slice(self, slice, solid):
                 if abs(domainBoundaries[-1].manifold._point - domainBoundaries[-2].manifold._point) < Manifold.minSeparation or \
                     domainBoundaries[-2].manifold._normal > 0.0:
                     del domainBoundaries[-1]
-                slice.add_boundary(newBoundary)
+                cutout.add_boundary(newBoundary)
         
         if boundaryWasTouched:
-            # Touch untouched boundaries that are connected to touched boundary endpoints and add them to slice.
+            # Touch untouched boundaries that are connected to touched boundary endpoints and add them to cutout.
             boundaryMap = ((2, 3, 0), (2, 3, -1), (0, 1, 0), (0, 1, -1)) # Map of which full domain boundaries touch each other
             while True:
                 noTouches = True
@@ -1185,21 +1185,21 @@ def complete_slice(self, slice, solid):
                     if not newBoundary.touched:
                         leftBoundary = fullDomain.boundaries[map[0]]
                         rightBoundary = fullDomain.boundaries[map[1]]
-                        if leftBoundary.touched and abs(leftBoundary.domain.boundaries[map[2]].manifold._point - bound) < Manifold.minSeparation:
+                        if leftBoundary.touched and abs(leftBoundary.trim.boundaries[map[2]].manifold._point - bound) < Manifold.minSeparation:
                             newBoundary.touched = True
-                            slice.add_boundary(newBoundary)
+                            cutout.add_boundary(newBoundary)
                             noTouches = False
-                        elif rightBoundary.touched and abs(rightBoundary.domain.boundaries[map[2]].manifold._point - bound) < Manifold.minSeparation:
+                        elif rightBoundary.touched and abs(rightBoundary.trim.boundaries[map[2]].manifold._point - bound) < Manifold.minSeparation:
                             newBoundary.touched = True
-                            slice.add_boundary(newBoundary)
+                            cutout.add_boundary(newBoundary)
                             noTouches = False
                 if noTouches:
                     break
         else:
-            # No slice boundaries touched the full domain (a hole), so only add full domain if it is contained in the solid.
+            # No cutout boundaries touched the full domain (a hole), so only add full domain if it is contained in the solid.
             if solid.contains_point(self.evaluate(bounds[:,0])):
                 for newBoundary in fullDomain.boundaries:
-                    slice.add_boundary(newBoundary)
+                    cutout.add_boundary(newBoundary)
 
 def full_domain(self):
     return Hyperplane.create_hypercube(self.domain())

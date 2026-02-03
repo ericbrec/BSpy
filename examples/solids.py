@@ -24,7 +24,7 @@ if __name__ == "__main__":
         viewer.list(extrudedSquare, "Square pipe")
         viewer.list(extrudedStar, "Star pipe")
         viewer.draw(combined, "Union")
-    if case == "slice":
+    if case == "cutout":
         viewer.frame.SetBackgroundColor(1.0, 1.0, 1.0)
         sphere = Hyperplane.create_hypercube([[-1, 1]] * 3)
         #sphere = Solid(3, False)

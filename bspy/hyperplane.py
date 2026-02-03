@@ -41,19 +41,19 @@ class Hyperplane(Manifold):
     def __repr__(self):
         return "Hyperplane({0}, {1}, {2})".format(self._normal, self._point, self._tangentSpace)
 
-    def complete_slice(self, slice, solid):
+    def complete_cutout(self, cutout, solid):
         """
-        Add any missing inherent (implicit) boundaries of this manifold's domain to the given slice of the 
-        given solid that are needed to make the slice valid and complete.
+        Add any missing inherent (implicit) boundaries of this manifold's domain to the given cutout of the 
+        given solid that are needed to make the cutout valid and complete.
 
         Parameters
         ----------
-        slice : `Solid`
-            The slice of the given solid formed by the manifold. The slice may be incomplete, missing some of the 
+        cutout : `Solid`
+            The cutout of the given solid formed by the manifold. The cutout may be incomplete, missing some of the 
             manifold's inherent domain boundaries. Its dimension must match `self.domain_dimension()`.
 
         solid : `Solid`
-            The solid being sliced by the manifold. Its dimension must match `self.range_dimension()`.
+            The solid determining the cutout of the manifold. Its dimension must match `self.range_dimension()`.
 
         Parameters
         ----------
@@ -63,17 +63,19 @@ class Hyperplane(Manifold):
 
         See Also
         --------
-        `Solid.slice` : Slice the solid by a manifold.
+        `Solid.compute_cutout` : Compute the cutout portion of the manifold within the solid.
 
         Notes
         -----
         Since hyperplanes have no inherent domain boundaries, this operation only tests for 
         point containment for zero-dimension hyperplanes (points).
         """
-        assert self.domain_dimension() == slice.dimension
+        assert self.domain_dimension() == cutout.dimension
         assert self.range_dimension() == solid.dimension
-        if slice.dimension == 0:
-            slice.containsInfinity = solid.contains_point(self._point)
+        if cutout.dimension == 0:
+            cutout.containsInfinity = solid.contains_point(self._point)
+
+    complete_slice = complete_cutout # backward compatibility
 
     def copy(self):
         """
@@ -86,7 +88,7 @@ class Hyperplane(Manifold):
         return Hyperplane(self._normal, self._point, self._tangentSpace)
 
     @staticmethod
-    def create_axis_aligned(dimension, axis, offset, flipNormal=False):
+    def create_axis_aligned(dimension, axis, offset, negateNormal=False):
         """
         Create an axis-aligned hyperplane.
 
@@ -101,7 +103,7 @@ class Hyperplane(Manifold):
         offset : `float`
             The offset from zero along the axis of a point on the hyperplane. 
         
-        flipNormal : `bool`, optional
+        negateNormal : `bool`, optional
             A Boolean indicating that the normal should point toward in the negative direction along the axis. 
             Default is False, meaning the normal points in the positive direction along the axis.
 
@@ -112,7 +114,7 @@ class Hyperplane(Manifold):
         """
         assert dimension > 0
         diagonal = np.identity(dimension)
-        sign = -1.0 if flipNormal else 1.0
+        sign = -1.0 if negateNormal else 1.0
         normal = sign * diagonal[:,axis]
         point = offset * normal
         if dimension > 1:
@@ -178,21 +180,6 @@ class Hyperplane(Manifold):
         """
         return np.dot(self._tangentSpace, np.atleast_1d(domainPoint)) + self._point
 
-    def flip_normal(self):
-        """
-        Flip the direction of the normal.
-
-        Returns
-        -------
-        hyperplane : `Hyperplane`
-            The hyperplane with flipped normal. The hyperplane retains the same tangent space.
-
-        See Also
-        --------
-        `Solid.complement` : Return the complement of the solid: whatever was inside is outside and vice-versa.
-        """
-        return Hyperplane(-self._normal, self._point, self._tangentSpace)
-
     @staticmethod
     def from_dict(dictionary):
         """
@@ -244,14 +231,14 @@ class Hyperplane(Manifold):
             (Hyperplanes will have at most one intersection, but other types of manifolds can have several.)
             Each intersection records either a crossing or a coincident region.
 
-            For a crossing, intersection is a `Manifold.Crossing`: (left, right)
-            * left : `Manifold` in the manifold's domain where the manifold and the other cross.
-            * right : `Manifold` in the other's domain where the manifold and the other cross.
+            For a crossing, intersection is a `Manifold.Crossing`: (firstPart, secondPart)
+            * firstPart : `Manifold` in the manifold's domain where the manifold and the other cross.
+            * secondPart : `Manifold` in the other's domain where the manifold and the other cross.
             * Both intersection manifolds have the same domain and range (the crossing between the manifold and the other).
 
-            For a coincident region, intersection is a `Manifold.Coincidence`: (left, right, alignment, transform, inverse, translation)
-            * left : `Solid` in the manifold's domain within which the manifold and the other are coincident.
-            * right : `Solid` in the other's domain within which the manifold and the other are coincident.
+            For a coincident region, intersection is a `Manifold.Coincidence`: (firstPart, secondPart, alignment, transform, inverse, translation)
+            * firstPart : `Solid` in the manifold's domain within which the manifold and the other are coincident.
+            * secondPart : `Solid` in the other's domain within which the manifold and the other are coincident.
             * alignment : scalar value holding the normal alignment between the manifold and the other (the dot product of their unit normals).
             * transform : `numpy.array` holding the transform matrix from the manifold's domain to the other's domain.
             * inverse : `numpy.array` holding the inverse transform matrix from the other's domain to the boundary's domain.
@@ -260,7 +247,7 @@ class Hyperplane(Manifold):
 
         See Also
         --------
-        `Solid.slice` : slice the solid by a manifold.
+        `Solid.compute_cutout` : Compute the cutout portion of the manifold within the solid.
         `numpy.linalg.svd` : Compute the singular value decomposition of a matrix array.
 
         Notes
@@ -360,6 +347,23 @@ class Hyperplane(Manifold):
                     intersections.append(Manifold.Coincidence(domainCoincidence, domainCoincidence, alignment, None, None, None))
 
         return intersections
+
+    def negate_normal(self):
+        """
+        Negate the direction of the normal.
+
+        Returns
+        -------
+        hyperplane : `Hyperplane`
+            The hyperplane with negated normal. The hyperplane retains the same tangent space.
+
+        See Also
+        --------
+        `Solid.complement` : Return the complement of the solid: whatever was inside is outside and vice-versa.
+        """
+        return Hyperplane(-self._normal, self._point, self._tangentSpace)
+
+    flip_normal = negate_normal # backward compatibility
 
     def normal(self, domainPoint, normalize=True, indices=None):
         """

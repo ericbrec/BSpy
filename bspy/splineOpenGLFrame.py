@@ -1543,16 +1543,16 @@ class SplineOpenGLFrame(OpenGLFrame):
                 self.connection = None
         endpoints = []
         for curve in solid.boundaries:
-            curve.domain.boundaries.sort(key=lambda boundary: (boundary.manifold.evaluate(0.0), -boundary.manifold.normal(0.0)))
+            curve.trim.boundaries.sort(key=lambda boundary: (boundary.manifold.evaluate(0.0), -boundary.manifold.normal(0.0)))
             leftB = 0
             rightB = 0
-            boundaryCount = len(curve.domain.boundaries)
+            boundaryCount = len(curve.trim.boundaries)
             while leftB < boundaryCount:
-                if curve.domain.boundaries[leftB].manifold.normal(0.0) < 0.0:
-                    leftPoint = curve.domain.boundaries[leftB].manifold.evaluate(0.0)[0]
+                if curve.trim.boundaries[leftB].manifold.normal(0.0) < 0.0:
+                    leftPoint = curve.trim.boundaries[leftB].manifold.evaluate(0.0)[0]
                     while rightB < boundaryCount:
-                        rightPoint = curve.domain.boundaries[rightB].manifold.evaluate(0.0)[0]
-                        if leftPoint - Manifold.minSeparation < rightPoint and curve.domain.boundaries[rightB].manifold.normal(0.0) > 0.0:
+                        rightPoint = curve.trim.boundaries[rightB].manifold.evaluate(0.0)[0]
+                        if leftPoint - Manifold.minSeparation < rightPoint and curve.trim.boundaries[rightB].manifold.normal(0.0) > 0.0:
                             t = curve.manifold.tangent_space(leftPoint)[:,0]
                             n = curve.manifold.normal(leftPoint)
                             clockwise = t[0] * n[1] - t[1] * n[0] > 0.0
@@ -1567,7 +1567,7 @@ class SplineOpenGLFrame(OpenGLFrame):
                         rightB += 1
                 leftB += 1
 
-        # Second, collect all valid pairings of endpoints (normal not flipped between segments).
+        # Second, collect all valid pairings of endpoints (normal not negated between segments).
         Connection = namedtuple('Connection', ('distance', 'ep1', 'ep2'))
         connections = []
         for i, ep1 in enumerate(endpoints[:-1]):

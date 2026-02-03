@@ -160,8 +160,8 @@ class Viewer(tk.Tk):
         elif isinstance(spline, Boundary):
             boundary = spline
             if isinstance(boundary.manifold, Hyperplane):
-                uvMin = boundary.domain.bounds[:,0]
-                uvMax = boundary.domain.bounds[:,1]
+                uvMin = boundary.trim.bounds[:,0]
+                uvMax = boundary.trim.bounds[:,1]
                 if (uvMax - uvMin).min() < 1.0e-8:
                     return
                 xyzMinMin = boundary.manifold.evaluate(uvMin)
@@ -174,7 +174,7 @@ class Viewer(tk.Tk):
                 spline.metadata = boundary.manifold.metadata # Ensure the spline representing the hyperplane shares the same metadata
             elif isinstance(boundary.manifold, Spline):
                 spline = boundary.manifold
-            tesselation = self.frame.tessellate2DSolid(boundary.domain)
+            tesselation = self.frame.tessellate2DSolid(boundary.trim)
             if tesselation is not None:
                 if not hasattr(spline, "cache"):
                     spline.cache = {}

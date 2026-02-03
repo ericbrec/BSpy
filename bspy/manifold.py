@@ -15,8 +15,8 @@ class Manifold:
     minSeparation = 0.0001
     """If two points are within minSeparation of each each other, they are coincident."""
 
-    Crossing = namedtuple('Crossing', ('left','right'))
-    Coincidence = namedtuple('Coincidence', ('left', 'right', 'alignment', 'transform', 'inverse', 'translation'))
+    Crossing = namedtuple('Crossing', ('firstPart','secondPart'))
+    Coincidence = namedtuple('Coincidence', ('firstPart', 'secondPart', 'alignment', 'transform', 'inverse', 'translation'))
     """Return type for intersect."""
 
     factory = {}
@@ -43,14 +43,14 @@ class Manifold:
             A list of intersections between the two manifolds. 
             Each intersection records either a crossing or a coincident region.
 
-            For a crossing, intersection is a Manifold.Crossing: (left, right)
-            * left : `Manifold` in the manifold's domain where the manifold and the other cross.
-            * right : `Manifold` in the other's domain where the manifold and the other cross.
+            For a crossing, intersection is a Manifold.Crossing: (firstPart, secondPart)
+            * firstPart : `Manifold` in the manifold's domain where the manifold and the other cross.
+            * secondPart : `Manifold` in the other's domain where the manifold and the other cross.
             * Both intersection manifolds have the same domain and range (the crossing between the manifold and the other).
 
-            For a coincident region, intersection is Manifold.Coincidence: (left, right, alignment, transform, inverse, translation)
-            * left : `Solid` in the manifold's domain within which the manifold and the other are coincident.
-            * right : `Solid` in the other's domain within which the manifold and the other are coincident.
+            For a coincident region, intersection is Manifold.Coincidence: (firstPart, secondPart, alignment, transform, inverse, translation)
+            * firstPart : `Solid` in the manifold's domain within which the manifold and the other are coincident.
+            * secondPart : `Solid` in the other's domain within which the manifold and the other are coincident.
             * alignment : scalar value holding the normal alignment between the manifold and the other (the dot product of their unit normals).
             * transform : `numpy.array` holding the matrix transform from the boundary's domain to the other's domain.
             * inverse : `numpy.array` holding the matrix inverse transform from the other's domain to the boundary's domain.
@@ -63,7 +63,7 @@ class Manifold:
         See Also
         --------
         `intersect` : Intersect two manifolds.
-        `Solid.slice` : slice the solid by a manifold.
+        `Solid.compute_cutout` : Compute the cutout portion of the manifold within the solid.
 
         Notes
         -----
@@ -97,31 +97,33 @@ class Manifold:
         
         return intersections, isTwin
 
-    def complete_slice(self, slice, solid):
+    def complete_cutout(self, cutout, solid):
         """
-        Add any missing inherent (implicit) boundaries of this manifold's domain to the given slice of the 
-        given solid that are needed to make the slice valid and complete.
+        Add any missing inherent (implicit) boundaries of this manifold's domain to the given cutout of the 
+        given solid that are needed to make the cutout valid and complete.
 
         Parameters
         ----------
-        slice : `Solid`
-            The slice of the given solid formed by the manifold. The slice may be incomplete, missing some of the 
+        cutout : `Solid`
+            The cutout of the given solid formed by the manifold. The cutout may be incomplete, missing some of the 
             manifold's inherent domain boundaries. Its dimension must match `self.domain_dimension()`.
 
         solid : `Solid`
-            The solid being sliced by the manifold. Its dimension must match `self.range_dimension()`.
+            The solid determining the cutout of the manifold. Its dimension must match `self.range_dimension()`.
 
         See Also
         --------
-        `Solid.slice` : Slice the solid by a manifold.
+        `Solid.compute_cutout` : Compute the cutout portion of the manifold within the solid.
 
         Notes
         -----
         For manifolds without inherent domain boundaries (like hyperplanes), the operation does nothing.
         """
-        assert self.domain_dimension() == slice.dimension
+        assert self.domain_dimension() == cutout.dimension
         assert self.range_dimension() == solid.dimension
 
+    complete_slice = complete_cutout # backward compatibility
+    
     def copy(self):
         """
         Copy the manifold.
@@ -154,21 +156,6 @@ class Manifold:
         Returns
         -------
         point : `numpy.array`
-        """
-        return None
-
-    def flip_normal(self):
-        """
-        Flip the direction of the normal.
-
-        Returns
-        -------
-        manifold : `Manifold`
-            The manifold with flipped normal. The manifold retains the same tangent space.
-
-        See Also
-        --------
-        `Solid.complement` : Return the complement of the solid: whatever was inside is outside and vice-versa.
         """
         return None
 
@@ -222,14 +209,14 @@ class Manifold:
             A list of intersections between the two manifolds. 
             Each intersection records either a crossing or a coincident region.
 
-            For a crossing, intersection is a `Manifold.Crossing`: (left, right)
-            * left : `Manifold` in the manifold's domain where the manifold and the other cross.
-            * right : `Manifold` in the other's domain where the manifold and the other cross.
+            For a crossing, intersection is a `Manifold.Crossing`: (firstPart, secondPart)
+            * firstPart : `Manifold` in the manifold's domain where the manifold and the other cross.
+            * secondPart : `Manifold` in the other's domain where the manifold and the other cross.
             * Both intersection manifolds have the same domain and range (the crossing between the manifold and the other).
 
-            For a coincident region, intersection is a `Manifold.Coincidence`: (left, right, alignment, transform, inverse, translation)
-            * left : `Solid` in the manifold's domain within which the manifold and the other are coincident.
-            * right : `Solid` in the other's domain within which the manifold and the other are coincident.
+            For a coincident region, intersection is a `Manifold.Coincidence`: (firstPart, secondPart, alignment, transform, inverse, translation)
+            * firstPart : `Solid` in the manifold's domain within which the manifold and the other are coincident.
+            * secondPart : `Solid` in the other's domain within which the manifold and the other are coincident.
             * alignment : scalar value holding the normal alignment between the manifold and the other (the dot product of their unit normals).
             * transform : `numpy.array` holding the transform matrix from the manifold's domain to the other's domain.
             * inverse : `numpy.array` holding the inverse transform matrix from the other's domain to the boundary's domain.
@@ -239,13 +226,30 @@ class Manifold:
         See Also
         --------
         `cached_intersect` : Intersect two manifolds, caching the result for twins (same intersection but swapping self and other).
-        `Solid.slice` : slice the solid by a manifold.
+        `Solid.compute_cutout` : Compute the cutout portion of the manifold within the solid.
 
         Notes
         -----
         To invert the mapping to go from the other's domain to the manifold's domain, you first subtract the translation and then multiply by the inverse of the transform.
         """
         return NotImplemented
+
+    def negate_normal(self):
+        """
+        Negate the direction of the normal.
+
+        Returns
+        -------
+        manifold : `Manifold`
+            The manifold with negated normal. The manifold retains the same tangent space.
+
+        See Also
+        --------
+        `Solid.complement` : Return the complement of the solid: whatever was inside is outside and vice-versa.
+        """
+        return None
+
+    flip_normal = negate_normal # backward compatibility
 
     def normal(self, domainPoint, normalize=True, indices=None):
         """
