@@ -477,7 +477,10 @@ class Solid:
             solid = Solid(dictionary["dimension"], dictionary["containsInfinity"], dictionary.get("metadata", {}))
             for boundary in dictionary["boundaries"]:
                 manifold = boundary["manifold"]
-                solid.add_boundary(Boundary(Manifold.factory[manifold.get("type", "Spline")].from_dict(manifold), from_dict(boundary["trim"])))
+                solid.add_boundary(
+                    Boundary(
+                        Manifold.factory[manifold.get("type", "Spline")].from_dict(manifold), 
+                        from_dict(boundary.get("trim", boundary.get("domain", None)))))
             return solid
 
         # Load json file.
