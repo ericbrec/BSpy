@@ -15,8 +15,8 @@ class Manifold:
     minSeparation = 0.0001
     """If two points are within minSeparation of each each other, they are coincident."""
 
-    Crossing = namedtuple('Crossing', ('left','right'))
-    Coincidence = namedtuple('Coincidence', ('left', 'right', 'alignment', 'transform', 'inverse', 'translation'))
+    Crossing = namedtuple('Crossing', ('firstPart','secondPart'))
+    Coincidence = namedtuple('Coincidence', ('firstPart', 'secondPart', 'alignment', 'transform', 'inverse', 'translation'))
     """Return type for intersect."""
 
     factory = {}
@@ -43,14 +43,14 @@ class Manifold:
             A list of intersections between the two manifolds. 
             Each intersection records either a crossing or a coincident region.
 
-            For a crossing, intersection is a Manifold.Crossing: (left, right)
-            * left : `Manifold` in the manifold's domain where the manifold and the other cross.
-            * right : `Manifold` in the other's domain where the manifold and the other cross.
+            For a crossing, intersection is a Manifold.Crossing: (firstPart, secondPart)
+            * firstPart : `Manifold` in the manifold's domain where the manifold and the other cross.
+            * secondPart : `Manifold` in the other's domain where the manifold and the other cross.
             * Both intersection manifolds have the same domain and range (the crossing between the manifold and the other).
 
-            For a coincident region, intersection is Manifold.Coincidence: (left, right, alignment, transform, inverse, translation)
-            * left : `Solid` in the manifold's domain within which the manifold and the other are coincident.
-            * right : `Solid` in the other's domain within which the manifold and the other are coincident.
+            For a coincident region, intersection is Manifold.Coincidence: (firstPart, secondPart, alignment, transform, inverse, translation)
+            * firstPart : `Solid` in the manifold's domain within which the manifold and the other are coincident.
+            * secondPart : `Solid` in the other's domain within which the manifold and the other are coincident.
             * alignment : scalar value holding the normal alignment between the manifold and the other (the dot product of their unit normals).
             * transform : `numpy.array` holding the matrix transform from the boundary's domain to the other's domain.
             * inverse : `numpy.array` holding the matrix inverse transform from the other's domain to the boundary's domain.
@@ -222,14 +222,14 @@ class Manifold:
             A list of intersections between the two manifolds. 
             Each intersection records either a crossing or a coincident region.
 
-            For a crossing, intersection is a `Manifold.Crossing`: (left, right)
-            * left : `Manifold` in the manifold's domain where the manifold and the other cross.
-            * right : `Manifold` in the other's domain where the manifold and the other cross.
+            For a crossing, intersection is a `Manifold.Crossing`: (firstPart, secondPart)
+            * firstPart : `Manifold` in the manifold's domain where the manifold and the other cross.
+            * secondPart : `Manifold` in the other's domain where the manifold and the other cross.
             * Both intersection manifolds have the same domain and range (the crossing between the manifold and the other).
 
-            For a coincident region, intersection is a `Manifold.Coincidence`: (left, right, alignment, transform, inverse, translation)
-            * left : `Solid` in the manifold's domain within which the manifold and the other are coincident.
-            * right : `Solid` in the other's domain within which the manifold and the other are coincident.
+            For a coincident region, intersection is a `Manifold.Coincidence`: (firstPart, secondPart, alignment, transform, inverse, translation)
+            * firstPart : `Solid` in the manifold's domain within which the manifold and the other are coincident.
+            * secondPart : `Solid` in the other's domain within which the manifold and the other are coincident.
             * alignment : scalar value holding the normal alignment between the manifold and the other (the dot product of their unit normals).
             * transform : `numpy.array` holding the transform matrix from the manifold's domain to the other's domain.
             * inverse : `numpy.array` holding the inverse transform matrix from the other's domain to the boundary's domain.

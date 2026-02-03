@@ -241,26 +241,26 @@ class Solid:
 
             # Each intersection is either a crossing (domain manifold) or a coincidence (solid within the domain).
             for intersection in intersections:
-                (left, right) = (intersection.right, intersection.left) if isTwin else (intersection.left, intersection.right)
+                (firstPart, secondPart) = (intersection.secondPart, intersection.firstPart) if isTwin else (intersection.firstPart, intersection.secondPart)
 
                 if isinstance(intersection, Manifold.Crossing):
-                    trimCutout = boundary.trim.compute_cutout(left, cache)
+                    trimCutout = boundary.trim.compute_cutout(firstPart, cache)
                     if trimCutout:
-                        cutout.add_boundary(Boundary(right, trimCutout))
+                        cutout.add_boundary(Boundary(secondPart, trimCutout))
 
                 elif isinstance(intersection, Manifold.Coincidence):
                     # Intersect domain coincidence with the boundary's domain.
-                    left = left.intersection(boundary.trim)
+                    firstPart = firstPart.intersection(boundary.trim)
                     # Invert the domain coincidence (which will remove it) if this is a twin or if the normals point in opposite directions.
                     #invertCoincidence = trimTwin and (isTwin or intersection.alignment < 0.0)
                     invertCoincidence = (trimTwin and isTwin) or intersection.alignment < 0.0
-                    # Create the coincidence to hold the trimmed and transformed domain coincidence (left).
-                    coincidence = Solid(left.dimension, left.containsInfinity)
+                    # Create the coincidence to hold the trimmed and transformed domain coincidence (firstPart).
+                    coincidence = Solid(firstPart.dimension, firstPart.containsInfinity)
                     if invertCoincidence:
                         coincidence.containsInfinity = not coincidence.containsInfinity
                     # Next, transform the domain coincidence from the boundary to the given manifold.
                     # Create copies of the manifolds and boundaries, since we are changing them.
-                    for coincidenceBoundary in left.boundaries:
+                    for coincidenceBoundary in firstPart.boundaries:
                         coincidenceManifold = coincidenceBoundary.manifold
                         if invertCoincidence:
                             coincidenceManifold = coincidenceManifold.negate_normal()
