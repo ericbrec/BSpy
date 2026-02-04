@@ -367,8 +367,6 @@ class Spline(Manifold):
         if cutout.dimension != 1 and cutout.dimension != 2: raise ValueError("Only works for nInd = 1 or 2")
         return bspy._spline_intersection.complete_cutout(self, cutout, solid)
 
-    complete_slice = complete_cutout # backward compatibility
-
     @staticmethod
     def composition(splines, tolerance = 1.0e-6):
         """
@@ -1639,8 +1637,6 @@ class Spline(Manifold):
         spline = self.copy()
         spline.metadata["negateNormal"] = not self.metadata.get("negateNormal", False)
         return spline
-
-    flip_normal = negate_normal # backward compatibility
 
     def normal(self, uvw, normalize=True, indices=None):
         """

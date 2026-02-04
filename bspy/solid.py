@@ -22,7 +22,6 @@ class Boundary:
     """
     def __init__(self, manifold, trim = None):
         self.trim = manifold.full_domain() if trim is None else trim
-        self.domain = self.trim # backward compatibility
         if manifold.domain_dimension() != self.trim.dimension: raise ValueError("Domain dimensions don't match")
         if manifold.domain_dimension() + 1 != manifold.range_dimension(): raise ValueError("Manifold range is not one dimension higher than domain")
         self.manifold, self.bounds = manifold.trimmed_range_bounds(self.trim.bounds)
@@ -288,8 +287,6 @@ class Solid:
                 cutout = cutout.union(coincidence[1])
 
         return cutout
-
-    slice = compute_cutout # backward compatibility
 
     def contains_point(self, point):
         """

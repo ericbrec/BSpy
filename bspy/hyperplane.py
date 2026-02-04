@@ -75,8 +75,6 @@ class Hyperplane(Manifold):
         if cutout.dimension == 0:
             cutout.containsInfinity = solid.contains_point(self._point)
 
-    complete_slice = complete_cutout # backward compatibility
-
     def copy(self):
         """
         Copy the hyperplane.
@@ -362,8 +360,6 @@ class Hyperplane(Manifold):
         `Solid.complement` : Return the complement of the solid: whatever was inside is outside and vice-versa.
         """
         return Hyperplane(-self._normal, self._point, self._tangentSpace)
-
-    flip_normal = negate_normal # backward compatibility
 
     def normal(self, domainPoint, normalize=True, indices=None):
         """
