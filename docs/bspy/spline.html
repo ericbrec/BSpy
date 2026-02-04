@@ -76,7 +76,7 @@
                                 <a class="function" href="#Spline.common_basis">common_basis</a>
                         </li>
                         <li>
-                                <a class="function" href="#Spline.complete_slice">complete_slice</a>
+                                <a class="function" href="#Spline.complete_cutout">complete_cutout</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.composition">composition</a>
@@ -145,9 +145,6 @@
                                 <a class="function" href="#Spline.fit">fit</a>
                         </li>
                         <li>
-                                <a class="function" href="#Spline.flip_normal">flip_normal</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#Spline.fold">fold</a>
                         </li>
                         <li>
@@ -200,6 +197,9 @@
                         </li>
                         <li>
                                 <a class="function" href="#Spline.multiply">multiply</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Spline.negate_normal">negate_normal</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spline.normal">normal</a>
@@ -699,32 +699,32 @@ The aligned collection of N splines.</li>
 
 
                             </div>
-                            <div id="Spline.complete_slice" class="classattr">
+                            <div id="Spline.complete_cutout" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">complete_slice</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="nb">slice</span>, </span><span class="param"><span class="n">solid</span></span><span class="return-annotation">):</span></span>
+        <span class="name">complete_cutout</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">cutout</span>, </span><span class="param"><span class="n">solid</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Spline.complete_slice"></a>
+    <a class="headerlink" href="#Spline.complete_cutout"></a>
     
-            <div class="docstring"><p>Add any missing inherent (implicit) boundaries of this spline's domain to the given slice of the 
-given solid that are needed to make the slice valid and complete.</p>
+            <div class="docstring"><p>Add any missing inherent (implicit) boundaries of this spline's domain to the given cutout of the 
+given solid that are needed to make the cutout valid and complete.</p>
 
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>slice</strong> (<code>solid.Solid</code>):
-The slice of the given solid formed by the spline. The slice may be incomplete, missing some of the 
+<li><strong>cutout</strong> (<code>solid.Solid</code>):
+The cutout of the given solid formed by the spline. The cutout may be incomplete, missing some of the 
 spline's inherent domain boundaries. Its dimension must match <code>self.domain_dimension()</code>.</li>
 <li><strong>solid</strong> (<code>solid.Solid</code>):
-The solid being sliced by the manifold. Its dimension must match <code>self.range_dimension()</code>.</li>
+The solid determining the cutout of the manifold. Its dimension must match <code>self.range_dimension()</code>.</li>
 </ul>
 
 <h6 id="see-also">See Also</h6>
 
-<p><code>solid.Solid.slice</code>:  slice the solid by a manifold. <br />
+<p><code>solid.Solid.compute_cutout</code>:  Compute the cutout portion of the manifold within the solid. <br />
 <code><a href="#Spline.domain">domain</a></code>:  Return the domain of a spline.  </p>
 
 <h6 id="notes">Notes</h6>
@@ -1610,32 +1610,6 @@ tolerance.</li>
 
 
                             </div>
-                            <div id="Spline.flip_normal" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">flip_normal</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Spline.flip_normal"></a>
-    
-            <div class="docstring"><p>Flip the direction of the normal.</p>
-
-<h6 id="returns">Returns</h6>
-
-<ul>
-<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
-The spline with flipped normal. The spline retains the same tangent space.</li>
-</ul>
-
-<h6 id="see-also">See Also</h6>
-
-<p><code>solid.Solid.complement</code>:  Return the complement of the solid: whatever was inside is outside and vice-versa.  </p>
-</div>
-
-
-                            </div>
                             <div id="Spline.fold" class="classattr">
                                 <div class="attr function">
             
@@ -2089,7 +2063,7 @@ Each intersection records either a crossing or a coincident region.</p>
 
 <p><code><a href="#Spline.zeros">zeros</a></code>:  Find the roots of a spline (nInd must match nDep). <br />
 <code><a href="#Spline.contours">contours</a></code>:  Find all the contour curves of a spline. <br />
-<code>solid.Solid.slice</code>:  slice the solid by a manifold.  </p>
+<code>solid.Solid.compute_cutout</code>:  Compute the cutout portion of the manifold within the solid.  </p>
 
 <h6 id="notes">Notes</h6>
 
@@ -2424,6 +2398,32 @@ The result of multiplying self and other.</li>
 
 <p>Taken in part from Lee, E. T. Y. "Computing a chain of blossoms, with application to products of splines." 
 Computer Aided Geometric Design 11, no. 6 (1994): 597-620.</p>
+</div>
+
+
+                            </div>
+                            <div id="Spline.negate_normal" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">negate_normal</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Spline.negate_normal"></a>
+    
+            <div class="docstring"><p>Negate the direction of the normal.</p>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>spline</strong> (<code><a href="#Spline">Spline</a></code>):
+The spline with negated normal. The spline retains the same tangent space.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code>solid.Solid.complement</code>:  Return the complement of the solid: whatever was inside is outside and vice-versa.  </p>
 </div>
 
 

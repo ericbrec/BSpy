@@ -54,3 +54,9 @@ a set of examples, including a jupyter notebook, can be found [here](https://git
 * Moved DrawableSpine methods for adjusting spline appearance to Viewer (see documentation for details)
 * Spline.bspline_values changed arguments (see documentation for details)
 * Spline.intersect changed return values (see documentation for details)
+
+### Release 5.0 breaking changes
+* Renamed Boundary.domain member to Boundary.trim
+* Renamed Solid.slice method to Solid.compute_cutout
+* Renamed Manifold.complete_slice method to Manifold.complete_cutout (also applies to Hyperplane and Spline classes)
+* Renamed Manifold.flip_normal method to Manifold.negate_normal (also applies to Hyperplane and Spline classes)
