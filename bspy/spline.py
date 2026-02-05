@@ -1114,8 +1114,15 @@ class Spline(Manifold):
         --------
         `to_dict` : Return a `dict` with `Spline` data.
         """
-        return Spline(dictionary["nInd"], dictionary["nDep"], dictionary["order"], dictionary["nCoef"],
+        spline = Spline(dictionary["nInd"], dictionary["nDep"], dictionary["order"], dictionary["nCoef"],
                 [np.array(knots) for knots in dictionary["knots"]], np.array(dictionary["coefs"]), dictionary.get("metadata", {}))
+        
+        # Handle backward compatibility for the old "flipNormal" metadata in spline files.
+        if hasattr(spline, "metadata") and spline.metadata.get("flipNormal", False):
+            spline.metadata["negateNormal"] = True
+            del spline.metadata["flipNormal"]
+        
+        return spline
 
     def full_domain(self):
         """
