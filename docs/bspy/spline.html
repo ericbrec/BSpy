@@ -2038,23 +2038,23 @@ The <code>Manifold</code> to intersect with self (must have same range dimension
 A list of intersections between the two manifolds. 
 Each intersection records either a crossing or a coincident region.</p>
 
-<p>For a crossing, intersection is a <code>Manifold.Crossing</code>: (left, right)</p>
+<p>For a crossing, intersection is a Manifold.Crossing: (firstPart, secondPart)</p>
 
 <ul>
-<li>left : <code>Manifold</code> in the manifold's domain where the manifold and the other cross.</li>
-<li>right : <code>Manifold</code> in the other's domain where the manifold and the other cross.</li>
+<li>firstPart : <code>Manifold</code> in the manifold's domain where the manifold and the other cross.</li>
+<li>secondPart : <code>Manifold</code> in the other's domain where the manifold and the other cross.</li>
 <li>Both intersection manifolds have the same domain and range (the crossing between the manifold and the other).</li>
 </ul>
 
-<p>For a coincident region, intersection is a <code>Manifold.Coincidence</code>: (left, right, alignment, transform, inverse, translation)</p>
+<p>For a coincident region, intersection is Manifold.Coincidence: (firstPart, secondPart, alignment, transform, inverse, translation)</p>
 
 <ul>
-<li>left : <code>Solid</code> in the manifold's domain within which the manifold and the other are coincident.</li>
-<li>right : <code>Solid</code> in the other's domain within which the manifold and the other are coincident.</li>
+<li>firstPart : <code>Solid</code> in the manifold's domain within which the manifold and the other are coincident.</li>
+<li>secondPart : <code>Solid</code> in the other's domain within which the manifold and the other are coincident.</li>
 <li>alignment : scalar value holding the normal alignment between the manifold and the other (the dot product of their unit normals).</li>
-<li>transform : <code>numpy.array</code> holding the transform matrix from the manifold's domain to the other's domain.</li>
-<li>inverse : <code>numpy.array</code> holding the inverse transform matrix from the other's domain to the boundary's domain.</li>
-<li>translation : <code>numpy.array</code> holding the translation vector from the manifold's domain to the other's domain.</li>
+<li>transform : <code>numpy.array</code> holding the matrix transform from the boundary's domain to the other's domain.</li>
+<li>inverse : <code>numpy.array</code> holding the matrix inverse transform from the other's domain to the boundary's domain.</li>
+<li>translation : <code>numpy.array</code> holding the 1D translation from the manifold's domain to the other's domain.</li>
 <li>Together transform, inverse, and translation form the mapping from the manifold's domain to the other's domain and vice-versa.</li>
 </ul></li>
 </ul>
