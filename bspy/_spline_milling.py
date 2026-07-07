@@ -254,10 +254,10 @@ def offset(self, edgeRadius, bitRadius=None, angle=np.pi / 2.2, path=None, subtr
                 tangent = self.jacobian(path(knot)) @ path.derivative((1,), knot)
             else:
                 tangent = self.derivative((1,), knot)
-            flipped = np.dot(tangent, offset.derivative((1,), knot)) < 0
-            if flipped and start is None:
+            negated = np.dot(tangent, offset.derivative((1,), knot)) < 0
+            if negated and start is None:
                 start = knot
-            if not flipped and start is not None:
+            if not negated and start is not None:
                 cusps.append((start, previousKnot))
                 start = None
             previousKnot = knot

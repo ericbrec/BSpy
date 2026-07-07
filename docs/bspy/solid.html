@@ -37,7 +37,7 @@
                                 <a class="function" href="#Boundary.__init__">Boundary</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Boundary.domain">domain</a>
+                                <a class="variable" href="#Boundary.trim">trim</a>
                         </li>
                         <li>
                                 <a class="function" href="#Boundary.any_point">any_point</a>
@@ -76,6 +76,9 @@
                                 <a class="function" href="#Solid.complement">complement</a>
                         </li>
                         <li>
+                                <a class="function" href="#Solid.compute_cutout">compute_cutout</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Solid.contains_point">contains_point</a>
                         </li>
                         <li>
@@ -98,9 +101,6 @@
                         </li>
                         <li>
                                 <a class="function" href="#Solid.save">save</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Solid.slice">slice</a>
                         </li>
                         <li>
                                 <a class="function" href="#Solid.surface_integral">surface_integral</a>
@@ -161,7 +161,7 @@
 <ul>
 <li><strong>manifold</strong> (<code>Manifold</code>):
 The differentiable function whose range is one dimension higher than its domain that defines the range of the boundary.</li>
-<li><strong>domain</strong> (<code><a href="#Solid">Solid</a></code>, optional):
+<li><strong>trim</strong> (<code><a href="#Solid">Solid</a></code>, optional):
 The region of the domain of the manifold that's within the boundary. The default is the full domain of the manifold.</li>
 </ul>
 
@@ -175,7 +175,7 @@ The region of the domain of the manifold that's within the boundary. The default
                             <div id="Boundary.__init__" class="classattr">
                                 <div class="attr function">
             
-        <span class="name">Boundary</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">manifold</span>, </span><span class="param"><span class="n">domain</span><span class="o">=</span><span class="kc">None</span></span>)</span>
+        <span class="name">Boundary</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">manifold</span>, </span><span class="param"><span class="n">trim</span><span class="o">=</span><span class="kc">None</span></span>)</span>
 
         
     </div>
@@ -184,13 +184,13 @@ The region of the domain of the manifold that's within the boundary. The default
     
 
                             </div>
-                            <div id="Boundary.domain" class="classattr">
+                            <div id="Boundary.trim" class="classattr">
                                 <div class="attr variable">
-            <span class="name">domain</span>
+            <span class="name">trim</span>
 
         
     </div>
-    <a class="headerlink" href="#Boundary.domain"></a>
+    <a class="headerlink" href="#Boundary.trim"></a>
     
     
 
@@ -220,7 +220,7 @@ A point on the boundary.</li>
 
 <h6 id="notes">Notes</h6>
 
-<p>The point is computed by evaluating the boundary manifold by an arbitrary point in the domain of the boundary.</p>
+<p>The point is computed by evaluating the boundary manifold by an arbitrary point in the trim of the boundary.</p>
 </div>
 
 
@@ -257,7 +257,7 @@ A dictionary of ancillary data to store with the solid. Default is {}.</li>
 
 <p>Solids also contain a <code>list</code> of <code><a href="#Solid.boundaries">boundaries</a></code>. That list may be empty.</p>
 
-<p>Solids can be of zero dimension, typically acting as the domain of boundary endpoints. Zero-dimension solids have no boundaries, they only contain infinity or not.</p>
+<p>Solids can be of zero dimension, typically acting as the trim of boundary endpoints. Zero-dimension solids have no boundaries, they only contain infinity or not.</p>
 </div>
 
 
@@ -416,6 +416,64 @@ The complement of the solid.</li>
 
 
                             </div>
+                            <div id="Solid.compute_cutout" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">compute_cutout</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">manifold</span>, </span><span class="param"><span class="n">cache</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">trimTwin</span><span class="o">=</span><span class="kc">False</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Solid.compute_cutout"></a>
+    
+            <div class="docstring"><p>Compute the cutout portion of the manifold within the solid.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>manifold</strong> (<code>Manifold</code>):
+The <code>Manifold</code> for which we are computing a cutout within this solid.</li>
+<li><strong>cache</strong> (<code>dict</code>, optional):
+A dictionary to cache <code>Manifold</code> intersections, speeding computation.</li>
+<li><strong>trimTwin : <code>bool</code>, default</strong> (False):
+Trim coincident boundary twins on subsequent calls to cutout (avoids duplication of overlapping regions).
+Trimming twins is typically only used in conjunction with <code><a href="#Solid.intersection">intersection</a></code>.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>cutout</strong> (<code><a href="#Solid">Solid</a></code>):
+A region in the domain of <code>manifold</code> that intersects with the solid. The region may contain infinity.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code><a href="#Solid.intersection">intersection</a></code>:  Intersect two solids. <br />
+<code>Manifold.intersect</code>:  Intersect two manifolds. <br />
+<code>Manifold.cached_intersect</code>:  Intersect two manifolds, caching the result for twins. <br />
+<code>Manifold.complete_cutout</code>:  Add any missing inherent (implicit) boundaries of this manifold's domain to the given cutout.  </p>
+
+<h6 id="notes">Notes</h6>
+
+<p>The dimension of the cutout is always one less than the dimension of the solid, since the cutout is a region in the domain of the manifold.</p>
+
+<p>To compute the cutout of a manifold intersecting the solid, we intersect the manifold with each boundary of the solid. There may be multiple intersections 
+between the manifold and the boundary. Each is either a crossing or a coincident region.</p>
+
+<p>Crossings result in two intersection manifolds: one in the domain of the manifold and one in the trim of the boundary. By construction, both intersection manifolds have the
+same domain and the same range of the manifold and boundary (the crossing itself). The intersection manifold in the domain of the manifold becomes a boundary of the cutout,
+but we must determine the intersection's trim. For that, we compute the cutout of the boundary's intersection manifold with the boundary's trim. This recursion continues 
+until the cutout is just a point with no trim.</p>
+
+<p>Coincident regions appear in the trims of the manifold and the boundary. We intersect the boundary's coincident region with the trim of the boundary and then map
+it to the domain of the manifold. If the coincident regions have normals in opposite directions, they cancel each other out, so we subtract them from the cutout by
+inverting the region and intersecting it with the cutout. We use this same technique for removing overlapping coincident regions. If the coincident regions have normals
+in the same direction, we union them with the cutout.</p>
+</div>
+
+
+                            </div>
                             <div id="Solid.contains_point" class="classattr">
                                 <div class="attr function">
             
@@ -551,19 +609,19 @@ A <code><a href="#Solid">Solid</a></code> that represents the intersection betwe
 
 <h6 id="see-also">See Also</h6>
 
-<p><code><a href="#Solid.slice">slice</a></code>:  Slice a solid by a manifold. <br />
+<p><code><a href="#Solid.compute_cutout">compute_cutout</a></code>:  Compute the cutout portion of the manifold within the solid. <br />
 <code><a href="#Solid.union">union</a></code>:  Union two solids. <br />
 <code><a href="#Solid.difference">difference</a></code>:  Subtract one solid from another.  </p>
 
 <h6 id="notes">Notes</h6>
 
-<p>To intersect two solids, we slice each solid with the boundaries of the other solid. The slices are the region
-of the domain that intersect the solid. We then intersect the domain of each boundary with its slice of the other solid. Thus,
-the intersection of two solids becomes a set of intersections within the domains of their boundaries. This recursion continues
-until we are intersecting points whose domains have no boundaries.</p>
+<p>To intersect two solids, we compute the cutout portions of each solid's untrimmed boundaries (their manifolds) that lie within the other solid.
+We then intersect the trim of each boundary (the trim of its manifold) with its cutout. Thus,
+the intersection of two solids becomes a set of intersections within the trims of their boundaries. This recursion continues
+until we are intersecting points whose trims have no boundaries.</p>
 
 <p>The only subtlety is when two boundaries are coincident. To avoid overlapping the coincident region, we keep that region
-for one slice and trim it away for the other. We use a manifold intersection cache to keep track of these pairs, as well as to reduce computation.</p>
+for one cutout and trim it away for the other. We use a manifold intersection cache to keep track of these pairs, as well as to reduce computation.</p>
 </div>
 
 
@@ -690,64 +748,6 @@ Solids and/or manifolds to save in the same file.</li>
 
 
                             </div>
-                            <div id="Solid.slice" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">slice</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">manifold</span>, </span><span class="param"><span class="n">cache</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">trimTwin</span><span class="o">=</span><span class="kc">False</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Solid.slice"></a>
-    
-            <div class="docstring"><p>Slice the solid by a manifold.</p>
-
-<h6 id="parameters">Parameters</h6>
-
-<ul>
-<li><strong>manifold</strong> (<code>Manifold</code>):
-The <code>Manifold</code> used to slice the solid.</li>
-<li><strong>cache</strong> (<code>dict</code>, optional):
-A dictionary to cache <code>Manifold</code> intersections, speeding computation.</li>
-<li><strong>trimTwin : <code>bool</code>, default</strong> (False):
-Trim coincident boundary twins on subsequent calls to slice (avoids duplication of overlapping regions).
-Trimming twins is typically only used in conjunction with <code><a href="#Solid.intersection">intersection</a></code>.</li>
-</ul>
-
-<h6 id="returns">Returns</h6>
-
-<ul>
-<li><strong>slice</strong> (<code><a href="#Solid">Solid</a></code>):
-A region in the domain of <code>manifold</code> that intersects with the solid. The region may contain infinity.</li>
-</ul>
-
-<h6 id="see-also">See Also</h6>
-
-<p><code><a href="#Solid.intersection">intersection</a></code>:  Intersect two solids. <br />
-<code>Manifold.intersect</code>:  Intersect two manifolds. <br />
-<code>Manifold.cached_intersect</code>:  Intersect two manifolds, caching the result for twins. <br />
-<code>Manifold.complete_slice</code>:  Add any missing inherent (implicit) boundaries of this manifold's domain to the given slice.  </p>
-
-<h6 id="notes">Notes</h6>
-
-<p>The dimension of the slice is always one less than the dimension of the solid, since the slice is a region in the domain of the manifold slicing the solid.</p>
-
-<p>To compute the slice of a manifold intersecting the solid, we intersect the manifold with each boundary of the solid. There may be multiple intersections 
-between the manifold and the boundary. Each is either a crossing or a coincident region.</p>
-
-<p>Crossings result in two intersection manifolds: one in the domain of the manifold and one in the domain of the boundary. By construction, both intersection manifolds have the
-same domain and the same range of the manifold and boundary (the crossing itself). The intersection manifold in the domain of the manifold becomes a boundary of the slice,
-but we must determine the intersection's domain. For that, we slice the boundary's intersection manifold with the boundary's domain. This recursion continues 
-until the slice is just a point with no domain.</p>
-
-<p>Coincident regions appear in the domains of the manifold and the boundary. We intersect the boundary's coincident region with the domain of the boundary and then map
-it to the domain of the manifold. If the coincident regions have normals in opposite directions, they cancel each other out, so we subtract them from the slice by
-inverting the region and intersecting it with the slice. We use this same technique for removing overlapping coincident regions. If the coincident regions have normals
-in the same direction, we union them with the slice.</p>
-</div>
-
-
-                            </div>
                             <div id="Solid.surface_integral" class="classattr">
                                 <div class="attr function">
             
@@ -787,7 +787,7 @@ The value of the surface integral.</li>
 
 <p>To compute the surface integral of a scalar function on the boundary, have <code>f</code> return the product of the <code>normal</code> times the scalar function for the <code>point</code>.</p>
 
-<p><code><a href="#Solid.surface_integral">surface_integral</a></code> sums the <code><a href="#Solid.volume_integral">volume_integral</a></code> over the domain of the solid's boundaries, using the integrand: <code>numpy.dot(f(point, normal), normal)</code>, 
+<p><code><a href="#Solid.surface_integral">surface_integral</a></code> sums the <code><a href="#Solid.volume_integral">volume_integral</a></code> over the trim of the solid's boundaries, using the integrand: <code>numpy.dot(f(point, normal), normal)</code>, 
 where <code>normal</code> is the cross-product of the boundary tangents (the normal before normalization).</p>
 </div>
 
@@ -939,7 +939,7 @@ The first coordinate of the cross product of the boundary manifold's tangent spa
 And so, <code>surface_integral(Integral(f) * n[0]) = volume_integral(Integral(f) * first cofactor)</code> over each boundary manifold's domain.</p>
 
 <p>So, we have <code>volume_integral(f) = volume_integral(Integral(f) * first cofactor)</code> over each boundary manifold's domain.
-To compute the volume integral we sum <code><a href="#Solid.volume_integral">volume_integral</a></code> over the domain of the solid's boundaries, using the integrand:
+To compute the volume integral we sum <code><a href="#Solid.volume_integral">volume_integral</a></code> over the trim of the solid's boundaries, using the integrand:
 <code>scipy.integrate.quad(f, x0, x [other coordinates fixed]) * first cofactor</code>.
 This recursion continues until the boundaries are only points, where we can just sum the integrand.</p>
 </div>
