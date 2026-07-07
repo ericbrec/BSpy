@@ -656,7 +656,7 @@ def test_intersect():
     maxError = 0.0
     for intersection in intersections:
         for t in np.linspace(0.0, 1.0, 21):
-            maxError = max(maxError, np.linalg.norm(stuff[0](intersection.left(t)) - stuff[1](intersection.right(t))))
+            maxError = max(maxError, np.linalg.norm(stuff[0](intersection.firstPart(t)) - stuff[1](intersection.secondPart(t))))
     range = stuff[1].range_bounds()
     rangeSize = np.sqrt((range[0][1] - range[0][0]) ** 2 + (range[1][1] -  range[1][0]) ** 2)
     assert maxError <= rangeSize * np.finfo(float).eps ** 0.2
@@ -731,7 +731,7 @@ def test_intersect():
     intersections = spline.intersect(plane)
     for intersection in intersections:
         for t in np.linspace(0.0, 1.0, 11):
-            maxError = max(maxError, np.linalg.norm(spline(intersection.left(t)) - plane(intersection.right(t))))
+            maxError = max(maxError, np.linalg.norm(spline(intersection.firstPart(t)) - plane(intersection.secondPart(t))))
     assert maxError <= np.finfo(float).eps ** 0.2
 
 def test_intersection():

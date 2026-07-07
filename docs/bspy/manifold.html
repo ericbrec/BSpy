@@ -55,7 +55,7 @@
                                 <a class="function" href="#Manifold.cached_intersect">cached_intersect</a>
                         </li>
                         <li>
-                                <a class="function" href="#Manifold.complete_slice">complete_slice</a>
+                                <a class="function" href="#Manifold.complete_cutout">complete_cutout</a>
                         </li>
                         <li>
                                 <a class="function" href="#Manifold.copy">copy</a>
@@ -67,9 +67,6 @@
                                 <a class="function" href="#Manifold.evaluate">evaluate</a>
                         </li>
                         <li>
-                                <a class="function" href="#Manifold.flip_normal">flip_normal</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#Manifold.from_dict">from_dict</a>
                         </li>
                         <li>
@@ -77,6 +74,9 @@
                         </li>
                         <li>
                                 <a class="function" href="#Manifold.intersect">intersect</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Manifold.negate_normal">negate_normal</a>
                         </li>
                         <li>
                                 <a class="function" href="#Manifold.normal">normal</a>
@@ -230,19 +230,19 @@ A dictionary to cache <code><a href="#Manifold">Manifold</a></code> intersection
 A list of intersections between the two manifolds. 
 Each intersection records either a crossing or a coincident region.</p>
 
-<p>For a crossing, intersection is a <a href="#Manifold.Crossing">Manifold.Crossing</a>: (left, right)</p>
+<p>For a crossing, intersection is a <a href="#Manifold.Crossing">Manifold.Crossing</a>: (firstPart, secondPart)</p>
 
 <ul>
-<li>left : <code><a href="#Manifold">Manifold</a></code> in the manifold's domain where the manifold and the other cross.</li>
-<li>right : <code><a href="#Manifold">Manifold</a></code> in the other's domain where the manifold and the other cross.</li>
+<li>firstPart : <code><a href="#Manifold">Manifold</a></code> in the manifold's domain where the manifold and the other cross.</li>
+<li>secondPart : <code><a href="#Manifold">Manifold</a></code> in the other's domain where the manifold and the other cross.</li>
 <li>Both intersection manifolds have the same domain and range (the crossing between the manifold and the other).</li>
 </ul>
 
-<p>For a coincident region, intersection is <a href="#Manifold.Coincidence">Manifold.Coincidence</a>: (left, right, alignment, transform, inverse, translation)</p>
+<p>For a coincident region, intersection is <a href="#Manifold.Coincidence">Manifold.Coincidence</a>: (firstPart, secondPart, alignment, transform, inverse, translation)</p>
 
 <ul>
-<li>left : <code>Solid</code> in the manifold's domain within which the manifold and the other are coincident.</li>
-<li>right : <code>Solid</code> in the other's domain within which the manifold and the other are coincident.</li>
+<li>firstPart : <code>Solid</code> in the manifold's domain within which the manifold and the other are coincident.</li>
+<li>secondPart : <code>Solid</code> in the other's domain within which the manifold and the other are coincident.</li>
 <li>alignment : scalar value holding the normal alignment between the manifold and the other (the dot product of their unit normals).</li>
 <li>transform : <code>numpy.array</code> holding the matrix transform from the boundary's domain to the other's domain.</li>
 <li>inverse : <code>numpy.array</code> holding the matrix inverse transform from the other's domain to the boundary's domain.</li>
@@ -256,7 +256,7 @@ True if this intersection is the twin from the cache (the intersection with self
 <h6 id="see-also">See Also</h6>
 
 <p><code><a href="#Manifold.intersect">intersect</a></code>:  Intersect two manifolds. <br />
-<code>Solid.slice</code>:  slice the solid by a manifold.  </p>
+<code>Solid.compute_cutout</code>:  Compute the cutout portion of the manifold within the solid.  </p>
 
 <h6 id="notes">Notes</h6>
 
@@ -265,32 +265,32 @@ True if this intersection is the twin from the cache (the intersection with self
 
 
                             </div>
-                            <div id="Manifold.complete_slice" class="classattr">
+                            <div id="Manifold.complete_cutout" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">complete_slice</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="nb">slice</span>, </span><span class="param"><span class="n">solid</span></span><span class="return-annotation">):</span></span>
+        <span class="name">complete_cutout</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">cutout</span>, </span><span class="param"><span class="n">solid</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Manifold.complete_slice"></a>
+    <a class="headerlink" href="#Manifold.complete_cutout"></a>
     
-            <div class="docstring"><p>Add any missing inherent (implicit) boundaries of this manifold's domain to the given slice of the 
-given solid that are needed to make the slice valid and complete.</p>
+            <div class="docstring"><p>Add any missing inherent (implicit) boundaries of this manifold's domain to the given cutout of the 
+given solid that are needed to make the cutout valid and complete.</p>
 
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>slice</strong> (<code>Solid</code>):
-The slice of the given solid formed by the manifold. The slice may be incomplete, missing some of the 
+<li><strong>cutout</strong> (<code>Solid</code>):
+The cutout of the given solid formed by the manifold. The cutout may be incomplete, missing some of the 
 manifold's inherent domain boundaries. Its dimension must match <code>self.domain_dimension()</code>.</li>
 <li><strong>solid</strong> (<code>Solid</code>):
-The solid being sliced by the manifold. Its dimension must match <code>self.range_dimension()</code>.</li>
+The solid determining the cutout of the manifold. Its dimension must match <code>self.range_dimension()</code>.</li>
 </ul>
 
 <h6 id="see-also">See Also</h6>
 
-<p><code>Solid.slice</code>:  Slice the solid by a manifold.  </p>
+<p><code>Solid.compute_cutout</code>:  Compute the cutout portion of the manifold within the solid.  </p>
 
 <h6 id="notes">Notes</h6>
 
@@ -365,32 +365,6 @@ The 1D array at which to evaluate the point.</li>
 <ul>
 <li><strong>point</strong> (<code>numpy.array</code>):</li>
 </ul>
-</div>
-
-
-                            </div>
-                            <div id="Manifold.flip_normal" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">flip_normal</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Manifold.flip_normal"></a>
-    
-            <div class="docstring"><p>Flip the direction of the normal.</p>
-
-<h6 id="returns">Returns</h6>
-
-<ul>
-<li><strong>manifold</strong> (<code><a href="#Manifold">Manifold</a></code>):
-The manifold with flipped normal. The manifold retains the same tangent space.</li>
-</ul>
-
-<h6 id="see-also">See Also</h6>
-
-<p><code>Solid.complement</code>:  Return the complement of the solid: whatever was inside is outside and vice-versa.  </p>
 </div>
 
 
@@ -480,19 +454,19 @@ The <code><a href="#Manifold">Manifold</a></code> intersecting self.</li>
 A list of intersections between the two manifolds. 
 Each intersection records either a crossing or a coincident region.</p>
 
-<p>For a crossing, intersection is a <code><a href="#Manifold.Crossing">Manifold.Crossing</a></code>: (left, right)</p>
+<p>For a crossing, intersection is a <code><a href="#Manifold.Crossing">Manifold.Crossing</a></code>: (firstPart, secondPart)</p>
 
 <ul>
-<li>left : <code><a href="#Manifold">Manifold</a></code> in the manifold's domain where the manifold and the other cross.</li>
-<li>right : <code><a href="#Manifold">Manifold</a></code> in the other's domain where the manifold and the other cross.</li>
+<li>firstPart : <code><a href="#Manifold">Manifold</a></code> in the manifold's domain where the manifold and the other cross.</li>
+<li>secondPart : <code><a href="#Manifold">Manifold</a></code> in the other's domain where the manifold and the other cross.</li>
 <li>Both intersection manifolds have the same domain and range (the crossing between the manifold and the other).</li>
 </ul>
 
-<p>For a coincident region, intersection is a <code><a href="#Manifold.Coincidence">Manifold.Coincidence</a></code>: (left, right, alignment, transform, inverse, translation)</p>
+<p>For a coincident region, intersection is a <code><a href="#Manifold.Coincidence">Manifold.Coincidence</a></code>: (firstPart, secondPart, alignment, transform, inverse, translation)</p>
 
 <ul>
-<li>left : <code>Solid</code> in the manifold's domain within which the manifold and the other are coincident.</li>
-<li>right : <code>Solid</code> in the other's domain within which the manifold and the other are coincident.</li>
+<li>firstPart : <code>Solid</code> in the manifold's domain within which the manifold and the other are coincident.</li>
+<li>secondPart : <code>Solid</code> in the other's domain within which the manifold and the other are coincident.</li>
 <li>alignment : scalar value holding the normal alignment between the manifold and the other (the dot product of their unit normals).</li>
 <li>transform : <code>numpy.array</code> holding the transform matrix from the manifold's domain to the other's domain.</li>
 <li>inverse : <code>numpy.array</code> holding the inverse transform matrix from the other's domain to the boundary's domain.</li>
@@ -504,11 +478,37 @@ Each intersection records either a crossing or a coincident region.</p>
 <h6 id="see-also">See Also</h6>
 
 <p><code><a href="#Manifold.cached_intersect">cached_intersect</a></code>:  Intersect two manifolds, caching the result for twins (same intersection but swapping self and other). <br />
-<code>Solid.slice</code>:  slice the solid by a manifold.  </p>
+<code>Solid.compute_cutout</code>:  Compute the cutout portion of the manifold within the solid.  </p>
 
 <h6 id="notes">Notes</h6>
 
 <p>To invert the mapping to go from the other's domain to the manifold's domain, you first subtract the translation and then multiply by the inverse of the transform.</p>
+</div>
+
+
+                            </div>
+                            <div id="Manifold.negate_normal" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">negate_normal</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Manifold.negate_normal"></a>
+    
+            <div class="docstring"><p>Negate the direction of the normal.</p>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>manifold</strong> (<code><a href="#Manifold">Manifold</a></code>):
+The manifold with negated normal. The manifold retains the same tangent space.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code>Solid.complement</code>:  Return the complement of the solid: whatever was inside is outside and vice-versa.  </p>
 </div>
 
 
@@ -773,7 +773,7 @@ lower and upper bounds on each dependent variable.</li>
     </div>
     <a class="headerlink" href="#Manifold.Crossing"></a>
     
-            <div class="docstring"><p>Crossing(left, right)</p>
+            <div class="docstring"><p>Crossing(firstPart, secondPart)</p>
 </div>
 
 
@@ -782,8 +782,8 @@ lower and upper bounds on each dependent variable.</li>
                                 <dl>
                                     <div><dt><a href="#Crossing">Crossing</a></dt>
                                 <dd id="Manifold.Crossing.__init__" class="function"><a href="#Crossing.__init__">Crossing</a></dd>
-                <dd id="Manifold.Crossing.left" class="variable"><a href="#Crossing.left">left</a></dd>
-                <dd id="Manifold.Crossing.right" class="variable"><a href="#Crossing.right">right</a></dd>
+                <dd id="Manifold.Crossing.firstPart" class="variable"><a href="#Crossing.firstPart">firstPart</a></dd>
+                <dd id="Manifold.Crossing.secondPart" class="variable"><a href="#Crossing.secondPart">secondPart</a></dd>
 
             </div>
             <div><dt>builtins.tuple</dt>
@@ -813,8 +813,8 @@ lower and upper bounds on each dependent variable.</li>
                                 <dl>
                                     <div><dt><a href="#Coincidence">Coincidence</a></dt>
                                 <dd id="Manifold.Coincidence.__init__" class="function"><a href="#Coincidence.__init__">Coincidence</a></dd>
-                <dd id="Manifold.Coincidence.left" class="variable"><a href="#Coincidence.left">left</a></dd>
-                <dd id="Manifold.Coincidence.right" class="variable"><a href="#Coincidence.right">right</a></dd>
+                <dd id="Manifold.Coincidence.firstPart" class="variable"><a href="#Coincidence.firstPart">firstPart</a></dd>
+                <dd id="Manifold.Coincidence.secondPart" class="variable"><a href="#Coincidence.secondPart">secondPart</a></dd>
                 <dd id="Manifold.Coincidence.alignment" class="variable"><a href="#Coincidence.alignment">alignment</a></dd>
                 <dd id="Manifold.Coincidence.transform" class="variable"><a href="#Coincidence.transform">transform</a></dd>
                 <dd id="Manifold.Coincidence.inverse" class="variable"><a href="#Coincidence.inverse">inverse</a></dd>

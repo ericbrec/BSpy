@@ -43,7 +43,7 @@
                                 <a class="variable" href="#Hyperplane.metadata">metadata</a>
                         </li>
                         <li>
-                                <a class="function" href="#Hyperplane.complete_slice">complete_slice</a>
+                                <a class="function" href="#Hyperplane.complete_cutout">complete_cutout</a>
                         </li>
                         <li>
                                 <a class="function" href="#Hyperplane.copy">copy</a>
@@ -61,9 +61,6 @@
                                 <a class="function" href="#Hyperplane.evaluate">evaluate</a>
                         </li>
                         <li>
-                                <a class="function" href="#Hyperplane.flip_normal">flip_normal</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#Hyperplane.from_dict">from_dict</a>
                         </li>
                         <li>
@@ -71,6 +68,9 @@
                         </li>
                         <li>
                                 <a class="function" href="#Hyperplane.intersect">intersect</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Hyperplane.negate_normal">negate_normal</a>
                         </li>
                         <li>
                                 <a class="function" href="#Hyperplane.normal">normal</a>
@@ -190,27 +190,27 @@ Thus the dimension of the domain is one less than that of the range.</p>
     
 
                             </div>
-                            <div id="Hyperplane.complete_slice" class="classattr">
+                            <div id="Hyperplane.complete_cutout" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">complete_slice</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="nb">slice</span>, </span><span class="param"><span class="n">solid</span></span><span class="return-annotation">):</span></span>
+        <span class="name">complete_cutout</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">cutout</span>, </span><span class="param"><span class="n">solid</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Hyperplane.complete_slice"></a>
+    <a class="headerlink" href="#Hyperplane.complete_cutout"></a>
     
-            <div class="docstring"><p>Add any missing inherent (implicit) boundaries of this manifold's domain to the given slice of the 
-given solid that are needed to make the slice valid and complete.</p>
+            <div class="docstring"><p>Add any missing inherent (implicit) boundaries of this manifold's domain to the given cutout of the 
+given solid that are needed to make the cutout valid and complete.</p>
 
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>slice</strong> (<code>Solid</code>):
-The slice of the given solid formed by the manifold. The slice may be incomplete, missing some of the 
+<li><strong>cutout</strong> (<code>Solid</code>):
+The cutout of the given solid formed by the manifold. The cutout may be incomplete, missing some of the 
 manifold's inherent domain boundaries. Its dimension must match <code>self.domain_dimension()</code>.</li>
 <li><strong>solid</strong> (<code>Solid</code>):
-The solid being sliced by the manifold. Its dimension must match <code>self.range_dimension()</code>.</li>
+The solid determining the cutout of the manifold. Its dimension must match <code>self.range_dimension()</code>.</li>
 </ul>
 
 <h6 id="parameters-2">Parameters</h6>
@@ -223,7 +223,7 @@ Its dimension must match <code>self.domain_dimension()</code>.</li>
 
 <h6 id="see-also">See Also</h6>
 
-<p><code>Solid.slice</code>:  Slice the solid by a manifold.  </p>
+<p><code>Solid.compute_cutout</code>:  Compute the cutout portion of the manifold within the solid.  </p>
 
 <h6 id="notes">Notes</h6>
 
@@ -259,7 +259,7 @@ point containment for zero-dimension hyperplanes (points).</p>
                     <div class="decorator">@staticmethod</div>
 
         <span class="def">def</span>
-        <span class="name">create_axis_aligned</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">dimension</span>, </span><span class="param"><span class="n">axis</span>, </span><span class="param"><span class="n">offset</span>, </span><span class="param"><span class="n">flipNormal</span><span class="o">=</span><span class="kc">False</span></span><span class="return-annotation">):</span></span>
+        <span class="name">create_axis_aligned</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">dimension</span>, </span><span class="param"><span class="n">axis</span>, </span><span class="param"><span class="n">offset</span>, </span><span class="param"><span class="n">negateNormal</span><span class="o">=</span><span class="kc">False</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -276,7 +276,7 @@ The dimension of the hyperplane.</li>
 The number of the axis (0 for x, 1 for y, ...).</li>
 <li><strong>offset</strong> (<code>float</code>):
 The offset from zero along the axis of a point on the hyperplane.</li>
-<li><strong>flipNormal</strong> (<code>bool</code>, optional):
+<li><strong>negateNormal</strong> (<code>bool</code>, optional):
 A Boolean indicating that the normal should point toward in the negative direction along the axis. 
 Default is False, meaning the normal points in the positive direction along the axis.</li>
 </ul>
@@ -370,32 +370,6 @@ The 1D array at which to evaluate the point.</li>
 
 
                             </div>
-                            <div id="Hyperplane.flip_normal" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">flip_normal</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Hyperplane.flip_normal"></a>
-    
-            <div class="docstring"><p>Flip the direction of the normal.</p>
-
-<h6 id="returns">Returns</h6>
-
-<ul>
-<li><strong>hyperplane</strong> (<code><a href="#Hyperplane">Hyperplane</a></code>):
-The hyperplane with flipped normal. The hyperplane retains the same tangent space.</li>
-</ul>
-
-<h6 id="see-also">See Also</h6>
-
-<p><code>Solid.complement</code>:  Return the complement of the solid: whatever was inside is outside and vice-versa.  </p>
-</div>
-
-
-                            </div>
                             <div id="Hyperplane.from_dict" class="classattr">
                                 <div class="attr function">
                     <div class="decorator">@staticmethod</div>
@@ -482,19 +456,19 @@ A list of intersections between the two hyperplanes.
 (Hyperplanes will have at most one intersection, but other types of manifolds can have several.)
 Each intersection records either a crossing or a coincident region.</p>
 
-<p>For a crossing, intersection is a <code>Manifold.Crossing</code>: (left, right)</p>
+<p>For a crossing, intersection is a <code>Manifold.Crossing</code>: (firstPart, secondPart)</p>
 
 <ul>
-<li>left : <code>Manifold</code> in the manifold's domain where the manifold and the other cross.</li>
-<li>right : <code>Manifold</code> in the other's domain where the manifold and the other cross.</li>
+<li>firstPart : <code>Manifold</code> in the manifold's domain where the manifold and the other cross.</li>
+<li>secondPart : <code>Manifold</code> in the other's domain where the manifold and the other cross.</li>
 <li>Both intersection manifolds have the same domain and range (the crossing between the manifold and the other).</li>
 </ul>
 
-<p>For a coincident region, intersection is a <code>Manifold.Coincidence</code>: (left, right, alignment, transform, inverse, translation)</p>
+<p>For a coincident region, intersection is a <code>Manifold.Coincidence</code>: (firstPart, secondPart, alignment, transform, inverse, translation)</p>
 
 <ul>
-<li>left : <code>Solid</code> in the manifold's domain within which the manifold and the other are coincident.</li>
-<li>right : <code>Solid</code> in the other's domain within which the manifold and the other are coincident.</li>
+<li>firstPart : <code>Solid</code> in the manifold's domain within which the manifold and the other are coincident.</li>
+<li>secondPart : <code>Solid</code> in the other's domain within which the manifold and the other are coincident.</li>
 <li>alignment : scalar value holding the normal alignment between the manifold and the other (the dot product of their unit normals).</li>
 <li>transform : <code>numpy.array</code> holding the transform matrix from the manifold's domain to the other's domain.</li>
 <li>inverse : <code>numpy.array</code> holding the inverse transform matrix from the other's domain to the boundary's domain.</li>
@@ -505,7 +479,7 @@ Each intersection records either a crossing or a coincident region.</p>
 
 <h6 id="see-also">See Also</h6>
 
-<p><code>Solid.slice</code>:  slice the solid by a manifold. <br />
+<p><code>Solid.compute_cutout</code>:  Compute the cutout portion of the manifold within the solid. <br />
 <code>numpy.linalg.svd</code>:  Compute the singular value decomposition of a matrix array.  </p>
 
 <h6 id="notes">Notes</h6>
@@ -541,6 +515,32 @@ You get the transform is <code>inverse(transpose(other._tangentSpace) * other._t
 and the translation is <code>inverse(transpose(other._tangentSpace) * other._tangentSpace)) * transpose(other._tangentSpace) * (hyperplane._point - other._point)</code>.</p>
 
 <p>Note that to invert the mapping to go from the other's domain to the hyperplane's domain, you first subtract the translation and then multiply by the inverse of the transform.</p>
+</div>
+
+
+                            </div>
+                            <div id="Hyperplane.negate_normal" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">negate_normal</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Hyperplane.negate_normal"></a>
+    
+            <div class="docstring"><p>Negate the direction of the normal.</p>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>hyperplane</strong> (<code><a href="#Hyperplane">Hyperplane</a></code>):
+The hyperplane with negated normal. The hyperplane retains the same tangent space.</li>
+</ul>
+
+<h6 id="see-also">See Also</h6>
+
+<p><code>Solid.complement</code>:  Return the complement of the solid: whatever was inside is outside and vice-versa.  </p>
 </div>
 
 
