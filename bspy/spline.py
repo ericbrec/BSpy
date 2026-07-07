@@ -303,6 +303,31 @@ class Spline(Manifold):
         `trim` : Trim the domain of a spline.
         """
         return bspy._spline_domain.clamp(self, left, right)
+    
+    @staticmethod
+    def clothoid(u, kappa0, kappa1, tolerance = None):
+        """
+        Construct a clothoid from the two given curvatures.
+
+        Parameters
+        ----------
+        kappa0 : scalar
+            The desired curvature of the clothoid at the start
+        
+        kappa1 : scalar
+            The desired curvature of the clothoid at the end
+
+        tolerance : scalar, optional
+            The desired absolute tolerance to which the clothoid should be constructed.  Defaults
+            to 1.0e-12 if tolerance == None.
+
+        Returns
+        -------
+        spline : `Spline`
+            A spline approximation to a clothoid of the specified curvatures,
+            accurate to the given tolerance.
+        """
+        return bspy._spline_fitting.clothoid_evaluator(u, kappa0, kappa1)
 
     @staticmethod
     def common_basis(splines, indMap = None):

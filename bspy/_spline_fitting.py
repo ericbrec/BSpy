@@ -12,6 +12,10 @@ def circular_arc(radius, angle, tolerance = None):
     samples = int(max(np.ceil(((1.1536e-5 * radius / tolerance)**(1/8)) * angle / 90), 2.0)) + 1
     return bspy.Spline.section([(radius * np.cos(u * angle * np.pi / 180), radius * np.sin(u * angle * np.pi / 180), 90 + u * angle, 1.0 / radius) for u in np.linspace(0.0, 1.0, samples)])
 
+def clothoid_evaluator(u, kappa0, kappa1):
+    uFresnel = 0.5 * ((1.0 - u) * kappa0 + u * kappa1)
+    return np.array(sp.special.fresnel(uFresnel)[::-1])
+
 def composition(splines, tolerance):
     # Collect domains and check range bounds
     domains = [None]
