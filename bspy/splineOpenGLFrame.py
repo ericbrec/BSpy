@@ -245,7 +245,11 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         void main()
         {{
-            outData = inData[gl_InvocationID];
+            outData.uOrder = inData[gl_InvocationID].uOrder;
+            outData.uN = inData[gl_InvocationID].uN;
+            outData.uKnot = inData[gl_InvocationID].uKnot;
+            outData.u = inData[gl_InvocationID].u;
+            outData.uInterval = inData[gl_InvocationID].uInterval;
             gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 
             float uSamples = 0.0;
@@ -610,7 +614,20 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         void main()
         {{
-            outData = inData[gl_InvocationID];
+            outData.uOrder = inData[gl_InvocationID].uOrder;
+            outData.vOrder = inData[gl_InvocationID].vOrder;
+            outData.uN = inData[gl_InvocationID].uN;
+            outData.vN = inData[gl_InvocationID].vN;
+            outData.uKnot = inData[gl_InvocationID].uKnot;
+            outData.vKnot = inData[gl_InvocationID].vKnot;
+            outData.uFirst = inData[gl_InvocationID].uFirst;
+            outData.vFirst = inData[gl_InvocationID].vFirst;
+            outData.uSpan = inData[gl_InvocationID].uSpan;
+            outData.vSpan = inData[gl_InvocationID].vSpan;
+            outData.u = inData[gl_InvocationID].u;
+            outData.v = inData[gl_InvocationID].v;
+            outData.uInterval = inData[gl_InvocationID].uInterval;
+            outData.vInterval = inData[gl_InvocationID].vInterval;
             gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 
             float uSamples[3];
@@ -703,7 +720,20 @@ class SplineOpenGLFrame(OpenGLFrame):
             }}
             {postProcessSplineColor}
 
-            outData = inData;
+            outData.uOrder = inData.uOrder;
+            outData.vOrder = inData.vOrder;
+            outData.uN = inData.uN;
+            outData.vN = inData.vN;
+            outData.uKnot = inData.uKnot;
+            outData.vKnot = inData.vKnot;
+            outData.uFirst = inData.uFirst;
+            outData.vFirst = inData.vFirst;
+            outData.uSpan = inData.uSpan;
+            outData.vSpan = inData.vSpan;
+            outData.u = inData.u;
+            outData.v = inData.v;
+            outData.uInterval = inData.uInterval;
+            outData.vInterval = inData.vInterval;
 
             worldPosition = point.xyz;
             normal = normalize(cross(duPoint, dvPoint));
