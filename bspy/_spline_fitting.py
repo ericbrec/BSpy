@@ -12,10 +12,125 @@ def circular_arc(radius, angle, tolerance = None):
     samples = int(max(np.ceil(((1.1536e-5 * radius / tolerance)**(1/8)) * angle / 90), 2.0)) + 1
     return bspy.Spline.section([(radius * np.cos(u * angle * np.pi / 180), radius * np.sin(u * angle * np.pi / 180), 90 + u * angle, 1.0 / radius) for u in np.linspace(0.0, 1.0, samples)])
 
-def clothoid_evaluator(u, kappa0, kappa1):
-    uFresnel = 0.5 * ((1.0 - u) * kappa0 + u * kappa1)
-    return np.array(sp.special.fresnel(uFresnel)[::-1])
+def _clothoid_evaluator(u, kappa0, kappa1, length):
+    alpha = np.sqrt((kappa1 - kappa0) / (2.0 * length))
+    myKappa = (1.0 - u) * kappa0 + u * kappa1
+    uFresnel = myKappa / (np.sqrt(2.0 * np.pi) * alpha)
+    scale = np.sqrt(np.pi / 2.0) / alpha
+    xy = scale * np.array(sp.special.fresnel(uFresnel)[::-1])
+    primeX = (myKappa / (2.0 * alpha)) ** 2
+    xyp = np.array([np.cos(primeX), np.sin(primeX)])
+    theta = 180.0 * np.arctan2(xyp[1], xyp[0]) / np.pi
+    return np.array([xy[0], xy[1], theta, myKappa])
 
+def clothoid(kappa0, kappa1, length, tolerance = 1.0e-12):
+    if tolerance is None:
+        tolerance = 1.0e-12
+    if length < 0.0 or tolerance < 0.0:
+        raise ValueError("The length and tolerance must be positive.")
+    if kappa1 == kappa0:
+        return bspy.Spline.line([0.0, 0.0], [length, 0.0])
+    def clothoid_fit(kappa0, kappa1, length, numPoints):
+        uValues = np.linspace(0.0, 1.0, numPoints)
+        points = np.array([_clothoid_evaluator(u, kappa0, kappa1, length) for u in uValues])
+        myClothoid = least_squares(uValues, points[:, :2].T, [4], compression = 0.5, fixEnds = True)
+    #    mySection = section(points)
+        uValues = np.linspace(0.001, 0.999, 401)
+    #    testPoints = [_clothoid_evaluator(u, kappa0, kappa1, length)[:2] for u in np.linspace(0.001, 0.999, 401)]
+    #    uProject = [((mySection - testPoint) @ mySection.differentiate()).zeros() for testPoint in testPoints]
+        maxError = 0.0
+        for uValue in uValues:
+            error = np.linalg.norm(myClothoid(uValue) - _clothoid_evaluator(uValue, kappa0, kappa1, length)[:2])
+            maxError = np.max([maxError, error])
+    #    for uValues, testPoint in zip(uProject, testPoints):
+    #        minError = length 
+    #        for u in uValues:
+    #            minError = np.min([minError, np.linalg.norm(mySection(u) - testPoint)])
+    #        maxError = np.max([maxError, minError])
+        return myClothoid, maxError
+    firstSection, maxError = clothoid_fit(kappa0, kappa1, length, 5)
+    numPoints = int(np.ceil(4 * ((maxError / tolerance) ** (1 / 4)) + 1))
+    print(maxError, numPoints)
+    finalSection, maxError = clothoid_fit(kappa0, kappa1, length, numPoints)
+    print(maxError)
+    return finalSection
+
+def fillet(point1, point2, point3, cutRadius, fillRadius, tolerance = 1.0e-12):
+    if tolerance is None:
+        tolerance = 1.0e-12
+    if cutRadius <= 0.0 or fillRadius <= 0.0 or tolerance < 0.0:
+        raise ValueError("The cut radius, fill radius, and tolerance must be positive.")
+    if cutRadius <= fillRadius:
+        raise ValueError("The cut radius must be greater than the fill radius.")
+
+    # Lay out the basic geometry of the two line segments
+
+    p1 = np.array(point1)
+    p2 = np.array(point2)
+    p3 = np.array(point3)
+    p2MinusP1 = p2 - p1
+    p3MinusP2 = p3 - p2
+    leg1Length = np.linalg.norm(p2MinusP1)
+    leg2Length = np.linalg.norm(p3MinusP2)
+    p21Perp = np.array([-p2MinusP1[1], p2MinusP1[0]]) / leg1Length
+    p32Perp = np.array([-p3MinusP2[1], p3MinusP2[0]]) / leg2Length
+
+    # Find the intersection of the offsets of the line segments cutRadius units away
+
+    if np.cross(p2MinusP1, p3MinusP2) < 0.0:
+        cutRadius = -cutRadius
+    uv = np.linalg.solve(np.array([p2MinusP1, -p3MinusP2]).T, p2MinusP1 + cutRadius * (p32Perp - p21Perp))
+    cutPoint1 = (1.0 - uv[0]) * p1 + uv[0] * p2
+    cutPoint2 = (1.0 - uv[1]) * p2 + uv[1] * p3
+    cornerDistance = (1.0 - uv[0]) * leg1Length
+
+    # Determine the length of the clothoid curve needed to bridge the gap between line and circle
+
+    kappaFill = 1.0 / fillRadius
+    def bisectBox(length):
+        x, y, theta, kappa = _clothoid_evaluator(1.0, 0.0, kappaFill, length)
+        angle = np.pi * theta / 180.0
+        cosCloth = np.cos(angle)
+        sinCloth = np.sin(angle)
+        return cutRadius * (x - cornerDistance) + y * cornerDistance + fillRadius * (cosCloth * cornerDistance - sinCloth * cutRadius) 
+    clothoidLength = sp.optimize.bisect(bisectBox, 1.0e-13, cornerDistance)
+
+    # Determine first line segments and first clothoid bridge
+
+    leg1 = line(p1, cutPoint1)
+    myClothoid = clothoid(0.0, kappaFill, clothoidLength)
+    clothoid1 = list(np.array([p2MinusP1 / leg1Length, p21Perp]).T) @ myClothoid + cutPoint1
+
+    # Rotate second clothoid bridge into place
+
+    clothoid2 = list(np.array([-p3MinusP2 / leg2Length, p32Perp]).T) @ myClothoid.reverse() + cutPoint2
+
+    # Determine circular arc section of fillet
+     
+    _, _, theta, _ = _clothoid_evaluator(1.0, 0.0, kappaFill, clothoidLength)
+    turnAngle = 180.0 * np.atan2(np.cross(p2MinusP1, p3MinusP2), p2MinusP1 @ p3MinusP2) / np.pi
+    filletArc = circular_arc(fillRadius, turnAngle - 2.0 * theta)
+
+    # Solve Procrustes problem to position circular arc
+
+    aEnd1 = filletArc(0.0)
+    aEnd2 = filletArc(1.0)
+    aAverage = 0.5 * (aEnd1 + aEnd2)
+    aPosition = np.array([aEnd1 - aAverage, aEnd2 - aAverage]).T
+    bEnd1 = clothoid1(1.0)
+    bEnd2 = clothoid2(0.0)
+    bAverage = 0.5 * (bEnd1 + bEnd2)
+    bPosition = np.array([bEnd1 - bAverage, bEnd2 - bAverage]).T
+    u, _, vt = np.linalg.svd(bPosition @ aPosition.T)
+    if np.linalg.det(u @ vt) < 0.0:
+        u[:,-1] *= -1.0
+    myArc = list(u @ vt) @ (filletArc - aAverage) + bAverage
+
+    # Determine final line segment and return the pieces
+
+    leg2 = line(cutPoint2, p3)
+    return leg1, clothoid1, myArc, clothoid2, leg2
+        
 def composition(splines, tolerance):
     # Collect domains and check range bounds
     domains = [None]

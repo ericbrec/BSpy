@@ -305,7 +305,7 @@ class Spline(Manifold):
         return bspy._spline_domain.clamp(self, left, right)
     
     @staticmethod
-    def clothoid(u, kappa0, kappa1, tolerance = None):
+    def clothoid(kappa0, kappa1, length, tolerance = None):
         """
         Construct a clothoid from the two given curvatures.
 
@@ -316,18 +316,21 @@ class Spline(Manifold):
         
         kappa1 : scalar
             The desired curvature of the clothoid at the end
+        
+        length : scalar
+            The desired length of the clothoid
 
         tolerance : scalar, optional
             The desired absolute tolerance to which the clothoid should be constructed.  Defaults
-            to 1.0e-12 if tolerance == None.
+            to 1.0e-5 if tolerance == None.
 
         Returns
         -------
         spline : `Spline`
-            A spline approximation to a clothoid of the specified curvatures,
+            A spline approximation to a clothoid of the specified curvatures and length,
             accurate to the given tolerance.
         """
-        return bspy._spline_fitting.clothoid_evaluator(u, kappa0, kappa1)
+        return bspy._spline_fitting.clothoid(kappa0, kappa1, length, tolerance)
 
     @staticmethod
     def common_basis(splines, indMap = None):
@@ -1000,6 +1003,22 @@ class Spline(Manifold):
         """
         return bspy._spline_domain.extrapolate(self, newDomain, continuityOrder)
 
+    @staticmethod
+    def fillet(point1, point2, point3, cutRadius, fillRadius, tolerance = 1.0e-12):
+        """
+        Create an arc Spline between three points
+
+        Parameters
+        ----------
+        point1 - 'array-like'
+            A vector of length 2 containing the first point of the sequence
+        point1 - 'array-like'
+            A vector of length 2 containing the first point of the sequence
+        point1 - 'array-like'
+            A vector of length 2 containing the first point of the sequence
+        """
+        return bspy._spline_fitting.fillet(point1, point2, point3, cutRadius, fillRadius, tolerance)
+    
     @staticmethod
     def fit(domain, f, order = None, knots = None, tolerance = 1.0e-4):
         """
