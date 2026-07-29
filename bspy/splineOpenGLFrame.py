@@ -10,6 +10,9 @@ except ImportError:
     from tkinter import Frame as OpenGLFrame
 from bspy import Spline
 
+def cleanCodeString(inputCode):
+    return ''.join(c for c in inputCode if c == '\n' or c.isprintable())
+
 class SplineOpenGLFrame(OpenGLFrame):
     """
     A tkinter `OpenGLFrame` with shaders to display a `Spline`.
@@ -41,7 +44,7 @@ class SplineOpenGLFrame(OpenGLFrame):
     ISOPARMS = (1 << 3)
     """Option to draw the lines of constant knot values of the spline in the line color (only useful for nInd >= 2). Off by default."""
 
-    computeShaderCode = """
+    computeShaderCode = cleanCodeString("""
         #version 430 core
 
         layout(local_size_x = 1) in;
@@ -56,9 +59,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             int coefficientOffset = int(gl_GlobalInvocationID.x);
             imageStore(uTransformedCoefs, coefficientOffset, uTransformMatrix * texelFetch(uXYZCoefs, coefficientOffset));
         }
-    """
+    """)
 
-    computeBSplineCode = """
+    computeBSplineCode = cleanCodeString("""
         void ComputeBSpline(in int offset, in int order, in int n, in int knot, in float u, 
             out float uBSpline[{maxOrder}], out float duBSpline[{maxOrder}])
         {{
@@ -102,9 +105,9 @@ class SplineOpenGLFrame(OpenGLFrame):
                 }}
             }}
         }}
-    """
+    """)
 
-    computeSampleRateCode = """
+    computeSampleRateCode = cleanCodeString("""
         float ComputeSampleRate(in vec3 point, in vec3 dPoint, in vec3 d2Point, in float minRate)
         {
             float rate = 0.0;
@@ -132,9 +135,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             }
             return rate;
         }
-    """
+    """)
 
-    curveVertexShaderCode = """
+    curveVertexShaderCode = cleanCodeString("""
         #version 410 core
      
         const int header = 2;
@@ -161,9 +164,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             outData.uInterval = texelFetch(uKnots, header + outData.uKnot).x - outData.u; // knots[uKnot] - knots[uKnot-1]
             gl_Position = aParameters;
         }
-    """
+    """)
 
-    computeCurveSamplesCode = """
+    computeCurveSamplesCode = cleanCodeString("""
         void ComputeCurveSamples(in int maxSamples, out float uSamples)
         {{
             float sampleRate = 0.0;
@@ -207,9 +210,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             }}
             uSamples = min(floor(0.5 + outData.uInterval * sampleRate), maxSamples);
         }}
-    """
+    """)
 
-    curveTCShaderCode = """
+    curveTCShaderCode = cleanCodeString("""
         #version 410 core
 
         layout (vertices = 1) out;
@@ -257,9 +260,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             gl_TessLevelOuter[0] = 1.0;
             gl_TessLevelOuter[1] = uSamples;
         }}
-    """
+    """)
 
-    curveTEShaderCode = """
+    curveTEShaderCode = cleanCodeString("""
         #version 410 core
 
         layout (isolines) in;
@@ -299,9 +302,9 @@ class SplineOpenGLFrame(OpenGLFrame):
 
             gl_Position = uProjectionMatrix * point;
         }}
-    """
+    """)
 
-    curveGeometryShaderCode = """
+    curveGeometryShaderCode = cleanCodeString("""
         #version 330 core
 
         layout( points ) in;
@@ -378,9 +381,9 @@ class SplineOpenGLFrame(OpenGLFrame):
                 EndPrimitive();
             }}
         }}
-    """
+    """)
 
-    curveFragmentShaderCode = """
+    curveFragmentShaderCode = cleanCodeString("""
         #version 410 core
      
         uniform vec4 uLineColor;
@@ -391,9 +394,9 @@ class SplineOpenGLFrame(OpenGLFrame):
         {
             color = uLineColor;
         }
-    """
+    """)
 
-    surfaceVertexShaderCode = """
+    surfaceVertexShaderCode = cleanCodeString("""
         #version 410 core
 
         const int header = 4;
@@ -434,9 +437,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             outData.vInterval = texelFetch(uKnots, header + outData.uOrder + outData.uN + outData.vKnot).x - outData.v; // vKnots[vKnot] - vKnots[vKnot-1]
             gl_Position = aParameters;
         }
-    """
+    """)
 
-    computeSurfaceSamplesCode = """
+    computeSurfaceSamplesCode = cleanCodeString("""
         void ComputeSurfaceSamples(in int maxSamples, out float uSamples[3], out float vSamples[3])
         {{
             // Computes sample counts for u and v for the left side ([0]), middle ([1]), and right side ([2]).
@@ -572,9 +575,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             vSamples[1] = min(floor(0.5 + outData.vInterval * sampleRate[1]), maxSamples);
             vSamples[2] = min(floor(0.5 + outData.vInterval * sampleRate[2]), maxSamples);
         }}
-    """
+    """)
 
-    surfaceTCShaderCode = """
+    surfaceTCShaderCode = cleanCodeString("""
         #version 410 core
 
         layout (vertices = 1) out;
@@ -640,9 +643,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             gl_TessLevelInner[0] = uSamples[1];
             gl_TessLevelInner[1] = vSamples[1];
         }}
-    """
+    """)
 
-    surfaceTEShaderCode = """
+    surfaceTEShaderCode = cleanCodeString("""
         #version 410 core
 
         layout (quads) in;
@@ -742,9 +745,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             pixelPer.y = zScale * max(uScreenScale.x * abs(point.x * dvPoint.z - dvPoint.x * point.z), uScreenScale.y * abs(point.y * dvPoint.z - dvPoint.y * point.z));
             gl_Position = uProjectionMatrix * point;
         }}
-    """
+    """)
 
-    surfaceGeometryShaderCode = """
+    surfaceGeometryShaderCode = cleanCodeString("""
         #version 330 core
 
         layout( points ) in;
@@ -908,9 +911,9 @@ class SplineOpenGLFrame(OpenGLFrame):
                 }}
             }}
         }}
-    """
+    """)
 
-    surfaceSimpleFragmentShaderCode = """
+    surfaceSimpleFragmentShaderCode = cleanCodeString("""
         #version 330 core
      
         in vec3 splineColor;
@@ -920,9 +923,9 @@ class SplineOpenGLFrame(OpenGLFrame):
         void main() {
             color = vec4(splineColor, uFillColor.a);
         }
-    """
+    """)
 
-    surfaceFragmentShaderCode = """
+    surfaceFragmentShaderCode = cleanCodeString("""
         #version 410 core
      
         flat in SplineInfo
@@ -960,9 +963,9 @@ class SplineOpenGLFrame(OpenGLFrame):
             if (color.a == 0.0)
                 discard;
         }
-    """
+    """)
 
-    trimmedSurfaceFragmentShaderCode = """
+    trimmedSurfaceFragmentShaderCode = cleanCodeString("""
         #version 410 core
      
         flat in SplineInfo
@@ -1002,7 +1005,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             if (color.a * texture(uTrimTextureMap, tex).r == 0.0)
                 discard;
         }
-    """
+    """)
  
     def __init__(self, *args, eye=(0.0, 0.0, 3.0), center=(0.0, 0.0, 0.0), up=(0.0, 1.0, 0.0), draw_func=None, **kw):
         OpenGLFrame.__init__(self, *args, **kw)
