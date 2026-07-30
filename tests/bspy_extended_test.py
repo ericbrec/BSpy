@@ -740,12 +740,12 @@ def test_intersection():
     solids = bspy.Solid.load("tests/teapots.json")
     intersection = solids[0].intersection(solids[1])
 
-    computedVolume = intersection.volume_integral(lambda x: 1.0)
-    expectedVolume = solids[2].volume_integral(lambda x: 1.0)
+    computedVolume = intersection.volume_integral(lambda x: 1.0, epsabs=epsilon*0.2, epsrel=epsilon*0.2)
+    expectedVolume = solids[2].volume_integral(lambda x: 1.0, epsabs=epsilon*0.2, epsrel=epsilon*0.2)
     assert abs(computedVolume - expectedVolume) < epsilon
 
-    computedSurfaceArea = intersection.surface_integral(lambda x, n: n)
-    expectedSurfaceArea = solids[2].surface_integral(lambda x, n: n)
+    computedSurfaceArea = intersection.surface_integral(lambda x, n: n, epsabs=epsilon*0.2, epsrel=epsilon*0.2)
+    expectedSurfaceArea = solids[2].surface_integral(lambda x, n: n, epsabs=epsilon*0.2, epsrel=epsilon*0.2)
     assert abs(computedSurfaceArea - expectedSurfaceArea) < epsilon
     print(computedVolume, computedSurfaceArea)
 
@@ -755,11 +755,11 @@ def test_union():
     solids = bspy.Solid.load("tests/pipes.json")
     union = solids[0].union(solids[1])
 
-    computedVolume = union.volume_integral(lambda x: 1.0)
-    expectedVolume = solids[2].volume_integral(lambda x: 1.0)
+    computedVolume = union.volume_integral(lambda x: 1.0, epsabs=epsilon, epsrel=epsilon)
+    expectedVolume = solids[2].volume_integral(lambda x: 1.0, epsabs=epsilon, epsrel=epsilon)
     assert abs(computedVolume - expectedVolume) < epsilon
 
-    computedSurfaceArea = union.surface_integral(lambda x, n: n)
-    expectedSurfaceArea = solids[2].surface_integral(lambda x, n: n)
+    computedSurfaceArea = union.surface_integral(lambda x, n: n, epsabs=epsilon*0.2, epsrel=epsilon*0.2)
+    expectedSurfaceArea = solids[2].surface_integral(lambda x, n: n, epsabs=epsilon*0.2, epsrel=epsilon*0.2)
     assert abs(computedSurfaceArea - expectedSurfaceArea) < epsilon
     print(computedVolume, computedSurfaceArea)

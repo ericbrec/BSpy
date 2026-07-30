@@ -12,7 +12,7 @@ class Manifold:
         A dictionary of ancillary data to store with the manifold. Default is {}.
     """
 
-    minSeparation = 0.0001
+    minSeparation = 1.0e-6
     """If two points are within minSeparation of each each other, they are coincident."""
 
     Crossing = namedtuple('Crossing', ('firstPart','secondPart'))

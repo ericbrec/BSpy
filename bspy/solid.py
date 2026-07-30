@@ -555,7 +555,7 @@ class Solid:
         with open(fileName, 'w', encoding='utf-8') as file:
             json.dump(solids_or_manifolds, file, indent=4, cls=Encoder)
 
-    def surface_integral(self, f, args=(), epsabs=None, epsrel=None, *quadArgs):
+    def surface_integral(self, f, args=(), **quadArgs):
         """
         Compute the surface integral of a vector field on the boundary of the solid.
 
@@ -568,7 +568,7 @@ class Solid:
         args : tuple, optional
             Extra arguments to pass to `f`.
         
-        *quadArgs : Quadrature arguments passed to `scipy.integrate.quad`.
+        **quadArgs : Quadrature arguments passed to `scipy.integrate.quad`.
 
         Returns
         -------
@@ -589,10 +589,6 @@ class Solid:
         """
         if not isinstance(args, tuple):
             args = (args,)
-        if epsabs is None:
-            epsabs = Manifold.minSeparation
-        if epsrel is None:
-            epsrel = Manifold.minSeparation
 
         # Initialize the return value for the integral
         sum = 0.0
@@ -608,7 +604,7 @@ class Solid:
 
             if boundary.trim.dimension > 0:
                 # Add the contribution to the Volume integral from this boundary.
-                sum += boundary.trim.volume_integral(integrand)
+                sum += boundary.trim.volume_integral(integrand, (), **quadArgs)
             else:
                 # This is a 1-D boundary (line interval, no domain), so just add the integrand.
                 sum += integrand(0.0)
@@ -684,7 +680,7 @@ class Solid:
         """
         return self.complement().intersection(other.complement()).complement()
 
-    def volume_integral(self, f, args=(), epsabs=None, epsrel=None, *quadArgs):
+    def volume_integral(self, f, args=(), epsabs=1.49e-8, **quadArgs):
         """
         Compute the volume integral of a function within the solid.
 
@@ -697,7 +693,7 @@ class Solid:
         args : tuple, optional
             Extra arguments to pass to `f`.
         
-        *quadArgs : Quadrature arguments passed to `scipy.integrate.quad`.
+        **quadArgs : Quadrature arguments passed to `scipy.integrate.quad`.
 
         Returns
         -------
@@ -732,10 +728,6 @@ class Solid:
         """
         if not isinstance(args, tuple):
             args = (args,)
-        if epsabs is None:
-            epsabs = Manifold.minSeparation
-        if epsrel is None:
-            epsrel = Manifold.minSeparation
 
         # Initialize the return value for the integral
         sum = 0.0
@@ -758,12 +750,12 @@ class Solid:
                 returnValue = 0.0
                 firstCofactor = boundary.manifold.normal(evalPoint, False, (0,))[0]
                 if abs(x0 - point[0]) > epsabs and abs(firstCofactor) > epsabs:
-                    returnValue = integrate.quad(fHat, x0, point[0], epsabs=epsabs, epsrel=epsrel, *quadArgs)[0] * firstCofactor
+                    returnValue = integrate.quad(fHat, x0, point[0], epsabs=epsabs, **quadArgs)[0] * firstCofactor
                 return returnValue
 
             if boundary.trim.dimension > 0:
                 # Add the contribution to the Volume integral from this boundary.
-                sum += boundary.trim.volume_integral(trimF)
+                sum += boundary.trim.volume_integral(trimF, (), epsabs=epsabs, **quadArgs)
             else:
                 # This is a 1-D boundary (line interval, no domain), so just add the integrand.
                 sum += trimF(0.0)
@@ -842,8 +834,10 @@ class Solid:
                     vectorLength = 1.0
                 return vector / (vectorLength**self.dimension)
 
+            # Record onBoundaryNormal by passing it in as a function argument
             onBoundaryNormalList = [onBoundaryNormal]
-            windingNumber += self.surface_integral(windingIntegrand, onBoundaryNormalList) / nSphereArea
+            # Set epsilon to 0.01 since the winding number only needs to be accurate to the nearest 0.5
+            windingNumber += self.surface_integral(windingIntegrand, onBoundaryNormalList, epsabs=0.01, epsrel=0.01) / nSphereArea
             onBoundaryNormal = onBoundaryNormalList[0]
 
         return windingNumber, onBoundaryNormal
