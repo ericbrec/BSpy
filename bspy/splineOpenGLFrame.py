@@ -146,14 +146,15 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         uniform samplerBuffer uKnots;
 
-        out SplineInfo
+        struct SplineInfo
         {
             int uOrder;
             int uN;
             int uKnot;
             float u;
             float uInterval;
-        } outData;
+        };
+        out SplineInfo outData;
 
         void main()
         {
@@ -219,28 +220,22 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         const int header = 2;
 
-        in SplineInfo
+        struct SplineInfo
         {{
             int uOrder;
             int uN;
             int uKnot;
             float u;
             float uInterval;
-        }} inData[];
+        }};
+        in SplineInfo inData[];
 
         uniform vec3 uScreenScale;
         uniform vec4 uClipBounds;
         uniform samplerBuffer uKnots;
         uniform sampler1D uXYZCoefs;
 
-        patch out SplineInfo
-        {{
-            int uOrder;
-            int uN;
-            int uKnot;
-            float u;
-            float uInterval;
-        }} outData;
+        patch out SplineInfo outData;
 
         {computeSampleRateCode}
 
@@ -269,14 +264,15 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         const int header = 2;
 
-        patch in SplineInfo
+        struct SplineInfo
         {{
             int uOrder;
             int uN;
             int uKnot;
             float u;
             float uInterval;
-        }} inData;
+        }};
+        patch in SplineInfo inData;
 
         uniform mat4 uProjectionMatrix;
         uniform samplerBuffer uKnots;
@@ -312,14 +308,15 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         const int header = 2;
 
-        in SplineInfo
+        struct SplineInfo
         {{
             int uOrder;
             int uN;
             int uKnot;
             float u;
             float uInterval;
-        }} inData[];
+        }};
+        in SplineInfo inData[];
 
         uniform mat4 uProjectionMatrix;
         uniform vec3 uScreenScale;
@@ -327,14 +324,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         uniform samplerBuffer uKnots;
         uniform samplerBuffer uXYZCoefs;
 
-        struct SplineInfoStruct
-        {{
-            int uOrder;
-            int uN;
-            int uKnot;
-            float u;
-            float uInterval;
-        }} outData; // We don't output outData (too many components per vertex), but we do use it in ComputeCurveSamples.
+        SplineInfo outData; // We don't output outData (too many components per vertex), but we do use it in ComputeCurveSamples.
 
         {computeSampleRateCode}
 
@@ -405,7 +395,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         uniform samplerBuffer uKnots;
 
-        out SplineInfo
+        struct SplineInfo
         {
             int uOrder, vOrder;
             int uN, vN;
@@ -414,7 +404,8 @@ class SplineOpenGLFrame(OpenGLFrame):
             float uSpan, vSpan;
             float u, v;
             float uInterval, vInterval;
-        } outData;
+        };
+        out SplineInfo outData;
 
         void main()
         {
@@ -584,7 +575,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         const int header = 4;
 
-        in SplineInfo
+        struct SplineInfo
         {{
             int uOrder, vOrder;
             int uN, vN;
@@ -593,23 +584,15 @@ class SplineOpenGLFrame(OpenGLFrame):
             float uSpan, vSpan;
             float u, v;
             float uInterval, vInterval;
-        }} inData[];
+        }};
+        in SplineInfo inData[];
 
         uniform vec3 uScreenScale;
         uniform vec4 uClipBounds;
         uniform samplerBuffer uKnots;
         uniform sampler1D uXYZCoefs;
 
-        patch out SplineInfo
-        {{
-            int uOrder, vOrder;
-            int uN, vN;
-            int uKnot, vKnot;
-            float uFirst, vFirst;
-            float uSpan, vSpan;
-            float u, v;
-            float uInterval, vInterval;
-        }} outData;
+        patch out SplineInfo outData;
 
         {computeSampleRateCode}
 
@@ -652,7 +635,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         const int header = 4;
 
-        patch in SplineInfo
+        struct SplineInfo
         {{
             int uOrder, vOrder;
             int uN, vN;
@@ -661,7 +644,8 @@ class SplineOpenGLFrame(OpenGLFrame):
             float uSpan, vSpan;
             float u, v;
             float uInterval, vInterval;
-        }} inData;
+        }};
+        patch in SplineInfo inData;
 
         uniform mat4 uProjectionMatrix;
         uniform vec3 uScreenScale;
@@ -670,16 +654,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         uniform sampler1D uXYZCoefs;
         uniform samplerBuffer uColorCoefs;
 
-        flat out SplineInfo
-        {{
-            int uOrder, vOrder;
-            int uN, vN;
-            int uKnot, vKnot;
-            float uFirst, vFirst;
-            float uSpan, vSpan;
-            float u, v;
-            float uInterval, vInterval;
-        }} outData;
+        flat out SplineInfo outData;
         out vec3 worldPosition;
         out vec3 splineColor;
         out vec3 normal;
@@ -755,7 +730,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         const int header = 4;
 
-        in SplineInfo
+        struct SplineInfo
         {{
             int uOrder, vOrder;
             int uN, vN;
@@ -764,7 +739,8 @@ class SplineOpenGLFrame(OpenGLFrame):
             float uSpan, vSpan;
             float u, v;
             float uInterval, vInterval;
-        }} inData[];
+        }};
+        in SplineInfo inData[];
 
         uniform mat4 uProjectionMatrix;
         uniform vec3 uScreenScale;
@@ -777,16 +753,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         out vec3 splineColor; // We restrict our output to color to reduce the number of components per vertex.
 
-        struct SplineInfoStruct
-        {{
-            int uOrder, vOrder;
-            int uN, vN;
-            int uKnot, vKnot;
-            float uFirst, vFirst;
-            float uSpan, vSpan;
-            float u, v;
-            float uInterval, vInterval;
-        }} outData; // We don't output outData (too many components per vertex), but we do use it in ComputeSurfaceSamples.
+        SplineInfo outData; // We don't output outData (too many components per vertex), but we do use it in ComputeSurfaceSamples.
 
         {computeSampleRateCode}
 
@@ -928,7 +895,7 @@ class SplineOpenGLFrame(OpenGLFrame):
     surfaceFragmentShaderCode = cleanCodeString("""
         #version 410 core
      
-        flat in SplineInfo
+        struct SplineInfo
         {
             int uOrder, vOrder;
             int uN, vN;
@@ -937,7 +904,8 @@ class SplineOpenGLFrame(OpenGLFrame):
             float uSpan, vSpan;
             float u, v;
             float uInterval, vInterval;
-        } inData;
+        };
+        flat in SplineInfo inData;
         in vec3 worldPosition;
         in vec3 splineColor;
         in vec3 normal;

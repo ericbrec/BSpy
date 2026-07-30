@@ -34,30 +34,22 @@ def clothoid(kappa0, kappa1, length, tolerance = 1.0e-12):
         uValues = np.linspace(0.0, 1.0, numPoints)
         points = np.array([_clothoid_evaluator(u, kappa0, kappa1, length) for u in uValues])
         myClothoid = least_squares(uValues, points[:, :2].T, [4], compression = 0.5, fixEnds = True)
-    #    mySection = section(points)
         uValues = np.linspace(0.001, 0.999, 401)
-    #    testPoints = [_clothoid_evaluator(u, kappa0, kappa1, length)[:2] for u in np.linspace(0.001, 0.999, 401)]
-    #    uProject = [((mySection - testPoint) @ mySection.differentiate()).zeros() for testPoint in testPoints]
         maxError = 0.0
         for uValue in uValues:
             error = np.linalg.norm(myClothoid(uValue) - _clothoid_evaluator(uValue, kappa0, kappa1, length)[:2])
             maxError = np.max([maxError, error])
-    #    for uValues, testPoint in zip(uProject, testPoints):
-    #        minError = length 
-    #        for u in uValues:
-    #            minError = np.min([minError, np.linalg.norm(mySection(u) - testPoint)])
-    #        maxError = np.max([maxError, minError])
         return myClothoid, maxError
-    firstSection, maxError = clothoid_fit(kappa0, kappa1, length, 5)
-    numPoints = int(np.ceil(4 * ((maxError / tolerance) ** (1 / 4)) + 1))
+    _, maxError = clothoid_fit(kappa0, kappa1, length, 5)
+    numPoints = int(np.ceil(2 * ((maxError / tolerance) ** (1 / 4)) + 1))
     print(maxError, numPoints)
     finalSection, maxError = clothoid_fit(kappa0, kappa1, length, numPoints)
     print(maxError)
     return finalSection
 
-def fillet(point1, point2, point3, cutRadius, fillRadius, tolerance = 1.0e-12):
+def fillet(point1, point2, point3, cutRadius, fillRadius, tolerance = 1.0e-8):
     if tolerance is None:
-        tolerance = 1.0e-12
+        tolerance = 1.0e-8
     if cutRadius <= 0.0 or fillRadius <= 0.0 or tolerance < 0.0:
         raise ValueError("The cut radius, fill radius, and tolerance must be positive.")
     if cutRadius <= fillRadius:
@@ -75,6 +67,10 @@ def fillet(point1, point2, point3, cutRadius, fillRadius, tolerance = 1.0e-12):
     p21Perp = np.array([-p2MinusP1[1], p2MinusP1[0]]) / leg1Length
     p32Perp = np.array([-p3MinusP2[1], p3MinusP2[0]]) / leg2Length
 
+    # Map to three points on the x-axis and above it
+
+
+
     # Find the intersection of the offsets of the line segments cutRadius units away
 
     if np.cross(p2MinusP1, p3MinusP2) < 0.0:
@@ -88,7 +84,7 @@ def fillet(point1, point2, point3, cutRadius, fillRadius, tolerance = 1.0e-12):
 
     kappaFill = 1.0 / fillRadius
     def bisectBox(length):
-        x, y, theta, kappa = _clothoid_evaluator(1.0, 0.0, kappaFill, length)
+        x, y, theta, _ = _clothoid_evaluator(1.0, 0.0, kappaFill, length)
         angle = np.pi * theta / 180.0
         cosCloth = np.cos(angle)
         sinCloth = np.sin(angle)
@@ -108,7 +104,6 @@ def fillet(point1, point2, point3, cutRadius, fillRadius, tolerance = 1.0e-12):
     # Determine circular arc section of fillet
      
     _, _, theta, _ = _clothoid_evaluator(1.0, 0.0, kappaFill, clothoidLength)
-    turnAngle = 180.0 * np.atan2(np.cross(p2MinusP1, p3MinusP2), p2MinusP1 @ p3MinusP2) / np.pi
     filletArc = circular_arc(fillRadius, turnAngle - 2.0 * theta)
 
     # Solve Procrustes problem to position circular arc
