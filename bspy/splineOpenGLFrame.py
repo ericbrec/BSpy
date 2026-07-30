@@ -243,11 +243,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         void main()
         {{
-            tcData.uOrder = vertexData[gl_InvocationID].uOrder;
-            tcData.uN = vertexData[gl_InvocationID].uN;
-            tcData.uKnot = vertexData[gl_InvocationID].uKnot;
-            tcData.u = vertexData[gl_InvocationID].u;
-            tcData.uInterval = vertexData[gl_InvocationID].uInterval;
+            tcData = vertexData[gl_InvocationID];
             gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 
             float uSamples = 0.0;
@@ -336,11 +332,7 @@ class SplineOpenGLFrame(OpenGLFrame):
         {{
             float uSamples = 0.0;
 
-            geometryData.uOrder = vertexData[0].uOrder;
-            geometryData.uN = vertexData[0].uN;
-            geometryData.uKnot = vertexData[0].uKnot;
-            geometryData.u = vertexData[0].u;
-            geometryData.uInterval = vertexData[0].uInterval;
+            geometryData = vertexData[0];
             ComputeCurveSamples(gl_MaxGeometryOutputVertices - 1, geometryData, uSamples);
 
             if (uSamples > 0.0)
@@ -600,20 +592,7 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         void main()
         {{
-            tcData.uOrder = vertexData[gl_InvocationID].uOrder;
-            tcData.vOrder = vertexData[gl_InvocationID].vOrder;
-            tcData.uN = vertexData[gl_InvocationID].uN;
-            tcData.vN = vertexData[gl_InvocationID].vN;
-            tcData.uKnot = vertexData[gl_InvocationID].uKnot;
-            tcData.vKnot = vertexData[gl_InvocationID].vKnot;
-            tcData.uFirst = vertexData[gl_InvocationID].uFirst;
-            tcData.vFirst = vertexData[gl_InvocationID].vFirst;
-            tcData.uSpan = vertexData[gl_InvocationID].uSpan;
-            tcData.vSpan = vertexData[gl_InvocationID].vSpan;
-            tcData.u = vertexData[gl_InvocationID].u;
-            tcData.v = vertexData[gl_InvocationID].v;
-            tcData.uInterval = vertexData[gl_InvocationID].uInterval;
-            tcData.vInterval = vertexData[gl_InvocationID].vInterval;
+            tcData = vertexData[gl_InvocationID];
             gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 
             float uSamples[3];
@@ -698,20 +677,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             }}
             {postProcessSplineColor}
 
-            teData.uOrder = tcData.uOrder;
-            teData.vOrder = tcData.vOrder;
-            teData.uN = tcData.uN;
-            teData.vN = tcData.vN;
-            teData.uKnot = tcData.uKnot;
-            teData.vKnot = tcData.vKnot;
-            teData.uFirst = tcData.uFirst;
-            teData.vFirst = tcData.vFirst;
-            teData.uSpan = tcData.uSpan;
-            teData.vSpan = tcData.vSpan;
-            teData.u = tcData.u;
-            teData.v = tcData.v;
-            teData.uInterval = tcData.uInterval;
-            teData.vInterval = tcData.vInterval;
+            teData = tcData;
 
             worldPosition = point.xyz;
             normal = normalize(cross(duPoint, dvPoint));
@@ -766,16 +732,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             float uFullSamples[3];
             float vFullSamples[3];
 
-            geometryData.uOrder = vertexData[0].uOrder;
-            geometryData.vOrder = vertexData[0].vOrder;
-            geometryData.uN = vertexData[0].uN;
-            geometryData.vN = vertexData[0].vN;
-            geometryData.uKnot = vertexData[0].uKnot;
-            geometryData.vKnot = vertexData[0].vKnot;
-            geometryData.u = vertexData[0].u;
-            geometryData.v = vertexData[0].v;
-            geometryData.uInterval = vertexData[0].uInterval;
-            geometryData.vInterval = vertexData[0].vInterval;
+            geometryData = vertexData[0];
             int maxVertices = gl_MaxGeometryTotalOutputComponents / 7; // The number of output components per vertex is 7 = position.xyzw + splineColor.rgb
             ComputeSurfaceSamples(maxVertices, geometryData, uFullSamples, vFullSamples);
 
