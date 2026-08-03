@@ -1900,9 +1900,14 @@ class SplineOpenGLFrame(OpenGLFrame):
 
         # Transform coefs by view transform.
         if self.tessellationEnabled:
+            if spline.metadata["options"] & self.HULL:
+                # We need to draw the hull lines, so transform them manually
+                drawCoefficients = xyzCoefs @ transform[:3,:3] + transform[3,:3]
+                transform = np.identity(4, np.float32)
+            else:
+                drawCoefficients = xyzCoefs
             glUseProgram(self.computeProgram.computeProgram);
             glUniformMatrix4fv(self.computeProgram.uTransformMatrix, 1, GL_FALSE, transform)
-            drawCoefficients = xyzCoefs
         else:
             drawCoefficients = xyzCoefs @ transform[:3,:3] + transform[3,:3]
 
