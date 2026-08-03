@@ -139,8 +139,6 @@ class SplineOpenGLFrame(OpenGLFrame):
      
         const int header = 2;
 
-        attribute vec4 aParameters;
-
         uniform samplerBuffer uKnots;
 
         struct SplineInfo
@@ -160,7 +158,6 @@ class SplineOpenGLFrame(OpenGLFrame):
             vertexData.uKnot = min(gl_InstanceID + vertexData.uOrder, vertexData.uN);
             vertexData.u = texelFetch(uKnots, header + vertexData.uKnot - 1).x; // knots[uKnot-1]
             vertexData.uInterval = texelFetch(uKnots, header + vertexData.uKnot).x - vertexData.u; // knots[uKnot] - knots[uKnot-1]
-            gl_Position = aParameters;
         }
     """
 
@@ -379,8 +376,6 @@ class SplineOpenGLFrame(OpenGLFrame):
         #version 410 core
 
         const int header = 4;
-     
-        attribute vec4 aParameters;
 
         uniform samplerBuffer uKnots;
 
@@ -415,7 +410,6 @@ class SplineOpenGLFrame(OpenGLFrame):
             vertexData.v = texelFetch(uKnots, header + vertexData.uOrder + vertexData.uN + vertexData.vKnot - 1).x; // vKnots[vKnot-1]
             vertexData.uInterval = texelFetch(uKnots, header + vertexData.uKnot).x - vertexData.u; // uKnots[uKnot] - uKnots[uKnot-1]
             vertexData.vInterval = texelFetch(uKnots, header + vertexData.uOrder + vertexData.uN + vertexData.vKnot).x - vertexData.v; // vKnots[vKnot] - vKnots[vKnot-1]
-            gl_Position = aParameters;
         }
     """
 
@@ -1156,11 +1150,6 @@ class SplineOpenGLFrame(OpenGLFrame):
         self.lightDirection = np.array((0.63960218, 0.63960218, 0.42640144), np.float32)
         self.lightDirection = self.lightDirection / np.linalg.norm(self.lightDirection)
 
-        # Bind parameter buffer
-        self.parameterBuffer = glGenBuffers(1)
-        glBindBuffer(GL_ARRAY_BUFFER, self.parameterBuffer)
-        glBufferData(GL_ARRAY_BUFFER, 4 * 4, np.array([0,0,0,0], np.float32), GL_STATIC_DRAW)
-
         # Compile shaders and link programs
         try:
             self.curveProgram = CurveProgram(self)
@@ -1645,14 +1634,12 @@ class SplineOpenGLFrame(OpenGLFrame):
         program = self.curveProgram
         glUseProgram(program.curveProgram)
         glUniform4fv(program.uCurveLineColor, 1, spline.metadata["lineColor"])
-        glEnableVertexAttribArray(program.aCurveParameters)
         if self.tessellationEnabled:
             glPatchParameteri(GL_PATCH_VERTICES, 1)
             glDrawArraysInstanced(GL_PATCHES, 0, 1, spline.nCoef[0] - spline.order[0] + 1)
         else:
             glDrawArraysInstanced(GL_POINTS, 0, 1, spline.nCoef[0] - spline.order[0] + 1)
             glFlush() # Old graphics card
-        glDisableVertexAttribArray(program.aCurveParameters)
         glUseProgram(0)
 
     @staticmethod
@@ -1739,14 +1726,12 @@ class SplineOpenGLFrame(OpenGLFrame):
         glUniform4fv(program.uSurfaceFillColor, 1, fillColor)
         glUniform4fv(program.uSurfaceLineColor, 1, spline.metadata["lineColor"])
         glUniform1i(program.uSurfaceOptions, spline.metadata["options"])
-        glEnableVertexAttribArray(program.aSurfaceParameters)
         if self.tessellationEnabled:
             glPatchParameteri(GL_PATCH_VERTICES, 1)
             glDrawArraysInstanced(GL_PATCHES, 0, 1, (spline.nCoef[0] - spline.order[0] + 1) * (spline.nCoef[1] - spline.order[1] + 1))
         else:
             glDrawArraysInstanced(GL_POINTS, 0, 1, (spline.nCoef[0] - spline.order[0] + 1) * (spline.nCoef[1] - spline.order[1] + 1))
             glFlush() # Old graphics card
-        glDisableVertexAttribArray(program.aSurfaceParameters)
         glUseProgram(0)
         if useBlending:
             glDisable( GL_BLEND )
@@ -1829,14 +1814,12 @@ class SplineOpenGLFrame(OpenGLFrame):
 
             # Render spline
             glUseProgram(program.surfaceProgram)
-            glEnableVertexAttribArray(program.aSurfaceParameters)
             if self.tessellationEnabled:
                 glPatchParameteri(GL_PATCH_VERTICES, 1)
                 glDrawArraysInstanced(GL_PATCHES, 0, 1, (spline.nCoef[i1] - spline.order[i1] + 1) * (spline.nCoef[i2] - spline.order[i2] + 1))
             else:
                 glDrawArraysInstanced(GL_POINTS, 0, 1, (spline.nCoef[i1] - spline.order[i1] + 1) * (spline.nCoef[i2] - spline.order[i2] + 1))
                 glFlush() # Old graphics card
-            glDisableVertexAttribArray(program.aSurfaceParameters)
 
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glEnable( GL_BLEND )
@@ -1970,9 +1953,6 @@ class CurveProgram:
                 shaders.compileShader(frame.curveFragmentShaderCode, GL_FRAGMENT_SHADER))
 
         glUseProgram(self.curveProgram)
-        self.aCurveParameters = glGetAttribLocation(self.curveProgram, "aParameters")
-        glBindBuffer(GL_ARRAY_BUFFER, frame.parameterBuffer)
-        glVertexAttribPointer(self.aCurveParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
         self.uCurveProjectionMatrix = glGetUniformLocation(self.curveProgram, 'uProjectionMatrix')
         self.uCurveScreenScale = glGetUniformLocation(self.curveProgram, 'uScreenScale')
         self.uCurveClipBounds = glGetUniformLocation(self.curveProgram, 'uClipBounds')
@@ -2028,9 +2008,6 @@ class SurfaceProgram:
 
         # Initialize program parameters.
         glUseProgram(self.surfaceProgram)
-        self.aSurfaceParameters = glGetAttribLocation(self.surfaceProgram, "aParameters")
-        glBindBuffer(GL_ARRAY_BUFFER, frame.parameterBuffer)
-        glVertexAttribPointer(self.aSurfaceParameters, 4, GL_FLOAT, GL_FALSE, 0, None)
         self.uSurfaceProjectionMatrix = glGetUniformLocation(self.surfaceProgram, 'uProjectionMatrix')
         self.uSurfaceScreenScale = glGetUniformLocation(self.surfaceProgram, 'uScreenScale')
         self.uSurfaceClipBounds = glGetUniformLocation(self.surfaceProgram, 'uClipBounds')
