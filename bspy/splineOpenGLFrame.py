@@ -286,6 +286,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             }}
 
             gl_Position = uProjectionMatrix * point;
+            gl_Position = vec4(0.5 * gl_TessCoord.x, tcData.u, 0.0, 1.0);
         }}
     """
 
