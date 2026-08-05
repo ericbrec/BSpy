@@ -238,7 +238,6 @@ class SplineOpenGLFrame(OpenGLFrame):
         void main()
         {{
             tcData = vertexData[gl_InvocationID];
-            gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 
             float uSamples = 0.0;
             ComputeCurveSamples(gl_MaxTessGenLevel, tcData, uSamples);
@@ -584,7 +583,6 @@ class SplineOpenGLFrame(OpenGLFrame):
         void main()
         {{
             tcData = vertexData[gl_InvocationID];
-            gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 
             float uSamples[3];
             float vSamples[3];
