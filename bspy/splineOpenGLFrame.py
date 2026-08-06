@@ -1632,6 +1632,9 @@ class SplineOpenGLFrame(OpenGLFrame):
         # Render spline
         program = self.curveProgram
         glUseProgram(program.curveProgram)
+        glUniformMatrix4fv(program.uCurveProjectionMatrix, 1, GL_FALSE, self.projection)
+        glUniform3fv(program.uCurveScreenScale, 1, self.screenScale)
+        glUniform4fv(program.uCurveClipBounds, 1, self.clipBounds)
         glUniform4fv(program.uCurveLineColor, 1, spline.metadata["lineColor"])
         if self.tessellationEnabled:
             glPatchParameteri(GL_PATCH_VERTICES, 1)
