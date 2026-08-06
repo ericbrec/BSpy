@@ -243,7 +243,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             ComputeCurveSamples(gl_MaxTessGenLevel, tcData, uSamples);
             gl_TessLevelOuter[0] = 1.0;
             gl_TessLevelOuter[1] = uSamples;
-            gl_TessLevelOuter[1] = 1.0;
+            gl_TessLevelOuter[1] = 10.0;
         }}
     """
 
@@ -287,7 +287,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             }}
 
             gl_Position = uProjectionMatrix * point;
-            gl_Position = vec4(0.5 * gl_TessCoord.x, tcData.u, 0.0, 1.0);
+            //gl_Position = vec4(0.5 * gl_TessCoord.x, tcData.u, 0.0, 1.0);
         }}
     """
 
@@ -1633,9 +1633,6 @@ class SplineOpenGLFrame(OpenGLFrame):
         # Render spline
         program = self.curveProgram
         glUseProgram(program.curveProgram)
-        glUniformMatrix4fv(program.uCurveProjectionMatrix, 1, GL_FALSE, self.projection)
-        glUniform3fv(program.uCurveScreenScale, 1, self.screenScale)
-        glUniform4fv(program.uCurveClipBounds, 1, self.clipBounds)
         glUniform4fv(program.uCurveLineColor, 1, spline.metadata["lineColor"])
         if self.tessellationEnabled:
             glPatchParameteri(GL_PATCH_VERTICES, 1)
@@ -1717,20 +1714,12 @@ class SplineOpenGLFrame(OpenGLFrame):
             glBindBuffer(GL_TEXTURE_BUFFER, self.colorCoefsBuffer)
             glBufferSubData(GL_TEXTURE_BUFFER, 0, size, spline.cache["colorCoefs32"])
 
-        err = glGetError()
-        if err != GL_NO_ERROR:
-            print(f"After data binding: OpenGL Error code: {err}")
-
         if self.tessellationEnabled:
             # Transform coefficients using compute program
             glUseProgram(self.computeProgram.computeProgram);
             glDispatchCompute(spline.nCoef[0] * spline.nCoef[1], 1, 1)
             # Block until compute shader is done
             glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT)
-
-        err = glGetError()
-        if err != GL_NO_ERROR:
-            print(f"After compute shader: OpenGL Error code: {err}")
 
         # Render spline
         glUseProgram(program.surfaceProgram)
@@ -1922,10 +1911,6 @@ class SplineOpenGLFrame(OpenGLFrame):
         else:
             drawCoefficients = xyzCoefs @ transform[:3,:3] + transform[3,:3]
 
-        err = glGetError()
-        if err != GL_NO_ERROR:
-            print(f"After transform: OpenGL Error code: {err}")
-
         # Draw spline.
         if spline.nInd == 0 or spline.order[0] == 1:
             self._DrawPoints(spline, drawCoefficients)
@@ -1935,10 +1920,6 @@ class SplineOpenGLFrame(OpenGLFrame):
             self._DrawSurface(spline, drawCoefficients)
         elif spline.nInd == 3:
             self._DrawSolid(spline, drawCoefficients)
-
-        err = glGetError()
-        if err != GL_NO_ERROR:
-            print(f"After DrawX: OpenGL Error code: {err}")
 
 class ComputeProgram:
     """ Compile compute program """
