@@ -243,6 +243,7 @@ class SplineOpenGLFrame(OpenGLFrame):
             ComputeCurveSamples(gl_MaxTessGenLevel, tcData, uSamples);
             gl_TessLevelOuter[0] = 1.0;
             gl_TessLevelOuter[1] = uSamples;
+            gl_TessLevelOuter[1] = 1.0;
         }}
     """
 
