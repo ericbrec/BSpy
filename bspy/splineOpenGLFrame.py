@@ -135,7 +135,7 @@ class SplineOpenGLFrame(OpenGLFrame):
     """
 
     curveVertexShaderCode = """
-        #version 410 core
+        #version 330 core
      
         const int header = 2;
 
@@ -374,7 +374,7 @@ class SplineOpenGLFrame(OpenGLFrame):
     """
 
     surfaceVertexShaderCode = """
-        #version 410 core
+        #version 330 core
 
         const int header = 4;
 
@@ -1080,6 +1080,15 @@ class SplineOpenGLFrame(OpenGLFrame):
         #print("GL_VERSION: ", glGetString(GL_VERSION))
         #print("GL_SHADING_LANGUAGE_VERSION: ", glGetString(GL_SHADING_LANGUAGE_VERSION))
         #print("GL_MAX_TESS_GEN_LEVEL: ", glGetIntegerv(GL_MAX_TESS_GEN_LEVEL))
+        glMajorVersion = glGetIntegerv(GL_MAJOR_VERSION)
+        glMinorVersion = glGetIntegerv(GL_MINOR_VERSION)
+        if glMajorVersion < 3 or (glMajorVersion == 3 and glMinorVersion < 3):
+            print(f"OpenGL version must be 3.3 or higher. Current version is {glGetString(GL_VERSION)}")
+            exit()
+        elif glMajorVersion < 4 or (glMajorVersion == 4 and glMinorVersion < 1):
+            self.tessellationEnabled = False # OpenGL version must be 4.1 or higher for tesselation
+        else:
+            self.tessellationEnabled = True
 
         # First, try to compile compute shader. If it fails, then tesselation will not be enabled.
         try:
