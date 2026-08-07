@@ -226,7 +226,6 @@ class SplineOpenGLFrame(OpenGLFrame):
             ComputeCurveSamples(gl_MaxTessGenLevel, tcData, uSamples);
             gl_TessLevelOuter[0] = 1.0;
             gl_TessLevelOuter[1] = uSamples;
-            gl_TessLevelOuter[1] = 10.0;
         }}
     """
 
@@ -270,7 +269,6 @@ class SplineOpenGLFrame(OpenGLFrame):
             }}
 
             gl_Position = uProjectionMatrix * point;
-            //gl_Position = vec4(0.5 * gl_TessCoord.x, tcData.u, 0.0, 1.0);
         }}
     """
 
