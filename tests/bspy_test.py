@@ -1204,20 +1204,30 @@ def test_normal():
     for u in np.linspace(0.0, 1.0, 5):
         for v in np.linspace(0.0, 1.0, 5):
             n = spline.normal((u, v), False)
+            nLength = np.linalg.norm(n)
             assert np.isclose(np.dot(du((u, v)), n), 0.0)
             assert np.isclose(np.dot(dv((u, v)), n), 0.0)
             assert np.allclose(n, normal((u, v)))
             assert np.allclose(n, normal2((u, v)))
-            assert np.isclose(np.dot(spline.normal((u, v)), n), np.linalg.norm(n))
+            assert np.isclose(np.dot(spline.normal((u, v)), n), nLength)
+            U, Sigma, Vt = np.linalg.svd(np.column_stack((du((u, v)), dv((u, v)))))
+            signCorrection = 1 if (-1)**(3 - 1)* np.linalg.det(U) * np.linalg.det(Vt) > 0.0 else -1
+            assert np.isclose(np.dot(U[:,2], n), signCorrection * nLength)
+            assert np.isclose(np.prod(Sigma), nLength)
     assert np.allclose(normal.coefs, normal2.coefs)
 
     spline = bspy.Spline(1, 2, [4], [5], [[0,0,0,0,.5,1,1,1,1]], [[0, .3, .6, .7, 1], [0, .25, .5, .75, 1]])
     du = spline.differentiate()
     normal = spline.normal_spline()
-
     for u in np.linspace(0.0, 1.0, 5):
-        assert np.isclose(np.dot(du((u,)), spline.normal((u,))), 0.0)
-        assert np.isclose(np.dot(du((u,)), normal((u,))), 0.0)
+        n = spline.normal((u,), False)
+        nLength = np.linalg.norm(n)
+        assert np.isclose(np.dot(du((u,)), n), 0.0)
+        assert np.allclose(n, normal((u,)))
+        U, Sigma, Vt = np.linalg.svd(np.column_stack((du((u,)),)))
+        signCorrection = 1 if (-1)**(2 - 1)* np.linalg.det(U) * np.linalg.det(Vt) > 0.0 else -1
+        assert np.isclose(np.dot(U[:,1], n), signCorrection * nLength)
+        assert np.isclose(np.prod(Sigma), nLength)
 
 def test_offset():
     spline = bspy.Spline(1, 2, (2,), (4,), ((0.0, 0.0, 1.0, 2.0, 3.0, 3.0),), ((0.0, 0.0, 1.0, 1.0), (0.0, 1.0, 1.0, 0.0)))
